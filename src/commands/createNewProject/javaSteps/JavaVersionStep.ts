@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { previewDescription } from "../../../constants-nls";
 import { hasMinFuncCliVersion } from "../../../funcCoreTools/hasMinFuncCliVersion";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
@@ -24,7 +23,7 @@ type javaVersionInfo = {
 const versionInfo: javaVersionInfo[] = [
     { label: 'Java 8', data: java8, miniFunc: '1.0.0' },
     { label: 'Java 11', data: java11, miniFunc: '3.0.2630' },
-    { label: 'Java 17', data: java17, miniFunc: '4.0.0', description: previewDescription }
+    { label: 'Java 17', data: java17, miniFunc: '4.0.0' }
 ];
 
 export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {

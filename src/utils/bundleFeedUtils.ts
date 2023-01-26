@@ -100,4 +100,10 @@ export namespace bundleFeedUtils {
 
         return feedUtils.getJsonFeed(context, url);
     }
+
+    export function overwriteExtensionBundleVersion(hostJson: IHostJsonV2, expectedRange: string, newRange: string): void {
+        if (hostJson.extensionBundle && hostJson.extensionBundle.version === expectedRange) {
+            hostJson.extensionBundle.version = newRange;
+        }
+    }
 }

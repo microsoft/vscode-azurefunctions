@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { IActionContext, IAzureQuickPickItem, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -15,6 +15,25 @@ export function isMultiRootWorkspace(): boolean {
         && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name; // multi-root workspaces always have something like "(Workspace)" appended to their name
 }
 
+/*
+ * Use sparingly. Prefer storing and passing 'projectPaths' instead.
+ * Over-reliance on this function may result in excessive prompting when a user employs a multi-root workspace.
+ */
+export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+        return undefined;
+    } else if (vscode.workspace.workspaceFolders.length === 1) {
+        return vscode.workspace.workspaceFolders[0];
+    } else {
+        const placeHolder: string = localize('selectRootWorkspace', 'Select the folder containing your function project');
+        const folder = await vscode.window.showWorkspaceFolderPick({ placeHolder });
+        if (!folder) {
+            throw new UserCancelledError('selectRootWorkspace');
+        }
+        return folder;
+    }
+}
+
 /**
  * Alternative to `vscode.workspace.findFiles` which always returns an empty array if no workspace is open
  */
@@ -23,11 +42,11 @@ export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: 
     const posixBase = path.posix.normalize(typeof base === 'string' ? base : base.uri.fsPath).replace(/\\/g, '/');
     const escapedBase = escapeCharacters(posixBase);
     const fullPattern = path.posix.join(escapedBase, pattern);
-    return (await globby(fullPattern)).map(s => vscode.Uri.file(s));
+    return (await globby(fullPattern, { ignore: ['**/node_modules/**'] })).map(s => vscode.Uri.file(s));
 }
 
 function escapeCharacters(nonPattern: string): string {
-    return nonPattern.replace(/[$^*+?()[\]]/g, '\\$&');
+    return nonPattern.replace(/[$^*+?()\[\]\\]/g, '\\$&');
 }
 
 export async function selectWorkspaceFolder(context: IActionContext, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {

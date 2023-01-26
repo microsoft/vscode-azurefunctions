@@ -5,15 +5,11 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
-import { ProjectLanguage, requirementsFileName } from "../constants";
+import { requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 
 export namespace pythonUtils {
-    export function isV2Plus(language: string | undefined, model: number | undefined): boolean {
-        return language === ProjectLanguage.Python && model !== undefined && model > 1;
-    }
-
     export async function addDependencyToRequirements(dependency: string, projectPath: string): Promise<void> {
         const requirementsPath: string = path.join(projectPath, requirementsFileName);
         if (await hasDependencyInRequirements(dependency, requirementsPath)) {

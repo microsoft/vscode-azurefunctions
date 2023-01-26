@@ -27,6 +27,7 @@ import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
+import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -70,6 +71,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
+
+    await showCoreToolsWarning(context, version, node.site.fullName);
 
     const client = await node.site.createClient(actionContext);
     const siteConfig: SiteConfigResource = await client.getSiteConfig();

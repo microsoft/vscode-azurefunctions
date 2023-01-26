@@ -21,7 +21,7 @@ import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCor
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { durableUtils } from '../utils/durableUtils';
-import { pythonUtils } from '../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 
@@ -134,7 +134,7 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
 async function validateFunctionVersion(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, workspacePath: string): Promise<boolean> {
     const validateTools = getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath) !== false;
 
-    if (validateTools && pythonUtils.isV2Plus(projectLanguage, projectLanguageModel)) {
+    if (validateTools && isPythonV2Plus(projectLanguage, projectLanguageModel)) {
         const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
 
         // NOTE: This is the latest version available as of this commit,
@@ -176,8 +176,12 @@ async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLan
         return new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
     }));
 
-    // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.
-    if (functions.some(f => !f.isHttpTrigger) || pythonUtils.isV2Plus(projectLanguage, projectLanguageModel) || requiresDurableStorage) {
+    // NOTE: Currently, Python V2+ and Node.js V4 requires storage to be configured, even for HTTP triggers.
+    if (functions.some(f => !f.isHttpTrigger) ||
+        isPythonV2Plus(projectLanguage, projectLanguageModel) ||
+        isNodeV4Plus({ language: projectLanguage, languageModel: projectLanguageModel }) ||
+        requiresDurableStorage) {
+
         await validateStorageConnection(context, projectPath);
     }
 }

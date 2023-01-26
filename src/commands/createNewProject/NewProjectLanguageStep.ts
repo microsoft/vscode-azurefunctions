@@ -5,18 +5,18 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting } from '../../constants';
+import { nodeLearnMoreLink, nodeModels, previewPythonModel, ProjectLanguage } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { pythonUtils } from '../../utils/pythonUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -59,12 +59,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        if (!getWorkspaceSetting(pysteinModelSetting)) {
-            languagePicks = languagePicks.filter(p => {
-                return p.label !== pythonNewModelPreview;
-            })
-        }
-
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
@@ -87,9 +81,17 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
             case ProjectLanguage.TypeScript:
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
             case ProjectLanguage.CSharp:
@@ -99,7 +101,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Python:
                 executeSteps.push(
-                    pythonUtils.isV2Plus(context.language, context.languageModel)
+                    isPythonV2Plus(context.language, context.languageModel)
                         ? new PysteinProjectCreateStep()
                         : new PythonProjectCreateStep());
                 break;
@@ -123,7 +125,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // Languages except Python v2+ and Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (!pythonUtils.isV2Plus(context.language, context.languageModel)) {
+        if (!isPythonV2Plus(context.language, context.languageModel)) {
             promptSteps.push(await FunctionListStep.create(context, {
                 isProjectWizard: true,
                 templateId: this._templateId,

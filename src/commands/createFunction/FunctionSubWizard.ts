@@ -7,7 +7,7 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { pythonUtils } from '../../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
@@ -19,6 +19,8 @@ import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
+import { NodeV4FunctionCreateStep } from './scriptSteps/NodeV4FunctionCreateStep';
+import { NodeV4FunctionNameStep } from './scriptSteps/NodeV4FunctionNameStep';
 import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
 import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
@@ -33,7 +35,7 @@ export class FunctionSubWizard {
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
 
-            const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
+            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
 
             if (isV2PythonModel) {
                 promptSteps.push(new PythonScriptStep());
@@ -48,8 +50,10 @@ export class FunctionSubWizard {
                     promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
                     break;
                 default:
-                    // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
-                    if (!isV2PythonModel) {
+                    if (isNodeV4Plus(context)) {
+                        promptSteps.push(new NodeV4FunctionNameStep())
+                    } else if (!isV2PythonModel) {
+                        // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
                         promptSteps.push(new ScriptFunctionNameStep());
                     }
                     break;
@@ -63,24 +67,28 @@ export class FunctionSubWizard {
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    executeSteps.push(new JavaFunctionCreateStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
-                    break;
-                case ProjectLanguage.TypeScript:
-                    executeSteps.push(new TypeScriptFunctionCreateStep());
-                    break;
-                default:
-                    if (isV2PythonModel) {
-                        executeSteps.push(new PythonFunctionCreateStep());
-                    } else {
-                        executeSteps.push(new ScriptFunctionCreateStep());
-                    }
-                    break;
+            if (isNodeV4Plus(context)) {
+                executeSteps.push(new NodeV4FunctionCreateStep());
+            } else {
+                switch (context.language) {
+                    case ProjectLanguage.Java:
+                        executeSteps.push(new JavaFunctionCreateStep());
+                        break;
+                    case ProjectLanguage.CSharp:
+                    case ProjectLanguage.FSharp:
+                        executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
+                        break;
+                    case ProjectLanguage.TypeScript:
+                        executeSteps.push(new TypeScriptFunctionCreateStep());
+                        break;
+                    default:
+                        if (isV2PythonModel) {
+                            executeSteps.push(new PythonFunctionCreateStep());
+                        } else {
+                            executeSteps.push(new ScriptFunctionCreateStep());
+                        }
+                        break;
+                }
             }
 
             if (context.newDurableStorageType) {

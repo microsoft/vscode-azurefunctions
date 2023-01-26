@@ -8,7 +8,8 @@ import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@mic
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
-import { getStackPicks } from './getStackPicks';
+import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
+import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
@@ -38,13 +39,17 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return !context.newSiteStack;
     }
 
-    public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
+    public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext>> {
+        const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
+        if (shouldShowEolWarning(context.newSiteStack?.minorVersion)) {
+            promptSteps.push(new FunctionAppEOLWarningStep());
+        }
         if (context.newSiteOS === undefined) {
-            return { promptSteps: [new SiteOSStep()] };
+            promptSteps.push(new SiteOSStep())
         } else {
             await setLocationsTask(context);
-            return undefined;
         }
+        return { promptSteps };
     }
 
     private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {

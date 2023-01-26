@@ -32,6 +32,25 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
     }
 }
 
+export function getFileExtensionFromLanguage(language?: string): string | undefined {
+    switch (language) {
+        case ProjectLanguage.CSharpScript:
+            return '.csx';
+        case ProjectLanguage.FSharpScript:
+            return '.fsx';
+        case ProjectLanguage.JavaScript:
+            return '.js';
+        case ProjectLanguage.PowerShell:
+            return '.ps1';
+        case ProjectLanguage.Python:
+            return '.py';
+        case ProjectLanguage.TypeScript:
+            return '.ts';
+        default:
+            return undefined;
+    }
+}
+
 export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
         const functionPath: string = path.join(context.projectPath, nonNullProp(context, 'functionName'));

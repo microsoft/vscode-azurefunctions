@@ -12,7 +12,7 @@ import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
-import { pythonUtils } from '../../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { FunctionSubWizard } from './FunctionSubWizard';
@@ -58,7 +58,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
+        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
 
         if (isV2PythonModel) {
             return {
@@ -144,7 +144,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !pythonUtils.isV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp ||
+            language === ProjectLanguage.Java ||
+            (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||
+            (language === ProjectLanguage.TypeScript && !isNodeV4Plus(context))) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
@@ -203,6 +206,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
     const orchestrator = /Orchestrat/i;
     const entityTrigger = /DurableFunctionsEntityHttpStart/i;  // filter out directly due to overlap with the base entity template pattern
 
+    // Todo: mwf note to self - simplify this expression.  Add additional comment to function
     if (entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId))) {
         return true;
     } else {

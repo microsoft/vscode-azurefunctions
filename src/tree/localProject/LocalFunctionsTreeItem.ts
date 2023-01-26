@@ -12,7 +12,7 @@ import { ParsedFunctionJson } from '../../funcConfig/function';
 import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
-import { pythonUtils } from '../../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
@@ -34,9 +34,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const isParentPythonV2Plus = pythonUtils.isV2Plus(this.parent.language, this.parent.languageModel);
+        const isFunctionalProgrammingModel = isPythonV2Plus(this.parent.language, this.parent.languageModel) || isNodeV4Plus(this.parent);
 
-        if (this.parent.isIsolated || isParentPythonV2Plus) {
+        if (this.parent.isIsolated || isFunctionalProgrammingModel) {
             return await this.getChildrenForHostedProjects(context);
         } else {
             const functions: string[] = await getFunctionFolders(context, this.parent.effectiveProjectPath);

@@ -33,6 +33,7 @@
     "azureFunctions.enableJavaRemoteDebugging": "Enable remote debugging for Java Functions Apps running on Windows. (experimental)",
     "azureFunctions.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureFunctions.enableRemoteDebugging": "Enable remote debugging for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported. (experimental)",
+    "azureFunctions.endOfLifeWarning": "Show a warning when creating Function Apps with stacks within 6 months of their end of life.",
     "azureFunctions.executeFunction": "Execute Function Now...",
     "azureFunctions.funcCliPath": "The path to the 'func' executable to use for debug and deploy tasks. For example, set it to 'node_modules/.bin/func' if using the func cli installed as a local npm package.",
     "azureFunctions.initProjectForVSCode": "Initialize Project for Use with VS Code...",
@@ -50,8 +51,8 @@
     "azureFunctions.problemMatchers.funcPythonWatch": "Azure Functions Python problems (watch mode)",
     "azureFunctions.problemMatchers.funcWatch": "Azure Functions problems (watch mode)",
     "azureFunctions.projectLanguage": "The default language to use when performing operations like \"Create New Function\".",
-    "azureFunctions.projectLanguageModel": "The default language model to use when performing operations like \"Create New Function\".",
     "azureFunctions.projectLanguage.preview": "(Preview)",
+    "azureFunctions.projectLanguageModel": "The default language model to use when performing operations like \"Create New Function\".",
     "azureFunctions.projectOpenBehavior": "The behavior to use after creating a new project. The options are \"AddToWorkspace\", \"OpenInNewWindow\", or \"OpenInCurrentWindow\".",
     "azureFunctions.projectRuntime": "The default version of the Azure Functions runtime to use when performing operations like \"Create New Function\".",
     "azureFunctions.projectRuntime.v1": "Azure Functions v1",
@@ -101,5 +102,6 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.showPysteinModel": "Enable Python (New Model Preview)"
+    "azureFunctions.functionSubpath": "The default subpath to create new functions. Currently, this only applies to Node.js programming model v4+.",
+    "azureFunctions.showNodeProgrammingModel": "Enable preview Node.js programming model"
 }
