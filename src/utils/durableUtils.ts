@@ -25,7 +25,7 @@ export namespace durableUtils {
     export const pythonDfPackage: string = 'azure-functions-durable';
 
     export function requiresDurableStorageSetup(context: IFunctionWizardContext): boolean {
-        return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate?.id, context.language) && !context.hasDurableStorage;
+        return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
     }
 
     // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
