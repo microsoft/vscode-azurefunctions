@@ -30,6 +30,7 @@ suite('Backup templates', () => {
         const workers: WorkerRuntime[] = [
             { language: ProjectLanguage.JavaScript, versions: allVersions },
             { language: ProjectLanguage.CSharp, versions: [FuncVersion.v1, FuncVersion.v2] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'netcoreapp3.1', versions: [FuncVersion.v3] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net5.0-isolated', versions: [FuncVersion.v3, FuncVersion.v4] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0', versions: [FuncVersion.v4] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0-isolated', versions: [FuncVersion.v4] },
