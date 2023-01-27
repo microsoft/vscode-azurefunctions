@@ -52,7 +52,6 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     private async getPicks(context: IProjectWizardContext): Promise<IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[]> {
         const runtimes = await getRuntimes(context);
         const picks: IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[] = [];
-
         for (const runtime of runtimes) {
             picks.push({
                 label: runtime.displayInfo.displayName,

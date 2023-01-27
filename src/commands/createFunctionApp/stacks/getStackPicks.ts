@@ -82,7 +82,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
 
         if (!stackHasPicks) {
             picks.push({
-                label: localize('noRuntimeStacksAvailable', 'No valid runtime stacks available.'),
+                label: localize('noRuntimeStacksAvailable', 'No valid runtime stacks available'),
                 group: stack.displayText,
                 data: undefined
             });
