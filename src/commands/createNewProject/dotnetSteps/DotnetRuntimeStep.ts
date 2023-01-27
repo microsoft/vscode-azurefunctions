@@ -53,14 +53,6 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
         const runtimes = await getRuntimes(context);
         const picks: IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[] = [];
 
-        if (!runtimes.length) {
-            picks.push({
-                label: localize('noDotNetWorkersFound', 'No .NET worker runtimes found.'),
-                data: undefined,
-                suppressPersistence: true
-            });
-        }
-
         for (const runtime of runtimes) {
             picks.push({
                 label: runtime.displayInfo.displayName,
@@ -68,13 +60,6 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
                 data: runtime
             });
         }
-
-        picks.push({
-            label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
-            description: localize('currentFuncVersion', 'Current: {0}', context.version),
-            data: undefined,
-            suppressPersistence: true
-        });
         return picks;
     }
 }
@@ -82,8 +67,10 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
 async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils.IWorkerRuntime[]> {
     const funcRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestVersion(context, context.version));
     const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
-    const deprecatedFrameworks = ['netcoreapp3.1'];
-    const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks).filter(r => !deprecatedFrameworks.includes(r.targetFramework));
+    const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
+    if (runtimes.length === 0) {
+        throw new Error('Internal error: No .NET worker runtimes found.');
+    }
     return runtimes;
 }
 

@@ -15,11 +15,14 @@ import { backupStacks } from './backupStacks';
 import { AppStackMinorVersion } from './models/AppStackModel';
 import { FunctionAppRuntimes, FunctionAppStack } from './models/FunctionAppStackModel';
 
-export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack>[]> {
+export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
     const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
-    const picks: IAzureQuickPickItem<FullFunctionAppStack>[] = [];
+    const picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = [];
     let hasEndOfLife = false;
+    let stackHasPicks: boolean;
+
     for (const stack of stacks) {
+        stackHasPicks = false;
         for (const majorVersion of stack.majorVersions) {
             const minorVersions: (AppStackMinorVersion<FunctionAppRuntimes>)[] = majorVersion.minorVersions
                 .filter(mv => {
@@ -73,11 +76,24 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                     group: stack.displayText,
                     data: { stack, majorVersion, minorVersion }
                 });
+                stackHasPicks = true;
             }
+        }
+
+        if (!stackHasPicks) {
+            picks.push({
+                label: localize('noRuntimeStacksAvailable', 'No valid runtime stacks available.'),
+                group: stack.displayText,
+                data: undefined
+            });
         }
     }
 
     picks.sort((p1, p2) => {
+        if (!p1.data || !p2.data) {
+            return 0;
+        }
+
         return p1.data.stack.value !== p2.data.stack.value ?
             0 : // keep order as-is if they're different stacks (i.e. Node.js vs. .NET)
             getPriority(p1.data.minorVersion.stackSettings) - getPriority(p2.data.minorVersion.stackSettings); // otherwise sort based on priority
@@ -162,7 +178,7 @@ function removeDeprecatedStacks(stacks: FunctionAppStack[]) {
         return;
     }
 
-    const deprecatedDotnetStacks: string[] = ['dotnetcore2', 'netcoreapp3.1'];
+    const deprecatedDotnetStacks: string[] = ['dotnetcore2', 'dotnetcore3.1', 'dotnet5'];
     for (const stack of stacks) {
         if (stack.value === 'dotnet') {
             stack.majorVersions = stack.majorVersions.filter(mv => !deprecatedDotnetStacks.includes(mv.value));
