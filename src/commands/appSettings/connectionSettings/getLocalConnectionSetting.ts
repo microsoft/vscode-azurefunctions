@@ -7,6 +7,7 @@ import { AccessKeys, AuthorizationRule, EventHubManagementClient, KnownAccessRig
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from "@azure/arm-storage";
 import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { ISubscriptionContext, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
+import { localSettingsFileName } from "../../../constants";
 import { defaultDescription } from "../../../constants-nls";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
@@ -67,7 +68,7 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
     const accessKeys: AccessKeys = await client.namespaces.listKeys(rgName, namespaceName, authRuleName);
     if (!accessKeys.primaryConnectionString && !accessKeys.secondaryConnectionString) {
         const learnMoreLink: string = 'https://aka.ms/event-hubs-connection-string';
-        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your namespace\'s shared access policy. Locate a valid access policy and add the connection string to "{0}".', 'local.settings.json');
+        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your namespace\'s shared access policy. Locate a valid access policy and add the connection string to "{0}".', localSettingsFileName);
         void context.ui.showWarningMessage(message, { learnMoreLink });
         ext.outputChannel.appendLog(message);
     }
