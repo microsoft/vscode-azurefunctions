@@ -24,7 +24,12 @@ export namespace durableUtils {
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
 
-    export function requiresDurableStorage(templateId: string, language?: string): boolean {
+    export function requiresDurableStorageSetup(context: IFunctionWizardContext): boolean {
+        return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate?.id, context.language) && !context.hasDurableStorage;
+    }
+
+    // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
+    export function templateRequiresDurableStorageSetup(templateId: string, language?: string): boolean {
         // Todo: Remove when Powershell and Java implementation is added
         if (language === ProjectLanguage.PowerShell || language === ProjectLanguage.Java) {
             return false;
