@@ -150,7 +150,7 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
                 method: 'GET',
                 pathTemplate: '/providers/Microsoft.Web/functionappstacks',
                 queryParameters: {
-                    'api-version': '2022-03-01',
+                    'api-version': '2020-10-01',
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
                 }
             });
