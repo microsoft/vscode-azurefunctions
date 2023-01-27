@@ -3,17 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { getResourceGroupFromId, IStorageAccountWizardContext, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { localize } from '../localize';
 import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
-import { createStorageClient } from './azureClients';
-import { nonNullProp, nonNullValue } from './nonNull';
 
 export interface IBaseResourceWithName {
     name?: string;
@@ -38,32 +35,6 @@ export async function promptForResource<T extends IBaseResourceWithName>(context
         context.valuesToMask.push(data.name);
     }
     return data;
-}
-
-export interface IResourceResult {
-    name: string;
-    connectionString: string;
-}
-
-export async function getStorageConnectionString(context: IStorageAccountWizardContext): Promise<IResourceResult> {
-    const client: StorageManagementClient = await createStorageClient(context);
-    const storageAccount: StorageAccount = nonNullProp(context, 'storageAccount');
-    const name: string = nonNullProp(storageAccount, 'name');
-
-    const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));
-    const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
-    const key: string = nonNullProp(nonNullValue(nonNullProp(result, 'keys')[0], 'keys[0]'), 'value');
-
-    let endpointSuffix: string = nonNullProp(context.environment, 'storageEndpointSuffix');
-    // https://github.com/Azure/azure-sdk-for-node/issues/4706
-    if (endpointSuffix.startsWith('.')) {
-        endpointSuffix = endpointSuffix.substr(1);
-    }
-
-    return {
-        name,
-        connectionString: `DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key};EndpointSuffix=${endpointSuffix}`
-    };
 }
 
 export async function registerProviders(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<void> {

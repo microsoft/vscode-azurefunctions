@@ -5,18 +5,15 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
-import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
-import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
-import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -94,9 +91,8 @@ export class FunctionSubWizard {
                 }
             }
 
-            if ((!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context, context.projectPath)) {
-                promptSteps.push(new AzureWebJobsStoragePromptStep());
-                executeSteps.push(new AzureWebJobsStorageExecuteStep());
+            if (context.newDurableStorageType) {
+                executeSteps.push(new DurableProjectConfigureStep());
             }
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);

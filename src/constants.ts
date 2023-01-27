@@ -81,6 +81,47 @@ export enum ScmType {
     GitHub = 'GitHub'
 }
 
+export enum CodeAction {
+    Deploy = 'Deploy',
+    Debug = 'Debug'
+}
+
+export enum ConnectionKey {
+    Storage = 'AzureWebJobsStorage',
+    EventHubs = 'EventHubsConnection',
+    SQL = 'SQLDB_Connection'
+}
+
+export enum ConnectionType {
+    /**
+     * Represents the connection to any resource that is hosted through Azure
+     */
+    Azure = "Azure",
+    /**
+     * Represents the connection to a local emulator resource
+     */
+    Emulator = 'Emulator',
+    /**
+     * Represents the connection to any resource that the user provides through a direct connection string
+     */
+    Custom = 'Custom',
+}
+
+export enum DurableBackend {
+    Storage = 'AzureStorage',
+    Netherite = 'Netherite',
+    SQL = "mssql"
+}
+
+export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
+export type StorageConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
+export type EventHubsConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
+export type SqlDbConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Emulator>;
+
+export type CodeActionValues = typeof CodeAction[keyof typeof CodeAction];
+export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
+export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];
+
 export const func: string = 'func';
 export const extInstallCommand: string = 'extensions install';
 export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;
@@ -98,7 +139,12 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
-export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
+export const localEventHubsEmulatorConnectionStringDefault: string = 'SingleHost';
+export const localEventHubsEmulatorConnectionStringAlternateOne: string = 'MemoryF';
+export const localEventHubsEmulatorConnectionStringAlternateTwo: string = 'Memory';
+
+export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
+export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternateOne}|${localEventHubsEmulatorConnectionStringAlternateTwo}`);
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const workerRuntimeVersionKey: string = 'FUNCTIONS_WORKER_RUNTIME_VERSION';
@@ -107,24 +153,17 @@ export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 
-export const viewOutput: string = localize('viewOutput', 'View Output');
-export const previewDescription: string = localize('preview', '(Preview)');
-export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
-
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).
  * The new Node.js model is 4.
  * Any significantly changed new model should use an incremented number.
  */
 export const nodeV4ModelVersion: number = 4;
-export const nodeV4ModelLabel: string = localize('modelV4', 'Model V4 (Preview)')
-
-export const nodeV4Model: { modelVersion: number, label: string } = { modelVersion: nodeV4ModelVersion, label: nodeV4ModelLabel };
+export const nodeV4Model: { modelVersion: number, label: string } = { modelVersion: nodeV4ModelVersion, label: localize('modelV4', 'Model V4 (Preview)') };
 export const nodeDefaultModel: { modelVersion: undefined, label: string } = { modelVersion: undefined, label: localize('modelV3', 'Model V3') }
 
 export const nodeModels = [nodeDefaultModel, nodeV4Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
-
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {
