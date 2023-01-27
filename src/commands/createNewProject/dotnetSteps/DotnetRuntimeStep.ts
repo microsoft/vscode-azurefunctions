@@ -59,13 +59,6 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
                 data: runtime
             });
         }
-
-        picks.push({
-            label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
-            description: localize('currentFuncVersion', 'Current: {0}', context.version),
-            data: undefined,
-            suppressPersistence: true
-        });
         return picks;
     }
 }
