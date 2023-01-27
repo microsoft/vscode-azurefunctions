@@ -144,7 +144,7 @@ export const localEventHubsEmulatorConnectionStringAlternateOne: string = 'Memor
 export const localEventHubsEmulatorConnectionStringAlternateTwo: string = 'Memory';
 
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
-export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternateOne}|${localEventHubsEmulatorConnectionStringAlternateOne}`);
+export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternateOne}|${localEventHubsEmulatorConnectionStringAlternateTwo}`);
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const workerRuntimeVersionKey: string = 'FUNCTIONS_WORKER_RUNTIME_VERSION';
