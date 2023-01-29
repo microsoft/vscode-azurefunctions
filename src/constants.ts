@@ -142,7 +142,6 @@ export const tsConfigFileName: string = 'tsconfig.json';
 export const localEventHubsEmulatorConnectionStringDefault: string = 'MemoryF';
 export const localEventHubsEmulatorConnectionStringAlternateOne: string = 'Memory';
 
-
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
 export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternateOne}`);
 
