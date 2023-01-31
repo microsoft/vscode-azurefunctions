@@ -39,7 +39,7 @@ export async function validateEventHubsConnection(context: Omit<ISetConnectionSe
     const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
-    if (!eventHubsConnection) {
+    if (!eventHubsConnection || localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection)) {
         promptSteps.push(new EventHubsConnectionPromptStep(options));
         executeSteps.push(new EventHubsConnectionExecuteStep());
     }
