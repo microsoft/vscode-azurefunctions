@@ -240,7 +240,6 @@ export namespace durableUtils {
                 connectionStringName: ConnectionKey.SQL,
                 taskEventLockTimeout: "00:02:00",
                 createDatabaseIfNotExists: true,
-                schemaName: null
             }
         };
     }
