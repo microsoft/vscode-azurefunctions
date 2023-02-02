@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { functionSubpathSetting } from '../../../constants';
+import { functionSubpathSetting, tsDefaultSrcDir } from '../../../constants';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
@@ -14,12 +14,12 @@ import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
-        const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
+        const fileExt = getFileExtensionFromLanguage(context.language);
+        const functionSubpath: string = path.join(fileExt?.toLowerCase() === '.ts' ? tsDefaultSrcDir : '', getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string);
         const functionPath = path.join(context.projectPath, functionSubpath);
         await AzExtFsExtra.ensureDir(functionPath);
 
         const functionName = nonNullProp(context, 'functionName');
-        const fileExt = getFileExtensionFromLanguage(context.language);
         const fileName = `${functionName}${fileExt}`;
 
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');

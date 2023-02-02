@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
+import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir, tsDefaultSrcDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
@@ -27,7 +27,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                     module: 'commonjs',
                     target: 'es6',
                     outDir: tsDefaultOutDir,
-                    rootDir: '.',
+                    rootDir: tsDefaultSrcDir,
                     sourceMap: true,
                     strict: false
                 }

@@ -1057,7 +1057,7 @@
                     "azureFunctions.functionSubpath": {
                         "scope": "resource",
                         "type": "string",
-                        "default": "src/functions",
+                        "default": "functions",
                         "description": "%azureFunctions.functionSubpath%"
                     },
                     "azureFunctions.showNodeProgrammingModel": {
