@@ -42,7 +42,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
             const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
 
             // this is set in the super class, but we want to override it
-            packageJson.main = path.posix.join('dist', functionSubpath, '*.js');
+            packageJson.main = path.posix.join(tsDefaultOutDir, functionSubpath, '*.js');
         }
 
         return packageJson;
