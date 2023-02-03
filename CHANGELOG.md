@@ -6,7 +6,7 @@
 
 - Enable support for Python 3.10 when creating projects [#3486](https://github.com/microsoft/vscode-azurefunctions/issues/3486)
 - Support new Durable Functions backend options for the following languages: C#, JavaScript, TypeScript, Python [#3273](https://github.com/microsoft/vscode-azurefunctions/issues/3272)
-- Support new Node.js Programming Model (v4) [#3285](https://github.com/microsoft/vscode-azurefunctions/issues/3285)
+- Support for new Node.js language model (Preview). Set feature flag `azureFunctions.showNodeProgrammingModel` to enable [#3285](https://github.com/microsoft/vscode-azurefunctions/issues/3285)
 - Declared limited support for virtual workspaces [#2793](https://github.com/microsoft/vscode-azurefunctions/issues/2793)
 - Added Azurite generated emulator files to .funcignore [#3371](https://github.com/microsoft/vscode-azurefunctions/issues/3371)
 
