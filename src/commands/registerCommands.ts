@@ -10,10 +10,10 @@ import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFu
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
-import { decryptLocalSettings } from './appSettings/decryptLocalSettings';
+import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
-import { encryptLocalSettings } from './appSettings/encryptLocalSettings';
-import { setAzureWebJobsStorage } from './appSettings/setAzureWebJobsStorage';
+import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
+import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSettings';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';

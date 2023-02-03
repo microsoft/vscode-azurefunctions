@@ -3,18 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from "@azure/arm-appservice";
+import type { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { functionFilter, localSettingsFileName, viewOutput } from "../../constants";
+import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
+import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { decryptLocalSettings } from "./decryptLocalSettings";
-import { encryptLocalSettings } from "./encryptLocalSettings";
-import { getLocalSettingsFile } from "./getLocalSettingsFile";
+import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
+import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
+import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
@@ -53,10 +54,15 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         }
 
         const excludedAppSettings: string[] = [];
-        // Don't want AzureWebJobsStorage to be overwritten in this case as it should point at a live resource: https://github.com/microsoft/vscode-azurefunctions/issues/3298
-        if (localSettings.Values["AzureWebJobsStorage"] === 'UseDevelopmentStorage=true') {
-            delete localSettings.Values?.["AzureWebJobsStorage"];
-            excludedAppSettings.push("AzureWebJobsStorage");
+
+        // Local emulator connections should not be uploaded to the cloud - exclude them (https://github.com/microsoft/vscode-azurefunctions/issues/3298)
+        if (localSettings.Values[ConnectionKey.Storage] === localStorageEmulatorConnectionString) {
+            delete localSettings.Values?.[ConnectionKey.Storage];
+            excludedAppSettings.push(ConnectionKey.Storage);
+        }
+        if (localEventHubsEmulatorConnectionRegExp.test(localSettings.Values[ConnectionKey.EventHubs])) {
+            delete localSettings.Values?.[ConnectionKey.EventHubs];
+            excludedAppSettings.push(ConnectionKey.EventHubs);
         }
 
         if (exclude) {

@@ -3,27 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource } from '@azure/arm-appservice';
+import type { SiteConfigResource } from '@azure/arm-appservice';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, DurableBackendValues, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
+import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
+import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
+import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
+
+export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
     await deploy(context, target, functionAppId);
@@ -38,7 +46,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
-    const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
+    const projectPath: string = nonNullValue(await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder));
+    const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, { action: CodeAction.Deploy, defaultAppSetting: 'defaultFunctionAppToDeploy', projectPath });
     if (treeUtils.isAzExtTreeItem(arg1)) {
         if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
             !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue)) {
@@ -85,6 +94,22 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'storage';
     }
 
+    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
+    context.telemetry.properties.projectDurableStorageType = durableStorageType;
+
+    const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.projectPath);
+
+    // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
+    if (shouldValidateStorage) {
+        await validateStorageConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
+    }
+    if (shouldValidateEventHubs) {
+        await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
+    }
+    if (shouldValidateSqlDb) {
+        await validateSqlDbConnection(context, context.projectPath);
+    }
+
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
         await showDeployConfirmation(context, node.site, 'azureFunctions.deploy');
     }
@@ -95,13 +120,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
-    if (language === ProjectLanguage.CSharp && !node.site.isLinux) {
-        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
+    if (language === ProjectLanguage.CSharp && !node.site.isLinux || durableStorageType) {
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
     }
 
     if (isZipDeploy) {
-        const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder);
-        await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
+        await verifyAppSettings(context, node, context.projectPath, version, language, { doRemoteBuild, isConsumption }, durableStorageType);
     }
 
     await node.runWithTemporaryDescription(
@@ -128,7 +152,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage): Promise<void> {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+    const client = await node.site.createClient(context);
+    const config: SiteConfigResource = {
+        use32BitWorkerProcess: false
+    };
+
+    if (durableStorageType === DurableBackend.Netherite) {
+        await client.updateConfiguration(config);
+        return;
+    }
+
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;
@@ -145,10 +179,6 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
         if (dialogResult === deployAnyway) {
             return;
         }
-        const config: SiteConfigResource = {
-            use32BitWorkerProcess: false
-        };
-        const client = await node.site.createClient(context);
         await client.updateConfiguration(config);
     }
 }

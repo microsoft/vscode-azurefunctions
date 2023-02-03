@@ -6,7 +6,7 @@
 import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { localSettingsFileName } from '../constants';
+import { ConnectionKeyValues, localSettingsFileName } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 
@@ -17,16 +17,14 @@ export interface ILocalSettingsJson {
     ConnectionStrings?: { [key: string]: string };
 }
 
-export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
-
-export async function getAzureWebJobsStorage(context: IActionContext, projectPath: string): Promise<string | undefined> {
+export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
-    if (process.env[azureWebJobsStorageKey]) {
-        return process.env[azureWebJobsStorageKey];
+    if (process.env[connectionKey]) {
+        return process.env[connectionKey];
     }
 
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-    return settings.Values && settings.Values[azureWebJobsStorageKey];
+    return settings.Values && settings.Values[connectionKey];
 }
 
 export enum MismatchBehavior {

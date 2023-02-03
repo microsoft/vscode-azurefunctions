@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.9.1-alpha.0",
+    "version": "1.10.1-alpha.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "0c6ae279ed8443289764825290e4f9e2-1a736e7c-1324-4338-be46-fc2a58ae4d14-7255",
@@ -83,6 +83,12 @@
         "workspaceContains:**/host.json"
     ],
     "main": "./main.js",
+    "capabilities": {
+        "virtualWorkspaces": {
+            "supported": "limited",
+            "description": "In virtual workspaces, creating a new function project, deploying, and debugging are not supported."
+        }
+    },
     "contributes": {
         "x-azResources": {
             "azure": {
@@ -121,7 +127,8 @@
             {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.add",
@@ -131,7 +138,8 @@
             {
                 "command": "azureFunctions.appSettings.decrypt",
                 "title": "%azureFunctions.appSettings.decrypt%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.delete",
@@ -151,7 +159,8 @@
             {
                 "command": "azureFunctions.appSettings.encrypt",
                 "title": "%azureFunctions.appSettings.encrypt%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.rename",
@@ -195,7 +204,8 @@
                 "icon": {
                     "light": "resources/light/AddFunction.svg",
                     "dark": "resources/dark/AddFunction.svg"
-                }
+                },
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.createFunctionApp",
@@ -215,7 +225,8 @@
                 "icon": {
                     "light": "resources/light/CreateNewProject.svg",
                     "dark": "resources/dark/CreateNewProject.svg"
-                }
+                },
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.createSlot",
@@ -241,12 +252,14 @@
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
-                "icon": "$(cloud-upload)"
+                "icon": "$(cloud-upload)",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.deploySlot",
                 "title": "%azureFunctions.deploySlot%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.disableFunction",
@@ -271,12 +284,14 @@
             {
                 "command": "azureFunctions.initProjectForVSCode",
                 "title": "%azureFunctions.initProjectForVSCode%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.installOrUpdateFuncCoreTools",
                 "title": "%azureFunctions.installOrUpdateFuncCoreTools%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.openInPortal",
@@ -316,12 +331,14 @@
             {
                 "command": "azureFunctions.startJavaRemoteDebug",
                 "title": "%azureFunctions.startJavaRemoteDebug%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.startRemoteDebug",
                 "title": "%azureFunctions.startRemoteDebug%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.startStreamingLogs",
@@ -352,7 +369,8 @@
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
                 "title": "%azureFunctions.uninstallFuncCoreTools%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.viewCommitInGitHub",
@@ -1116,21 +1134,23 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^2.11.0",
+        "vscode-azurekudu": "^0.2.0",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
     },
     "dependencies": {
         "@azure/arm-appinsights": "^4.0.0",
-        "@azure/arm-appservice": "^11.0.0",
+        "@azure/arm-appservice": "^13.0.3",
         "@azure/arm-cosmosdb": "^15.0.0",
-        "@azure/arm-eventhub": "^5.0.0",
+        "@azure/arm-eventhub": "^5.1.0",
         "@azure/arm-servicebus": "^5.0.0",
+        "@azure/arm-sql": "^9.1.0",
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^0.7.7",
-        "@microsoft/vscode-azext-azureutils": "^0.3.4",
-        "@microsoft/vscode-azext-utils": "^0.3.21",
+        "@microsoft/vscode-azext-azureappservice": "^0.8.1",
+        "@microsoft/vscode-azext-azureutils": "^0.3.7",
+        "@microsoft/vscode-azext-utils": "^0.4.0",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",
         "fs-extra": "^4.0.2",
@@ -1140,7 +1160,6 @@
         "p-retry": "^4.6.2",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
         "xml2js": "^0.4.19",
