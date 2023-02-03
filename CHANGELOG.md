@@ -1,5 +1,24 @@
 # Change Log
 
+## 1.10.0 - 2023-02-02
+
+### Added
+
+- Enable support for Python 3.10 when creating projects [#3486](https://github.com/microsoft/vscode-azurefunctions/issues/3486)
+- Support new Durable Functions backend options for the following languages: C#, JavaScript, TypeScript, Python [#3273](https://github.com/microsoft/vscode-azurefunctions/issues/3272)
+- Support new Node.js Programming Model (v4) [#3285](https://github.com/microsoft/vscode-azurefunctions/issues/3285)
+- Declared limited support for virtual workspaces [#2793](https://github.com/microsoft/vscode-azurefunctions/issues/2793)
+### Changed
+
+- Removed deprecated .NET runtime stacks for creating new projects and Function Apps [#3474](https://github.com/microsoft/vscode-azurefunctions/issues/3474)
+- Remove Python 3.6 due to EOL [#3526](https://github.com/microsoft/vscode-azurefunctions/issues/3526)
+- Add warning messages for Azure Functions Core Tools EOL and mismatched versions [#3346](https://github.com/microsoft/vscode-azurefunctions/issues/3346) [#2985](https://github.com/microsoft/vscode-azurefunctions/issues/2985)
+- Improve Core Tools install experience for Linux [#2745](https://github.com/microsoft/vscode-azurefunctions/issues/2745)
+
+### Fixed
+
+- [Bugs Fixed](https://github.com/microsoft/vscode-azurefunctions/milestone/60?closed=1)
+
 ## 1.9.0 - 2022-11-16
 
 ### Added
