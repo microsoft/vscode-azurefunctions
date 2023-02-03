@@ -8,6 +8,7 @@
 - Support new Durable Functions backend options for the following languages: C#, JavaScript, TypeScript, Python [#3273](https://github.com/microsoft/vscode-azurefunctions/issues/3272)
 - Support new Node.js Programming Model (v4) [#3285](https://github.com/microsoft/vscode-azurefunctions/issues/3285)
 - Declared limited support for virtual workspaces [#2793](https://github.com/microsoft/vscode-azurefunctions/issues/2793)
+- Added Azurite generated emulator files to .funcignore [#3371](https://github.com/microsoft/vscode-azurefunctions/issues/3371)
 ### Changed
 
 - Removed deprecated .NET runtime stacks for creating new projects and Function Apps [#3474](https://github.com/microsoft/vscode-azurefunctions/issues/3474)
