@@ -1803,6 +1803,7 @@
             "categoryStyle": "eventHub",
             "enabledInTryMode": false,
             "userPrompt": [
+                "connection",
                 "eventHubName"
             ]
         }
@@ -1942,6 +1943,7 @@
             "categoryStyle": "eventHub",
             "enabledInTryMode": false,
             "userPrompt": [
+                "connection",
                 "eventHubName"
             ]
         }
