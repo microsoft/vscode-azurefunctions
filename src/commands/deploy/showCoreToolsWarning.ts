@@ -5,16 +5,16 @@
 
 import { DialogResponses, IActionContext, nonNullValue, openUrl } from "@microsoft/vscode-azext-utils";
 import { MessageItem } from "vscode";
-import { getLocalFuncCoreToolsVersion } from "../../funcCoreTools/getLocalFuncCoreToolsVersion";
 import { FuncVersion, funcVersionLink, tryParseFuncVersion } from "../../FuncVersion";
+import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersion";
 import { localize } from "../../localize";
 import { getWorkspaceSetting, updateGlobalSetting } from "../../vsCodeConfig/settings";
 
 export async function showCoreToolsWarning(context: IActionContext, runtimeVersion: FuncVersion, siteName: string): Promise<void> {
     const showCoreToolsWarningKey: string = 'showCoreToolsWarning';
     if (getWorkspaceSetting<boolean>(showCoreToolsWarningKey)) {
-        const coreToolsVersion = await getLocalFuncCoreToolsVersion(context, undefined)
-        if (coreToolsVersion !== null) {
+        const coreToolsVersion = await tryGetLocalFuncVersion(context, undefined);
+        if (coreToolsVersion) {
             const localVersion = nonNullValue(tryParseFuncVersion(coreToolsVersion), 'localCoreToolsVersion');
 
             if (localVersion === FuncVersion.v2 || localVersion === FuncVersion.v3) {
