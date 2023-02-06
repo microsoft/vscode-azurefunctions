@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.10.1 - 2023-02-06
+
+### Fixed
+
+- Deployment failure due to `Function Core Tools` not being installed [#3556](https://github.com/microsoft/vscode-azurefunctions/issues/3556)
+- Missing event hub connection prompt [#3554](https://github.com/microsoft/vscode-azurefunctions/issues/3551)
+
 ## 1.10.0 - 2023-02-02
 
 ### Added
