@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
-import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
+import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, DurableBackendValues, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -19,9 +19,9 @@ import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
