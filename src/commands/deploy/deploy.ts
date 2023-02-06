@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
-import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
+import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, DurableBackendValues, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -19,9 +19,9 @@ import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -72,7 +72,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    await showCoreToolsWarning(context, version, node.site.fullName);
+    void showCoreToolsWarning(context, version, node.site.fullName);
 
     const client = await node.site.createClient(actionContext);
     const siteConfig: SiteConfigResource = await client.getSiteConfig();
