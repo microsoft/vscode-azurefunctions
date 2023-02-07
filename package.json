@@ -91,13 +91,20 @@
     },
     "contributes": {
         "x-azResources": {
-            "activation": {
-                "onFetch": [
-                    "microsoft.web/sites"
-                ],
-                "onResolve": [
-                    "microsoft.web/sites"
+            "azure": {
+                "branches": [
+                    {
+                        "type": "FunctionApp"
+                    }
                 ]
+            },
+            "workspace": {
+                "branches": [
+                    {
+                        "type": "func"
+                    }
+                ],
+                "resources": true
             },
             "commands": [
                 {
@@ -106,7 +113,15 @@
                     "type": "microsoft.web/sites",
                     "detail": "%azureFunctions.createFunctionAppDetail%"
                 }
-            ]
+            ],
+            "activation": {
+                "onFetch": [
+                    "microsoft.web/sites"
+                ],
+                "onResolve": [
+                    "microsoft.web/sites"
+                ]
+            }
         },
         "commands": [
             {
@@ -396,12 +411,12 @@
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "when": "view == azureResourceGroups && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
-                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "when": "view == azureResourceGroups && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@2"
                 },
                 {

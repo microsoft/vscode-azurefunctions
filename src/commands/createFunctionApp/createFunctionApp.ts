@@ -10,7 +10,8 @@ import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 import { ISiteCreatedOptions } from './showSiteCreated';
 
-export async function createFunctionApp(context: IActionContext & Partial<ICreateFunctionAppContext>, subscription?: AzExtParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
+export async function createFunctionApp(context: IActionContext & Partial<ICreateFunctionAppContext>, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string> {
+    const newResourceGroupName = Array.isArray(nodesOrNewResourceGroupName) ? undefined : nodesOrNewResourceGroupName;
     let node: AzExtParentTreeItem | undefined;
     if (typeof subscription === 'string') {
         node = await ext.rgApi.tree.findTreeItem(`/subscriptions/${subscription}`, context);
@@ -18,7 +19,7 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
             throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscription));
         }
     } else if (!subscription) {
-        node = await ext.rgApi.tree.showTreeItemPicker<AzExtParentTreeItem>(SubscriptionTreeItem.contextValue, context);
+        node = await ext.rgApi.appResourceTree.showTreeItemPicker<AzExtParentTreeItem>(SubscriptionTreeItem.contextValue, context);
     } else {
         node = subscription;
     }
@@ -31,6 +32,6 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     return funcAppNode.fullId;
 }
 
-export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
-    return await createFunctionApp({ ...context, advancedCreation: true }, subscription, newResourceGroupName);
+export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string> {
+    return await createFunctionApp({ ...context, advancedCreation: true }, subscription, nodesOrNewResourceGroupName);
 }

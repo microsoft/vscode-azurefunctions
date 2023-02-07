@@ -33,7 +33,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
             } else if (result === streamLogs) {
                 await startStreamingLogs(postDeployContext, node);
             } else if (result === uploadSettings) {
-                await uploadAppSettings(postDeployContext, node.appSettingsTreeItem, workspaceFolder);
+                await uploadAppSettings(postDeployContext, node.appSettingsTreeItem, undefined, workspaceFolder);
             }
         });
     });

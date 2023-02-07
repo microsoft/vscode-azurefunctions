@@ -9,14 +9,12 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 
 export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
-            filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            filter: functionFilter
         });
     }
 

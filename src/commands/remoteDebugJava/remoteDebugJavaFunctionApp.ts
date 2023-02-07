@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { openUrl } from '../../utils/openUrl';
 import { DebugProxy } from './DebugProxy';
@@ -21,8 +20,7 @@ const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:tra
 export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            filter: functionFilter
         });
     }
     const client: SiteClient = await node.site.createClient(context);
