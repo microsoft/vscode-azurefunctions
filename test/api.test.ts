@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
+import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
 import { extensionId, nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
