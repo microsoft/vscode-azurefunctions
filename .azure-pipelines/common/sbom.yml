@@ -3,11 +3,11 @@ steps:
     displayName: "SBoM Generation Task"
     inputs:
       BuildDropPath: "$(Build.ArtifactStagingDirectory)"
-    condition: ne(variables['System.PullRequest.IsFork'], 'True')
+    condition: ne(variables['System.PullRequest.IsFork'], 'False')
 
   - task: PublishBuildArtifacts@1
     displayName: "Publish artifacts: sbom"
     inputs:
       PathtoPublish: "$(Build.ArtifactStagingDirectory)/_manifest"
       ArtifactName: _manifest
-    condition: ne(variables['System.PullRequest.IsFork'], 'True')
+    condition: ne(variables['System.PullRequest.IsFork'], 'False')
