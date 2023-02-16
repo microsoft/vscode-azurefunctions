@@ -1,7 +1,7 @@
-| If you want to...           | Then...                                                                                                                                                                   |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Build a web API             | Implement an endpoint for your web applications using the [HTTP trigger](https://learn.microsoft.com/azure/azure-functions/functions-bindings-http-webhook)               |
-| Run scheduled tasks         | Execute code on [pre-defined time intervals](https://learn.microsoft.com/azure/azure-functions/functions-bindings-timer)                                                  |
-| Build a serverless workflow | Crete an event-driven workflow from a series of functions using [durable functions](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview) |
-| Process file uploads        | Run code when a file is uploaded or changed in [blob storage](https://learn.microsoft.com/azure/azure-functions/functions-bindings-storage-blob)                          |
-| Respond to database changes | Run custom logic when a document is created or updated in [Azure Cosmos DB](https://learn.microsoft.com/azure/azure-functions/functions-bindings-cosmosdb-v2)             |
+| If you want to...           | Then...                                                                                                                                                                    |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Build a web API             | Implement an endpoint for your web applications using the [HTTP trigger](https://learn.microsoft.com/azure/azure-functions/functions-bindings-http-webhook)                |
+| Run scheduled tasks         | Execute code on [pre-defined time intervals](https://learn.microsoft.com/azure/azure-functions/functions-bindings-timer)                                                   |
+| Build a serverless workflow | Create an event-driven workflow from a series of functions using [durable functions](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview) |
+| Process file uploads        | Run code when a file is uploaded or changed in [blob storage](https://learn.microsoft.com/azure/azure-functions/functions-bindings-storage-blob)                           |
+| Respond to database changes | Run custom logic when a document is created or updated in [Azure Cosmos DB](https://learn.microsoft.com/azure/azure-functions/functions-bindings-cosmosdb-v2)              |
