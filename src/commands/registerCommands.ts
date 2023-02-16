@@ -5,6 +5,7 @@
 
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapArgs } from '@microsoft/vscode-azext-utils';
+import { commands } from "vscode";
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -84,6 +85,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openFile', openFile);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openInPortal', openDeploymentInPortal);
+    registerCommand('azureFunctions.openWalkthrough', () => commands.executeCommand('workbench.action.openWalkthrough', 'ms-azuretools.vscode-azurefunctions#functionsStart'));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.pickProcess', pickFuncProcess);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', redeployDeployment);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.restartFunctionApp', restartFunctionApp);

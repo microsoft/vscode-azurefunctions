@@ -386,6 +386,11 @@
                 "command": "azureFunctions.viewProperties",
                 "title": "%azureFunctions.viewProperties%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.openWalkthrough",
+                "title": "%azureFunctions.openWalkthrough%",
+                "category": "Azure Functions"
             }
         ],
         "menus": {
@@ -1081,6 +1086,48 @@
                         "default": false
                     }
                 }
+            }
+        ],
+        "walkthroughs": [
+            {
+                "id": "functionsStart",
+                "title": "%azureFunctions.walkthrough.functionsStart.title%",
+                "description": "%azureFunctions.walkthrough.functionsStart.description%",
+                "steps": [
+                    {
+                        "id": "scenarios",
+                        "title": "%azureFunctions.walkthrough.functionsStart.scenarios.title%",
+                        "completionEvents": [
+                            "onStepSelected"
+                        ],
+                        "description": "%azureFunctions.walkthrough.functionsStart.scenarios.description%",
+                        "media": {
+                            "markdown": "resources/walkthroughs/scenarios.md"
+                        }
+                    },
+                    {
+                        "id": "create",
+                        "title": "%azureFunctions.walkthrough.functionsStart.create.title%",
+                        "completionEvents": [
+                            "onCommand:azureFunctions.createNewProject"
+                        ],
+                        "description": "%azureFunctions.walkthrough.functionsStart.create.description%",
+                        "media": {
+                            "markdown": "resources/walkthroughs/empty.md"
+                        }
+                    },
+                    {
+                        "id": "initialize",
+                        "title": "%azureFunctions.walkthrough.functionsStart.initialize.title%",
+                        "completionEvents": [
+                            "onCommand:azureFunctions.initProjectForVSCode"
+                        ],
+                        "description": "%azureFunctions.walkthrough.functionsStart.initialize.description%",
+                        "media": {
+                            "markdown": "resources/walkthroughs/empty.md"
+                        }
+                    }
+                ]
             }
         ]
     },
