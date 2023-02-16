@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.10.2 - 2023-02-15
+
+### Added
+- Forward compatibility with Azure Resources API v2 by @alexweininger in [#3548](https://github.com/microsoft/vscode-azurefunctions/pull/3548)
+
 ## 1.10.1 - 2023-02-06
 
 ### Fixed
