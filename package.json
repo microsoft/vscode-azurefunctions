@@ -1093,6 +1093,7 @@
                 "id": "functionsStart",
                 "title": "%azureFunctions.walkthrough.functionsStart.title%",
                 "description": "%azureFunctions.walkthrough.functionsStart.description%",
+                "when": "false",
                 "steps": [
                     {
                         "id": "scenarios",
