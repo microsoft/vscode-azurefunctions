@@ -16,6 +16,7 @@ import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageSt
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
@@ -48,6 +49,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
+            { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
         ];
 
@@ -110,6 +112,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Java:
                 await addJavaCreateProjectSteps(context, promptSteps, executeSteps);
+                break;
+            case ProjectLanguage.Ballerina:
+                await addBallerinaCreateProjectSteps(promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Custom:
                 executeSteps.push(new CustomProjectCreateStep());
