@@ -6,7 +6,7 @@
 import { AzureWizardExecuteStep, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
-import { ProjectLanguage } from "../../../constants";
+import { packageJsonFileName, ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
@@ -97,7 +97,7 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
 async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizardContext): Promise<void> {
     const coreHttp: string = '@azure/core-http';
     const coreHttpVersion: string = '^1.1.4';
-    const packagePath: string = path.join(context.projectPath, 'package.json');
+    const packagePath: string = path.join(context.projectPath, packageJsonFileName);
 
     await confirmEditJsonFile(context, packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
         data.devDependencies = data.devDependencies || {};

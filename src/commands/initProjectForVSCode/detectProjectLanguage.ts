@@ -5,9 +5,10 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { hasNodeJsDependency, tryGetPackageJson } from '../../utils/nodeJsUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
@@ -16,25 +17,37 @@ import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/Scr
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(context: IActionContext, projectPath: string): Promise<ProjectLanguage | undefined> {
-    let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(context, projectPath);
+    try {
+        let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(context, projectPath);
 
-    if (await isJavaProject(projectPath)) {
-        detectedLangs.push(ProjectLanguage.Java);
+        if (await isNodeJsProject(projectPath)) {
+            if (await isTypeScriptProject(projectPath)) {
+                detectedLangs.push(ProjectLanguage.TypeScript);
+            } else {
+                detectedLangs.push(ProjectLanguage.JavaScript);
+            }
+        }
+
+        if (await isJavaProject(projectPath)) {
+            detectedLangs.push(ProjectLanguage.Java);
+        }
+
+        if (await isCSharpProject(context, projectPath)) {
+            detectedLangs.push(ProjectLanguage.CSharp);
+        }
+
+        if (await isFSharpProject(context, projectPath)) {
+            detectedLangs.push(ProjectLanguage.FSharp);
+        }
+
+        await detectLanguageFromLocalSettings(context, detectedLangs, projectPath);
+
+        // de-dupe
+        detectedLangs = detectedLangs.filter((pl, index) => detectedLangs.indexOf(pl) === index);
+        return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
+    } catch {
+        return undefined;
     }
-
-    if (await isCSharpProject(context, projectPath)) {
-        detectedLangs.push(ProjectLanguage.CSharp);
-    }
-
-    if (await isFSharpProject(context, projectPath)) {
-        detectedLangs.push(ProjectLanguage.FSharp);
-    }
-
-    await detectLanguageFromLocalSettings(context, detectedLangs, projectPath);
-
-    // de-dupe
-    detectedLangs = detectedLangs.filter((pl, index) => detectedLangs.indexOf(pl) === index);
-    return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
 }
 
 async function isJavaProject(projectPath: string): Promise<boolean> {
@@ -55,6 +68,14 @@ async function isCSharpProject(context: IActionContext, projectPath: string): Pr
 
 async function isFSharpProject(context: IActionContext, projectPath: string): Promise<boolean> {
     return (await dotnetUtils.getProjFiles(context, ProjectLanguage.FSharp, projectPath)).length === 1;
+}
+
+async function isNodeJsProject(projectPath: string): Promise<boolean> {
+    return await AzExtFsExtra.pathExists(path.join(projectPath, packageJsonFileName));
+}
+
+async function isTypeScriptProject(projectPath: string): Promise<boolean> {
+    return await hasNodeJsDependency(projectPath, 'typescript', true);
 }
 
 /**
@@ -106,18 +127,35 @@ async function detectScriptLanguages(context: IActionContext, projectPath: strin
 }
 
 export async function detectProjectLanguageModel(language: ProjectLanguage | undefined, projectPath: string): Promise<number | undefined> {
-    switch (language) {
-        case ProjectLanguage.Python:
-            const uris = await findFiles(projectPath, pythonFunctionAppFileName);
+    try {
+        switch (language) {
+            case ProjectLanguage.Python:
+                const uris = await findFiles(projectPath, pythonFunctionAppFileName);
 
-            if (uris.length > 0) {
-                return previewPythonModel;
-            }
+                if (uris.length > 0) {
+                    return previewPythonModel;
+                }
 
-            break;
+                break;
+            case ProjectLanguage.JavaScript:
+            case ProjectLanguage.TypeScript:
+                const packageJson = await tryGetPackageJson(projectPath);
+                const funcDepVersion = packageJson?.dependencies?.['@azure/functions'];
+                if (funcDepVersion) {
+                    const supportedModels = [3, 4];
+                    for (const model of supportedModels) {
+                        if (new RegExp(`^[^0-9]*${model}`).test(funcDepVersion)) {
+                            return model;
+                        }
+                    }
+                }
 
-        default:
-            break;
+                break;
+            default:
+                break;
+        }
+    } catch {
+        // ignore
     }
 
     return undefined;

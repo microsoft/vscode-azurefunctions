@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
@@ -22,7 +22,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
 
-        this.hasPackageJson = await AzExtFsExtra.pathExists(path.join(context.projectPath, 'package.json'));
+        this.hasPackageJson = await AzExtFsExtra.pathExists(path.join(context.projectPath, packageJsonFileName));
         if (this.hasPackageJson) {
             this.preDeployTask = npmPruneTaskLabel;
             this.settings.push({ key: 'postDeployTask', value: npmInstallTaskLabel });

@@ -13,6 +13,7 @@ import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
+import { hasNodeJsDependency } from "./nodeJsUtils";
 import { pythonUtils } from "./pythonUtils";
 import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
@@ -92,14 +93,7 @@ export namespace durableUtils {
     }
 
     async function nodeProjectHasDurableDependency(projectPath: string): Promise<boolean> {
-        const packagePath: string = path.join(projectPath, 'package.json');
-        if (!await AzExtFsExtra.pathExists(packagePath)) {
-            return false;
-        }
-
-        const packageJson: Record<string, unknown> = await AzExtFsExtra.readJSON(packagePath);
-        const dependencies = packageJson?.dependencies as {} || {};
-        return !!dependencies[nodeDfPackage];
+        return await hasNodeJsDependency(projectPath, nodeDfPackage);
     }
 
     async function dotnetProjectHasDurableDependency(projectPath: string): Promise<boolean> {
