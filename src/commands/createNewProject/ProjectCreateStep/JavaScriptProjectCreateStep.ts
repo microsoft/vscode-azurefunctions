@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { functionSubpathSetting } from '../../../constants';
+import { functionSubpathSetting, packageJsonFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { cpUtils } from '../../../utils/cpUtils';
@@ -30,7 +30,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
 
-        const packagePath: string = path.join(context.projectPath, 'package.json');
+        const packagePath: string = path.join(context.projectPath, packageJsonFileName);
         if (await confirmOverwriteFile(context, packagePath)) {
             await AzExtFsExtra.writeJSON(packagePath, this.getPackageJson(context));
         }
