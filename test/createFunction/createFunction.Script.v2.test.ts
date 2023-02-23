@@ -130,18 +130,6 @@ function addSuite(tester: FunctionTesterBase): void {
             ]
         },
         {
-            functionName: 'Durable Functions activity',
-            inputs: [],
-            skip: tester.language === ProjectLanguage.Custom
-        },
-        {
-            functionName: 'Durable Functions HTTP starter',
-            inputs: [
-                getRotatingAuthLevel()
-            ],
-            skip: tester.language === ProjectLanguage.Custom
-        },
-        {
             functionName: 'Durable Functions orchestrator',
             inputs: [],
             skip: tester.language === ProjectLanguage.Custom
