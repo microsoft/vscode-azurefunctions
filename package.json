@@ -299,6 +299,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.openWalkthrough",
+                "title": "%azureFunctions.openWalkthrough%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.pickProcess",
                 "title": "%azureFunctions.pickProcess%",
                 "category": "Azure Functions"
@@ -385,11 +390,6 @@
             {
                 "command": "azureFunctions.viewProperties",
                 "title": "%azureFunctions.viewProperties%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.openWalkthrough",
-                "title": "%azureFunctions.openWalkthrough%",
                 "category": "Azure Functions"
             }
         ],
