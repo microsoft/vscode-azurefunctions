@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.10.2 - 2023-02-23
+
+### Added
+- Azure Functions walkthrough by @esweet431 in [#3573](https://github.com/microsoft/vscode-azurefunctions/pull/3573)
+
+### Fixed
+- Detect new NodeJs model during "Init for VS Code" by @ejizba in [#3586](https://github.com/microsoft/vscode-azurefunctions/pull/3586)
+- Minor fixes for durable in new NodeJs model by @ejizba in [#3587](https://github.com/microsoft/vscode-azurefunctions/pull/3587)
+
 ## 1.10.2 - 2023-02-15
 
 ### Added
