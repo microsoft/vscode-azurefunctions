@@ -15,7 +15,7 @@ jobs:
       - name: Bump version
         id: bump
         uses: alexweininger/bump-prerelease-version@v0.1.1
-      
+
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
@@ -25,6 +25,7 @@ jobs:
           branch: bot/bump-${{ steps.bump.outputs.new-version }}
           base: main
           author: GitHub <noreply@github.com>
+          token: ${{ secrets.PAT_GITHUB }}
         env:
           RUN_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           MESSAGE: Bump version after release
