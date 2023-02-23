@@ -131,18 +131,18 @@ function addSuite(tester: FunctionTesterBase): void {
         },
         {
             functionName: 'Durable Functions orchestrator',
-            inputs: [],
+            inputs: ['Azure Storage'],
             skip: tester.language === ProjectLanguage.Custom
         },
         {
             functionName: 'Durable Functions entity',
-            inputs: [],
+            inputs: ['Azure Storage'],
             skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java
         },
         {
             functionName: 'Durable Functions Entity HTTP starter',
             inputs: tester.language === ProjectLanguage.JavaScript ? [] : [getRotatingAuthLevel()],
-            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java || tester.language === ProjectLanguage.Python
+            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java || tester.language === ProjectLanguage.Python || tester.language === ProjectLanguage.Custom
         },
         {
             functionName: 'IoT Hub (Event Hub)',
