@@ -43,7 +43,7 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
 
         // The Entity templates aren't supported in PowerShell at all, and the DurableFunctionsEntityHttpStart template is not yet supported in Python.
         // As a result, we need to manually create their respective regular expressions to account for these edge cases
-        const entityRegExps = [new RegExp(`^DurableFunctionsEntity-(JavaScript|TypeScript|Python|Custom)$`, 'i'), new RegExp(`^DurableFunctionsEntityHttpStart-(JavaScript|TypeScript|Custom)$`, 'i')];
+        const entityRegExps = [new RegExp(`^DurableFunctionsEntity-(JavaScript(-4.x)?|TypeScript(-4.x)?|Python|Custom)$`, 'i'), new RegExp(`^DurableFunctionsEntityHttpStart-(JavaScript(-4.x)?|TypeScript(-4.x)?|Custom)$`, 'i')];
         return regExps.concat(entityRegExps);
     }
 }
