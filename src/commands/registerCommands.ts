@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapArgs } from '@microsoft/vscode-azext-utils';
+import { AppSettingsTreeItem, AppSettingTreeItem } from '@microsoft/vscode-azext-azureappservice';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping } from '@microsoft/vscode-azext-utils';
 import { commands } from "vscode";
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
@@ -33,7 +33,6 @@ import { connectToGitHub } from './deployments/connectToGitHub';
 import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
-import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
 import { editAppSetting } from './editAppSetting';
 import { executeFunction } from './executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
@@ -100,7 +99,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.toggleAppSettingVisibility', async (context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(context); }, 250);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
-    registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapArgs(viewDeploymentLogs));
+    //registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapArgs(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
 }
