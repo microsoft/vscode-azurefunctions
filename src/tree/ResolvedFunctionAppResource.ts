@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, AppSettingTreeItem, DeleteLastServicePlanStep, DeleteSiteStep, DeploymentsTreeItem, DeploymentTreeItem, getFile, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
+import { AppSettingsTreeItem, AppSettingTreeItem, DeleteLastServicePlanStep, DeleteSiteStep, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { runFromPackageKey } from "../constants";
@@ -292,7 +293,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const wizardContext: IDeleteSiteWizardContext = Object.assign(context, {
+        const wizardContext: any = Object.assign(context, {
             site: this.site,
             ...(await createActivityContext())
         });
