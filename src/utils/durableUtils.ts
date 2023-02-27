@@ -19,9 +19,11 @@ import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
-    export const dotnetDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    export const dotnetDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    export const dotnetDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    export const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
+    export const dotnetIsolatedDfSqlPackage: string = '';
+    export const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
+    export const dotnetIsolatedDfNetheritePackage: string = '';
+    export const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
 
@@ -111,17 +113,8 @@ export namespace durableUtils {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
-
-                    for (const packageRef of packageReferences) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        if (packageRef['$'] && packageRef['$']['Include']) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                            if (packageRef['$']['Include'] === dotnetDfBasePackage) {
-                                resolve(true);
-                                return;
-                            }
-                        }
-                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'])));
                 }
                 resolve(false);
             });
@@ -165,17 +158,17 @@ export namespace durableUtils {
         const packageNames: string[] = [];
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
-                packageNames.push(durableUtils.dotnetDfNetheritePackage);
+                packageNames.push(durableUtils.dotnetLtsDfNetheritePackage);
                 break;
             case DurableBackend.SQL:
-                packageNames.push(durableUtils.dotnetDfSqlPackage);
+                packageNames.push(durableUtils.dotnetLtsDfSqlPackage);
                 break;
             case DurableBackend.Storage:
             default:
         }
 
         // Seems that the package arrives out-dated and needs to be updated
-        packageNames.push(durableUtils.dotnetDfBasePackage);
+        packageNames.push(durableUtils.dotnetLtsDfBasePackage);
 
         const failedPackages: string[] = [];
         for (const packageName of packageNames) {
