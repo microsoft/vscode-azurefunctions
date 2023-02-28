@@ -31,26 +31,33 @@ export async function run(): Promise<void> {
         files = ['updateBackupTemplates.js'];
     } else {
         files = await globby('**/**.test.js', { cwd: __dirname })
+        const hardcodedTests = await globby('**/**.run.only.js', { cwd: __dirname });
+        if (hardcodedTests.length > 0) {
+            files = hardcodedTests;
+        }
+
+        console.log(`Running tests from ${files.length} files.`);
+
+        files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
+
+        const failures = await new Promise<number>(resolve => mocha.run(resolve));
+        if (failures > 0) {
+            throw new Error(`${failures} tests failed.`);
+        }
     }
 
-    files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
 
-    const failures = await new Promise<number>(resolve => mocha.run(resolve));
-    if (failures > 0) {
-        throw new Error(`${failures} tests failed.`);
-    }
-}
-
-function addEnvVarsToMochaOptions(options: Mocha.MochaOptions): void {
-    for (const envVar of Object.keys(process.env)) {
-        const match: RegExpMatchArray | null = envVar.match(/^mocha_(.+)/i);
-        if (match) {
-            const [, option] = match;
-            let value: string | number = process.env[envVar] || '';
-            if (typeof value === 'string' && !isNaN(parseInt(value))) {
-                value = parseInt(value);
+    function addEnvVarsToMochaOptions(options: Mocha.MochaOptions): void {
+        for (const envVar of Object.keys(process.env)) {
+            const match: RegExpMatchArray | null = envVar.match(/^mocha_(.+)/i);
+            if (match) {
+                const [, option] = match;
+                let value: string | number = process.env[envVar] || '';
+                if (typeof value === 'string' && !isNaN(parseInt(value))) {
+                    value = parseInt(value);
+                }
+                (<any>options)[option] = value;
             }
-            (<any>options)[option] = value;
         }
     }
 }
