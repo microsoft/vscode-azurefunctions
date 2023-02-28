@@ -138,19 +138,31 @@ function addSuite(tester: FunctionTesterBase): void {
             ]
         },
         {
+            functionName: 'Durable Functions activity',
+            inputs: [],
+            skip: tester.language === ProjectLanguage.Custom
+        },
+        {
+            functionName: 'Durable Functions HTTP starter',
+            inputs: [
+                getRotatingAuthLevel()
+            ],
+            skip: tester.language === ProjectLanguage.Custom
+        },
+        {
             functionName: 'Durable Functions orchestrator',
-            inputs: ['Azure Storage'],
+            inputs: [],
             skip: tester.language === ProjectLanguage.Custom
         },
         {
             functionName: 'Durable Functions entity',
-            inputs: ['Azure Storage'],
+            inputs: [],
             skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java
         },
         {
             functionName: 'Durable Functions Entity HTTP starter',
             inputs: tester.language === ProjectLanguage.JavaScript ? [] : [getRotatingAuthLevel()],
-            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java || tester.language === ProjectLanguage.Python || tester.language === ProjectLanguage.Custom
+            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java || tester.language === ProjectLanguage.Python
         },
         {
             functionName: 'IoT Hub (Event Hub)',
