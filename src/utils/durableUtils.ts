@@ -144,7 +144,7 @@ export namespace durableUtils {
                 await installNodeDependencies(context);
                 break;
             case ProjectLanguage.Python:
-                await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                await pythonUtils.addDependencyToRequirements(pythonDfPackage, context.projectPath);
                 await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
                 break;
             case ProjectLanguage.PowerShell:
@@ -196,10 +196,10 @@ export namespace durableUtils {
     async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
             const packageVersion = context.languageModel === 4 ? 'preview' : '2';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${durableUtils.nodeDfPackage}@${packageVersion}`);
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${nodeDfPackage}@${packageVersion}`);
         } catch (error) {
             const pError: IParsedError = parseError(error);
-            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.nodeDfPackage);
+            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', nodeDfPackage);
             ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
