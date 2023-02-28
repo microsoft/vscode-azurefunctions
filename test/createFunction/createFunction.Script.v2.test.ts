@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
@@ -41,6 +42,13 @@ class PythonFunctionTester extends FunctionTesterBase {
             path.join(functionName, 'function.json'),
             path.join(functionName, '__init__.py')
         ];
+    }
+
+    protected override async initializeTestFolder(testFolder: string): Promise<void> {
+        await super.initializeTestFolder(testFolder);
+        await Promise.all([
+            AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), '')
+        ]);
     }
 }
 
