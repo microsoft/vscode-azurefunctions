@@ -20,9 +20,9 @@ import { findFiles } from "./workspace";
 
 export namespace durableUtils {
     export const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
+    export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
     export const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
