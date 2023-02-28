@@ -19,13 +19,13 @@ import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
-    export const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
-    export const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
-    export const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
-    export const nodeDfPackage: string = 'durable-functions';
-    export const pythonDfPackage: string = 'azure-functions-durable';
+    const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
+    const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
+    const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
+    const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    const nodeDfPackage: string = 'durable-functions';
+    const pythonDfPackage: string = 'azure-functions-durable';
 
     export function requiresDurableStorageSetup(context: IFunctionWizardContext): boolean {
         return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
