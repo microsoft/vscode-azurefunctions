@@ -116,7 +116,6 @@ export namespace durableUtils {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'] ?? '')));
                 }
-                resolve(false);
             });
         });
     }
