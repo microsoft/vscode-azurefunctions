@@ -129,10 +129,6 @@ export abstract class FunctionTesterBase implements Disposable {
 
         inputs.unshift(funcName); // Specify the function name
 
-        if (templateName.includes('Durable') && this.language !== ProjectLanguage.PowerShell) {
-            inputs.unshift('Azure Storage');
-        }
-
         inputs.unshift(templateName); // Select the function template
 
         console.log('Testing create function with inputs', inputs.join(', '));

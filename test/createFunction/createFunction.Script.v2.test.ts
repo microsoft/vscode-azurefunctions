@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -6,13 +7,26 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, ProjectLanguage, durableUtils, funcVersionSetting, projectLanguageSetting } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
 
-class JavaScriptFunctionTester extends FunctionTesterBase {
+abstract class NodeScriptFunctionTester extends FunctionTesterBase {
+    protected override async initializeTestFolder(testFolder: string): Promise<void> {
+        await super.initializeTestFolder(testFolder);
+        const packageJsonContents = `{
+            "dependencies": {
+                "${durableUtils.nodeDfPackage}": "1.0.0"
+            }
+        }`;
+
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'package.json'), packageJsonContents);
+    }
+}
+
+export class JavaScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -23,7 +37,7 @@ class JavaScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-class TypeScriptFunctionTester extends FunctionTesterBase {
+export class TypeScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -34,7 +48,7 @@ class TypeScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-class PythonFunctionTester extends FunctionTesterBase {
+export class PythonFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Python;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -46,13 +60,16 @@ class PythonFunctionTester extends FunctionTesterBase {
 
     protected override async initializeTestFolder(testFolder: string): Promise<void> {
         await super.initializeTestFolder(testFolder);
+
+        const requirementsContents = `${durableUtils.pythonDfPackage}`;
+
         await Promise.all([
-            AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), '')
+            AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), requirementsContents)
         ]);
     }
 }
 
-class PowerShellFunctionTester extends FunctionTesterBase {
+export class PowerShellFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.PowerShell;
 
     public getExpectedPaths(functionName: string): string[] {
