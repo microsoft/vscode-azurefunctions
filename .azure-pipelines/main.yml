@@ -14,7 +14,7 @@ jobs:
   - template: compliance/compliance.yml # Only works on Windows
   - template: common/test.yml
 
-- job: Linux
+- job: Build - Linux
   pool:
     vmImage: ubuntu-latest
   steps:
@@ -22,6 +22,18 @@ jobs:
   - template: common/package.yml
   - template: common/sbom.yml # Only generate on linux
   - template: common/lint.yml
+  # - template: common/test.yml
+  variables:
+    Codeql.Enabled: $[in(variables['Build.Reason'], 'Schedule')] # Enable CodeQL only on scheduled builds because it is slow
+
+- job: Test - Linux
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - template: common/build.yml
+  # - template: common/package.yml
+  # - template: common/sbom.yml # Only generate on linux
+  # - template: common/lint.yml
   - template: common/test.yml
   variables:
     Codeql.Enabled: $[in(variables['Build.Reason'], 'Schedule')] # Enable CodeQL only on scheduled builds because it is slow
