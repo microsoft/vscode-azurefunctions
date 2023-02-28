@@ -31,7 +31,7 @@ export async function run(): Promise<void> {
         files = ['updateBackupTemplates.js'];
     } else {
         files = await globby('**/**.test.js', { cwd: __dirname })
-        const hardcodedTests = await globby('**/**.run.only.js', { cwd: __dirname });
+        const hardcodedTests = await globby('**/**.test.only.js', { cwd: __dirname });
         if (hardcodedTests.length > 0) {
             files = hardcodedTests;
         }

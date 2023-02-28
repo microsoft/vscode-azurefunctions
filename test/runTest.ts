@@ -35,7 +35,7 @@ async function main(): Promise<void> {
             ],
             extensionTestsPath: path.resolve(repoRoot, 'dist', 'test', 'index'),
             extensionTestsEnv: {
-                DEBUGTELEMETRY: 'v',
+                DEBUGTELEMETRY: 'false',
                 MOCHA_timeout: '20000'
             }
         });
