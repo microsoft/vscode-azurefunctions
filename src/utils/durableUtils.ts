@@ -20,9 +20,9 @@ import { findFiles } from "./workspace";
 
 export namespace durableUtils {
     export const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    export const dotnetIsolatedDfSqlPackage: string = '';
+    export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
     export const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    export const dotnetIsolatedDfNetheritePackage: string = '';
+    export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
@@ -114,7 +114,7 @@ export namespace durableUtils {
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                    resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'])));
+                    resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'] ?? '')));
                 }
                 resolve(false);
             });
@@ -156,19 +156,28 @@ export namespace durableUtils {
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
         const packageNames: string[] = [];
+        const isDotnetIsolated: boolean = /Isolated/i.test(context.projectTemplateKey ?? '');
+
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
-                packageNames.push(durableUtils.dotnetLtsDfNetheritePackage);
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDfNetheritePackage) :
+                    packageNames.push(dotnetLtsDfNetheritePackage);
                 break;
             case DurableBackend.SQL:
-                packageNames.push(durableUtils.dotnetLtsDfSqlPackage);
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDfSqlPackage) :
+                    packageNames.push(dotnetLtsDfSqlPackage);
                 break;
             case DurableBackend.Storage:
             default:
         }
 
-        // Seems that the package arrives out-dated and needs to be updated
-        packageNames.push(durableUtils.dotnetLtsDfBasePackage);
+        // Seems that the package arrives out-dated and needs to be updated;
+        // otherwise, error appears when running with certain storage types
+        if (!isDotnetIsolated) {
+            packageNames.push(dotnetLtsDfBasePackage);
+        }
 
         const failedPackages: string[] = [];
         for (const packageName of packageNames) {
