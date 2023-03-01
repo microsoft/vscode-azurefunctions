@@ -31,7 +31,14 @@ export async function run(): Promise<void> {
         files = ['updateBackupTemplates.js'];
     } else {
         files = await globby('**/**.test.js', { cwd: __dirname })
+        const onlyFiles = await globby('**/**.only.test.js', { cwd: __dirname });
+        if (onlyFiles.length) {
+            files = onlyFiles;
+            console.log('Found test files marked with ".only". Only running tests from those files.');
+        }
     }
+    console.log(`Running tests from ${files.length} file(s).`);
+    console.log(`Test files: \n\t${files.join('\n\t')}`);
 
     files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
 

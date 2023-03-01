@@ -35,7 +35,7 @@ class CSharpFunctionTester extends FunctionTesterBase {
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="${this._isIsolated ? 'Microsoft.Azure.Functions.Worker.Sdk' : 'Microsoft.NET.Sdk.Functions'}" Version="1.0.0" />
-        <PackageReference Include="${durableUtils.dotnetDfBasePackage}" Version="2.9.2" />
+        <PackageReference Include="${durableUtils.dotnetInProcDfBasePackage}" Version="2.9.2" />
     </ItemGroup>
 </Project>`);
     }
@@ -75,7 +75,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             inputs: [
                 'TestCompany.TestFunction'
             ],
-            skip: isIsolated
+            // skip: isIsolated
         },
         {
             functionName: 'Azure Event Grid trigger',
