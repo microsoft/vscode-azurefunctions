@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -26,7 +25,7 @@ abstract class NodeScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-export class JavaScriptFunctionTester extends NodeScriptFunctionTester {
+class JavaScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -37,7 +36,7 @@ export class JavaScriptFunctionTester extends NodeScriptFunctionTester {
     }
 }
 
-export class TypeScriptFunctionTester extends NodeScriptFunctionTester {
+class TypeScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -48,7 +47,7 @@ export class TypeScriptFunctionTester extends NodeScriptFunctionTester {
     }
 }
 
-export class PythonFunctionTester extends FunctionTesterBase {
+class PythonFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Python;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -69,7 +68,7 @@ export class PythonFunctionTester extends FunctionTesterBase {
     }
 }
 
-export class PowerShellFunctionTester extends FunctionTesterBase {
+class PowerShellFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.PowerShell;
 
     public getExpectedPaths(functionName: string): string[] {
