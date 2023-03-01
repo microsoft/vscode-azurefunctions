@@ -19,11 +19,13 @@ import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
-    export const dotnetDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    export const dotnetDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    export const dotnetDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
-    export const nodeDfPackage: string = 'durable-functions';
-    export const pythonDfPackage: string = 'azure-functions-durable';
+    const dotnetInProcDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
+    const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
+    const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
+    const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    const nodeDfPackage: string = 'durable-functions';
+    const pythonDfPackage: string = 'azure-functions-durable';
 
     export function requiresDurableStorageSetup(context: IFunctionWizardContext): boolean {
         return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
@@ -111,19 +113,9 @@ export namespace durableUtils {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
-
-                    for (const packageRef of packageReferences) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        if (packageRef['$'] && packageRef['$']['Include']) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                            if (packageRef['$']['Include'] === dotnetDfBasePackage) {
-                                resolve(true);
-                                return;
-                            }
-                        }
-                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'] ?? '')));
                 }
-                resolve(false);
             });
         });
     }
@@ -151,7 +143,7 @@ export namespace durableUtils {
                 await installNodeDependencies(context);
                 break;
             case ProjectLanguage.Python:
-                await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                await pythonUtils.addDependencyToRequirements(pythonDfPackage, context.projectPath);
                 await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
                 break;
             case ProjectLanguage.PowerShell:
@@ -163,19 +155,31 @@ export namespace durableUtils {
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
         const packageNames: string[] = [];
+        const isDotnetIsolated: boolean = /Isolated/i.test(context.projectTemplateKey ?? '');
+
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
-                packageNames.push(durableUtils.dotnetDfNetheritePackage);
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDfNetheritePackage) :
+                    packageNames.push(dotnetInProcDfNetheritePackage);
                 break;
             case DurableBackend.SQL:
-                packageNames.push(durableUtils.dotnetDfSqlPackage);
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDfSqlPackage) :
+                    packageNames.push(dotnetInProcDfSqlPackage);
                 break;
             case DurableBackend.Storage:
             default:
         }
 
-        // Seems that the package arrives out-dated and needs to be updated
-        packageNames.push(durableUtils.dotnetDfBasePackage);
+        /*
+         * https://github.com/microsoft/vscode-azurefunctions/issues/3599
+         * Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
+         * otherwise, error appears when running with sql backend
+         */
+        if (!isDotnetIsolated) {
+            packageNames.push(dotnetInProcDfBasePackage);
+        }
 
         const failedPackages: string[] = [];
         for (const packageName of packageNames) {
@@ -194,10 +198,10 @@ export namespace durableUtils {
     async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
             const packageVersion = context.languageModel === 4 ? 'preview' : '2';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${durableUtils.nodeDfPackage}@${packageVersion}`);
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${nodeDfPackage}@${packageVersion}`);
         } catch (error) {
             const pError: IParsedError = parseError(error);
-            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.nodeDfPackage);
+            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', nodeDfPackage);
             ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
