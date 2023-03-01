@@ -145,6 +145,7 @@ export namespace dotnetUtils {
 
     export function getPackageReferences(xml: CSProjXml): CSProjPackageReference[] {
         const packageReferences: CSProjPackageReference[] = [];
+        // package references can be split across multiple item groups
         xml.Project?.ItemGroup?.forEach((itemGroup) => {
             const references = itemGroup.PackageReference;
             if (references) {
