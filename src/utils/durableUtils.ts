@@ -19,11 +19,11 @@ import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
-    const dotnetLtsDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
+    const dotnetInProcDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
     const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
-    const dotnetLtsDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
+    const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
     const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
-    const dotnetLtsDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     const nodeDfPackage: string = 'durable-functions';
     const pythonDfPackage: string = 'azure-functions-durable';
 
@@ -161,12 +161,12 @@ export namespace durableUtils {
             case DurableBackend.Netherite:
                 isDotnetIsolated ?
                     packageNames.push(dotnetIsolatedDfNetheritePackage) :
-                    packageNames.push(dotnetLtsDfNetheritePackage);
+                    packageNames.push(dotnetInProcDfNetheritePackage);
                 break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?
                     packageNames.push(dotnetIsolatedDfSqlPackage) :
-                    packageNames.push(dotnetLtsDfSqlPackage);
+                    packageNames.push(dotnetInProcDfSqlPackage);
                 break;
             case DurableBackend.Storage:
             default:
@@ -175,7 +175,7 @@ export namespace durableUtils {
         // Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
         // otherwise, error appears when running with sql backend
         if (!isDotnetIsolated) {
-            packageNames.push(dotnetLtsDfBasePackage);
+            packageNames.push(dotnetInProcDfBasePackage);
         }
 
         const failedPackages: string[] = [];
