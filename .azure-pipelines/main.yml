@@ -17,7 +17,7 @@ jobs:
     variables:
       Codeql.Enabled: $[in(variables['Build.Reason'], 'Schedule')] # Enable CodeQL only on scheduled builds because it is slow
 
-  - job: Windows
+  - job: complianceWindows
     displayName: Compliance - Windows
     pool:
       vmImage: windows-latest
@@ -26,7 +26,7 @@ jobs:
       - template: common/build.yml
       - template: compliance/compliance.yml # Only works on Windows
 
-  - job: Windows
+  - job: testWindows
     displayName: Test - Windows
     pool:
       vmImage: windows-latest
@@ -49,7 +49,7 @@ jobs:
     variables:
       Codeql.Enabled: $[in(variables['Build.Reason'], 'Schedule')] # Enable CodeQL only on scheduled builds because it is slow
 
-  - job: macOS
+  - job: testMacOS
     displayName: Test - macOS
     pool:
       vmImage: macOS-latest
