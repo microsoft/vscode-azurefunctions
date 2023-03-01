@@ -5,8 +5,8 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
-import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
+import { ProjectLanguage, buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { ILocalSettingsJson, getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { hasNodeJsDependency, tryGetPackageJson } from '../../utils/nodeJsUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
@@ -19,12 +19,13 @@ import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/Scr
 export async function detectProjectLanguage(context: IActionContext, projectPath: string): Promise<ProjectLanguage | undefined> {
     try {
         let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(context, projectPath);
-
         if (await isNodeJsProject(projectPath)) {
             if (await isTypeScriptProject(projectPath)) {
                 detectedLangs.push(ProjectLanguage.TypeScript);
             } else {
-                detectedLangs.push(ProjectLanguage.JavaScript);
+                if (!detectedLangs.includes(ProjectLanguage.TypeScript)) {
+                    detectedLangs.push(ProjectLanguage.JavaScript);
+                }
             }
         }
 
@@ -44,6 +45,7 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
 
         // de-dupe
         detectedLangs = detectedLangs.filter((pl, index) => detectedLangs.indexOf(pl) === index);
+        console.log('detected langs end', detectedLangs);
         return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
     } catch {
         return undefined;
