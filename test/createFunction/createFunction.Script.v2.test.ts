@@ -59,12 +59,8 @@ class PythonFunctionTester extends FunctionTesterBase {
 
     protected override async initializeTestFolder(testFolder: string): Promise<void> {
         await super.initializeTestFolder(testFolder);
-
         const requirementsContents = `${durableUtils.pythonDfPackage}`;
-
-        await Promise.all([
-            AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), requirementsContents)
-        ]);
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), requirementsContents)
     }
 }
 
