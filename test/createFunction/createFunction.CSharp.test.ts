@@ -74,8 +74,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             functionName: 'Durable Functions Orchestration',
             inputs: [
                 'TestCompany.TestFunction'
-            ],
-            // skip: isIsolated
+            ]
         },
         {
             functionName: 'Azure Event Grid trigger',
