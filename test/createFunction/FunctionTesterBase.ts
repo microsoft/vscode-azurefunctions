@@ -120,18 +120,13 @@ export abstract class FunctionTesterBase implements Disposable {
     }
 
     private async testCreateFunctionInternal(context: TestActionContext, testFolder: string, templateName: string, inputs: string[]): Promise<void> {
-
         // clone inputs array
         const expectedContents: string[] = inputs.slice(0);
 
         // Setup common inputs
         const funcName: string = templateName.replace(/[^a-z0-9]/ig, '') + getRandomHexString();
-
         inputs.unshift(funcName); // Specify the function name
-
         inputs.unshift(templateName); // Select the function template
-
-        console.log('Testing create function with inputs', inputs.join(', '));
 
         await context.ui.runWithInputs(inputs, async () => {
             await createFunctionInternal(context, {
