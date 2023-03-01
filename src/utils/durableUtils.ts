@@ -98,7 +98,6 @@ export namespace durableUtils {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
                 const result = await dotnetProjectHasDurableDependency(projectPath);
-                console.log(`C# project has durable dependency: ${result}`);
                 return result;
             case ProjectLanguage.PowerShell:
                 // ???
