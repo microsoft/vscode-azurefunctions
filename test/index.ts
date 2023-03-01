@@ -30,11 +30,16 @@ export async function run(): Promise<void> {
     if (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES)) {
         files = ['updateBackupTemplates.js'];
     } else {
-        files = await globby('**/**.test.js', { cwd: __dirname })
-        const onlyFiles = await globby('**/**.only.test.js', { cwd: __dirname });
+        files = await globby('**/**.test.js', { cwd: __dirname });
+
+        // use this to run tests from specific test files
+        const onlyRunTheseTests = [
+            // ex: 'templateCount.test.js' or 'createFunction/createFunction.Script.V2.test.js'
+        ]
+
+        const onlyFiles = await globby(onlyRunTheseTests, { cwd: __dirname });
         if (onlyFiles.length) {
             files = onlyFiles;
-            console.log('Found test files marked with ".only". Only running tests from those files.');
         }
     }
     console.log(`Running tests from ${files.length} file(s).`);
