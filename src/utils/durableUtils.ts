@@ -172,8 +172,11 @@ export namespace durableUtils {
             default:
         }
 
-        // Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
-        // otherwise, error appears when running with sql backend
+        /*
+         * https://github.com/microsoft/vscode-azurefunctions/issues/3599
+         * Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
+         * otherwise, error appears when running with sql backend
+         */
         if (!isDotnetIsolated) {
             packageNames.push(dotnetInProcDfBasePackage);
         }
