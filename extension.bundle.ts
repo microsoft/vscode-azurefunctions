@@ -27,6 +27,7 @@ export * from './src/commands/deleteFunctionApp';
 export * from './src/commands/deploy/deploy';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
+export * from './src/utils/durableUtils';
 export * from './src/constants';
 // Export activate/deactivate for main.js
 export { activateInternal, deactivateInternal } from './src/extension';
