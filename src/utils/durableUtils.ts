@@ -13,6 +13,7 @@ import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
+import { dotnetUtils } from "./dotnetUtils";
 import { hasNodeJsDependency } from "./nodeJsUtils";
 import { pythonUtils } from "./pythonUtils";
 import { venvUtils } from "./venvUtils";
@@ -107,14 +108,9 @@ export namespace durableUtils {
         const csProjContents: string = await AzExtFsExtra.readFile(csProjPaths[0].path);
 
         return new Promise((resolve) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            xml2js.parseString(csProjContents, { explicitArray: false }, (err: any, result: any): void => {
+            xml2js.parseString(csProjContents, (err: Error, result: unknown): void => {
                 if (result && !err) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-                    let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
-                    packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                    resolve(packageReferences.some(p => /Durable/i.test(p?.['$']?.['Include'] ?? '')));
+                    resolve(dotnetUtils.getPackageReferences(result).some(p => /Durable/i.test(p.Include)));
                 }
             });
         });
