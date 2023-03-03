@@ -23,7 +23,7 @@ export async function promptForResource<T extends IBaseResourceWithName>(context
             .map((r: T) => r.name ? { data: r, label: r.name, description: r._description } : undefined)
             .filter((p: IAzureQuickPickItem<T> | undefined) => p));
         picks.push({
-            label: localize('skipForNow', '$(clock) Skip for now'),
+            label: picks.length ? localize('skipForNow', '$(clock) Skip for now') : localize('skippedNoResources', '$(warning) Skipped because no matching resource was found'),
             data: undefined,
             suppressPersistence: true
         });
