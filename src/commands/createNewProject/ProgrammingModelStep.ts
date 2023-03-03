@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
-import { learnMoreQp, nodeProgrammingModelSetting } from '../../constants';
+import { learnMoreQp } from '../../constants';
 import { localize } from '../../localize';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 type ProgrammingModel = { modelVersion: number | undefined, label: string };
@@ -59,7 +58,6 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
 
         // this only impacts node for now so only check the feature flag for node
         return context.languageModel === undefined &&
-            (!!getWorkspaceSetting(nodeProgrammingModelSetting) &&
-                (context.language === 'JavaScript' || context.language === 'TypeScript'));
+            (context.language === 'JavaScript' || context.language === 'TypeScript');
     }
 }

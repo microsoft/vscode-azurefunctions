@@ -1079,11 +1079,6 @@
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
-                    },
-                    "azureFunctions.showNodeProgrammingModel": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.showNodeProgrammingModel%",
-                        "default": false
                     }
                 }
             }
