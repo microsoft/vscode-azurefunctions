@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions } from '@microsoft/vscode-azext-utils';
-import { learnMoreQp } from './constants';
 import { localize } from './localize';
 import { openUrl } from './utils/openUrl';
 
@@ -29,6 +28,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
 
     picks = picks.filter(p => osSupportsVersion(p.data));
 
+    const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };
     picks.push(learnMoreQp);
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };
