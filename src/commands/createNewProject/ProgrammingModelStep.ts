@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
-import { learnMoreQp } from '../../constants';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
@@ -28,6 +27,7 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
             }
         });
 
+        const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more about Model V4...'), description: '', data: undefined };
         if (this._learnMoreLink) {
             modelsPick.push(learnMoreQp);
         }
