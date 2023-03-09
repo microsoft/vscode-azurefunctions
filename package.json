@@ -621,22 +621,22 @@
                 },
                 {
                     "command": "azureFunctions.viewDeploymentLogs",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment\\//",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.redeploy",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment\\//",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment\\//",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.viewCommitInGitHub",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment/github/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*deployment\\/github/",
                     "group": "1@4"
                 },
                 {
