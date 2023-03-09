@@ -12,7 +12,7 @@
 - Remove remote connection overwrite prompting by @MicroFish91 in [#3593](https://github.com/microsoft/vscode-azurefunctions/pull/3593)
 - Add Dotnet Isolated runtime specific dependencies for Durable by @MicroFish91 in [#3597](https://github.com/microsoft/vscode-azurefunctions/pull/3597)
 - Fix getting package references from csproj from multiple item groups by @alexweininger in [#3603](https://github.com/microsoft/vscode-azurefunctions/pull/3603)
-- Fix when clause contexts for upcoming VS Code release by @MicroFish91 in [#3621](https://github.com/microsoft/vscode-azurefunctions/pull/3621)
+- Fix when clause contexts for upcoming VS Code release (v1.77) by @MicroFish91 in [#3621](https://github.com/microsoft/vscode-azurefunctions/pull/3621)
 
 ## 1.10.3 - 2023-02-23
 
