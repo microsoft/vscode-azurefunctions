@@ -37,7 +37,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
                 <RootNamespace>func_t</RootNamespace>
             </PropertyGroup>
             <ItemGroup>
-                <PackageReference Include="${durableUtils.dotnetDfBasePackage}" Version="2.9.2" />
+                <PackageReference Include="${durableUtils.dotnetInProcDfBasePackage}" Version="2.9.2" />
                 <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
             </ItemGroup>
             <ItemGroup>
