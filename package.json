@@ -1178,7 +1178,7 @@
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^2.11.0",
         "vscode-azurekudu": "^0.2.0",
-        "webpack": "^5.28.0",
+        "webpack": "^5.76.0",
         "webpack-cli": "^4.6.0"
     },
     "dependencies": {
