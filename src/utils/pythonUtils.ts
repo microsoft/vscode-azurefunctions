@@ -38,7 +38,7 @@ export namespace pythonUtils {
 
     export async function hasDependencyInRequirements(dependency: string, filePath: string): Promise<boolean> {
         if (!await AzExtFsExtra.pathExists(filePath)) {
-            throw new Error(localize('requirementsTextNotFound', `The "${requirementsFileName}" file could not be found.`));
+            return false;
         }
 
         const contents: string = await AzExtFsExtra.readFile(filePath);

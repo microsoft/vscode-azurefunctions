@@ -21,7 +21,6 @@ export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
-export const nodeProgrammingModelSetting: string = 'showNodeProgrammingModel';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -172,4 +171,3 @@ export const functionFilter = {
 };
 
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
-export const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };

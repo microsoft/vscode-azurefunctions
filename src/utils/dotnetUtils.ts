@@ -128,4 +128,32 @@ export namespace dotnetUtils {
         }
         return result;
     }
+
+    interface CSProjXml {
+        Project?: {
+            ItemGroup?: {
+                PackageReference?: {
+                    '$': CSProjPackageReference;
+                }[];
+            }[];
+        }
+    }
+
+    type CSProjPackageReference = {
+        Include: string;
+    }
+
+    export function getPackageReferences(xml: CSProjXml): CSProjPackageReference[] {
+        const packageReferences: CSProjPackageReference[] = [];
+        // package references can be split across multiple item groups
+        xml.Project?.ItemGroup?.forEach((itemGroup) => {
+            const references = itemGroup.PackageReference;
+            if (references) {
+                references.forEach((reference) => {
+                    packageReferences.push(reference.$);
+                });
+            }
+        });
+        return packageReferences;
+    }
 }

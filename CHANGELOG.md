@@ -1,6 +1,20 @@
 # Change Log
 
-## 1.10.2 - 2023-02-23
+## 1.10.4 - 2023-03-09
+
+### Changed
+
+- Make skip for now message more clear when there are no resources available by @nturinski in [#3611](https://github.com/microsoft/vscode-azurefunctions/pull/3611)
+- Change learn more label for programming model step by @nturinski in [#3609](https://github.com/microsoft/vscode-azurefunctions/pull/3609)
+- Remove node.js programming model experimental flag by @nturinski in [#3612](https://github.com/microsoft/vscode-azurefunctions/pull/3612)
+
+### Fixed
+- Remove remote connection overwrite prompting by @MicroFish91 in [#3593](https://github.com/microsoft/vscode-azurefunctions/pull/3593)
+- Add Dotnet Isolated runtime specific dependencies for Durable by @MicroFish91 in [#3597](https://github.com/microsoft/vscode-azurefunctions/pull/3597)
+- Fix getting package references from csproj from multiple item groups by @alexweininger in [#3603](https://github.com/microsoft/vscode-azurefunctions/pull/3603)
+- Fix when clause contexts for upcoming VS Code release (v1.77) by @MicroFish91 in [#3621](https://github.com/microsoft/vscode-azurefunctions/pull/3621)
+
+## 1.10.3 - 2023-02-23
 
 ### Added
 - Azure Functions walkthrough by @esweet431 in [#3573](https://github.com/microsoft/vscode-azurefunctions/pull/3573)
