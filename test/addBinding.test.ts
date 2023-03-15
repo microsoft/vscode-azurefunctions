@@ -8,7 +8,7 @@ import { AzExtFsExtra, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { Uri } from 'vscode';
-import { addBinding, createNewProjectInternal, ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
+import { IFunctionBinding, IFunctionJson, ProjectLanguage, addBinding, createNewProjectInternal, ext, getRandomHexString } from '../extension.bundle';
 import { cleanTestWorkspace, getTestWorkspaceFolder } from './global.test';
 
 suite('Add Binding', () => {
@@ -20,7 +20,7 @@ suite('Add Binding', () => {
         await cleanTestWorkspace();
         const testWorkspacePath = getTestWorkspaceFolder();
         await runWithTestActionContext('createNewProject', async (context) => {
-            await context.ui.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, /http\s*trigger/i, functionName, 'Anonymous'], async () => {
+            await context.ui.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, 'Model V3', /http\s*trigger/i, functionName, 'Anonymous'], async () => {
                 await createNewProjectInternal(context, {});
             });
         })
