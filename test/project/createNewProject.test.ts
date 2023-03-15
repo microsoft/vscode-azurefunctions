@@ -30,8 +30,8 @@ const testCases: CreateProjectTestCase[] = [
 // Test cases that are the same for both v2 and v3
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     testCases.push(
-        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version) },
-        { ...getTypeScriptValidateOptions(version) },
+        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: ['Model V3'] },
+        { ...getTypeScriptValidateOptions(version), inputs: ['Model V3'] },
         { ...getPowerShellValidateOptions(version) },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
