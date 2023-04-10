@@ -1205,7 +1205,7 @@
         "semver": "^5.7.1",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
-        "xml2js": "^0.4.19",
+        "xml2js": "^0.5.0",
         "xregexp": "4.3.0"
     },
     "extensionDependencies": [
