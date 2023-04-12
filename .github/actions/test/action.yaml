@@ -1,0 +1,28 @@
+name: 'Test'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup
+      uses: ./.github/actions/setup
+
+    - run: npm run build
+      shell: bash
+
+    - run: npm run webpack-prod
+      shell: bash
+
+    - name: Run headless test
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: npm test
+      env:
+        DISPLAY: :10 # Only necessary for linux tests
+
+    # - name: Test Report
+    #   uses: dorny/test-reporter@v1
+    #   if: success() || failure()    # run this step even if previous step failed
+    #   with:
+    #     name: Mocha Tests            # Name of the check run which will be created
+    #     path: '*-results.json'    # Path to test results
+    #     reporter: mocha-json        # Format of test results

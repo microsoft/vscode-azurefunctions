@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, WorkspaceFolder } from 'vscode';
+import { CancellationToken, debug, DebugConfiguration, DebugConfigurationProvider, tasks, WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskNameRegExp } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
@@ -13,6 +13,8 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     public abstract workerArgKey: string;
     protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
+
+    private readonly _resolvedConfigurations = new Map<string, DebugConfiguration>();
 
     private readonly _debugPorts = new Map<WorkspaceFolder | undefined, number | undefined>();
 
@@ -57,6 +59,12 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
                 }
             }
         });
+
+        const activeDebugSession = debug.activeDebugSession;
+        console.log(activeDebugSession);
+
+        const task = tasks.taskExecutions;
+        console.log(task);
 
         // Always return the debugConfiguration passed in. If we return undefined we would block debugging and we don't want that.
         return result;
