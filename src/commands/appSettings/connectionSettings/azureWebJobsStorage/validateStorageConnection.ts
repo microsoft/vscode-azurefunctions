@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard } from "@microsoft/vscode-azext-utils";
-import { CodeAction, ConnectionKey, localStorageEmulatorConnectionString } from "../../../../constants";
+import { CodeAction, ConnectionKey } from "../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { IConnectionPromptOptions } from "../IConnectionPromptOptions";
 import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
@@ -12,21 +12,16 @@ import { AzureWebJobsStorageExecuteStep } from "./AzureWebJobsStorageExecuteStep
 import { AzureWebJobsStoragePromptStep } from "./AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardContext";
 
-// Supports validation on both 'debug' and 'deploy'
 export async function validateStorageConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
+    if (context.action === CodeAction.Deploy) {
+        // Skip validation on deploy - we already connect the storage account for the user when the Function App is initially created
+        return;
+    }
+
     const currentStorageConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
     if (currentStorageConnection) {
-        if (context.action === CodeAction.Deploy) {
-            if (currentStorageConnection !== localStorageEmulatorConnectionString) {
-                // Found a valid connection in deploy mode. Set it and skip the wizard.
-                context[ConnectionKey.Storage] = currentStorageConnection;
-                return;
-            }
-            // Found an invalid connection for deploy mode, we need to proceed with acquiring a connection through the wizard...
-        } else {
-            // Found a valid connection in debug mode.  Skip the wizard.
-            return;
-        }
+        // Found a valid connection in debug mode.  Skip the wizard.
+        return;
     }
 
     const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
