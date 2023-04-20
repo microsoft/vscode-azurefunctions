@@ -1,5 +1,19 @@
 # Change Log
 
+## 1.10.5 - 2023-04-21
+
+### Changed
+
+- Update backup templates by @alexweininger in [#3602](https://github.com/microsoft/vscode-azurefunctions/pull/3602)
+
+### Fixed
+
+- Remove azureWebJobsStorage validation on deploy by @MicroFish91 in [#3647](https://github.com/microsoft/vscode-azurefunctions/pull/3647)
+- Update .NET Isolated detection to check against the template ID by @MicroFish91 in [#3644](https://github.com/microsoft/vscode-azurefunctions/pull/3644)
+- Fix parsing binding setting with missing help resource by @alexweininger in [#3601](https://github.com/microsoft/vscode-azurefunctions/pull/3601)
+- Fix TypeScript project language detection by @alexweininger in [#3604](https://github.com/microsoft/vscode-azurefunctions/pull/3604)
+- Don't throw error when missing 'requirements.txt' by @MicroFish91 in [#3627](https://github.com/microsoft/vscode-azurefunctions/pull/3627)
+
 ## 1.10.4 - 2023-03-09
 
 ### Changed
