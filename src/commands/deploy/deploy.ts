@@ -60,7 +60,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         expectedChildContextValue: expectedContextValue
     }));
 
-    const { language, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
+    const { language, languageModel, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
 
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
@@ -121,7 +121,16 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (isZipDeploy) {
-        await verifyAppSettings(context, node, context.projectPath, version, language, { doRemoteBuild, isConsumption }, durableStorageType);
+        await verifyAppSettings({
+            context,
+            node,
+            projectPath: context.projectPath,
+            version,
+            language,
+            languageModel,
+            bools: { doRemoteBuild, isConsumption },
+            durableStorageType
+        });
     }
 
     await node.runWithTemporaryDescription(

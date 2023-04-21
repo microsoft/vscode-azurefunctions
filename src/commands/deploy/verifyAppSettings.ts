@@ -7,11 +7,12 @@ import type { StringDictionary } from '@azure/arm-appservice';
 import type { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { azureWebJobsFeatureFlags, ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { isNodeV4Plus } from '../../utils/programmingModelUtils';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
@@ -20,7 +21,18 @@ import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+export async function verifyAppSettings(options: {
+    context: IActionContext,
+    node: SlotTreeItem,
+    projectPath: string | undefined,
+    version: FuncVersion,
+    language: ProjectLanguage,
+    languageModel: number | undefined,
+    bools: VerifyAppSettingBooleans,
+    durableStorageType: DurableBackendValues | undefined
+}): Promise<void> {
+
+    const { context, node, projectPath, version, language, bools, durableStorageType } = options;
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
@@ -32,6 +44,8 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
         if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings ||= remoteBuildSettingsChanged;
+        } else if (isNodeV4Plus(options)) {
+            updateAppSettings ||= verifyFeatureFlags(context, node.site, appSettings.properties);
         } else {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
@@ -168,3 +182,21 @@ function verifyLinuxRemoteBuildSettings(context: IActionContext, remotePropertie
     return hasChanged;
 }
 
+function verifyFeatureFlags(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
+    const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+
+    // Feature flags are comma-delimited lists of beta features
+    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
+    const featureFlagArray = !featureFlagString ? [] : featureFlagString.split(',');
+    const enableWorkerIndexingValue = 'EnableWorkerIndexing';
+    const shouldAddSetting: boolean = !featureFlagArray.includes(enableWorkerIndexingValue);
+
+    if (shouldAddSetting) {
+        featureFlagArray.push(enableWorkerIndexingValue);
+        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the Node v4 programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
+        remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
+    }
+
+    context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
+    return shouldAddSetting;
+}
