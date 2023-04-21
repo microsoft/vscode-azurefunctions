@@ -12,7 +12,7 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
-import { isNodeV4Plus } from '../../utils/programmingModelUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
@@ -44,10 +44,12 @@ export async function verifyAppSettings(options: {
         if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings ||= remoteBuildSettingsChanged;
-        } else if (isNodeV4Plus(options)) {
-            updateAppSettings ||= verifyFeatureFlags(context, node.site, appSettings.properties);
         } else {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+        }
+
+        if (isNodeV4Plus(options) || isPythonV2Plus(options.language, options.languageModel)) {
+            updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
@@ -182,7 +184,7 @@ function verifyLinuxRemoteBuildSettings(context: IActionContext, remotePropertie
     return hasChanged;
 }
 
-function verifyFeatureFlags(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
+function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
     const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
 
     // Feature flags are comma-delimited lists of beta features
@@ -193,10 +195,10 @@ function verifyFeatureFlags(context: IActionContext, site: ParsedSite, remotePro
 
     if (shouldAddSetting) {
         featureFlagArray.push(enableWorkerIndexingValue);
-        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the Node v4 programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
+        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the new programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
         remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
     }
 
-    context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
+    context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
     return shouldAddSetting;
 }
