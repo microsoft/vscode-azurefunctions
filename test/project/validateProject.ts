@@ -45,8 +45,9 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     };
 }
 
-export function getTypeScriptValidateOptions(version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
-    return {
+export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, missingCleanScript?: boolean }): IValidateProjectOptions {
+    const version = options?.version || defaultTestFuncVersion;
+    const result = {
         language: ProjectLanguage.TypeScript,
         version,
         expectedSettings: {
@@ -73,6 +74,10 @@ export function getTypeScriptValidateOptions(version: FuncVersion = defaultTestF
             'host start'
         ]
     };
+    if (!options?.missingCleanScript) {
+        result.expectedTasks.push('npm clean (functions)');
+    }
+    return result;
 }
 
 export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultTestFuncVersion, numCsproj: number = 1): IValidateProjectOptions {
