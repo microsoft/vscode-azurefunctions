@@ -59,7 +59,7 @@ export async function verifyAppSettings(options: {
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             try {
-                await verifyAppSettingsPropogated(context, client, appSettings);
+                await verifyAppSettingsPropagated(context, client, appSettings);
             } catch (e) {
                 // don't throw if we can't verify the settings were updated
             }
@@ -211,14 +211,14 @@ function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, rem
 }
 
 // App settings are not always propagated before the deployment leading to an inconsistent behavior so verify that
-async function verifyAppSettingsPropogated(context: IActionContext, client: SiteClient, expectedAppSettings: StringDictionary): Promise<void> {
+async function verifyAppSettingsPropagated(context: IActionContext, client: SiteClient, expectedAppSettings: StringDictionary): Promise<void> {
     const expectedProperties = expectedAppSettings.properties || {};
     // Retry up to 2 minutes
     const retries = 12;
 
     return await retry(
         async (attempt: number) => {
-            context.telemetry.measurements.verifyAppSettingsPropogatedAttempt = attempt;
+            context.telemetry.measurements.verifyAppSettingsPropagatedAttempt = attempt;
             ext.outputChannel.appendLog(localize('verifyAppSettings', `Verifying that app settings have propogated... (Attempt ${attempt}/${retries})`), { resourceName: client.fullName });
 
             const currentAppSettings = await client.listApplicationSettings();
@@ -228,6 +228,7 @@ async function verifyAppSettingsPropogated(context: IActionContext, client: Site
 
             for (const key of keysUnion) {
                 if (currentProperties[key] !== expectedProperties[key]) {
+                    // error gets swallowed by the end so no need for an error message
                     throw new Error();
                 }
             }
