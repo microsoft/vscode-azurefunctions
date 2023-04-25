@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TaskDefinition } from 'vscode';
-import { func, hostStartCommand, hostStartTaskName, ProjectLanguage, projectSubpathSetting } from '../../../constants';
+import { func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -25,10 +25,6 @@ export class BallerinaInitVSCodeStep extends InitVSCodeStepBase {
         }
 
         this.setDeploySubpath(context, this._debugSubpath);
-        this.settings.push({
-            key: projectSubpathSetting,
-            value: this._debugSubpath
-        });
     }
 
     protected getTasks(language: ProjectLanguage): TaskDefinition[] {

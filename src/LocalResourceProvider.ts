@@ -93,7 +93,7 @@ async function getCompiledProjectInfo(context: IActionContext, projectPath: stri
             return { compiledProjectPath: path.join(projectPath, getJavaDebugSubpath(functionAppName, buildTool)), isIsolated: false };
         }
     } else if (projectLanguage === ProjectLanguage.Ballerina) {
-        return { compiledProjectPath: projectPath, isIsolated: false };
+        return { compiledProjectPath: path.join(projectPath, "target", "azure_functions"), isIsolated: false };
     } else {
         return undefined;
     }
