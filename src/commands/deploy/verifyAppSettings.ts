@@ -219,7 +219,7 @@ async function verifyAppSettingsPropagated(context: IActionContext, client: Site
     return await retry(
         async (attempt: number) => {
             context.telemetry.measurements.verifyAppSettingsPropagatedAttempt = attempt;
-            ext.outputChannel.appendLog(localize('verifyAppSettings', `Verifying that app settings have propogated... (Attempt ${attempt}/${retries})`), { resourceName: client.fullName });
+            ext.outputChannel.appendLog(localize('verifyAppSettings', `Verifying that app settings have propagated... (Attempt ${attempt}/${retries})`), { resourceName: client.fullName });
 
             const currentAppSettings = await client.listApplicationSettings();
             const currentProperties = currentAppSettings.properties || {};
