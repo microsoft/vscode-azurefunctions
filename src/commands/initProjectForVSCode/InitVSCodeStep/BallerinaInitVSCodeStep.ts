@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TaskDefinition } from 'vscode';
-import { func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
+import { DebugConfiguration, TaskDefinition } from 'vscode';
+import { ProjectLanguage, func, hostStartCommand, hostStartTaskName } from '../../../constants';
+import { ballerinaDebugConfig } from '../../../debug/BallerinaDebugProvider';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -50,6 +51,14 @@ export class BallerinaInitVSCodeStep extends InitVSCodeStepBase {
                 }
             }
         ];
+    }
+
+    protected getDebugConfiguration(): DebugConfiguration {
+        return ballerinaDebugConfig;
+    }
+
+    protected getRecommendedExtensions(): string[] {
+        return ['WSO2.ballerina'];
     }
 }
 

@@ -11,9 +11,6 @@ import { IBallerinaProjectWizardContext } from "./IBallerinaProjectWizardContext
 
 
 export class BallerinaBackendStep extends AzureWizardPromptStep<IBallerinaProjectWizardContext> {
-    public static async setDefaultBuildTool(context: IBallerinaProjectWizardContext): Promise<void> {
-        context.balBackend = BallerinaBackend.jvm;
-    }
 
     public async prompt(context: IBallerinaProjectWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<BallerinaBackend>[] = [

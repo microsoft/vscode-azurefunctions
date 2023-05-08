@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { nodeLearnMoreLink, nodeModels, previewPythonModel, ProjectLanguage } from '../../constants';
+import { ProjectLanguage, nodeLearnMoreLink, nodeModels, previewPythonModel } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
@@ -13,10 +13,7 @@ import { openUrl } from '../../utils/openUrl';
 import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
-import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
-import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
-import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
@@ -26,6 +23,9 @@ import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCrea
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
+import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
+import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
+import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -114,7 +114,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 await addJavaCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Ballerina:
-                await addBallerinaCreateProjectSteps(promptSteps, executeSteps);
+                await addBallerinaCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Custom:
                 executeSteps.push(new CustomProjectCreateStep());

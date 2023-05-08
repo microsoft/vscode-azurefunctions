@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { ballerinaUtils } from "../../../utils/ballerinaUtils";
 import { IProjectWizardContext } from "../IProjectWizardContext";
 import { BallerinaProjectCreateStep } from "../ProjectCreateStep/BallerinaProjectCreateSteps";
 import { BallerinaBackendStep } from "./BallerinaBackendStep";
-import { BalPackageNameStep } from "./BallerinaPackageNameStep";
-import { BalPackageOrgStep } from "./BallerinaPackageOrgStep";
-import { BalPackageVersionStep } from "./BallerinaPackageVersionStep";
+import { IBallerinaProjectWizardContext } from "./IBallerinaProjectWizardContext";
 
 export async function addBallerinaCreateProjectSteps(
+    context: IBallerinaProjectWizardContext,
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
-    promptSteps.push(new BalPackageNameStep(), new BalPackageOrgStep(), new BalPackageVersionStep(), new BallerinaBackendStep());
+    await ballerinaUtils.getBallerinaVersion(context);
+    promptSteps.push(new BallerinaBackendStep());
     executeSteps.push(new BallerinaProjectCreateStep());
 }

@@ -12,6 +12,7 @@ import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
+import { BallerinaDebugProvider } from './BallerinaDebugProvider';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
@@ -22,12 +23,14 @@ export class FuncTaskProvider implements TaskProvider {
     private readonly _nodeDebugProvider: NodeDebugProvider;
     private readonly _pythonDebugProvider: PythonDebugProvider;
     private readonly _javaDebugProvider: JavaDebugProvider;
+    private readonly _ballerinaDebugProvider: BallerinaDebugProvider;
     private readonly _powershellDebugProvider: PowerShellDebugProvider;
 
-    constructor(nodeDebugProvider: NodeDebugProvider, pythonDebugProvider: PythonDebugProvider, javaDebugProvider: JavaDebugProvider, powershellDebugProvider: PowerShellDebugProvider) {
+    constructor(nodeDebugProvider: NodeDebugProvider, pythonDebugProvider: PythonDebugProvider, javaDebugProvider: JavaDebugProvider, ballerinaDebugProvider: BallerinaDebugProvider, powershellDebugProvider: PowerShellDebugProvider) {
         this._nodeDebugProvider = nodeDebugProvider;
         this._pythonDebugProvider = pythonDebugProvider;
         this._javaDebugProvider = javaDebugProvider;
+        this._ballerinaDebugProvider = ballerinaDebugProvider;
         this._powershellDebugProvider = powershellDebugProvider;
     }
 
@@ -133,6 +136,9 @@ export class FuncTaskProvider implements TaskProvider {
                 break;
             case ProjectLanguage.Java:
                 debugProvider = this._javaDebugProvider;
+                break;
+            case ProjectLanguage.Ballerina:
+                debugProvider = this._ballerinaDebugProvider
                 break;
             case ProjectLanguage.PowerShell:
                 debugProvider = this._powershellDebugProvider;

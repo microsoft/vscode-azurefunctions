@@ -8,9 +8,6 @@ import { BallerinaBackend } from '../../../constants';
 import { IProjectWizardContext } from "../IProjectWizardContext";
 
 export interface IBallerinaProjectWizardContext extends IProjectWizardContext {
-    balVersion?: string;
-    balOrgName: string;
-    balPackageName?: string;
     balBackend?: BallerinaBackend;
 }
 
