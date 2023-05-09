@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { StringDictionary } from '@azure/arm-appservice';
-import type { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import type { ParsedSite, SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
+import * as retry from 'p-retry';
 import * as vscode from 'vscode';
-import { azureWebJobsFeatureFlags, ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
+import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, ProjectLanguage, azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
@@ -57,6 +58,12 @@ export async function verifyAppSettings(options: {
 
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
+            try {
+                await verifyAppSettingsPropagated(context, client, appSettings);
+            } catch (e) {
+                // don't throw if we can't verify the settings were updated
+            }
+
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
             await node.appSettingsTreeItem?.refresh(context);
         }
@@ -201,4 +208,33 @@ function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, rem
 
     context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
     return shouldAddSetting;
+}
+
+// App settings are not always propagated before the deployment leading to an inconsistent behavior so verify that
+async function verifyAppSettingsPropagated(context: IActionContext, client: SiteClient, expectedAppSettings: StringDictionary): Promise<void> {
+    const expectedProperties = expectedAppSettings.properties || {};
+    // Retry up to 2 minutes
+    const retries = 12;
+
+    return await retry(
+        async (attempt: number) => {
+            context.telemetry.measurements.verifyAppSettingsPropagatedAttempt = attempt;
+            ext.outputChannel.appendLog(localize('verifyAppSettings', `Verifying that app settings have propagated... (Attempt ${attempt}/${retries})`), { resourceName: client.fullName });
+
+            const currentAppSettings = await client.listApplicationSettings();
+            const currentProperties = currentAppSettings.properties || {};
+            // we need to check the union of the keys because we may have removed properties as well
+            const keysUnion = new Set([...Object.keys(expectedProperties), ...Object.keys(currentProperties)]);
+
+            for (const key of keysUnion) {
+                if (currentProperties[key] !== expectedProperties[key]) {
+                    // error gets swallowed by the end so no need for an error message
+                    throw new Error();
+                }
+            }
+
+            return;
+        },
+        { retries, minTimeout: 10 * 1000 }
+    );
 }
