@@ -1209,6 +1209,9 @@
         "xml2js": "^0.4.19",
         "xregexp": "4.3.0"
     },
+    "optionalDependencies": {
+        "@vscode/windows-process-tree": "^0.4.3"
+    },
     "extensionDependencies": [
         "ms-vscode.azure-account",
         "ms-azuretools.vscode-azureresourcegroups"

@@ -11,12 +11,12 @@ import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { getFuncPortFromTaskOrProject, IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
+import { IRunningFuncTask, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
-import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
+import { IProcessInfo, IWindowsProcessTree, ProcessDataFlag, getWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
@@ -170,7 +170,7 @@ async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
 }
 
 async function getWindowsChildren(pid: number): Promise<OSAgnosticProcess[]> {
-    const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
+    const windowsProcessTree: IWindowsProcessTree = await getWindowsProcessTree();
     const processes: (IProcessInfo[] | undefined) = await new Promise((resolve): void => {
         windowsProcessTree.getProcessList(pid, resolve, ProcessDataFlag.None);
     });

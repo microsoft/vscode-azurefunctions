@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../localize';
-import { getCoreNodeModule } from "./getCoreNodeModule";
 
-export function getWindowsProcessTree(): IWindowsProcessTree {
+export async function getWindowsProcessTree(): Promise<IWindowsProcessTree> {
     const moduleName: string = 'windows-process-tree';
-    const windowsProcessTree: IWindowsProcessTree | undefined = getCoreNodeModule<IWindowsProcessTree>(moduleName);
+    const windowsProcessTree: IWindowsProcessTree | undefined = await import('@vscode/windows-process-tree') as unknown as IWindowsProcessTree;
     if (!windowsProcessTree) {
         throw new Error(localize('noWindowsProcessTree', 'Failed to find dependency "{0}".', moduleName));
     }
-    return windowsProcessTree;
+    return windowsProcessTree as IWindowsProcessTree;
 }
 
 // https://github.com/microsoft/vscode-windows-process-tree/blob/b7efc9fb4567d552ef95c7449058b6f634a82df8/typings/windows-process-tree.d.ts
