@@ -7,13 +7,13 @@ import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
-import { extensionId, nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
+import { ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getJavaScriptValidateOptions, IValidateProjectOptions, validateProject } from './project/validateProject';
+import { IValidateProjectOptions, getJavaScriptValidateOptions, validateProject } from './project/validateProject';
 
-suite(`AzureFunctionsExtensionApi`, () => {
+suite.only(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {
@@ -28,7 +28,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /Model V3/, functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 suppressOpenFolder: true,
@@ -55,7 +55,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi2');
 
-        await runWithInputs('api.createFunction', [language], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /Model V3/], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
