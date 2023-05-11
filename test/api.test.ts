@@ -13,7 +13,7 @@ import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
 import { IValidateProjectOptions, getJavaScriptValidateOptions, validateProject } from './project/validateProject';
 
-suite.only(`AzureFunctionsExtensionApi`, () => {
+suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {
