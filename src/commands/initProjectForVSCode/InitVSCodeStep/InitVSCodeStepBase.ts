@@ -6,17 +6,17 @@
 import { AzExtFsExtra, AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
-import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
+import { ProjectLanguage, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { IExtensionsJson } from '../../../vsCodeConfig/extensions';
-import { getDebugConfigs, getLaunchVersion, ILaunchJson, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';
+import { ILaunchJson, getDebugConfigs, getLaunchVersion, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';
 import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
-import { getTasks, getTasksVersion, ITask, ITasksJson, tasksVersion, updateTasks, updateTasksVersion } from '../../../vsCodeConfig/tasks';
+import { ITask, ITasksJson, getTasks, getTasksVersion, tasksVersion, updateTasks, updateTasksVersion } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
 export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
@@ -125,8 +125,15 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
         // remove new tasks that have an identical existing task
         newTasks = newTasks.filter(t1 => {
-            const t1String = JSON.stringify(t1);
-            return !existingTasks?.some(t2 => t1String === JSON.stringify(t2));
+            // sort keys so that stringify will compare tasks with the same keys in different order
+            function stringifySorted(value: {}) {
+                return JSON.stringify(value, Object.keys(value).sort());
+            }
+            const t1String = stringifySorted(t1);
+            return !existingTasks?.some(t2 => {
+                // add label to existing task if it doesn't have one
+                return t1String === stringifySorted({ ...t2, label: this.getTaskLabel(t2) });
+            });
         });
 
         const nonMatchingTasks: ITask[] = [];

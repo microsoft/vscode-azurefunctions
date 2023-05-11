@@ -249,7 +249,7 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
                 ]
             }
         }];
-        await initAndValidateProject({ ...getJavaScriptValidateOptions(true /* hasPackageJson */), mockFiles, inputs: [ProjectLanguage.JavaScript, 'Overwrite'] });
+        await initAndValidateProject({ ...getJavaScriptValidateOptions(true /* hasPackageJson */), mockFiles, inputs: ['Overwrite'] });
     });
 
     test('Old tasks.json', async () => {
