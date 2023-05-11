@@ -38,13 +38,6 @@ export function getTestWorkspaceFolder(): string {
 
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
-    JSON.parse = (text, reviver) => {
-        try {
-            return JSON.parse(text, reviver);
-        } catch (e) {
-            return JSON.parse(text, reviver);
-        }
-    }
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
