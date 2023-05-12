@@ -32,11 +32,11 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     });
 
     test('TypeScript', async () => {
-        await initAndValidateProject({ ...getTypeScriptValidateOptions(), mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json'] });
+        await initAndValidateProject({ ...getTypeScriptValidateOptions({ missingCleanScript: true }), mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json'] });
     });
 
     test('TypeScript with extensions.csproj', async () => {
-        const options: IValidateProjectOptions = getTypeScriptValidateOptions();
+        const options: IValidateProjectOptions = getTypeScriptValidateOptions({ missingCleanScript: true });
         options.expectedSettings['files.exclude'] = { obj: true, bin: true };
         await initAndValidateProject({ ...options, mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json', 'extensions.csproj'] });
     });

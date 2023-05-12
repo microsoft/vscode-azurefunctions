@@ -151,7 +151,7 @@ export namespace durableUtils {
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
         const packageNames: string[] = [];
-        const isDotnetIsolated: boolean = /Isolated/i.test(context.projectTemplateKey ?? '');
+        const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:

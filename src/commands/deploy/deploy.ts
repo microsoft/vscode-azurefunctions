@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
-import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
+import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, DurableBackendValues, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -19,9 +19,8 @@ import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
-import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -61,7 +60,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         expectedChildContextValue: expectedContextValue
     }));
 
-    const { language, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
+    const { language, languageModel, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
 
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
@@ -97,12 +96,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.projectDurableStorageType = durableStorageType;
 
-    const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
+    const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
-    if (shouldValidateStorage) {
-        await validateStorageConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
-    }
     if (shouldValidateEventHubs) {
         await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
     }
@@ -125,7 +121,16 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (isZipDeploy) {
-        await verifyAppSettings(context, node, context.projectPath, version, language, { doRemoteBuild, isConsumption }, durableStorageType);
+        await verifyAppSettings({
+            context,
+            node,
+            projectPath: context.projectPath,
+            version,
+            language,
+            languageModel,
+            bools: { doRemoteBuild, isConsumption },
+            durableStorageType
+        });
     }
 
     await node.runWithTemporaryDescription(

@@ -31,7 +31,7 @@ const testCases: CreateProjectTestCase[] = [
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     testCases.push(
         { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: ['Model V3'] },
-        { ...getTypeScriptValidateOptions(version), inputs: ['Model V3'] },
+        { ...getTypeScriptValidateOptions({ version }), inputs: ['Model V3'] },
         { ...getPowerShellValidateOptions(version) },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
