@@ -125,13 +125,13 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
         // remove new tasks that have an identical existing task
         newTasks = newTasks.filter(t1 => {
-            // sort keys so that stringify will compare tasks with the same keys in different order
+            // improve JSON.stringify comparison by sorting keys first
             function stringifySorted(value: {}) {
                 return JSON.stringify(value, Object.keys(value).sort());
             }
             const t1String = stringifySorted(t1);
             return !existingTasks?.some(t2 => {
-                // add label to existing task if it doesn't have one
+                // just for the sake of comparison: add label to existing task if it doesn't have one
                 return t1String === stringifySorted({ ...t2, label: this.getTaskLabel(t2) });
             });
         });
