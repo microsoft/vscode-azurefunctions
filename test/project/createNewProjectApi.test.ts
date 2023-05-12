@@ -10,7 +10,7 @@ import { FuncVersion, registerOnActionStartHandler } from '../../extension.bundl
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
-suite.only('Create New Project API (deprecated)', () => {
+suite('Create New Project API (deprecated)', () => {
     // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-new-project
     test('JavaScript', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
