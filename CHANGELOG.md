@@ -1,5 +1,16 @@
 # Change Log
 
+## 1.10.6 - 2023-05-12
+
+### Added
+* Verify `AzureWebJobsFeatureFlags` setting has `EnableWorkerIndexing` and enable prior to deployment for Node Model v4 by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3653
+* Add clean script to TypeScript projects by @ejizba in https://github.com/microsoft/vscode-azurefunctions/pull/3654
+* Ensure that the app settings have propogated to production app before deploying by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3656
+* Improve task comparison during project init by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3671
+
+### Fixed
+* Change the name of the `windows-process-tree` module by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3669
+
 ## 1.10.5 - 2023-04-21
 
 ### Changed
