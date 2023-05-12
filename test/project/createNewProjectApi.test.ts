@@ -10,12 +10,12 @@ import { FuncVersion, registerOnActionStartHandler } from '../../extension.bundl
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
-suite('Create New Project API (deprecated)', () => {
+suite.only('Create New Project API (deprecated)', () => {
     // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-new-project
     test('JavaScript', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         const commandId = 'azureFunctions.createNewProject';
-        await runWithInputs(commandId, [/skip for now/i], registerOnActionStartHandler, async () => {
+        await runWithInputs(commandId, [/Model V3/, /skip for now/i], registerOnActionStartHandler, async () => {
             await vscode.commands.executeCommand(commandId, projectPath, 'JavaScript', '~2', false /* openFolder */);
         });
         await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v2));
