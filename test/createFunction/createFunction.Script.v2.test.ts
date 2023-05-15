@@ -3,15 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, ProjectLanguage, durableUtils, funcVersionSetting, projectLanguageSetting } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
 
-class JavaScriptFunctionTester extends FunctionTesterBase {
+abstract class NodeScriptFunctionTester extends FunctionTesterBase {
+    protected override async initializeTestFolder(testFolder: string): Promise<void> {
+        await super.initializeTestFolder(testFolder);
+        const packageJsonContents = `{
+            "dependencies": {
+                "${durableUtils.nodeDfPackage}": "1.0.0"
+            }
+        }`;
+
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'package.json'), packageJsonContents);
+    }
+}
+
+class JavaScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -22,7 +36,7 @@ class JavaScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-class TypeScriptFunctionTester extends FunctionTesterBase {
+class TypeScriptFunctionTester extends NodeScriptFunctionTester {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
 
     public getExpectedPaths(functionName: string): string[] {
@@ -41,6 +55,12 @@ class PythonFunctionTester extends FunctionTesterBase {
             path.join(functionName, 'function.json'),
             path.join(functionName, '__init__.py')
         ];
+    }
+
+    protected override async initializeTestFolder(testFolder: string): Promise<void> {
+        await super.initializeTestFolder(testFolder);
+        const requirementsContents = `${durableUtils.pythonDfPackage}`;
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'requirements.txt'), requirementsContents)
     }
 }
 
