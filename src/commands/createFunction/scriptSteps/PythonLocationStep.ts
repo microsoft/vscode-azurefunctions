@@ -4,18 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
-import { localize } from '../../../localize';
 import { pythonFunctionAppFileName } from '../../../constants';
+import { localize } from '../../../localize';
 import { FunctionSubWizard } from '../FunctionSubWizard';
+import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
 import { PythonFunctionCreateStep } from './PythonFunctionCreateStep';
 
 export class PythonLocationStep extends AzureWizardPromptStep<IPythonFunctionWizardContext> {
     private readonly _functionSettings: { [key: string]: string | undefined };
+    private readonly _isProjectWizard: boolean;
 
-    public constructor(functionSettings: { [key: string]: string | undefined } | undefined) {
+    public constructor(functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean) {
         super();
         this._functionSettings = functionSettings || {};
+        this._isProjectWizard = !!isProjectWizard;
     }
 
     public async prompt(wizardContext: IPythonFunctionWizardContext): Promise<void> {
@@ -40,14 +42,22 @@ export class PythonLocationStep extends AzureWizardPromptStep<IPythonFunctionWiz
     public async getSubWizard(wizardContext: IPythonFunctionWizardContext): Promise<IWizardOptions<IPythonFunctionWizardContext> | undefined> {
         if (wizardContext.functionLocation === FunctionLocation.Document) {
             return {
-                executeSteps: [ new PythonFunctionCreateStep() ]
+                executeSteps: [new PythonFunctionCreateStep()]
             };
         } else {
             return await FunctionSubWizard.createSubWizard(wizardContext, this._functionSettings);
         }
     }
 
+    public async configureBeforePrompt(wizardContext: IPythonFunctionWizardContext): Promise<void> {
+        // if this is a project wizard, we need to set the functionScript to the default value of 'function_app.py'
+        if (this._isProjectWizard && wizardContext.functionScript === undefined) {
+            wizardContext.functionScript = pythonFunctionAppFileName;
+        }
+    }
+
     public shouldPrompt(wizardContext: IPythonFunctionWizardContext): boolean {
-        return wizardContext.functionLocation === undefined;
+        // don't give the user the option to "append" if this is from project creation
+        return wizardContext.functionLocation === undefined && !this._isProjectWizard;
     }
 }
