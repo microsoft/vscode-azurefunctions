@@ -6,8 +6,8 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
+import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
@@ -52,7 +52,8 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         const typeScriptPackageJsonScripts: { [key: string]: string } = {
             build: 'tsc',
             watch: 'tsc -w',
-            prestart: 'npm run build',
+            clean: `rimraf ${tsDefaultOutDir}`,
+            prestart: 'npm run clean && npm run build',
             start: 'func start',
             test: 'echo \"No tests yet...\"'
         };
@@ -92,6 +93,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
 
         devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
         devDeps['typescript'] = '^4.0.0';
+        devDeps['rimraf'] = '^5.0.0';
         return devDeps;
     }
 }

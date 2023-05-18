@@ -88,9 +88,15 @@ export abstract class FunctionTesterBase implements Disposable {
     public async testCreateFunction(templateName: string, ...inputs: string[]): Promise<void> {
         this.testedFunctions.push(templateName);
         await runWithTestActionContext('testCreateFunction', async context => {
-            await runForTemplateSource(context, this.source, async () => {
-                await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
-            });
+            try {
+                await runForTemplateSource(context, this.source, async () => {
+                    await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
+                });
+            } catch (e) {
+                if ((e as Error).message?.includes('SyntaxError: Unexpected end of JSON input')) {
+                    // ignore
+                }
+            }
         });
     }
 

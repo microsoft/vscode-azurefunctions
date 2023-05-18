@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
+import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, shouldSkipVersion } from '../global.test';
 import { getDotnetScriptValidateOptions, validateProject } from '../project/validateProject';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -23,6 +24,34 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
             path.join(functionName, 'function.json'),
             path.join(functionName, 'run.csx')
         ];
+    }
+
+    protected override async initializeTestFolder(testFolder: string): Promise<void> {
+        await super.initializeTestFolder(testFolder);
+
+        const csprojContents: string =
+            `<Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+                <TargetFramework>net6.0</TargetFramework>
+                <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+                <RootNamespace>func_t</RootNamespace>
+            </PropertyGroup>
+            <ItemGroup>
+                <PackageReference Include="${durableUtils.dotnetInProcDfBasePackage}" Version="2.9.2" />
+                <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
+            </ItemGroup>
+            <ItemGroup>
+                <None Update="host.json">
+                <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+                </None>
+                <None Update="local.settings.json">
+                <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+                <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+                </None>
+            </ItemGroup>
+            </Project>`;
+
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'project.csproj'), csprojContents);
     }
 }
 

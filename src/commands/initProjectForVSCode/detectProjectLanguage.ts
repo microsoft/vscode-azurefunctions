@@ -24,7 +24,10 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
             if (await isTypeScriptProject(projectPath)) {
                 detectedLangs.push(ProjectLanguage.TypeScript);
             } else {
-                detectedLangs.push(ProjectLanguage.JavaScript);
+                // don't add JavaScript if TypeScript is already detected
+                if (!detectedLangs.includes(ProjectLanguage.TypeScript)) {
+                    detectedLangs.push(ProjectLanguage.JavaScript);
+                }
             }
         }
 

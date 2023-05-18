@@ -9,7 +9,7 @@ import * as path from 'path';
 
 async function main(): Promise<void> {
     try {
-        const vscodeExecutablePath = await downloadAndUnzipVSCode('1.69.0');
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
         const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 
         cp.spawnSync(

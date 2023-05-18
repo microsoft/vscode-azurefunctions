@@ -15,7 +15,7 @@ suite('Create New Project API (deprecated)', () => {
     test('JavaScript', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         const commandId = 'azureFunctions.createNewProject';
-        await runWithInputs(commandId, [/skip for now/i], registerOnActionStartHandler, async () => {
+        await runWithInputs(commandId, [/Model V3/, /skip for now/i], registerOnActionStartHandler, async () => {
             await vscode.commands.executeCommand(commandId, projectPath, 'JavaScript', '~2', false /* openFolder */);
         });
         await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v2));

@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
+import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -35,6 +35,7 @@ class CSharpFunctionTester extends FunctionTesterBase {
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="${this._isIsolated ? 'Microsoft.Azure.Functions.Worker.Sdk' : 'Microsoft.NET.Sdk.Functions'}" Version="1.0.0" />
+        <PackageReference Include="${durableUtils.dotnetInProcDfBasePackage}" Version="2.9.2" />
     </ItemGroup>
 </Project>`);
     }
@@ -74,7 +75,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             inputs: [
                 'TestCompany.TestFunction'
             ],
-            skip: isIsolated
+            // skip: isIsolated
         },
         {
             functionName: 'Azure Event Grid trigger',

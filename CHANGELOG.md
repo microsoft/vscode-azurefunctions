@@ -1,9 +1,50 @@
 # Change Log
 
-## 1.10.3 - 2023-03-07
+## 1.10.7 - 2023-05-17
 
+### Added
+* Add support for the upcoming Azure Resources Focus feature
 
-## 1.10.2 - 2023-02-23
+## 1.10.6 - 2023-05-12
+
+### Added
+* Verify `AzureWebJobsFeatureFlags` setting has `EnableWorkerIndexing` and enable prior to deployment for Node Model v4 by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3653
+* Add clean script to TypeScript projects by @ejizba in https://github.com/microsoft/vscode-azurefunctions/pull/3654
+* Ensure that the app settings have propogated to production app before deploying by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3656
+* Improve task comparison during project init by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3671
+
+### Fixed
+* Change the name of the `windows-process-tree` module by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3669
+
+## 1.10.5 - 2023-04-21
+
+### Changed
+
+- Update backup templates by @alexweininger in [#3602](https://github.com/microsoft/vscode-azurefunctions/pull/3602)
+
+### Fixed
+
+- Remove azureWebJobsStorage validation on deploy by @MicroFish91 in [#3647](https://github.com/microsoft/vscode-azurefunctions/pull/3647)
+- Update .NET Isolated detection to check against the template ID by @MicroFish91 in [#3644](https://github.com/microsoft/vscode-azurefunctions/pull/3644)
+- Fix parsing binding setting with missing help resource by @alexweininger in [#3601](https://github.com/microsoft/vscode-azurefunctions/pull/3601)
+- Fix TypeScript project language detection by @alexweininger in [#3604](https://github.com/microsoft/vscode-azurefunctions/pull/3604)
+- Don't throw error when missing 'requirements.txt' by @MicroFish91 in [#3627](https://github.com/microsoft/vscode-azurefunctions/pull/3627)
+
+## 1.10.4 - 2023-03-09
+
+### Changed
+
+- Make skip for now message more clear when there are no resources available by @nturinski in [#3611](https://github.com/microsoft/vscode-azurefunctions/pull/3611)
+- Change learn more label for programming model step by @nturinski in [#3609](https://github.com/microsoft/vscode-azurefunctions/pull/3609)
+- Remove node.js programming model experimental flag by @nturinski in [#3612](https://github.com/microsoft/vscode-azurefunctions/pull/3612)
+
+### Fixed
+- Remove remote connection overwrite prompting by @MicroFish91 in [#3593](https://github.com/microsoft/vscode-azurefunctions/pull/3593)
+- Add Dotnet Isolated runtime specific dependencies for Durable by @MicroFish91 in [#3597](https://github.com/microsoft/vscode-azurefunctions/pull/3597)
+- Fix getting package references from csproj from multiple item groups by @alexweininger in [#3603](https://github.com/microsoft/vscode-azurefunctions/pull/3603)
+- Fix when clause contexts for upcoming VS Code release (v1.77) by @MicroFish91 in [#3621](https://github.com/microsoft/vscode-azurefunctions/pull/3621)
+
+## 1.10.3 - 2023-02-23
 
 ### Added
 - Azure Functions walkthrough by @esweet431 in [#3573](https://github.com/microsoft/vscode-azurefunctions/pull/3573)

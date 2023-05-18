@@ -93,7 +93,10 @@ function getVariableValue(resources: IResources, variables: IVariables, data: st
     return getResourceValue(resources, data);
 }
 
-export function getResourceValue(resources: IResources, data: string): string {
+
+export function getResourceValue(resources: IResources, data: string, dontThrow: true): string | undefined;
+export function getResourceValue(resources: IResources, data: string, dontThrow?: false): string;
+export function getResourceValue(resources: IResources, data: string, dontThrow: boolean | undefined): string | undefined {
     const matches: RegExpMatchArray | null = data.match(/\$(.*)/);
     if (matches === null) {
         return data;
@@ -101,6 +104,9 @@ export function getResourceValue(resources: IResources, data: string): string {
         const key: string = matches[1];
         const result: string | undefined = resources.lang && resources.lang[key] ? resources.lang[key] : resources.en[key];
         if (result === undefined) {
+            if (dontThrow) {
+                return undefined;
+            }
             throw new Error(localize('resourceNotFound', 'Resource "{0}" not found.', data));
         } else {
             return result;
@@ -120,11 +126,19 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
         }
     }
 
+    function getDescription(): string | undefined {
+        if (rawSetting.help) {
+            const resourceValue = getResourceValue(resources, rawSetting.help, true);
+            return resourceValue ? replaceHtmlLinkWithMarkdown(resourceValue) : undefined;
+        }
+        return undefined;
+    }
+
     return {
         name: getVariableValue(resources, variables, rawSetting.name),
         resourceType: rawSetting.resource,
         valueType: rawSetting.value,
-        description: rawSetting.help ? replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) : undefined,
+        description: getDescription(),
         defaultValue: rawSetting.defaultValue,
         label: getVariableValue(resources, variables, rawSetting.label),
         enums: enums,

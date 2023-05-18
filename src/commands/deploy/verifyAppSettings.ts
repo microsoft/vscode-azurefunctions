@@ -4,14 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { StringDictionary } from '@azure/arm-appservice';
-import type { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import type { ParsedSite, SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
+import * as retry from 'p-retry';
 import * as vscode from 'vscode';
-import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
+import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, ProjectLanguage, azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
@@ -20,7 +22,18 @@ import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+export async function verifyAppSettings(options: {
+    context: IActionContext,
+    node: SlotTreeItem,
+    projectPath: string | undefined,
+    version: FuncVersion,
+    language: ProjectLanguage,
+    languageModel: number | undefined,
+    bools: VerifyAppSettingBooleans,
+    durableStorageType: DurableBackendValues | undefined
+}): Promise<void> {
+
+    const { context, node, projectPath, version, language, bools, durableStorageType } = options;
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
@@ -36,11 +49,21 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
+        if (isNodeV4Plus(options) || isPythonV2Plus(options.language, options.languageModel)) {
+            updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
+        }
+
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
 
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
+            try {
+                await verifyAppSettingsPropagated(context, client, appSettings);
+            } catch (e) {
+                // don't throw if we can't verify the settings were updated
+            }
+
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
             await node.appSettingsTreeItem?.refresh(context);
         }
@@ -168,3 +191,50 @@ function verifyLinuxRemoteBuildSettings(context: IActionContext, remotePropertie
     return hasChanged;
 }
 
+function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
+    const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+
+    // Feature flags are comma-delimited lists of beta features
+    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
+    const featureFlagArray = !featureFlagString ? [] : featureFlagString.split(',');
+    const enableWorkerIndexingValue = 'EnableWorkerIndexing';
+    const shouldAddSetting: boolean = !featureFlagArray.includes(enableWorkerIndexingValue);
+
+    if (shouldAddSetting) {
+        featureFlagArray.push(enableWorkerIndexingValue);
+        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the new programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
+        remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
+    }
+
+    context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
+    return shouldAddSetting;
+}
+
+// App settings are not always propagated before the deployment leading to an inconsistent behavior so verify that
+async function verifyAppSettingsPropagated(context: IActionContext, client: SiteClient, expectedAppSettings: StringDictionary): Promise<void> {
+    const expectedProperties = expectedAppSettings.properties || {};
+    // Retry up to 2 minutes
+    const retries = 12;
+
+    return await retry(
+        async (attempt: number) => {
+            context.telemetry.measurements.verifyAppSettingsPropagatedAttempt = attempt;
+            ext.outputChannel.appendLog(localize('verifyAppSettings', `Verifying that app settings have propagated... (Attempt ${attempt}/${retries})`), { resourceName: client.fullName });
+
+            const currentAppSettings = await client.listApplicationSettings();
+            const currentProperties = currentAppSettings.properties || {};
+            // we need to check the union of the keys because we may have removed properties as well
+            const keysUnion = new Set([...Object.keys(expectedProperties), ...Object.keys(currentProperties)]);
+
+            for (const key of keysUnion) {
+                if (currentProperties[key] !== expectedProperties[key]) {
+                    // error gets swallowed by the end so no need for an error message
+                    throw new Error();
+                }
+            }
+
+            return;
+        },
+        { retries, minTimeout: 10 * 1000 }
+    );
+}

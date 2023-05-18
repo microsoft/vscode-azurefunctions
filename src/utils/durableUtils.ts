@@ -8,7 +8,7 @@ import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
@@ -20,13 +20,13 @@ import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
-    const dotnetInProcDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
-    const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
-    const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
-    const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
-    const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
-    const nodeDfPackage: string = 'durable-functions';
-    const pythonDfPackage: string = 'azure-functions-durable';
+    export const dotnetInProcDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
+    export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
+    export const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
+    export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    export const nodeDfPackage: string = 'durable-functions';
+    export const pythonDfPackage: string = 'azure-functions-durable';
 
     export function requiresDurableStorageSetup(context: IFunctionWizardContext): boolean {
         return !!context.functionTemplate && templateRequiresDurableStorageSetup(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
@@ -151,7 +151,7 @@ export namespace durableUtils {
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
         const packageNames: string[] = [];
-        const isDotnetIsolated: boolean = /Isolated/i.test(context.projectTemplateKey ?? '');
+        const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
