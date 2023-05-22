@@ -35,7 +35,6 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const projectTemplate = await PysteinProjectCreateStep.getProjectTemplate(context);
-
         const localSettingsContent = projectTemplate.templateFiles[localSettingsFileName];
 
         if (localSettingsContent) {
@@ -60,6 +59,11 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
                 .filter(file => !explicitlyHandledFiles.includes(file));
 
         for (const file of filesToAdd) {
+            // skip the old default function app file since we let users pick the trigger now
+            if (file === pythonFunctionAppFileName) {
+                continue;
+            }
+
             const fileContent = projectTemplate.templateFiles[file];
 
             if (!fileContent) {

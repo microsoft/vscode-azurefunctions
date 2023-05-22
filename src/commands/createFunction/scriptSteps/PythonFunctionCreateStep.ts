@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
+import { showMarkdownPreviewContent } from '../../../utils/textUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
-import { showMarkdownPreviewContent } from '../../../utils/textUtils';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 
 function createMarkdown(name: string, content: string): string {
     return `# ${name}
@@ -18,10 +18,31 @@ ${content}
 \`\`\``;
 }
 
+function escapeRegExp(input: string): string {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunctionWizardContext> {
     public async executeCore(context: IPythonFunctionWizardContext): Promise<string> {
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
-        const content = template.templateFiles['function_app.py'];
+        const functionScript = nonNullProp(context, 'functionScript');
+        const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
+
+        // if it doesn't exist, then this is a function app and we need to use the function_app.py template
+        const isFunctionApp: boolean = !await AzExtFsExtra.pathExists(functionScriptPath);
+        await AzExtFsExtra.ensureFile(functionScriptPath);
+
+        let content = isFunctionApp ?
+            template.templateFiles['function_app.py'] :
+            template.templateFiles['function_body.py'];
+
+        for (const setting of template.userPromptedSettings) {
+            if (setting.assignTo) {
+                // the setting name keys are lowercased
+                content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()]);
+            }
+        }
+
 
         if (context.functionLocation === FunctionLocation.Document) {
             const name = nonNullProp(template, 'name');
@@ -39,13 +60,10 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             // NOTE: No "real" file being generated...
             return '';
         } else {
-            const functionScript = nonNullProp(context, 'functionScript');
-            const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
-
             // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
-            // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions.
+            // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions for function_body.
             const existingContent = await AzExtFsExtra.readFile(functionScriptPath);
-            await AzExtFsExtra.writeFile(functionScriptPath, existingContent + '\r\n\r\n' + content);
+            await AzExtFsExtra.writeFile(functionScriptPath, existingContent + (isFunctionApp ? '' : '\r\n\r\n') + content);
 
             return functionScriptPath;
         }

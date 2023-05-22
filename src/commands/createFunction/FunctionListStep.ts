@@ -63,7 +63,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         if (isV2PythonModel) {
             return {
                 // TODO: Title?
-                promptSteps: [new PythonLocationStep(this._functionSettings)]
+                promptSteps: [new PythonLocationStep(this._functionSettings, this._isProjectWizard)]
             };
         } else {
             const requiresDurableStorageSetup: boolean = durableUtils.requiresDurableStorageSetup(context);
