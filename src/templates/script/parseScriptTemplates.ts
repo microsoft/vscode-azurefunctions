@@ -172,7 +172,7 @@ export function parseScriptSettingV2(data: object | undefined, resources: IResou
 
     return {
         name: rawSetting ? getResourceValue(resources, rawSetting.name) : input.paramId,
-        resourceType: rawSetting ? rawSetting.resource : undefined,
+        resourceType: rawSetting?.resource,
         valueType: rawSetting ? rawSetting.value : undefined,
         description: rawSetting && rawSetting.help ? replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) : undefined,
         defaultValue: rawSetting && rawSetting.defaultValue ? rawSetting.defaultValue : input.defaultValue,
