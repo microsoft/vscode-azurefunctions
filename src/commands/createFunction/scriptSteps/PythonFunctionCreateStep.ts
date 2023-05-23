@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import { pythonFunctionAppFileName, pythonFunctionBodyFileName } from '../../../constants';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { showMarkdownPreviewContent } from '../../../utils/textUtils';
@@ -25,24 +26,7 @@ function escapeRegExp(input: string): string {
 export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunctionWizardContext> {
     public async executeCore(context: IPythonFunctionWizardContext): Promise<string> {
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
-        const functionScript = nonNullProp(context, 'functionScript');
-        const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
-
-        // if it doesn't exist, then this is a function app and we need to use the function_app.py template
-        const isFunctionApp: boolean = !await AzExtFsExtra.pathExists(functionScriptPath);
-        await AzExtFsExtra.ensureFile(functionScriptPath);
-
-        let content = isFunctionApp ?
-            template.templateFiles['function_app.py'] :
-            template.templateFiles['function_body.py'];
-
-        for (const setting of template.userPromptedSettings) {
-            if (setting.assignTo) {
-                // the setting name keys are lowercased
-                content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()]);
-            }
-        }
-
+        let content = template.templateFiles[pythonFunctionBodyFileName];
 
         if (context.functionLocation === FunctionLocation.Document) {
             const name = nonNullProp(template, 'name');
@@ -60,9 +44,28 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             // NOTE: No "real" file being generated...
             return '';
         } else {
+            const functionScript = nonNullProp(context, 'functionScript');
+            const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
+
+            // if it doesn't exist, then we should create the file
+            await AzExtFsExtra.ensureFile(functionScriptPath);
+
+            const existingContent = await AzExtFsExtra.readFile(functionScriptPath);
+            // is the existingContent file is empty, this is start of a function app and we need to use the function_app.py template
+            const isFunctionApp: boolean = !existingContent;
+
+            content = isFunctionApp ?
+                template.templateFiles[pythonFunctionAppFileName] :
+                template.templateFiles[pythonFunctionBodyFileName];
+
+            for (const setting of template.userPromptedSettings) {
+                if (setting.assignTo) {
+                    // the setting name keys are lowercased
+                    content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()]);
+                }
+            }
             // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
             // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions for function_body.
-            const existingContent = await AzExtFsExtra.readFile(functionScriptPath);
             await AzExtFsExtra.writeFile(functionScriptPath, existingContent + (isFunctionApp ? '' : '\r\n\r\n') + content);
 
             return functionScriptPath;

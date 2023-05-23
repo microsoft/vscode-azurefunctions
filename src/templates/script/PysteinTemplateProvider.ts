@@ -117,7 +117,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         // replace the function files with the V2 templates
         for (const templateV2 of rawTemplatesV2) {
             const pythonTemplateV1 = templates.functionTemplates.find(
-                t => t.id === `${templateV2.id}-Preview-Append`) as IScriptFunctionTemplate;
+                t => t.id.toLocaleLowerCase() === `${templateV2.id}-Preview-Append`.toLocaleLowerCase()) as IScriptFunctionTemplate;
 
             // to pick up the GA templates, we should be able to replace those properties in the templates
             if (pythonTemplateV1) {
@@ -128,7 +128,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
                 pythonTemplateV1.templateFiles[pythonFunctionBodyFileName] =
                     templateV2.files?.[pythonFunctionBodyFileName] as string;
                 // old markdowns mention "preview" in them
-                const markdownFileName = Object.keys(templateV2.files).find(key => key.includes('template.md'))
+                const markdownFileName = Object.keys(templateV2.files).find(filename => filename.toLowerCase().endsWith('.md'));
                 if (markdownFileName) {
                     pythonTemplateV1.templateFiles[markdownFileName] = templateV2.files?.[markdownFileName] as string;
                 }
