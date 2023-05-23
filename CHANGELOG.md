@@ -2,7 +2,7 @@
 
 ## 1.11.0 - 2023-05-23
 
-### Updated
+### Changed
 * Python V2 templates have left preview!
   * See the GA announcement [here](https://azure.microsoft.com/en-us/updates/generally-available-v2-programming-model-for-azure-functions-using-python/)
   * Learn more from the blog post [here](https://techcommunity.microsoft.com/t5/azure-compute-blog/azure-functions-v2-python-programming-model-is-generally/ba-p/3827474)
