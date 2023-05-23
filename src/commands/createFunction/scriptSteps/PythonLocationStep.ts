@@ -23,7 +23,6 @@ export class PythonLocationStep extends AzureWizardPromptStep<IPythonFunctionWiz
     public async prompt(wizardContext: IPythonFunctionWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<FunctionLocation>[] = [
             { label: localize('appendToMainScript', 'Append to {0} (Recommended)', pythonFunctionAppFileName), data: FunctionLocation.MainScript },
-            { label: localize('appendToSelectedScript', 'Append to selected file...'), data: FunctionLocation.SelectedScript },
             { label: localize('viewTemplate', 'Preview template'), data: FunctionLocation.Document }
         ];
 

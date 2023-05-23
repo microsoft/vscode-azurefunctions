@@ -38,7 +38,8 @@ export enum ResourceType {
     DocumentDB = 'DocumentDB',
     Storage = 'Storage',
     EventHub = 'EventHub',
-    ServiceBus = 'ServiceBus'
+    ServiceBus = 'ServiceBus',
+    ExistingFile = 'Existingfile',
 }
 
 export enum ValueType {

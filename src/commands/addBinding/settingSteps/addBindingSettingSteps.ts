@@ -4,19 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import { IBindingSetting, ValueType } from "../../../templates/IBindingTemplate";
+import { IBindingSetting, ResourceType, ValueType } from "../../../templates/IBindingTemplate";
 import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingNameStep } from "./BindingNameStep";
 import { BooleanPromptStep } from "./BooleanPromptStep";
 import { EnumPromptStep } from "./EnumPromptStep";
-import { EventHubNameStep } from "./eventHub/EventHubNameStep";
 import { LocalAppSettingListStep } from "./LocalAppSettingListStep";
 import { StringPromptStep } from "./StringPromptStep";
+import { EventHubNameStep } from "./eventHub/EventHubNameStep";
 
 export function addBindingSettingSteps(settings: IBindingSetting[], promptSteps: AzureWizardPromptStep<IBindingWizardContext>[]): void {
     for (const setting of settings) {
         const name: string = setting.name.toLowerCase();
-        if (name === 'name') {
+        if (setting.resourceType === ResourceType.ExistingFile) {
+            // don't prompt for this as we already ask the user for this in the wizard
+            continue;
+        } else if (name === 'name') {
             promptSteps.push(new BindingNameStep(setting));
         } else if (name === 'eventhubname') {
             promptSteps.push(new EventHubNameStep(setting));

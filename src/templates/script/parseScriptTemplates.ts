@@ -171,12 +171,12 @@ export function parseScriptSettingV2(data: object | undefined, resources: IResou
     }
 
     return {
-        name: rawSetting ? getResourceValue(resources, rawSetting.name) : input.paramId,
+        name: rawSetting && getResourceValue(resources, rawSetting.name, true) || input.paramId,
         resourceType: rawSetting?.resource,
-        valueType: rawSetting ? rawSetting.value : undefined,
-        description: rawSetting && rawSetting.help ? replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) : undefined,
+        valueType: rawSetting?.value,
+        description: rawSetting && rawSetting.help && replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) || undefined,
         defaultValue: rawSetting?.defaultValue || input.defaultValue,
-        label: rawSetting ? getResourceValue(resources, rawSetting.label) : input.paramId,
+        label: rawSetting && getResourceValue(resources, rawSetting.label, true) || input.paramId,
         enums: enums,
         required: rawSetting ? rawSetting.required : input.required,
         assignTo: input.assignTo,
