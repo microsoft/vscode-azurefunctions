@@ -19,8 +19,7 @@ export function addBindingSettingSteps(settings: IBindingSetting[], promptSteps:
         if (setting.resourceType === ResourceType.ExistingFile) {
             // don't prompt for this as we already ask the user for this in the wizard
             continue;
-        }
-        else if (name === 'name') {
+        } else if (name === 'name') {
             promptSteps.push(new BindingNameStep(setting));
         } else if (name === 'eventhubname') {
             promptSteps.push(new EventHubNameStep(setting));
