@@ -70,13 +70,11 @@ export enum JavaBuildTool {
     gradle = 'gradle'
 }
 
-
 export const ballerinaTomlFileName: string = "Ballerina.toml"
 export enum BallerinaBackend {
     jvm = 'jvm',
     native = 'native'
 }
-
 
 export enum PackageManager {
     npm = 'npm',

@@ -8,20 +8,20 @@ import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
-export const defaultJavaDebugPort: number = 5005;
+export const defaultBallerinaDebugPort: number = 5005;
 
 export const ballerinaDebugConfig: DebugConfiguration = {
-    name: localize('attachJava', 'Attach to Ballerina Functions'),
+    name: localize('attachBallerina', 'Attach to Ballerina Functions'),
     type: 'ballerina',
     request: 'attach',
     hostName: localhost,
-    port: defaultJavaDebugPort,
+    port: defaultBallerinaDebugPort,
     preLaunchTask: hostStartTaskName
 };
 
 export class BallerinaDebugProvider extends FuncDebugProviderBase {
     public readonly workerArgKey: string = 'BALLERINA_DEBUG_FLAGS';
-    protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
+    protected readonly defaultPortOrPipeName: number = defaultBallerinaDebugPort;
     protected readonly debugConfig: DebugConfiguration = ballerinaDebugConfig;
 
     // eslint-disable-next-line @typescript-eslint/require-await
