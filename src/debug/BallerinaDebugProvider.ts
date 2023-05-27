@@ -20,7 +20,7 @@ export const ballerinaDebugConfig: DebugConfiguration = {
 };
 
 export class BallerinaDebugProvider extends FuncDebugProviderBase {
-    public readonly workerArgKey: string = 'languageWorkers__custom__arguments';
+    public readonly workerArgKey: string = 'BALLERINA_DEBUG_FLAGS';
     protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
     protected readonly debugConfig: DebugConfiguration = ballerinaDebugConfig;
 
@@ -28,5 +28,13 @@ export class BallerinaDebugProvider extends FuncDebugProviderBase {
     public async getWorkerArgValue(folder: WorkspaceFolder): Promise<string> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
         return `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}`;
+    }
+
+    protected getDebugConfigPort(debugConfiguration: DebugConfiguration): number | undefined {
+        const debugPort: string | undefined = <string | undefined>debugConfiguration.debuggeePort;
+        if (debugPort !== undefined) {
+            return parseInt(debugPort);
+        }
+        return undefined;
     }
 }
