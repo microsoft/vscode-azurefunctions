@@ -8,7 +8,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
-import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
+import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     this.timeout(30 * 1000);
@@ -114,6 +114,19 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
             }
         ];
         await initAndValidateProject({ ...getJavaValidateOptions(appName, JavaBuildTool.gradle), mockFiles });
+    });
+
+    test('Ballerina', async () => {
+        const mockFiles: MockFile[] = [
+            {
+                fsPath: 'Ballerina.toml',
+                contents: `[package]
+                org = "testorg"
+                name = "azf_test"
+                version = "0.1.0"`
+            }
+        ];
+        await initAndValidateProject({ ...getBallerinaValidateOptions(), mockFiles });
     });
 
     test('PowerShell', async () => {

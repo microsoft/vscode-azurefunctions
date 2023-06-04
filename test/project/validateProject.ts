@@ -204,6 +204,34 @@ export function getJavaValidateOptions(appName: string, buildTool: string, versi
     };
 }
 
+export function getBallerinaValidateOptions(version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
+    return {
+        language: ProjectLanguage.Ballerina,
+        version,
+        expectedSettings: {
+            'azureFunctions.projectLanguage': ProjectLanguage.Ballerina,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.preDeployTask': 'package (functions)',
+            'azureFunctions.deploySubpath': 'target/azure_functions',
+            'debug.internalConsoleOptions': 'neverOpen',
+        },
+        expectedExtensionRecs: [
+            'WSO2.ballerina',
+        ],
+        expectedDebugConfigs: [
+            'Attach to Ballerina Functions'
+        ],
+        expectedTasks: [
+            'func: host start',
+            'package (functions)'
+        ],
+        expectedPaths: ['Ballerina.toml'],
+        excludedPaths: [
+            '.funcignore'
+        ],
+    };
+}
+
 export function getDotnetScriptValidateOptions(language: ProjectLanguage, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language,

@@ -5,7 +5,7 @@
 
 import { TestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
-import { createNewProjectInternal, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
+import { ProjectLanguage, createNewProjectInternal, getRandomHexString, hiddenStacksSetting } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import * as api from '../../src/vscode-azurefunctions.api';
 import { testFolderPath } from '../global.test';
@@ -33,7 +33,7 @@ export async function createAndValidateProject(context: TestActionContext, optio
 
     // All languages except Java support creating a function after creating a project
     // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-    if (language !== ProjectLanguage.Java) {
+    if (language !== (ProjectLanguage.Java)) {
         // don't create function
         inputs.push(/skip for now/i);
     }

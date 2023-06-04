@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, FuncVersion, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest, runInSeries } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
+import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getBallerinaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -24,6 +24,7 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'JavaScript', ...getJavaScriptValidateOptions(true), deployInputs: [getRotatingNodeVersion()] },
     { title: 'TypeScript', ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion()] },
+    { title: 'Ballerina', ...getBallerinaValidateOptions(), deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 5', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net5.0'), createProjectInputs: [/net.*5/i], deployInputs: [/net.*5/i], createFunctionInputs: ['Company.Function'] },
