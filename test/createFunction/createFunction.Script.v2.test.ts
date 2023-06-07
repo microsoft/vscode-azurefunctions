@@ -188,7 +188,19 @@ function addSuite(tester: FunctionTesterBase): void {
             functionName: 'SendGrid',
             inputs: [],
             skip: tester.language === ProjectLanguage.Python
-        }
+        },
+        {
+            functionName: 'SQL Input Binding',
+            inputs: [
+                getRotatingAuthLevel()
+            ]
+        },
+        {
+            functionName: 'SQL Output Binding',
+            inputs: [
+                getRotatingAuthLevel()
+            ]
+        },
     ];
 
     tester.addParallelSuite(testCases, {
