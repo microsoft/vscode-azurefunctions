@@ -12,7 +12,7 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
         'QueueTrigger',
         'TimerTrigger',
         'SQLInputBinding',
-        'SQLOutputBinding'
+        'SQLOutputBinding',
     ];
 
     if (version === FuncVersion.v1) {
