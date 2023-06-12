@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HostKeys } from '@azure/arm-appservice';
-import { RequestPrepareOptions } from '@azure/ms-rest-js';
-import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
+import { createHttpHeaders } from '@azure/core-rest-pipeline';
+import { AzExtRequestPrepareOptions, parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
@@ -42,10 +42,10 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const defaultHostName: string | undefined = slotTreeItem.site.defaultHostName;
 
             if (!!hostKeys && hostKeys.masterKey && defaultHostName) {
-                const requestOptions: RequestPrepareOptions = {
+                const requestOptions: AzExtRequestPrepareOptions = {
                     method: 'GET',
                     url: `https://${defaultHostName}/admin/functions/download?includeCsproj=true&includeAppSettings=true`,
-                    headers: { 'x-functions-key': hostKeys.masterKey }
+                    headers: createHttpHeaders({ 'x-functions-key': hostKeys.masterKey }),
                 };
                 await requestUtils.downloadFile(context, requestOptions, downloadFilePath);
             } else {

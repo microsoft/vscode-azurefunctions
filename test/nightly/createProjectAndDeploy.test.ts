@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
+import { ServiceClient } from '@azure/core-client';
+import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { createTestActionContext, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
@@ -118,7 +119,7 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     assert.ok(functionUrl?.includes(routePrefix), `Function url "${functionUrl}" did not include routePrefix "${routePrefix}".`);
 
     const client: ServiceClient = await createGenericClient(await createTestActionContext(), undefined);
-    const response: HttpOperationResponse = await client.sendRequest({ method: 'POST', url: functionUrl, body: { name: "World" } });
+    const response = await client.sendRequest(createPipelineRequest({ method: 'POST', url: functionUrl!, body: { name: "World" } }));
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');
 }

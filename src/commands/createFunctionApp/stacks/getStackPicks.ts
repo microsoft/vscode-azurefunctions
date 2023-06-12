@@ -3,12 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
-import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
+import { ServiceClient } from '@azure/core-client';
+import { createPipelineRequest } from '@azure/core-rest-pipeline';
+import { AzExtPipelineResponse, createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
-import { hiddenStacksSetting } from '../../../constants';
 import { FuncVersion, funcVersionLink } from '../../../FuncVersion';
+import { hiddenStacksSetting } from '../../../constants';
 import { localize } from '../../../localize';
+import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { backupStacks } from './backupStacks';
@@ -146,14 +148,13 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
         let stacksArmResponse: StacksArmResponse;
         try {
             const client: ServiceClient = await createGenericClient(context, context);
-            const result: HttpOperationResponse = await client.sendRequest({
+            const result: AzExtPipelineResponse = await client.sendRequest(createPipelineRequest({
                 method: 'GET',
-                pathTemplate: '/providers/Microsoft.Web/functionappstacks',
-                queryParameters: {
+                url: requestUtils.createRequestUrl('/providers/Microsoft.Web/functionappstacks', {
                     'api-version': '2020-10-01',
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
-                }
-            });
+                }),
+            }));
             stacksArmResponse = <StacksArmResponse>result.parsedBody;
         } catch (error) {
             // Some environments (like Azure Germany/Mooncake) don't support the stacks ARM API yet

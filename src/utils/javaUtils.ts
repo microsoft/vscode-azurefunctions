@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from "@azure/ms-rest-js";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { nonNullProp } from "./nonNull";
 import { requestUtils } from "./requestUtils";
@@ -13,7 +12,7 @@ export namespace javaUtils {
 
     export async function getLatestArtifactVersionFromMetaData(context: IActionContext, metaDataUrl: string): Promise<string | undefined> {
         if (!cachedVersions.has(metaDataUrl)) {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: metaDataUrl });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: metaDataUrl });
             const metaData: string = nonNullProp(response, 'bodyAsText');
             const match: RegExpMatchArray | null = metaData.match(/<release>(.*)<\/release>/i);
             if (match) {
