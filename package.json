@@ -1191,7 +1191,6 @@
         "@azure/arm-storage": "^18.1.0",
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
-        "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^2.0.0",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
