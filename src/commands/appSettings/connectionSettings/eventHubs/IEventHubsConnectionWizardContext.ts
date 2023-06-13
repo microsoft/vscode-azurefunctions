@@ -3,23 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AuthorizationRule, EHNamespace } from "@azure/arm-eventhub";
-import type { ResourceManagementModels } from "@azure/arm-resources";
-import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
+import { IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
 import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IEventHubsConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
-    resourceGroup?: ResourceManagementModels.ResourceGroup;
-
+export interface IEventHubsConnectionWizardContext extends IEventHubWizardContext, ISetConnectionSettingContext {
     // Connection Types
     azureWebJobsStorageType?: StorageConnectionTypeValues;
     eventHubsConnectionType?: EventHubsConnectionTypeValues;
 
-    // Netherite
-    newEventHubsNamespaceName?: string;
-    eventHubsNamespace?: EHNamespace;
-    newAuthRuleName?: string;
-    authRule?: AuthorizationRule;
-    newEventHubName?: string;
+    // Netherite uses all of the eventhub namespace settings in IEventHubWizardContext
 }

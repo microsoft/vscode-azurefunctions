@@ -5,7 +5,7 @@
 
 import { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { IBaseResourceWithName, promptForResource } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -14,8 +14,8 @@ import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
     public async prompt(context: IEventHubWizardContext): Promise<void> {
-        const namespaceName: string = nonNullProp(context, 'namespaceName');
-        const resourceGroupName: string = nonNullProp(context, 'resourceGroupName');
+        const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
+        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
         const eventHubName: string = nonNullProp(context, 'eventhubname');
 
         const client: EventHubManagementClient = await createEventHubClient(context);
@@ -34,12 +34,12 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
         const placeHolder: string = localize('placeHolder', 'Select an event hub policy');
         const result: (AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(context, placeHolder, getEventHubAuthRules());
         if (result) {
-            context.authRuleName = nonNullProp(result, 'name');
+            context.authRule = result;
             context.isNamespaceAuthRule = result._description === namespaceDescription;
         }
     }
 
     public shouldPrompt(context: IEventHubWizardContext): boolean {
-        return !!context.namespaceName && !!context.eventhubname && !context.authRuleName;
+        return !!context.eventHubsNamespace && !!context.eventhubname && !context.authRule;
     }
 }
