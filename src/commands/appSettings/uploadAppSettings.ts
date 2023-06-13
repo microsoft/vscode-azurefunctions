@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
+import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
+import { AppSettingsTreeItem, IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";

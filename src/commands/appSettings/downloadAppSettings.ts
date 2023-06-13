@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
+import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
+import { AppSettingsTreeItem, IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName } from "../../constants";
 import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
-import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
+import { ILocalSettingsJson, getLocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";

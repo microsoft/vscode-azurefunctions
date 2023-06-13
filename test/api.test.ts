@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithInputs } from '@microsoft/vscode-azext-dev';
-import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
+import { apiUtils } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
 import { ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
@@ -17,7 +17,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {
-        const extension: Extension<AzureExtensionApiProvider> | undefined = extensions.getExtension(extensionId);
+        const extension: Extension<apiUtils.AzureExtensionApiProvider> | undefined = extensions.getExtension(extensionId);
         api = nonNullValue(extension).exports.getApi<AzureFunctionsExtensionApi>('^1.0.0');
     });
 
