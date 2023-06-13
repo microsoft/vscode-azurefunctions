@@ -69,7 +69,7 @@ export class ParsedFunctionJson {
 
     public get authLevel(): HttpAuthLevel | undefined {
         if (this.triggerBinding && this.triggerBinding.authLevel) {
-            return <HttpAuthLevel | undefined>HttpAuthLevel[this.triggerBinding.authLevel.toLowerCase()];
+            return HttpAuthLevel[this.triggerBinding.authLevel.toLowerCase() as HttpAuthLevel];
         } else {
             return undefined;
         }

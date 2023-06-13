@@ -11,7 +11,7 @@ import { requestUtils } from './requestUtils';
 export namespace feedUtils {
     interface ICachedFeed {
         data: {};
-        nextRefreshTime: {};
+        nextRefreshTime: number;
     }
 
     const cachedFeeds: Map<string, ICachedFeed> = new Map<string, ICachedFeed>();

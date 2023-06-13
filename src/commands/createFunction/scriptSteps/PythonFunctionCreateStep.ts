@@ -61,7 +61,9 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             for (const setting of template.userPromptedSettings) {
                 if (setting.assignTo) {
                     // the setting name keys are lowercased
-                    content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()]);
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()] as string);
                 }
             }
             // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
