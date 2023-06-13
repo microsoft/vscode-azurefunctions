@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { ResourceManagementModels } from "@azure/arm-resources";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
-import { IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
 import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IEventHubsConnectionWizardContext extends IEventHubWizardContext, ISetConnectionSettingContext {
+export interface IEventHubsConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
+    resourceGroup?: ResourceManagementModels.ResourceGroup;
+
     // Connection Types
     azureWebJobsStorageType?: StorageConnectionTypeValues;
     eventHubsConnectionType?: EventHubsConnectionTypeValues;

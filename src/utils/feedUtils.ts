@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { nonNullProp } from './nonNull';
 import { parseJson } from './parseJson';
@@ -12,7 +11,7 @@ import { requestUtils } from './requestUtils';
 export namespace feedUtils {
     interface ICachedFeed {
         data: {};
-        nextRefreshTime: {};
+        nextRefreshTime: number;
     }
 
     const cachedFeeds: Map<string, ICachedFeed> = new Map<string, ICachedFeed>();
@@ -25,7 +24,7 @@ export namespace feedUtils {
     export async function getJsonFeed<T extends {}>(context: IActionContext, url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
             // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
             cachedFeed = { data: parseJson(nonNullProp(response, 'bodyAsText')), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);

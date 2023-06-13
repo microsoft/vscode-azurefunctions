@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels } from '@azure/arm-appinsights';
+import { ApplicationInsightsComponent, ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
 import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { SlotTreeItem, isSlotTreeItem } from '../../tree/SlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -64,8 +65,8 @@ async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, 
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
         const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node.subscription]);
-        const components: ApplicationInsightsManagementModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
-        const component: ApplicationInsightsManagementModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
+        const components = await uiUtils.listAllIterator(aiClient.components.list());
+        const component: ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {
             throw new Error(localize('failedToFindAI', 'Failed to find application insights component.'));
         } else {

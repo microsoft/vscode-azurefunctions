@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
@@ -111,7 +110,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
         if (packageManager === PackageManager.brew) {
             const packageName: string = getBrewPackageName(versionFromSetting);
             const url: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
             const brewInfo: string = nonNullProp(response, 'bodyAsText');
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
             if (matches && matches.length > 1) {

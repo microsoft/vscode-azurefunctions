@@ -22,7 +22,7 @@ export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardCo
         const eventHubName = `${namespaceName}-${getRandomHexString()}`
         // don't bother prompting the user-- just create one with a default name and properties
         context.eventhubname = (await client.eventHubs.createOrUpdate(resourceGroupName, namespaceName, eventHubName, {})).name;
-        // it was just created so just use root namespace rule
+        // it won't have any auth rules since it was just created so just use root namespace rule
         const namespaceRules: AuthorizationRule[] = await uiUtils.listAllIterator(client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName));
         context.authRule = namespaceRules[0];
         context.isNamespaceAuthRule = true;

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
@@ -111,7 +111,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         });
 
         try {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: this.azModuleGalleryUrl });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: this.azModuleGalleryUrl });
             const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);
@@ -120,7 +120,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private parseLatestAzModuleVersion(response: HttpOperationResponse): string {
+    private parseLatestAzModuleVersion(response: AzExtPipelineResponse): string {
         /* eslint-disable */
         const moduleInfo: any = response.parsedBody;
         if (moduleInfo?.entry && Array.isArray(moduleInfo.entry)) {

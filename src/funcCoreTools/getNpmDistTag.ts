@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
@@ -19,7 +18,7 @@ interface IPackageMetadata {
 }
 
 export async function getNpmDistTag(context: IActionContext, version: FuncVersion): Promise<INpmDistTag> {
-    const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: npmRegistryUri });
+    const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: npmRegistryUri });
     const packageMetadata: IPackageMetadata = <IPackageMetadata>response.parsedBody;
     const majorVersion: string = getMajorVersion(version);
 

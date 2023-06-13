@@ -4,21 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, AppSettingTreeItem, DeleteLastServicePlanStep, DeleteSiteStep, DeploymentsTreeItem, DeploymentTreeItem, getFile, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
-import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile } from "@microsoft/vscode-azext-azureappservice";
+import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
+import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, TreeItemIconPath, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { runFromPackageKey } from "../constants";
-import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
+import { runFromPackageKey } from "../constants";
+import { ext } from "../extensionVariables";
+import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
-import { matchesAnyPart, ProjectResource, ProjectSource } from "./projectContextValues";
-import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
-import { SlotsTreeItem } from "./SlotsTreeItem";
 import { SlotTreeItem } from "./SlotTreeItem";
+import { SlotsTreeItem } from "./SlotsTreeItem";
+import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
+import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
 
 export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBase {
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
@@ -213,7 +215,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             sourceControl,
             contextValuesToAdd: ['azFunc']
         });
-        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, {
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
             contextValuesToAdd: ['azFunc']
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {

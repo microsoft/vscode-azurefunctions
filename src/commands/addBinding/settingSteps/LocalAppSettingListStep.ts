@@ -9,25 +9,24 @@ import * as path from 'path';
 import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { BindingSettingValue } from '../../../funcConfig/function';
-import { getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { ILocalSettingsJson, getLocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
 import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
+import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
+import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
+import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
+import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 import { CosmosDBConnectionCreateStep } from './cosmosDB/CosmosDBConnectionCreateStep';
 import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
 import { EventHubAuthRuleListStep } from './eventHub/EventHubAuthRuleListStep';
 import { EventHubConnectionCreateStep } from './eventHub/EventHubConnectionCreateStep';
 import { EventHubListStep } from './eventHub/EventHubListStep';
-import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
-import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
-import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
 import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectionCreateStep';
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
-import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 
 export class LocalAppSettingListStep extends BindingSettingStepBase {
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {

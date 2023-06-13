@@ -40,8 +40,9 @@ export namespace mavenUtils {
                 if (result && !err) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     if (result['project'] && result['project']['properties']) {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        resolve(result['project']['properties']['functionAppName']);
+                        resolve(result['project']['properties']['functionAppName'] as string | undefined);
                         return;
                     }
                 }

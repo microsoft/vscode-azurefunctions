@@ -70,7 +70,7 @@ suite('Add Binding', () => {
         const bindingName: string = 'binding' + getRandomHexString();
         await runWithTestActionContext('addBinding', async (context) => {
             await context.ui.runWithInputs([...userInputs, bindingDirection, bindingType, bindingName], async () => {
-                await addBinding(context, commandInput);
+                await addBinding(context, commandInput as Uri | undefined);
             });
         });
 
