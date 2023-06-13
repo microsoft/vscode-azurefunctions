@@ -60,9 +60,9 @@ export namespace requestUtils {
      * Mimics what the azure sdk does under the covers to create standardized property names
      */
     export function convertToAzureSdkObject(data: {}): {} {
-        const result = {};
+        const result: Record<string, unknown> = {};
         for (const key of Object.keys(data)) {
-            result[convertPropertyName(key)] = convertPropertyValue(data[key]);
+            result[convertPropertyName(key)] = convertPropertyValue(data[key] as string | null | undefined);
         }
         return result;
     }

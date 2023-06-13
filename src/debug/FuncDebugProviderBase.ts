@@ -46,7 +46,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
             context.telemetry.suppressIfSuccessful = true;
 
             this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
-            if (hostStartTaskNameRegExp.test(debugConfiguration.preLaunchTask)) {
+            if (hostStartTaskNameRegExp.test(debugConfiguration.preLaunchTask as string)) {
                 context.telemetry.properties.isActivationEvent = 'false';
                 context.telemetry.suppressIfSuccessful = false;
 

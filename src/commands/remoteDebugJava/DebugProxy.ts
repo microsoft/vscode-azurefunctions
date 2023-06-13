@@ -7,7 +7,7 @@ import { User } from '@azure/arm-appservice';
 import { ParsedSite, pingFunctionApp } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { EventEmitter } from 'events';
-import { createServer, Server, Socket } from 'net';
+import { Server, Socket, createServer } from 'net';
 import * as websocket from 'websocket';
 import { ext } from '../../extensionVariables';
 
@@ -144,11 +144,11 @@ export class DebugProxy extends EventEmitter {
             try {
                 await pingFunctionApp(context, this._site);
                 // eslint-disable-next-line @typescript-eslint/no-misused-promises
-                setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
+                setTimeout<IActionContext[]>(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {
                 ext.outputChannel.appendLog(`[Proxy Server] ${err}`);
                 // eslint-disable-next-line @typescript-eslint/no-misused-promises
-                setTimeout(this.keepAlive, 5 * 1000 /* 5 seconds */);
+                setTimeout<IActionContext[]>(this.keepAlive, 5 * 1000 /* 5 seconds */);
             }
         }
     }
