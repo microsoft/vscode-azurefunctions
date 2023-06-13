@@ -47,7 +47,7 @@ export namespace requestUtils {
     export async function downloadFile(context: IActionContext, requestOptionsOrUrl: string | AzExtRequestPrepareOptions, filePath: string): Promise<void> {
         await AzExtFsExtra.ensureDir(path.dirname(filePath));
         const request = createPipelineRequest(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
-        request.streamResponseStatusCodes = new Set([200]);
+        request.streamResponseStatusCodes = new Set([Number.POSITIVE_INFINITY]);
         const client: ServiceClient = await createGenericClient(context, undefined);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
