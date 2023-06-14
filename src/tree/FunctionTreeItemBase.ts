@@ -6,14 +6,14 @@
 import { FunctionEnvelope } from '@azure/arm-appservice';
 import { AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as url from 'url';
+import { FuncVersion } from '../FuncVersion';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
-import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
 import { ApplicationSettings, FuncHostRequest } from './IProjectTreeItem';
-import { getProjectContextValue, ProjectResource } from './projectContextValues';
+import { ProjectResource, getProjectContextValue } from './projectContextValues';
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;

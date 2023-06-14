@@ -8,6 +8,7 @@ import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, Deployme
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, TreeItemIconPath, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
@@ -112,6 +113,13 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public get iconPath(): TreeItemIconPath {
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
         return treeUtils.getIconPath(proxyTree.contextValue);
+    }
+
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            data: this.site,
+            label: this.name,
+        }
     }
 
     private get _state(): string | undefined {
