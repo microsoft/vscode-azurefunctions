@@ -560,11 +560,6 @@
                     "group": "3@2"
                 },
                 {
-                    "command": "azureFunctions.viewProperties",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;/i",
-                    "group": "4@1"
-                },
-                {
                     "command": "azureFunctions.appSettings.add",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettings.*azFunc/",
                     "group": "1@1"
