@@ -394,23 +394,33 @@
             }
         ],
         "menus": {
-            "azureWorkspaceDeploy": [
+            "azureFunctionsWorkspaceActions": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "group": "1_projects@1"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@2"
+                },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@1"
+                    "group": "2_deploy@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionApp",
+                    "group": "3_create@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionAppAdvanced",
+                    "group": "3_create@2"
                 }
             ],
             "view/title": [
                 {
-                    "command": "azureFunctions.createFunction",
+                    "submenu": "azureFunctionsWorkspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
-                },
-                {
-                    "submenu": "azureWorkspaceDeploy",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
@@ -794,9 +804,9 @@
         ],
         "submenus": [
             {
-                "id": "azureWorkspaceDeploy",
-                "icon": "$(cloud-upload)",
-                "label": "Deploy..."
+                "id": "azureFunctionsWorkspaceActions",
+                "icon": "resources/azure-functions.png",
+                "label": "Azure Functions"
             }
         ],
         "configuration": [
