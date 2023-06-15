@@ -393,19 +393,18 @@
                 "category": "Azure Functions"
             }
         ],
+        "submenus": [
+            {
+                "id": "azureFunctions.submenus.workspaceActions",
+                "icon": "resources/azure-functions.png",
+                "label": "Azure Functions"
+            }
+        ],
         "menus": {
-            "azureFunctionsWorkspaceActions": [
+            "azureFunctions.submenus.workspaceActions": [
                 {
                     "command": "azureFunctions.createFunction",
                     "group": "1_projects@1"
-                },
-                {
-                    "command": "azureFunctions.createNewProject",
-                    "group": "1_projects@2"
-                },
-                {
-                    "command": "azureFunctions.deploy",
-                    "group": "2_deploy@1"
                 },
                 {
                     "command": "azureFunctions.createFunctionApp",
@@ -414,11 +413,19 @@
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
                     "group": "3_create@2"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@2"
+                },
+                {
+                    "command": "azureFunctions.deploy",
+                    "group": "2_deploy@1"
                 }
             ],
             "view/title": [
                 {
-                    "submenu": "azureFunctionsWorkspaceActions",
+                    "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
                 }
@@ -800,13 +807,6 @@
                 "name": "func-python-watch",
                 "label": "%azureFunctions.problemMatchers.funcPythonWatch%",
                 "base": "$func-watch"
-            }
-        ],
-        "submenus": [
-            {
-                "id": "azureFunctionsWorkspaceActions",
-                "icon": "resources/azure-functions.png",
-                "label": "Azure Functions"
             }
         ],
         "configuration": [
