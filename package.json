@@ -1150,7 +1150,7 @@
     "devDependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@microsoft/eslint-config-azuretools": "^0.2.1",
-        "@microsoft/vscode-azext-dev": "^2.0.0",
+        "@microsoft/vscode-azext-dev": "^2.0.1",
         "@types/fs-extra": "^8.1.0",
         "@types/gulp": "^4.0.10",
         "@types/gulp-filter": "^3.0.33",
