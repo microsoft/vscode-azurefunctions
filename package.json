@@ -393,24 +393,41 @@
                 "category": "Azure Functions"
             }
         ],
+        "submenus": [
+            {
+                "id": "azureFunctions.submenus.workspaceActions",
+                "icon": "resources/azure-functions.png",
+                "label": "Azure Functions"
+            }
+        ],
         "menus": {
-            "azureWorkspaceDeploy": [
+            "azureFunctions.submenus.workspaceActions": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "group": "1_projects@1"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@2"
+                },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@1"
+                    "group": "2_deploy@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionApp",
+                    "group": "3_create@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionAppAdvanced",
+                    "group": "3_create@2"
                 }
             ],
             "view/title": [
                 {
-                    "command": "azureFunctions.createFunction",
+                    "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
-                },
-                {
-                    "submenu": "azureWorkspaceDeploy",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
@@ -792,13 +809,6 @@
                 "base": "$func-watch"
             }
         ],
-        "submenus": [
-            {
-                "id": "azureWorkspaceDeploy",
-                "icon": "$(cloud-upload)",
-                "label": "Deploy..."
-            }
-        ],
         "configuration": [
             {
                 "title": "Azure Functions",
@@ -1140,7 +1150,7 @@
     "devDependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@microsoft/eslint-config-azuretools": "^0.2.1",
-        "@microsoft/vscode-azext-dev": "^2.0.0",
+        "@microsoft/vscode-azext-dev": "^2.0.1",
         "@types/fs-extra": "^8.1.0",
         "@types/gulp": "^4.0.10",
         "@types/gulp-filter": "^3.0.33",
