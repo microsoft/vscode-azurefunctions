@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { nodeLearnMoreLink, nodeModels, previewPythonModel, ProjectLanguage } from '../../constants';
+import { ProjectLanguage, nodeLearnMoreLink, nodeModels, previewPythonModel } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
@@ -13,9 +13,7 @@ import { openUrl } from '../../utils/openUrl';
 import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
-import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
-import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
@@ -25,6 +23,8 @@ import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCrea
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
+import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
+import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -125,7 +125,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        promptSteps.push(await FunctionListStep.create(context, {
+        promptSteps.push(new FunctionListStep({
             isProjectWizard: true,
             templateId: this._templateId,
             functionSettings: this._functionSettings
