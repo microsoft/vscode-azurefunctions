@@ -60,9 +60,12 @@ export namespace bundleFeedUtils {
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
-    export async function getLatestVersionRange(context: IActionContext): Promise<string> {
-        const feed: IBundleFeed = await getBundleFeed(context, undefined);
-        return feed.defaultVersionRange;
+    export async function getLatestVersionRange(_context: IActionContext): Promise<string> {
+        // const feed: IBundleFeed = await getBundleFeed(context, undefined);
+        // return feed.defaultVersionRange;
+        // New default bundle version causes issues (ex: https://github.com/microsoft/vscode-azurefunctions/issues/3711)
+        // Using old version range as seen in https://github.com/Azure/azure-functions-host/pull/9324
+        return '[3.*, 4.0.0)';
     }
 
     export async function addDefaultBundle(context: IActionContext, hostJson: IHostJsonV2): Promise<void> {
