@@ -103,6 +103,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
 
     return {
         functionTemplates,
+        functionTemplatesV2: [], // CSharp does not support v2 templates
         bindingTemplates: [] // CSharp does not support binding templates
     };
 }

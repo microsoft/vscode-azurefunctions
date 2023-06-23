@@ -8,6 +8,8 @@ import { DurableBackendValues } from "../../constants";
 import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
+import { IFunctionTemplateV2 } from '../../templates/IFunctionTemplateV2';
+import { IParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
 
 export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext {
@@ -17,6 +19,10 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
     // Durable Functions
     hasDurableStorage?: boolean;
     newDurableStorageType?: DurableBackendValues;
+
+    // consider breaking this out into a separate interface
+    functionTemplateV2?: IFunctionTemplateV2;
+    job?: IParsedJob;
 }
 
 export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: BindingSettingValue): void {

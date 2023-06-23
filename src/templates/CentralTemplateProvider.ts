@@ -5,29 +5,30 @@
 
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
-import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../constants';
-import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
+import { ProjectLanguage, TemplateFilter, projectTemplateKeySetting } from '../constants';
+import { TemplateSource, ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
-import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { IFunctionTemplateV2 } from './IFunctionTemplateV2';
 import { ITemplates } from './ITemplates';
-import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
+import { TemplateProviderBase } from './TemplateProviderBase';
+import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
+import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
-import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { NodeV4Provider } from './script/NodeV4Provider';
-import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
-import { TemplateProviderBase } from './TemplateProviderBase';
+import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 
 type CachedProviders = { providers: TemplateProviderBase[]; templatesTask?: Promise<ITemplates> }
 
@@ -87,6 +88,22 @@ export class CentralTemplateProvider implements Disposable {
             default:
                 const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
+        }
+    }
+
+
+    public async getFunctionV2Templates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplateV2[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
+        switch (templateFilter) {
+            case TemplateFilter.All:
+                return templates.functionTemplatesV2;
+            // TODO: Verify if schema V2 templates have categories
+            // case TemplateFilter.Core:
+            //     return templates.functionTemplatesV2.filter((t: IFunctionTemplateV2) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
+            case TemplateFilter.Verified:
+            default:
+                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
+                return templates.functionTemplatesV2.filter((t: IFunctionTemplateV2) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }
 
@@ -195,6 +212,7 @@ export class CentralTemplateProvider implements Disposable {
         }))).reduce((t1: ITemplates, t2: ITemplates) => {
             return {
                 functionTemplates: t1.functionTemplates.concat(t2.functionTemplates),
+                functionTemplatesV2: t1.functionTemplatesV2.concat(t2.functionTemplatesV2),
                 bindingTemplates: t1.bindingTemplates.concat(t2.bindingTemplates)
             };
         });
@@ -246,6 +264,7 @@ export class CentralTemplateProvider implements Disposable {
         if (result) {
             return {
                 functionTemplates: result.functionTemplates.filter(f => this.includeTemplate(provider, f)),
+                functionTemplatesV2: result.functionTemplatesV2.filter(f => this.includeTemplate(provider, f)),
                 bindingTemplates: result.bindingTemplates.filter(b => this.includeTemplate(provider, b))
             };
         } else if (latestErrorMessage) {
@@ -256,7 +275,7 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate): boolean {
+    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate | IFunctionTemplateV2): boolean {
         return provider.includeTemplate(template) && (!('language' in template) || template.language.toLowerCase() === provider.language.toLowerCase());
     }
 

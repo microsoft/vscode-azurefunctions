@@ -7,16 +7,16 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { hostFileName, localSettingsFileName, ProjectLanguage, pythonFunctionAppFileName } from '../../../constants';
+import { ProjectLanguage, hostFileName, localSettingsFileName, pythonFunctionAppFileName } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
-import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { localize } from "../../../localize";
 import { PysteinTemplateProvider } from '../../../templates/script/PysteinTemplateProvider';
+import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { showMarkdownPreviewFile } from '../../../utils/textUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
-import { localize } from "../../../localize";
-import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
-import { showMarkdownPreviewFile } from '../../../utils/textUtils';
 
 const gettingStartedFileName = 'getting_started.md';
 
@@ -30,6 +30,7 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
+// TODO: This file needs to be completely refactored to create with the "actions" step
 export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 

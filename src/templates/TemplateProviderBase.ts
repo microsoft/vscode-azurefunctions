@@ -6,12 +6,13 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, env } from 'vscode';
+import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
-import { FuncVersion } from '../FuncVersion';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
+import { IFunctionTemplateV2 } from './IFunctionTemplateV2';
 import { ITemplates } from './ITemplates';
 
 export enum TemplateType {
@@ -79,7 +80,7 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Unless this is overidden, all templates will be included
      */
-    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate): boolean {
+    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate | IFunctionTemplateV2): boolean {
         return true;
     }
 

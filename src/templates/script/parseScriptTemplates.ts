@@ -10,7 +10,6 @@ import { localize } from '../../localize';
 import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { IInput } from './PysteinTemplateProvider';
 
 /**
  * Describes a script template before it has been parsed
@@ -157,42 +156,6 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
     };
 }
 
-// the bindings are similar to v1, but the input is coming from the trigger template so we need to account for that as well
-export function parseScriptSettingV2(data: object | undefined, resources: IResources, input: IInput): IBindingSetting {
-    const rawSetting: IRawSetting = <IRawSetting>data;
-    const enums: IEnumValue[] = [];
-    if (rawSetting && rawSetting.enum) {
-        for (const ev of rawSetting.enum) {
-            enums.push({
-                value: getResourceValue(resources, ev.value),
-                displayName: getResourceValue(resources, ev.display)
-            });
-        }
-    }
-
-    return {
-        name: rawSetting && getResourceValue(resources, rawSetting.name, true) || input.paramId,
-        resourceType: rawSetting?.resource,
-        valueType: rawSetting?.value,
-        description: rawSetting && rawSetting.help && replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) || undefined,
-        defaultValue: rawSetting?.defaultValue || input.defaultValue,
-        label: rawSetting && getResourceValue(resources, rawSetting.label, true) || input.paramId,
-        enums: enums,
-        required: rawSetting ? rawSetting.required : input.required,
-        assignTo: input.assignTo,
-        validateSetting: (value: string | undefined): string | undefined => {
-            if (rawSetting.validators) {
-                for (const validator of rawSetting.validators) {
-                    if (!value || value.match(validator.expression) === null) {
-                        return replaceHtmlLinkWithMarkdown(getResourceValue(resources, validator.errorText));
-                    }
-                }
-            }
-
-            return undefined;
-        }
-    };
-}
 
 function replaceHtmlLinkWithMarkdown(text: string): string {
     const match: RegExpMatchArray | null = text.match(/<a[^>]*href=['"]([^'"]*)['"][^>]*>([^<]*)<\/a>/i);
@@ -323,6 +286,7 @@ export function parseScriptTemplates(rawResources: object, rawTemplates: object[
         }
     }
 
-    return { functionTemplates, bindingTemplates };
+    // this is for parsing V1 templates, so no functionTemplatesV2
+    return { functionTemplates, bindingTemplates, functionTemplatesV2: [] };
 }
 

@@ -14,8 +14,8 @@ import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateType } from '../TemplateProviderBase';
-import { parseScriptTemplates } from './parseScriptTemplates';
 import { ScriptTemplateProvider } from './ScriptTemplateProvider';
+import { parseScriptTemplates } from './parseScriptTemplates';
 
 export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.ScriptBundle;
@@ -31,7 +31,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(context, bundleMetadata, latestTemplateVersion);
+        const release: bundleFeedUtils.ITemplatesReleaseV1 = await bundleFeedUtils.getRelease(context, bundleMetadata, latestTemplateVersion);
 
         const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);

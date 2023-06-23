@@ -5,52 +5,16 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage, pythonFunctionAppFileName, pythonFunctionBodyFileName } from '../../constants';
-import { IBindingSetting, IBindingTemplate } from '../IBindingTemplate';
-import { IFunctionTemplate } from '../IFunctionTemplate';
+import { ProjectLanguage } from '../../constants';
+import { IBundleMetadata } from '../../funcConfig/host';
+import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
+import { feedUtils } from '../../utils/feedUtils';
+import { IFunctionTemplateV2 } from '../IFunctionTemplateV2';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { IResources, IScriptFunctionTemplate, parseScriptSettingV2, parseScriptTemplates } from './parseScriptTemplates';
+import { IRawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
 
-interface IRawTemplateV2 {
-    actions: IAction[];
-    author?: string;
-    name: string;
-    id?: string;
-    description: string;
-    programmingModel: 'v1' | 'v2';
-    language: ProjectLanguage;
-    jobs: IJob[]
-    files: { [filename: string]: string };
-}
-
-interface IAction {
-    name: string;
-    type: string
-    assignTo: string;
-    filePath: string;
-    continueOnError?: boolean;
-    errorText?: string;
-    source: string;
-    createIfNotExists: boolean;
-    replaceTokens: boolean;
-}
-
-interface IJob {
-    actions: IAction[];
-    condition: { name: string, expectedValue: string }
-    inputs: IInput[];
-    name: string;
-    type: string;
-}
-
-export interface IInput {
-    assignTo: string;
-    defaultValue: string;
-    paramId: string;
-    required: boolean;
-}
 
 export class PysteinTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
@@ -59,32 +23,52 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         return path.join('pystein');
     }
 
-    protected _rawTemplates: object[];
+    protected _resources: { en: { [key: string]: string } };
+    protected _rawTemplates: IRawTemplateV2[];
+    protected _rawBindings: object[];
+    protected _language: string;
+    // TODO: Remove hardcoded language
+    public resourcesLanguage: string = 'en';
 
     public async getCachedTemplates(): Promise<ITemplates | undefined> {
         return await this.getBackupTemplates();
     }
 
     public async getLatestTemplateVersion(_context: IActionContext): Promise<string> {
-        return '1.0';
+        return '1.0.0';
     }
 
-    public async getLatestTemplates(_context: IActionContext, _latestTemplateVersion: string): Promise<ITemplates> {
+    public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         return await this.getBackupTemplates();
+        // just use backup templates until template feed deploys v2 templates
+        const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
+        const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(context, bundleMetadata, latestTemplateVersion);
+        this._language = this.getResourcesLanguage();
+        const resourcesUrl: string = release.resources.replace('{locale}', this.language);
+        const urls: string[] = [release.userPrompts, resourcesUrl, release.functions];
+
+        [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, IRawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
+
+        return {
+            functionTemplates: [],
+            functionTemplatesV2: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
+            bindingTemplates: []
+        }
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
-        return await this.parseTemplates(this.getBackupPath());
-    }
+        const paths: ITemplatePaths = this.getTemplatePaths(this.getBackupPath());
+        this._rawTemplates = <IRawTemplateV2[]>await AzExtFsExtra.readJSON(paths.templates);
+        this._rawBindings = <object[]>await AzExtFsExtra.readJSON(paths.bindings);
+        this._resources = await AzExtFsExtra.readJSON(paths.resources);
 
-    public async getProjectTemplate(): Promise<IScriptFunctionTemplate | undefined> {
-        const templates = await this.getBackupTemplates();
+        const functionTemplatesV2 = parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources);
 
-        // Find the first Python Preview project root template...
-        return templates.functionTemplates.find(template =>
-            template.language === ProjectLanguage.Python
-            && template.id.endsWith('-Python-Preview')
-            && template.categoryStyle === 'projectroot') as IScriptFunctionTemplate;
+        return {
+            functionTemplates: [],
+            functionTemplatesV2,
+            bindingTemplates: []
+        }
     }
 
     public async updateBackupTemplates(): Promise<void> {
@@ -102,52 +86,9 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         await Promise.resolve();
     }
 
-    public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
-        return this.isFunctionTemplate(template)
-            && template.language === ProjectLanguage.Python
-            && template.id.endsWith('-Python-Preview-Append');
-    }
-
-    protected async parseTemplates(rootPath: string): Promise<ITemplates> {
-        const paths: ITemplatePaths = this.getTemplatePaths(rootPath);
-        this._rawTemplates = <object[]>await AzExtFsExtra.readJSON(paths.templates);
-        const templates: ITemplates = parseScriptTemplates({}, this._rawTemplates, {});
-
-        const rawTemplatesV2 = <IRawTemplateV2[]>await AzExtFsExtra.readJSON(paths.templatesV2);
-        // replace the function files with the V2 templates
-        for (const templateV2 of rawTemplatesV2) {
-            const pythonTemplateV1 = templates.functionTemplates.find(
-                t => t.id.toLocaleLowerCase() === `${templateV2.id}-Preview-Append`.toLocaleLowerCase()) as IScriptFunctionTemplate;
-
-            // to pick up the GA templates, we should be able to replace those properties in the templates
-            if (pythonTemplateV1) {
-                // template used for a new project
-                pythonTemplateV1.templateFiles[pythonFunctionAppFileName] =
-                    templateV2.files?.[pythonFunctionAppFileName] as string;
-                // template used for appending to an existing project
-                pythonTemplateV1.templateFiles[pythonFunctionBodyFileName] =
-                    templateV2.files?.[pythonFunctionBodyFileName] as string;
-                // old markdowns mention "preview" in them
-                const markdownFileName = Object.keys(templateV2.files).find(filename => filename.toLowerCase().endsWith('.md'));
-                if (markdownFileName) {
-                    pythonTemplateV1.templateFiles[markdownFileName] = templateV2.files?.[markdownFileName] as string;
-                }
-
-                const inputs = templateV2?.jobs.find(j => j.type === 'AppendToFile')?.inputs;
-                if (inputs) {
-                    const userPrompts = await AzExtFsExtra.readJSON(paths.bindingsV2) as unknown as { label: string, id: string }[];
-                    const resourcesV2 = await AzExtFsExtra.readJSON(paths.resourcesV2) as IResources;
-                    // create the userPromptedSettings by using the "AppendToFile" inputs with the userPrompts which replaced the bindings.json
-                    for (const input of inputs) {
-                        const userPrompt = userPrompts.find(up => up.id.toLocaleLowerCase() === input.paramId.toLocaleLowerCase());
-                        const userPromptedSetting: IBindingSetting = parseScriptSettingV2(userPrompt, resourcesV2, input);
-                        pythonTemplateV1.userPromptedSettings.push(userPromptedSetting);
-                    }
-                }
-            }
-        }
-
-        return templates;
+    public includeTemplate(template: IFunctionTemplateV2): boolean {
+        return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase()
+            && template.programmingModel === 'v2';
     }
 
     protected getResourcesLanguage(): string {
@@ -155,22 +96,25 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
     }
 
     private getTemplatePaths(rootPath: string): ITemplatePaths {
-        const templates: string = path.join(rootPath, 'templates', 'templates.json');
-        const templatesV2: string = path.join(rootPath, 'templates-v2', 'templates.json');
-        const bindingsV2: string = path.join(rootPath, 'bindings-v2', 'userPrompts.json');
-        const resourcesV2: string = path.join(rootPath, 'resources-v2', 'Resources.json');
+        const templates: string = path.join(rootPath, 'templates-v2', 'templates.json');
+        const bindings: string = path.join(rootPath, 'bindings-v2', 'userPrompts.json');
+        const resources: string = path.join(rootPath, 'resources-v2', 'Resources.json');
 
-        return { templates, templatesV2, bindingsV2, resourcesV2 };
+        return { templates, bindings, resources };
     }
 
-    private isFunctionTemplate(template: IFunctionTemplate | IBindingTemplate): template is IFunctionTemplate {
-        return (template as IFunctionTemplate).id !== undefined;
+    private async getBundleInfo(): Promise<IBundleMetadata | undefined> {
+        // hard-code this for now, but this should be retrieved from the template feed at some point
+        return {
+            "id": "Microsoft.Azure.Functions.ExtensionBundle",
+            "version": "[4.*, 5.0.0)"
+        }
     }
 }
 
+
 interface ITemplatePaths {
     templates: string;
-    templatesV2: string;
-    bindingsV2: string;
-    resourcesV2: string;
+    bindings: string;
+    resources: string;
 }

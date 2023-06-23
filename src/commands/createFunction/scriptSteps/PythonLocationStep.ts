@@ -44,7 +44,7 @@ export class PythonLocationStep extends AzureWizardPromptStep<IPythonFunctionWiz
                 executeSteps: [new PythonFunctionCreateStep()]
             };
         } else {
-            return await FunctionSubWizard.createSubWizard(wizardContext, this._functionSettings);
+            return await FunctionSubWizard.createSubWizard(wizardContext, this._functionSettings, this._isProjectWizard);
         }
     }
 
