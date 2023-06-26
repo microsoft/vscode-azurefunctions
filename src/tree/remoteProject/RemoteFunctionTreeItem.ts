@@ -6,6 +6,7 @@
 import { FunctionEnvelope, HostKeys } from '@azure/arm-appservice';
 import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { ViewPropertiesModel } from '@microsoft/vscode-azureresources-api';
 import { ProgressLocation, window } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -35,6 +36,13 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this.name)}`;
+    }
+
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            data: this.rawConfig,
+            label: this.name,
+        }
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
