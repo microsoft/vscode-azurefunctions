@@ -15,6 +15,7 @@ export class FunctionAppResolver implements AppResourceResolver {
             const client = await createWebSiteClient({ ...context, ...subContext });
 
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
+                this.siteCache.clear();
                 const sites = await uiUtils.listAllIterator(client.webApps.list());
                 sites.forEach(site => this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), site));
                 this.siteCacheLastUpdated = Date.now();
