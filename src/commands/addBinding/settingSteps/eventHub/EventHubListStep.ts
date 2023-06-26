@@ -16,7 +16,7 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
     public async prompt(context: IEventHubWizardContext): Promise<void> {
         if (!context.eventHubsNamespace) {
             // if there is no event hub namespace, then we can't create an event hub but
-            // getSubWizard only gets called if prompt does so we can't use shouldPrompt to stiffle this prompt
+            // getSubWizard only gets called if prompt does so we can't use shouldPrompt to stifle this prompt
             return;
         }
 
