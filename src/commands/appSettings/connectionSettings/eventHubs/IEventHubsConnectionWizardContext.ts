@@ -16,4 +16,4 @@ export interface IEventHubsConnectionWizardContext extends IEventHubWizardContex
     eventHubsConnectionType?: EventHubsConnectionTypeValues;
 
     // Netherite uses all of the eventhub namespace settings in IEventHubWizardContext
-}``
+}
