@@ -12,8 +12,10 @@ import { BindingSettingValue } from '../../../funcConfig/function';
 import { ILocalSettingsJson, getLocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
+import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
 import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { IBindingWizardContext } from '../IBindingWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
@@ -24,7 +26,6 @@ import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
 import { EventHubAuthRuleListStep } from './eventHub/EventHubAuthRuleListStep';
 import { EventHubConnectionCreateStep } from './eventHub/EventHubConnectionCreateStep';
 import { EventHubListStep } from './eventHub/EventHubListStep';
-import { EventHubNamespaceListStep } from './eventHub/EventHubNamespaceListStep';
 import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectionCreateStep';
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 
@@ -41,8 +42,8 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
 
     public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
         if (!getBindingSetting(context, this._setting)) {
-            const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionActionContext>[] = [];
-            const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionActionContext>[] = [];
+            const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
             switch (this._setting.resourceType) {
                 case ResourceType.DocumentDB:
                     azurePromptSteps.push(new CosmosDBListStep());
@@ -60,7 +61,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
                     azureExecuteSteps.push(new ServiceBusConnectionCreateStep(this._setting));
                     break;
                 case ResourceType.EventHub:
-                    azurePromptSteps.push(new EventHubNamespaceListStep(), new EventHubListStep(), new EventHubAuthRuleListStep());
+                    azurePromptSteps.push(new EventHubsNamespaceListStep(), new EventHubListStep(), new EventHubAuthRuleListStep());
                     azureExecuteSteps.push(new EventHubConnectionCreateStep(this._setting));
                     break;
                 default:

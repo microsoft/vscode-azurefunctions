@@ -5,7 +5,7 @@
 
 import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
 import { AzExtLocation, LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -16,7 +16,7 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
     public priority: number = 200;
 
     public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const rgName: string = nonNullValue(context.resourceGroup?.name);
+        const rgName: string = nonNullValueAndProp(context.resourceGroup, 'name');
         const newNamespaceName: string = nonNullValue(context.newEventHubsNamespaceName);
         const creating: string = localize('creatingEventHubsNamespace', 'Creating new event hubs namespace "{0}"...', newNamespaceName);
         ext.outputChannel.appendLog(creating);
