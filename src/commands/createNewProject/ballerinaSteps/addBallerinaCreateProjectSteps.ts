@@ -6,7 +6,7 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { ballerinaUtils } from "../../../utils/ballerinaUtils";
 import { IProjectWizardContext } from "../IProjectWizardContext";
-import { BallerinaProjectCreateStep } from "../ProjectCreateStep/BallerinaProjectCreateSteps";
+import { BallerinaProjectCreateStep } from "../ProjectCreateStep/BallerinaProjectCreateStep";
 import { BallerinaBackendStep } from "./BallerinaBackendStep";
 import { IBallerinaProjectWizardContext } from "./IBallerinaProjectWizardContext";
 

@@ -21,7 +21,7 @@ import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
-import { BallerinaProvider } from './script/BallerinaProvider';
+import { BallerinaTemplateProvider } from './script/BallerinaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
 import { NodeV4Provider } from './script/NodeV4Provider';
 import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
@@ -62,7 +62,7 @@ export class CentralTemplateProvider implements Disposable {
                 providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             case ProjectLanguage.Ballerina:
-                providers.push(new BallerinaProvider(version, projectPath, language, projectTemplateKey));
+                providers.push(new BallerinaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             default:
                 if (isPythonV2Plus(language, languageModel)) {
@@ -77,7 +77,7 @@ export class CentralTemplateProvider implements Disposable {
                 }
                 break;
         }
-        
+
         return providers;
     }
 

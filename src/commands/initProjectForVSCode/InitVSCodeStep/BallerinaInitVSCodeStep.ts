@@ -8,7 +8,7 @@ import { ProjectLanguage, func, hostStartCommand, hostStartTaskName } from '../.
 import { ballerinaDebugConfig } from '../../../debug/BallerinaDebugProvider';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
+import { IBallerinaProjectWizardContext } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
 import { isBallerinaProject } from '../detectProjectLanguage';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -19,7 +19,7 @@ export class BallerinaInitVSCodeStep extends InitVSCodeStepBase {
 
     private _debugSubpath: string = "target/azure_functions";
 
-    protected async executeCore(context: IJavaProjectWizardContext): Promise<void> {
+    protected async executeCore(context: IBallerinaProjectWizardContext): Promise<void> {
         const isProject: boolean = await isBallerinaProject(context.projectPath);
         if (!isProject) {
             this._debugSubpath = "azure_functions";

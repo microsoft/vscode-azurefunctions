@@ -31,7 +31,7 @@ export class BallerinaProjectCreateStep extends ScriptProjectCreateStep {
 
     async getBuildOptions(context: IBallerinaProjectWizardContext): Promise<string> {
         return `cloud="azure_functions"
-${context.balBackend === BallerinaBackend.native ? 'native=true' : ''}`;
+${context.balBackend === BallerinaBackend.native ? 'graalvm=true' : ''}`;
     }
 }
 

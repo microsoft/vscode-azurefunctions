@@ -12,7 +12,7 @@ import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';
 
-export class BallerinaProvider extends TemplateProviderBase {
+export class BallerinaTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
 
     protected get backupSubpath(): string {
