@@ -5,30 +5,31 @@
 
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
-import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../constants';
-import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
+import { ProjectLanguage, TemplateFilter, projectTemplateKeySetting } from '../constants';
+import { TemplateSource, ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
-import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
-import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
+import { TemplateProviderBase } from './TemplateProviderBase';
+import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
+import { getBallerinaVerifiedTemplateIds } from './ballerina/getBallerinaVerifiedTemplateIds';
+import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
+import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
-import { BallerinaTemplateProvider } from './script/BallerinaTemplateProvider';
-import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { NodeV4Provider } from './script/NodeV4Provider';
-import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
-import { TemplateProviderBase } from './TemplateProviderBase';
+import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 
 type CachedProviders = { providers: TemplateProviderBase[]; templatesTask?: Promise<ITemplates> }
 
@@ -90,7 +91,7 @@ export class CentralTemplateProvider implements Disposable {
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
-                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
+                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }

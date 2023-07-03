@@ -9,11 +9,11 @@ import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
-import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { parseScriptTemplates } from './parseScriptTemplates';
+import { getScriptResourcesLanguage } from '../script/getScriptResourcesLanguage';
+import { parseScriptTemplates } from '../script/parseScriptTemplates';
 
 export class BallerinaTemplateProvider extends TemplateProviderBase {
-    public templateType: TemplateType = TemplateType.Script;
+    public templateType: TemplateType = TemplateType.Ballerina;
 
     protected get backupSubpath(): string {
         return path.join('ballerina');
