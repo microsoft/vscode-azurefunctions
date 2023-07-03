@@ -5,42 +5,49 @@
 
 import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
+import { FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
-import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
+import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
 
+    private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
 
-    private constructor(functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
+    public constructor(options: IFunctionListStepOptions) {
         super();
-        this._functionSettings = functionSettings || {};
-        this._isProjectWizard = !!isProjectWizard;
+        this._options = options;
+        this._functionSettings = options.functionSettings || {};
+        this._isProjectWizard = !!options.isProjectWizard;
     }
 
-    public static async create(context: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
-        if (options.templateId) {
+    public async configureBeforePrompt(context: IFunctionWizardContext): Promise<void> {
+        if (this._options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templateProvider = ext.templateProvider.get(context);
             const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
-                if (options.templateId) {
+                if (this._options.templateId) {
                     const actualId: string = t.id.toLowerCase();
-                    const expectedId: string = options.templateId.toLowerCase();
+                    const expectedId: string = this._options.templateId.toLowerCase();
+
+                    if (isNodeV4Plus(context) && !actualId.includes(nodeV4Suffix)) {
+                        return false;
+                    }
+
                     // check for an exact match or only whole word matches and escape the "\b" since it's in a string, not a RegExp expression
                     return actualId === expectedId || new RegExp(`\\b${escape(expectedId)}\\b`, 'gmi').test(actualId);
                 } else {
@@ -50,11 +57,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
             } else {
-                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", version "{1}", and id "{2}".', context.language, context.version, options.templateId));
+                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", version "{1}", and id "{2}".', context.language, context.version, this._options.templateId));
             }
         }
-
-        return new FunctionListStep(options.functionSettings, options.isProjectWizard);
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {

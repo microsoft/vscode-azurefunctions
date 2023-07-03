@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { createResourceClient } from '@microsoft/vscode-azext-azureappservice';
+import { ResourceGroupListStep, getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -21,6 +22,10 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
 
         const result: EHNamespace | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
         context.eventHubsNamespace = result;
+        if (result) {
+            const rgClient = await createResourceClient(context);
+            context.resourceGroup = await rgClient.resourceGroups.get(getResourceGroupFromId(nonNullProp(result, 'id')));
+        }
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionContext> | undefined> {

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FuncVersion } from '../../FuncVersion';
+import { nodeV4Suffix } from '../../utils/programmingModelUtils';
 
 export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)[] {
     let verifiedTemplateIds: string[] = [
@@ -39,11 +40,11 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
         // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
         // NOTE: The Python Preview IDs are only temporary.
         // NOTE: The Node Programming Model IDs include -4.x as a suffix
-        const regExps = verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript(-4.x)?|TypeScript(-4.x)?|Python|PowerShell|Custom|Python-Preview|Python-Preview-Append)$`, 'i'));
+        const regExps = verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript(${nodeV4Suffix})?|TypeScript(${nodeV4Suffix})?|Python|PowerShell|Custom|Python-Preview|Python-Preview-Append)$`, 'i'));
 
         // The Entity templates aren't supported in PowerShell at all, and the DurableFunctionsEntityHttpStart template is not yet supported in Python.
         // As a result, we need to manually create their respective regular expressions to account for these edge cases
-        const entityRegExps = [new RegExp(`^DurableFunctionsEntity-(JavaScript(-4.x)?|TypeScript(-4.x)?|Python|Custom)$`, 'i'), new RegExp(`^DurableFunctionsEntityHttpStart-(JavaScript(-4.x)?|TypeScript(-4.x)?|Custom)$`, 'i')];
+        const entityRegExps = [new RegExp(`^DurableFunctionsEntity-(JavaScript(${nodeV4Suffix})?|TypeScript(${nodeV4Suffix})?|Python|Custom)$`, 'i'), new RegExp(`^DurableFunctionsEntityHttpStart-(JavaScript(${nodeV4Suffix})?|TypeScript(${nodeV4Suffix})?|Custom)$`, 'i')];
         return regExps.concat(entityRegExps);
     }
 }

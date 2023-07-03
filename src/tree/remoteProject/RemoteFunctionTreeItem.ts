@@ -6,6 +6,7 @@
 import { FunctionEnvelope, HostKeys } from '@azure/arm-appservice';
 import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { ViewPropertiesModel } from '@microsoft/vscode-azureresources-api';
 import { ProgressLocation, window } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -18,7 +19,8 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
     private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string, func: FunctionEnvelope) {
-        super(parent, config, name, func);
+        super(parent, config, name, func, false);
+        this.commandId = 'azureResourceGroups.viewProperties';
     }
 
     public static async create(context: IActionContext, parent: RemoteFunctionsTreeItem, func: FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
@@ -35,6 +37,13 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this.name)}`;
+    }
+
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            data: this.rawConfig,
+            label: this.name,
+        }
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {

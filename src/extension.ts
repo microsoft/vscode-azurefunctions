@@ -7,8 +7,8 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtResourceType, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { IActionContext, apiUtils, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
@@ -19,7 +19,6 @@ import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromAp
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
-import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -27,6 +26,7 @@ import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
+import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
@@ -35,7 +35,7 @@ import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);

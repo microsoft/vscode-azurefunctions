@@ -48,8 +48,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
             { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
-            { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
+            { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
         ];
 
@@ -130,7 +130,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        promptSteps.push(await FunctionListStep.create(context, {
+        promptSteps.push(new FunctionListStep({
             isProjectWizard: true,
             templateId: this._templateId,
             functionSettings: this._functionSettings

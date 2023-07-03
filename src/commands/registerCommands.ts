@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapArgs } from '@microsoft/vscode-azext-utils';
+import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
+import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapTreeNodeCommandCallback } from '@microsoft/vscode-azext-utils';
 import { commands } from "vscode";
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
@@ -100,7 +101,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.toggleAppSettingVisibility', async (context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(context); }, 250);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
-    registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapArgs(viewDeploymentLogs));
+    registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapTreeNodeCommandCallback(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
 }

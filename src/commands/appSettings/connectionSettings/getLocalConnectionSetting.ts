@@ -5,7 +5,7 @@
 
 import { AccessKeys, AuthorizationRule, EventHubManagementClient, KnownAccessRights } from "@azure/arm-eventhub";
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from "@azure/arm-storage";
-import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { IStorageAccountWizardContext, getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { ISubscriptionContext, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { localSettingsFileName } from "../../../constants";
 import { defaultDescription } from "../../../constants-nls";

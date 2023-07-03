@@ -8,6 +8,7 @@ import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCrea
 import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
+import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
@@ -15,16 +16,15 @@ import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/Funct
 import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
-import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 import { createActivityContext } from '../utils/activityUtils';
 import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
-import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
+import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
@@ -126,14 +126,15 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
                 {
+                    // The account type must support blobs, queues, and tables.
+                    // See: https://aka.ms/Cfqnrc
                     kind: [
+                        // Blob-only accounts don't support queues and tables
                         StorageAccountKind.BlobStorage
                     ],
                     performance: [
+                        // Premium performance accounts don't support queues and tables
                         StorageAccountPerformance.Premium
-                    ],
-                    replication: [
-                        StorageAccountReplication.ZRS
                     ],
                     learnMoreLink: 'https://aka.ms/Cfqnrc'
                 }
