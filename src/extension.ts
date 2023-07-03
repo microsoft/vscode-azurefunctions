@@ -19,6 +19,7 @@ import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromAp
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
+import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -26,7 +27,6 @@ import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
-import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';

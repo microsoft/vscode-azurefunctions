@@ -23,6 +23,7 @@ export class BallerinaFunctionCreateStep extends FunctionCreateStepBase<IBalleri
 
             for (const setting of template.userPromptedSettings) {
                 // the setting name keys are lowercased
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 contents = contents.replace(new RegExp(`%${setting.name}%`, 'g'), context[setting.name.toLowerCase()]);
             }
 
