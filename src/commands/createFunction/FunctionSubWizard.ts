@@ -6,8 +6,8 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
+import { FunctionTemplateV2 } from '../../templates/FunctionTemplateV2';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { IFunctionTemplateV2 } from '../../templates/IFunctionTemplateV2';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
@@ -33,7 +33,7 @@ export class FunctionSubWizard {
     public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
 
-        const template: IFunctionTemplate | IFunctionTemplateV2 | undefined = context.functionTemplate ?? context.functionTemplateV2;
+        const template: IFunctionTemplate | FunctionTemplateV2 | undefined = context.functionTemplate ?? context.functionTemplateV2;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
 
@@ -69,6 +69,8 @@ export class FunctionSubWizard {
             if ('wizards' in template) {
                 // wizards is a unique property of v2 templates
                 promptSteps.push(new JobsListStep(isProjectWizard));
+                // the JobListStep will create the rest of the wizard
+                return undefined;
             } else {
                 addBindingSettingSteps(template.userPromptedSettings, promptSteps);
             }

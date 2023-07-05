@@ -14,9 +14,9 @@ import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { FunctionTemplateV2 } from './FunctionTemplateV2';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
-import { IFunctionTemplateV2 } from './IFunctionTemplateV2';
 import { ITemplates } from './ITemplates';
 import { TemplateProviderBase } from './TemplateProviderBase';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -92,7 +92,7 @@ export class CentralTemplateProvider implements Disposable {
     }
 
 
-    public async getFunctionV2Templates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplateV2[]> {
+    public async getFunctionV2Templates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionTemplateV2[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
         switch (templateFilter) {
             case TemplateFilter.All:
@@ -103,7 +103,7 @@ export class CentralTemplateProvider implements Disposable {
             case TemplateFilter.Verified:
             default:
                 const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
-                return templates.functionTemplatesV2.filter((t: IFunctionTemplateV2) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
+                return templates.functionTemplatesV2.filter((t: FunctionTemplateV2) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }
 
@@ -275,7 +275,7 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate | IFunctionTemplateV2): boolean {
+    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate | FunctionTemplateV2): boolean {
         return provider.includeTemplate(template) && (!('language' in template) || template.language.toLowerCase() === provider.language.toLowerCase());
     }
 

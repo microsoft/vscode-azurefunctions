@@ -9,11 +9,11 @@ import { ProjectLanguage } from '../../constants';
 import { IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
-import { IFunctionTemplateV2 } from '../IFunctionTemplateV2';
+import { FunctionTemplateV2 } from '../FunctionTemplateV2';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { IRawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
+import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
 
 
 export class PysteinTemplateProvider extends TemplateProviderBase {
@@ -24,7 +24,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
     }
 
     protected _resources: { en: { [key: string]: string } };
-    protected _rawTemplates: IRawTemplateV2[];
+    protected _rawTemplates: RawTemplateV2[];
     protected _rawBindings: object[];
     protected _language: string;
     // TODO: Remove hardcoded language
@@ -47,7 +47,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         const resourcesUrl: string = release.resources.replace('{locale}', this.language);
         const urls: string[] = [release.userPrompts, resourcesUrl, release.functions];
 
-        [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, IRawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
+        [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
 
         return {
             functionTemplates: [],
@@ -58,7 +58,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
 
     public async getBackupTemplates(): Promise<ITemplates> {
         const paths: ITemplatePaths = this.getTemplatePaths(this.getBackupPath());
-        this._rawTemplates = <IRawTemplateV2[]>await AzExtFsExtra.readJSON(paths.templates);
+        this._rawTemplates = <RawTemplateV2[]>await AzExtFsExtra.readJSON(paths.templates);
         this._rawBindings = <object[]>await AzExtFsExtra.readJSON(paths.bindings);
         this._resources = await AzExtFsExtra.readJSON(paths.resources);
 
@@ -86,7 +86,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         await Promise.resolve();
     }
 
-    public includeTemplate(template: IFunctionTemplateV2): boolean {
+    public includeTemplate(template: FunctionTemplateV2): boolean {
         return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase()
             && template.programmingModel === 'v2';
     }

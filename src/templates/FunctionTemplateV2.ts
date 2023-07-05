@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IParsedJob, IRawTemplateV2 } from "./script/parseScriptTemplatesV2";
+import { ParsedJob, RawTemplateV2 } from "./script/parseScriptTemplatesV2";
 
-export interface IFunctionTemplateV2 extends IRawTemplateV2 {
+export interface FunctionTemplateV2 extends RawTemplateV2 {
     id: string;
     // jobs translate to Azure Wizards
-    wizards: IParsedJob[];
+    wizards: ParsedJob[];
 }

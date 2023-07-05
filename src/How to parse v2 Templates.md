@@ -33,3 +33,6 @@ JobsPromptStep
 
 Should I change FunctionSubWizard to add this or make a new file?
 Could probably extend FunctionListStep for a v2 version as well.
+
+When I create the execute steps, I should pass in the prompt's inputs to the execute step, otherwise I'll have to do a look up after the fact.
+Ideally, I run wizard.prompt() and then can check the assignTo of the executes and see if there are any prompts that match up with it. If there are, then I can replace with `assignTo` with `replaceToken`

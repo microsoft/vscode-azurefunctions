@@ -4,64 +4,64 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ProjectLanguage } from '../../constants';
+import { ActionType, ProjectLanguage } from '../../constants';
+import { FunctionTemplateV2 } from '../FunctionTemplateV2';
 import { ResourceType } from '../IBindingTemplate';
-import { IFunctionTemplateV2 } from '../IFunctionTemplateV2';
 
 /**
  * Describes script template resources to be used for parsing
  */
-export interface IResources {
+export interface Resources {
     lang?: { [key: string]: string | undefined };
     // Every Resources.json file also contains the english strings
     en: { [key: string]: string | undefined };
 }
 
-export interface IRawTemplateV2 {
-    actions: IParsedAction[];
+export interface RawTemplateV2 {
+    actions: ParsedAction[];
     author?: string;
     name: string;
     id?: string;
     description: string;
     programmingModel: 'v1' | 'v2';
     language: ProjectLanguage;
-    jobs: IRawJob[]
+    jobs: RawJob[]
     files: { [filename: string]: string };
 }
 
-interface IParsedAction {
+export interface ParsedAction {
     name: string;
-    type: string;
-    assignTo: string;
-    filePath: string;
+    type: ActionType;
+    assignTo?: string;
+    filePath?: string;
     continueOnError?: boolean;
     errorText?: string;
-    source: string;
-    createIfNotExists: boolean;
-    replaceTokens: boolean;
+    source?: string;
+    createIfNotExists?: boolean;
+    replaceTokens?: boolean;
 }
 
-interface IRawJob {
+interface RawJob {
     actions: string[];
     condition: { name: string, expectedValue: string }
-    inputs: IRawInput[];
+    inputs: RawInput[];
     name: string;
     type: string;
 }
 
-export interface IRawInput {
+export interface RawInput {
     assignTo: string;
     defaultValue: string;
     paramId: string;
     required: boolean;
 }
 
-interface IRawUserPrompt {
+interface RawUserPrompt {
     id: string;
     name: string;
     label: string;
     help?: string;
-    validator?: {
+    validators?: {
         // string representation of a regex
         expression: string;
         errorText: string;
@@ -75,33 +75,30 @@ interface IRawUserPrompt {
     placeHolder?: string;
 }
 
-interface IParsedInputPrompt extends IRawUserPrompt {
-    assignTo: string;
-    defaultValue: string;
-    required: boolean;
+export interface ParsedInput extends RawUserPrompt, RawInput {
+
 }
 
-export interface IParsedJob extends IRawJob {
-    prompts: IParsedInputPrompt[];
-    // doesn't seem like there's a need to parse these yet
-    executes: IParsedAction[];
+export interface ParsedJob extends RawJob {
+    prompts: ParsedInput[];
+    executes: ParsedAction[];
 }
 
-export function parseScriptTemplates(rawTemplates: IRawTemplateV2[], rawBindings: object[], resources: IResources): IFunctionTemplateV2[] {
-    const userPrompts: IRawUserPrompt[] = parseUserPrompts(rawBindings, resources);
-    const templates: IFunctionTemplateV2[] = [];
+export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings: object[], resources: Resources): FunctionTemplateV2[] {
+    const userPrompts: RawUserPrompt[] = parseUserPrompts(rawBindings, resources);
+    const templates: FunctionTemplateV2[] = [];
     for (const templateV2 of rawTemplates) {
         // look into jobs-- each job can be an Azure Wizard. Name is the title
-        const parsedJobs: IParsedJob[] = [];
+        const parsedJobs: ParsedJob[] = [];
         for (const job of templateV2.jobs) {
-            const prompts: IParsedInputPrompt[] = [];
+            const prompts: ParsedInput[] = [];
             job.inputs.forEach(input => {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const userPrompt = userPrompts.find(up => up.id.toLocaleLowerCase() === input.paramId.toLocaleLowerCase())!;
                 prompts.push(Object.assign(input, userPrompt));
             });
 
-            const executes: IParsedAction[] = [];
+            const executes: ParsedAction[] = [];
             for (const action of job.actions) {
                 const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase())
                 if (parsedAction) {
@@ -117,10 +114,10 @@ export function parseScriptTemplates(rawTemplates: IRawTemplateV2[], rawBindings
     return templates;
 }
 
-export function parseUserPrompts(rawUserPrompts: object[], resources: IResources): IRawUserPrompt[] {
-    const userPrompts: IRawUserPrompt[] = [];
+export function parseUserPrompts(rawUserPrompts: object[], resources: Resources): RawUserPrompt[] {
+    const userPrompts: RawUserPrompt[] = [];
     for (const rawUserPrompt of rawUserPrompts) {
-        const userPrompt: IRawUserPrompt = rawUserPrompt as IRawUserPrompt;
+        const userPrompt: RawUserPrompt = rawUserPrompt as RawUserPrompt;
         for (const key of Object.keys(rawUserPrompt)) {
             // all of the properties in the rawResources are in the format of "param_name" but the keys in the rawUserPrompt are in the format of "param-name"
             const paramName = userPrompt[key] as unknown;

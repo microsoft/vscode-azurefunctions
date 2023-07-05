@@ -10,9 +10,9 @@ import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
+import { FunctionTemplateV2 } from './FunctionTemplateV2';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
-import { IFunctionTemplateV2 } from './IFunctionTemplateV2';
 import { ITemplates } from './ITemplates';
 
 export enum TemplateType {
@@ -80,7 +80,7 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Unless this is overidden, all templates will be included
      */
-    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate | IFunctionTemplateV2): boolean {
+    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate | FunctionTemplateV2): boolean {
         return true;
     }
 
