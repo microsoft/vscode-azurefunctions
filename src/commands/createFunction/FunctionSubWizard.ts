@@ -11,6 +11,7 @@ import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
+import { FunctionWizardV2Context } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
@@ -30,7 +31,7 @@ import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
 export class FunctionSubWizard {
-    public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+    public static async createSubWizard(context: FunctionWizardV2Context, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
 
         const template: IFunctionTemplate | FunctionTemplateV2 | undefined = context.functionTemplate ?? context.functionTemplateV2;

@@ -16,6 +16,7 @@ import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
+import { FunctionWizardV2Context } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
@@ -81,7 +82,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         }
     }
 
-    public async prompt(context: IFunctionWizardContext): Promise<void> {
+    public async prompt(context: FunctionWizardV2Context): Promise<void> {
         let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
         const templateProvider = ext.templateProvider.get(context);
