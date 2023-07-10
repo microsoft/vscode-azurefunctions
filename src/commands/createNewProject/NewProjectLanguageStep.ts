@@ -10,7 +10,6 @@ import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { JobsListStep } from '../createFunction/JobsListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
@@ -100,9 +99,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
-                if (!isPythonV2Plus(context.language, context.languageModel)) {
-                    executeSteps.push(new PythonProjectCreateStep());
-                }
+                executeSteps.push(new PythonProjectCreateStep());
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());
@@ -131,7 +128,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         }));
 
         if (context.languageModel) {
-            promptSteps.push(new JobsListStep());
+            promptSteps.push(new JobsListStep(true));
         }
 
 

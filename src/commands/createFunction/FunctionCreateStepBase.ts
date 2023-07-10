@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
+import { FunctionTemplateV2 } from '../../templates/FunctionTemplateV2';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { nonNullProp } from '../../utils/nonNull';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { FunctionWizardV2Context } from './FunctionV2WizardContext';
 
 interface ICachedFunction {
     projectPath: string;
@@ -35,7 +35,7 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     }
 }
 
-export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class FunctionCreateStepBase<T extends FunctionWizardV2Context> extends AzureWizardExecuteStep<T> {
     public priority: number = 220;
 
     /**
@@ -44,8 +44,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public abstract executeCore(context: T): Promise<string>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
-
+        const template: IFunctionTemplate | FunctionTemplateV2 = nonNullValue(context.functionTemplate ?? context.functionTemplateV2);
         context.telemetry.properties.projectLanguage = context.language;
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
@@ -79,7 +78,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.functionTemplate;
+        return !!context.functionTemplate || !!context.functionTemplateV2;
     }
 }
 

@@ -3,22 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
 import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { PromptSchemaBaseStep } from "./PromptSchemaBaseStep";
 
-export abstract class PromptSchemaBaseStep<T extends FunctionWizardV2Context> extends AzureWizardPromptStep<T> {
+export class StringInputStep<T extends FunctionWizardV2Context> extends PromptSchemaBaseStep<T> {
 
     public constructor(readonly input: ParsedInput) {
-        super();
+        super(input);
     }
 
-    public async prompt(context: T): Promise<void> {
-        context[this.input.assignTo] = await this.promptAction(context);
-    }
+    protected async promptAction(context: T): Promise<string> {
+        const options: AzExtInputBoxOptions = {
+            title: this.input.label,
+            prompt: this.input.help,
+            value: this.input.defaultValue,
+            validateInput: this.validateInput
+        };
 
-    protected abstract promptAction(context: T): Promise<unknown>;
+        return await context.ui.showInputBox(options);
+    }
 
     protected validateInput(input: string | undefined): string | undefined {
         if (!input && this.input.required) {
@@ -28,13 +34,11 @@ export abstract class PromptSchemaBaseStep<T extends FunctionWizardV2Context> ex
         const validators = this.input.validators || [];
         for (const validator of validators) {
             if (input) {
-                if (new RegExp(validator.expression).test(input)) {
+                if (!new RegExp(validator.expression).test(input)) {
                     return validator.errorText;
                 }
             }
         }
-
-        // special case for existingfile/new file
 
         return undefined;
     }
@@ -47,7 +51,5 @@ export abstract class PromptSchemaBaseStep<T extends FunctionWizardV2Context> ex
     // if required is false, then add a skip for now (for quickpick only)
 
     // resource types
-    // Existingfile needs to open a file dialog
-
 
 }

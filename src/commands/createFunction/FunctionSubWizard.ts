@@ -67,11 +67,12 @@ export class FunctionSubWizard {
                 context[key.toLowerCase()] = functionSettings[key];
             }
 
-            if ('wizards' in template) {
+            // if skip for now, we need to just skip this step as well
+            if (!!template && 'wizards' in template) {
                 // wizards is a unique property of v2 templates
                 promptSteps.push(new JobsListStep(isProjectWizard));
                 // the JobListStep will create the rest of the wizard
-                return undefined;
+                return { promptSteps };
             } else {
                 addBindingSettingSteps(template.userPromptedSettings, promptSteps);
             }

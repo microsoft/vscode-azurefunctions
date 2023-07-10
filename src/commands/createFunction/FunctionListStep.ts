@@ -19,7 +19,6 @@ import { FunctionSubWizard } from './FunctionSubWizard';
 import { FunctionWizardV2Context } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
-import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -65,21 +64,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
-
-        if (isV2PythonModel) {
-            return {
-                // TODO: Title?
-                promptSteps: [new PythonLocationStep(this._functionSettings, this._isProjectWizard)]
-            };
+        const requiresDurableStorageSetup: boolean = durableUtils.requiresDurableStorageSetup(context);
+        if (requiresDurableStorageSetup) {
+            return { promptSteps: [new DurableStorageTypePromptStep()] };
         } else {
-            const requiresDurableStorageSetup: boolean = durableUtils.requiresDurableStorageSetup(context);
-            if (requiresDurableStorageSetup) {
-                return { promptSteps: [new DurableStorageTypePromptStep()] };
-            } else {
-                return await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard);
-            }
+            return await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard);
         }
+
     }
 
     public async prompt(context: FunctionWizardV2Context): Promise<void> {

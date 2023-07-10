@@ -11,6 +11,8 @@ export interface FunctionWizardV2Context extends IFunctionWizardContext {
     functionTemplateV2?: FunctionTemplateV2;
     job?: ParsedJob;
 
+    newFilePath?: string;
+
     // follow the format of `assignTo`: value
     // `assignTo` is the common ID between the inputs and the actions
     replaceTokens?: { [key: string]: string }[];

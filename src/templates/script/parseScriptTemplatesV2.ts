@@ -46,7 +46,17 @@ interface RawJob {
     condition: { name: string, expectedValue: string }
     inputs: RawInput[];
     name: string;
-    type: string;
+    type: JobType;
+}
+
+export enum JobType {
+    CreateNewApp = 'CreateNewApp',
+    CreateNewBlueprint = 'CreateNewBlueprint',
+    AppendToBlueprint = 'AppendToBlueprint',
+    GetTemplateFileContent = 'GetTemplateFileContent',
+    WriteToFile = 'WriteToFile',
+    AppendToFile = 'AppendToFile',
+    ShowMarkdownPreview = 'ShowMarkdownPreview'
 }
 
 export interface RawInput {
@@ -70,7 +80,7 @@ interface RawUserPrompt {
     enum?: {
         value: string;
         display: string;
-    };
+    }[];
     resource?: ResourceType,
     placeHolder?: string;
 }
@@ -107,8 +117,10 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
             }
             parsedJobs.push(Object.assign(job, { prompts, executes }));
         }
+        const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
+        const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
 
-        templates.push(Object.assign(templateV2, { wizards: parsedJobs, id: nonNullValue(templateV2.id) }));
+        templates.push(Object.assign(templateV2, { wizards: parsedJobs, id: nonNullValue(templateV2.id), isHttpTrigger, isTimerTrigger }));
     }
 
     return templates;

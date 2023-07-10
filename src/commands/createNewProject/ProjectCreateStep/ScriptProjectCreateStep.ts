@@ -7,10 +7,10 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { FuncVersion } from '../../../FuncVersion';
 import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
-import { FuncVersion } from '../../../FuncVersion';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
@@ -89,8 +89,8 @@ __azurite_db*__.json`));
         };
 
         await bundleFeedUtils.addDefaultBundle(context, hostJson);
-        if (isNodeV4Plus(context)) {
-            bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[3.15.0, 4.0.0)");
+        if (context.languageModel && context.languageModel > 1) {
+            bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[4.*, 5.0.0)");
         }
 
         return hostJson;

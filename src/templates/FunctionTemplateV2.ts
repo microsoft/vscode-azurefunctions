@@ -7,6 +7,9 @@ import { ParsedJob, RawTemplateV2 } from "./script/parseScriptTemplatesV2";
 
 export interface FunctionTemplateV2 extends RawTemplateV2 {
     id: string;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
+
     // jobs translate to Azure Wizards
     wizards: ParsedJob[];
 }

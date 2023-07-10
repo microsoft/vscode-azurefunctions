@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, hostStartTaskName, ProjectLanguage, pythonVenvSetting } from "../../../constants";
+import { ProjectLanguage, extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, hostStartTaskName, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';

@@ -10,9 +10,15 @@ import { ActionSchemaBaseStep } from "./ActionSchemaBaseStep";
 export class GetTemplateFileContentExecuteStep<T extends FunctionWizardV2Context> extends ActionSchemaBaseStep<T> {
     public async executeAction(context: T): Promise<void> {
         const filePath = nonNullProp(this.action, 'filePath');
-        const source: string | undefined = context.functionTemplateV2?.files[filePath];
+        let source: string | undefined = context.functionTemplateV2?.files[filePath];
         if (!source) {
             throw new Error(`Could not find file "${filePath}" in template`);
+        }
+
+        // all tokens saved on the context are prefixed with '$('
+        const assignToTokens = Object.keys(context).filter(k => k.startsWith('$('));
+        for (const token of assignToTokens) {
+            source = source.replace(new RegExp(this.escapeRegExp(token), 'g'), context[token] as string);
         }
 
         const assignTo = nonNullProp(this.action, 'assignTo');
