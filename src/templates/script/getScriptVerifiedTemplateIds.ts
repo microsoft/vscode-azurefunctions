@@ -11,7 +11,9 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
         'BlobTrigger',
         'HttpTrigger',
         'QueueTrigger',
-        'TimerTrigger'
+        'TimerTrigger',
+        'SQLInputBinding',
+        'SQLOutputBinding',
     ];
 
     if (version === FuncVersion.v1) {

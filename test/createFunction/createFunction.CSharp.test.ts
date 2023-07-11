@@ -146,7 +146,23 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'TestCompany.TestFunction',
                 '0 * * * */6 *'
             ]
-        }
+        },
+        {
+            functionName: 'SQL Input Binding',
+            inputs: [
+                'TestCompany.TestFunction',
+                getRotatingAuthLevel()
+            ],
+            skip: version === FuncVersion.v2 || version === FuncVersion.v3
+        },
+        {
+            functionName: 'SQL Output Binding',
+            inputs: [
+                'TestCompany.TestFunction',
+                getRotatingAuthLevel()
+            ],
+            skip: version === FuncVersion.v2 || version === FuncVersion.v3
+        },
     ];
 
     const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
