@@ -5,14 +5,14 @@
 
 import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
+import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
+import { ProjectLanguage, funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
-import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import * as api from '../../vscode-azurefunctions.api';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import * as api from '../../vscode-azurefunctions.api';
 import { IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
 import { FolderListStep } from './FolderListStep';
 import { NewProjectLanguageStep } from './NewProjectLanguageStep';
@@ -24,8 +24,8 @@ import { OpenFolderStep } from './OpenFolderStep';
  */
 export async function createNewProjectFromCommand(
     context: IActionContext,
-    folderPath?: string,
-    language?: ProjectLanguage,
+    folderPath?: string | unknown,
+    language?: ProjectLanguage | unknown[],
     version?: string,
     openFolder: boolean = true,
     templateId?: string,
@@ -33,12 +33,14 @@ export async function createNewProjectFromCommand(
     functionSettings?: { [key: string]: string | undefined }): Promise<void> {
 
     await createNewProjectInternal(context, {
-        folderPath,
+        // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
+        folderPath: typeof folderPath === 'string' ? folderPath : undefined,
         templateId,
         functionName,
         functionSettings,
         suppressOpenFolder: !openFolder,
-        language: <api.ProjectLanguage>language,
+        // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
+        language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
         version: <api.ProjectVersion>version
     });
 }
