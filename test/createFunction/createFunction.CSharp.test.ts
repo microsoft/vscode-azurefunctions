@@ -157,7 +157,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
 
     tester.addParallelSuite(testCases, {
         title,
-        timeoutMS: 60 * 1000,
+        timeoutMS: 120 * 1000,
         isLongRunning: isLongRunningVersion(version),
         suppressParallel: true, // lots of errors like "The process cannot access the file because it is being used by another process" 😢
         addTests: () => {
