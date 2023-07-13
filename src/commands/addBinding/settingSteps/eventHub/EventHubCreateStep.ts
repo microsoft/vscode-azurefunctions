@@ -11,8 +11,8 @@ import { getRandomHexString } from '../../../../utils/fs';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardContext> {
-    // EventHubsNamespaceCreateStep has a priority number of 200, so has to be after that
-    public priority: number = 210;
+    // EventHubsNamespaceCreateStep has a priority number of 190, so has to be after that
+    public priority: number = 191;
     public async execute(context: IEventHubWizardContext): Promise<void> {
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
         const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');

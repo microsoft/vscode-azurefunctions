@@ -13,7 +13,7 @@ import { createEventHubClient } from '../../../../utils/azureClients';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 200;
+    public priority: number = 190;
 
     public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const rgName: string = nonNullValueAndProp(context.resourceGroup, 'name');
