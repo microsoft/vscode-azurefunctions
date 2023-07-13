@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.12.0 - 2023-07-12
+## 1.12.0 - 2023-07-13
 
 ### Added
 * Add actions submenu to workspace view title by @alexweininger in [#3719](https://github.com/microsoft/vscode-azurefunctions/pull/3719)
