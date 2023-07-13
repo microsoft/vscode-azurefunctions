@@ -18,7 +18,7 @@ export interface IConnection {
 }
 
 export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 300;
+    public priority: number = 200;
 
     private readonly _setting: IBindingSetting;
 
