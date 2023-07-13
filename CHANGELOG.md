@@ -1,5 +1,29 @@
 # Change Log
 
+## 1.12.0 - 2023-07-13
+
+### Added
+* Add actions submenu to workspace view title by @alexweininger in [#3719](https://github.com/microsoft/vscode-azurefunctions/pull/3719)
+* Allow user to create an Event Hub namespace and/or Event Hub when creating EventHubTrigger by @nturinski in [#3713](https://github.com/microsoft/vscode-azurefunctions/pull/3713)
+* Support ZRS enabled storage accounts in advanced create by @alexweininger in [#3737](https://github.com/microsoft/vscode-azurefunctions/pull/3737)
+
+### Fixed
+* Fix view properties command for function apps by @alexweininger in [#3714](https://github.com/microsoft/vscode-azurefunctions/pull/3714)
+* Fix SWA create function for node model v4 by @ejizba in [#3721]([#3721](https://github.com/microsoft/vscode-azurefunctions/pull/3721))
+* Hardcode default bundle version by @alexweininger in [#3727](https://github.com/microsoft/vscode-azurefunctions/pull/3727)
+* Fix create function app when workspace items are selected by @alexweininger in [#3732](https://github.com/microsoft/vscode-azurefunctions/pull/3732)
+* Fix view properties command on remote function by @alexweininger in [#3736](https://github.com/microsoft/vscode-azurefunctions/pull/3736)
+
+### Engineering
+* Update to utils v2 by @alexweininger in [#3707](https://github.com/microsoft/vscode-azurefunctions/pull/3707)
+* Upgrade to TS 5.1.3 by @alexweininger in [#3712](https://github.com/microsoft/vscode-azurefunctions/pull/3712)
+* Remove onCommand activation events by @alexweininger in [#3741](https://github.com/microsoft/vscode-azurefunctions/pull/3741)
+* Resolve using list instead of get by @alexweininger in [#3726](https://github.com/microsoft/vscode-azurefunctions/pull/3726)
+
+### Dependencies
+* Update dependencies to fix CG alerts by @bwateratmsft in [#3720](https://github.com/microsoft/vscode-azurefunctions/pull/3720)
+* Bump semver from 5.7.1 to 7.5.2 by @dependabot in [#3724](https://github.com/microsoft/vscode-azurefunctions/pull/3724)
+
 ## 1.11.0 - 2023-05-23
 
 ### Changed
