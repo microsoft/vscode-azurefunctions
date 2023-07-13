@@ -97,8 +97,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                     const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
                     if (scheme === 'https') {
                         statusRequest.rejectUnauthorized = false;
-                    } else {
-                        statusRequest.allowInsecureConnection = true;
                     }
 
                     try {
