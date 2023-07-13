@@ -68,12 +68,14 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
 
     let responseText: string | null | undefined;
     await node.runWithTemporaryDescription(context, localize('executing', 'Executing...'), async () => {
-        const headers = createHttpHeaders();
+        const headers = createHttpHeaders({
+            'Content-Type': 'application/json',
+        });
         if (client) {
             headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }
         try {
-            responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body })).bodyAsText;
+            responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body: JSON.stringify(body) })).bodyAsText;
         } catch (error) {
             const errorType = parseError(error).errorType;
             if (!client && errorType === 'ECONNREFUSED') {
@@ -83,7 +85,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
                 // stringify JSON object to match the format in the portal
                 functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
                 body = { input: functionInput };
-                responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body })).bodyAsText;
+                responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body: JSON.stringify(body) })).bodyAsText;
             } else {
                 context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
