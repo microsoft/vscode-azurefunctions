@@ -236,11 +236,11 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             contextValuesToAdd: ['azFunc']
         });
 
-        if (!this._functionsTreeItem) {
-            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
-        }
+        // if (!this._functionsTreeItem) {
+        //     this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
+        // }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
+        const children: AzExtTreeItem[] = [/*this._functionsTreeItem*/this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
         if (!this.site.isSlot) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
