@@ -6,10 +6,10 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, env } from 'vscode';
+import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
-import { FuncVersion } from '../FuncVersion';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
@@ -18,7 +18,8 @@ export enum TemplateType {
     Script = 'Script',
     ScriptBundle = 'ScriptBundle',
     Dotnet = '.NET',
-    Java = 'Java'
+    Java = 'Java',
+    Ballerina = 'Ballerina',
 }
 
 export abstract class TemplateProviderBase implements Disposable {

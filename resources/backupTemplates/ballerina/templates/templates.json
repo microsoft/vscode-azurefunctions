@@ -1,0 +1,121 @@
+[
+    {
+        "id": "HttpTrigger-Ballerina",
+        "runtime": "2",
+        "files": {
+            "%functionName%.bal": "import ballerinax/azure.functions;\n\n// This function gets triggered by an HTTP call with the name query parameter and returns a processed HTTP output to the caller.\n@functions:HttpTrigger{\n    authLevel: \"%authLevel%\"\n}\nlistener functions:HttpListener httpListener =  new functions:HttpListener();\nservice /%functionName% on httpListener {\n    resource function get .(string name) returns string {\n        return \"Hello, \" + name + \"!\";\n    }\n}\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "httpTrigger",
+            "description": "$HttpTrigger_description",
+            "name": "HTTP trigger",
+            "language": "Ballerina",
+            "triggerType": "httpTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_api"
+            ],
+            "categoryStyle": "http",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "authLevel"
+            ]
+        }
+    },
+    {
+        "id": "BlobTrigger-Ballerina",
+        "runtime": "2",
+        "files": {
+            "%functionName%.bal": "import ballerinax/azure.functions;\nimport ballerina/log;\n\n// The following Function will be invoked when a new blob added to the specified blob storage.\n@functions:BlobTrigger {\n    path: \"%path%\",\n    connection: \"%connection%\"\n}\nlistener functions:BlobListener blobListener = new functions:BlobListener();\n\nservice \"%functionName%\" on blobListener {\n    remote function onUpdate(byte[] blobIn) {\n        log:printInfo(\"Blob Store updated with file of \" + blobIn.length().toString() + \" bytes\");\n    }\n}\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "blobTrigger",
+            "description": "$BlobTrigger_description",
+            "name": "Blob trigger",
+            "language": "Ballerina",
+            "triggerType": "blobTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "blob",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "path"
+            ]
+        }
+    },
+    {
+        "id": "CosmosDBTrigger-Ballerina",
+        "runtime": "2",
+        "files": {
+            "%functionName%.bal": "import ballerina/log;\nimport ballerinax/azure.functions;\n\n// The following Function will be invoked when an entry is added to CosmosDB collection.\n@functions:CosmosDBTrigger {connectionStringSetting: \"%connectionStringSetting%\", databaseName: \"%databaseName%\", collectionName: \"%collectionName%\"}\nlistener functions:CosmosDBListener cosmosEp = new ();\n\ntype Users record {\n    string id;\n    string name;\n};\n\nservice \"%functionName%\" on cosmosEp {\n    remote function onUpdate(Users[] users) {\n        log:printInfo(users.toJsonString());\n    }\n}\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "cosmosTrigger",
+            "description": "$CosmosDBTrigger_description",
+            "name": "CosmosDB trigger",
+            "language": "Ballerina",
+            "triggerType": "cosmosDBTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "cosmosDB",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connectionStringSetting",
+                "databaseName",
+                "collectionName"
+            ]
+        }
+    },
+    {
+        "id": "QueueTrigger-Ballerina",
+        "runtime": "2",
+        "files": {
+            "%functionName%.bal": "import ballerina/log;\nimport ballerinax/azure.functions;\n\n\n// The following Function will be executed when a message is added to the queue storage.\n@functions:QueueTrigger {\n    queueName: \"%queueName%\",\n    connection: \"%connection%\"\n}\nlistener functions:QueueListener queueListener = new functions:QueueListener();\n\nservice \"%functionName%\" on queueListener {\n    remote function onMessage(string message) {\n        log:printInfo(\"Queue message received: \" + message);\n    }\n}\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "queueTrigger",
+            "description": "$QueueTrigger_description",
+            "name": "Queue trigger",
+            "language": "Ballerina",
+            "triggerType": "queueTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "queue",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "queueName"
+            ]
+        }
+    },
+    {
+        "id": "TimerTrigger-Ballerina",
+        "runtime": "2",
+        "files": {
+            "%functionName%.bal": "import ballerina/time;\nimport ballerina/log;\nimport ballerinax/azure.functions;\n\n// The following function will be invoked periodically according to the schedule given.\n@functions:TimerTrigger {schedule: \"%schedule%\"}\nlistener functions:TimerListener timerEp = new ();\n\nservice \"%functionName%\" on timerEp {\n    remote function onTrigger(functions:TimerMetadata metadata) {\n        log:printInfo(\"Function Executed at \" + time:utcToString(time:utcNow()));\n    }\n}\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "timerTrigger",
+            "description": "$TimerTrigger_description",
+            "name": "Timer trigger",
+            "language": "Ballerina",
+            "triggerType": "timerTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "timer",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "schedule"
+            ]
+        }
+    }
+]

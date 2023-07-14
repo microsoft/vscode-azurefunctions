@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey, ballerinaTomlFileName } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { hasNodeJsDependency, tryGetPackageJson } from '../../utils/nodeJsUtils';
@@ -41,6 +41,10 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
 
         if (await isFSharpProject(context, projectPath)) {
             detectedLangs.push(ProjectLanguage.FSharp);
+        }
+        
+        if (await isBallerinaProject(projectPath)) {
+            detectedLangs.push(ProjectLanguage.Ballerina);
         }
 
         await detectLanguageFromLocalSettings(context, detectedLangs, projectPath);
@@ -79,6 +83,10 @@ async function isNodeJsProject(projectPath: string): Promise<boolean> {
 
 async function isTypeScriptProject(projectPath: string): Promise<boolean> {
     return await hasNodeJsDependency(projectPath, 'typescript', true);
+}
+
+export async function isBallerinaProject(projectPath: string): Promise<boolean> {
+    return await AzExtFsExtra.pathExists(path.join(projectPath, ballerinaTomlFileName));
 }
 
 /**

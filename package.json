@@ -812,6 +812,7 @@
                             "PowerShell",
                             "Python",
                             "TypeScript",
+                            "Ballerina",
                             "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
@@ -820,6 +821,7 @@
                             "",
                             "%azureFunctions.projectLanguage.preview%",
                             "%azureFunctions.projectLanguage.preview%",
+                            "",
                             "",
                             "",
                             "",

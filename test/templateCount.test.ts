@@ -45,9 +45,10 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 14 },
-            { language: ProjectLanguage.Java, version: FuncVersion.v2, expectedCount: 4 }
+            { language: ProjectLanguage.Java, version: FuncVersion.v2, expectedCount: 4 },
             // https://github.com/microsoft/vscode-azurefunctions/issues/1605
             // { language: ProjectLanguage.Java, version: FuncVersion.v3, expectedCount: 4}]
+            { language: ProjectLanguage.Ballerina, version: FuncVersion.v4, expectedCount: 5 }
         ];
 
         let testWorkspacePath: string;

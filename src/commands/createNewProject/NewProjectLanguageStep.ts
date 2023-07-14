@@ -23,6 +23,7 @@ import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCrea
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
+import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 
@@ -47,6 +48,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
             { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
+            { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
         ];
@@ -110,6 +112,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Java:
                 await addJavaCreateProjectSteps(context, promptSteps, executeSteps);
+                break;
+            case ProjectLanguage.Ballerina:
+                await addBallerinaCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Custom:
                 executeSteps.push(new CustomProjectCreateStep());
