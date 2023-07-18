@@ -6,11 +6,11 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaBaseStep } from "./ActionSchemaBaseStep";
 
-export class WriteToFileExecuteStep<T extends FunctionWizardV2Context> extends ActionSchemaBaseStep<T> {
+export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaBaseStep<T> {
     public async executeAction(context: T): Promise<void> {
         context.newFilePath = await this.getFilePath(context);
         await this.writeToFile(context, context.newFilePath);

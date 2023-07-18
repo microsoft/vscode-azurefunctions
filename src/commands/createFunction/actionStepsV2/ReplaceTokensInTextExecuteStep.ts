@@ -3,34 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { nonNullProp } from "@microsoft/vscode-azext-utils";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { WriteToFileExecuteStep } from "./WriteToFileExecuteStep";
 
-export class ReplaceTokensInTextExecuteStep<T extends FunctionWizardV2Context> extends WriteToFileExecuteStep<T> {
+// documentation: https://github.com/Azure/azure-functions-templates/blob/dev/Docs/Actions/ReplaceTokensInText.md
+export class ReplaceTokensInTextExecuteStep<T extends FunctionV2WizardContext> extends WriteToFileExecuteStep<T> {
     public async executeAction(context: T): Promise<void> {
-        const filePath = nonNullProp(this.action, 'filePath');
-
-        if (!await AzExtFsExtra.pathExists(filePath)) {
-            if (this.action.createIfNotExists) {
-                await AzExtFsExtra.ensureFile(filePath);
-            } else {
-                throw new Error(`File "${filePath}" does not exist.`);
-            }
+        const assignTo = nonNullProp(this.action, 'assignTo');
+        let source: string | undefined = context[assignTo] as string | undefined;
+        if (!source) {
+            throw new Error(`Could not find source "${assignTo}".`);
         }
 
-        let content = await AzExtFsExtra.readFile(filePath);
-        // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
-        // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions for function_body.
-        content = (content + '\r\n\r\n');
+        // all tokens saved on the context are prefixed with '$('
+        const assignToTokens = Object.keys(context).filter(k => k.startsWith('$('));
+        for (const token of assignToTokens) {
+            source = source.replace(new RegExp(this.escapeRegExp(token), 'g'), context[token] as string);
+        }
 
-        await this.writeToFile(context, content);
+        context[assignTo] = source;
     }
 }
-
-//     {
-//       name: "replaceText_FunctionBody",
-//       type: "ReplaceTokensInText",
-//       assignTo: "$(TIMER_FUNCTION_BODY)",
-//       source: "$(TIMER_FUNCTION_BODY)",
-//     }

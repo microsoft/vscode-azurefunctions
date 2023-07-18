@@ -6,13 +6,13 @@
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { ResourceType } from "../../../templates/IBindingTemplate";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { EnumInputStep } from "./EnumInputStep";
 import { ExistingFileStep } from "./ExistingFileStep";
 import { NewFileStep } from "./NewFileStep";
 import { StringInputStep } from "./StringInputStep";
 
-export function promptStepFactory<T extends FunctionWizardV2Context>(input: ParsedInput): AzureWizardPromptStep<T> {
+export function promptStepFactory<T extends FunctionV2WizardContext>(input: ParsedInput): AzureWizardPromptStep<T> {
     switch (input.value) {
         case 'enum':
             return new EnumInputStep(input);

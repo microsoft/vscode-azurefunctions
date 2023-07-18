@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
+import { Uri } from "vscode";
+import { Utils } from 'vscode-uri';
 import { localize } from "../../../localize";
 import { JobType } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { StringInputStep } from "./StringInputStep";
-import path = require("path");
 
-export class NewFileStep<T extends FunctionWizardV2Context> extends StringInputStep<T> {
+export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputStep<T> {
     protected async promptAction(context: T): Promise<string> {
         const options: AzExtInputBoxOptions = {
             title: this.input.label,
@@ -27,7 +28,7 @@ export class NewFileStep<T extends FunctionWizardV2Context> extends StringInputS
         return !context[this.input.assignTo];
     }
 
-    protected async validateInputCore(context: FunctionWizardV2Context, input: string | undefined): Promise<string | undefined> {
+    protected async validateInputCore(context: FunctionV2WizardContext, input: string | undefined): Promise<string | undefined> {
         const error = super.validateInput(input);
         if (error) {
             return error;
@@ -40,11 +41,11 @@ export class NewFileStep<T extends FunctionWizardV2Context> extends StringInputS
         return undefined;
     }
 
-    protected async validateFunctionNameCore(context: FunctionWizardV2Context, name: string): Promise<string | undefined> {
+    protected async validateFunctionNameCore(context: FunctionV2WizardContext, name: string): Promise<string | undefined> {
         // if this is a new project, then we should overwrite the file
         if (context.job?.type !== JobType.CreateNewApp) {
             return undefined;
-        } else if (await AzExtFsExtra.pathExists(path.join(context.projectPath, name))) {
+        } else if (await AzExtFsExtra.pathExists(Utils.joinPath(Uri.file(context.projectPath), name))) {
             return localize('existingFileError', 'A file with the name "{0}" already exists.', name);
         } else {
             return undefined;

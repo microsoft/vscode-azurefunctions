@@ -7,7 +7,7 @@ import { FunctionTemplateV2 } from '../../templates/FunctionTemplateV2';
 import { ParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
-export interface FunctionWizardV2Context extends IFunctionWizardContext {
+export interface FunctionV2WizardContext extends IFunctionWizardContext {
     functionTemplateV2?: FunctionTemplateV2;
     job?: ParsedJob;
 

@@ -8,7 +8,7 @@ import { localize } from '../../localize';
 import { JobType, ParsedJob } from '../../templates/script/parseScriptTemplatesV2';
 import { ScriptProjectCreateStep } from '../createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
 import { isFunctionProject } from '../createNewProject/verifyIsProject';
-import { FunctionWizardV2Context } from './FunctionV2WizardContext';
+import { FunctionV2WizardContext } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
 import { promptStepFactory } from './promptStepsV2/promptStepFactory';
@@ -19,27 +19,27 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
         super();
     }
 
-    public async prompt(context: FunctionWizardV2Context): Promise<void> {
+    public async prompt(context: FunctionV2WizardContext): Promise<void> {
         // TODO: come up with a better placeholder
         const placeHolder: string = localize('selectJob', 'Select a job');
         context.job = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder })).data;
     }
 
-    public shouldPrompt(context: FunctionWizardV2Context): boolean {
+    public shouldPrompt(context: FunctionV2WizardContext): boolean {
         return !context.job && !!context.functionTemplateV2;
     }
 
-    public async getSubWizard(context: FunctionWizardV2Context): Promise<IWizardOptions<FunctionWizardV2Context> | undefined> {
+    public async getSubWizard(context: FunctionV2WizardContext): Promise<IWizardOptions<FunctionV2WizardContext> | undefined> {
         if (context.job) {
-            const promptSteps: AzureWizardPromptStep<FunctionWizardV2Context>[] = [];
-            context.job.prompts.map(p => {
-                promptSteps.push(promptStepFactory(p));
+            const promptSteps: AzureWizardPromptStep<FunctionV2WizardContext>[] = [];
+            context.job.parsedInputs.map(pi => {
+                promptSteps.push(promptStepFactory(pi));
             });
 
-            const executeSteps: AzureWizardExecuteStep<FunctionWizardV2Context>[] = [];
-            context.job.executes.map((e, index) => {
+            const executeSteps: AzureWizardExecuteStep<FunctionV2WizardContext>[] = [];
+            context.job.parsedActions.map((pa, index) => {
                 // add index to increment the priority number
-                executeSteps.push(actionStepFactory(e, index));
+                executeSteps.push(actionStepFactory(pa, index));
             });
 
             if (context.job.type === JobType.CreateNewApp) {
@@ -52,17 +52,15 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
         return undefined;
     }
 
-    public async configureBeforePrompt(context: FunctionWizardV2Context): Promise<void> {
+    public async configureBeforePrompt(context: FunctionV2WizardContext): Promise<void> {
         // if this is a new project, we can default to the new project job
         if (this.isProjectWizard) {
             context.job = context.functionTemplateV2!.wizards.find(j => j.type === JobType.CreateNewApp);
         }
     }
 
-    private async getPicks(context: FunctionWizardV2Context): Promise<IAzureQuickPickItem<ParsedJob>[]> {
-        // also check if there is or is not a blueprint already?
+    private async getPicks(context: FunctionV2WizardContext): Promise<IAzureQuickPickItem<ParsedJob>[]> {
         let picks = context.functionTemplateV2!.wizards.map((w) => { return { label: w.name, data: w } });
-        // also check if there is or is not a blueprint already?
         // verify if this is a function project-- if so, remove the createNewApp job
         if (await isFunctionProject(context.projectPath)) {
             picks = picks.filter(p => p.data.type !== JobType.CreateNewApp);

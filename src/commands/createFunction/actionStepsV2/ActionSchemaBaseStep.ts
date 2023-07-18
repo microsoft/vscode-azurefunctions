@@ -5,9 +5,9 @@
 
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
 import { ParsedAction } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 
-export abstract class ActionSchemaBaseStep<T extends FunctionWizardV2Context> extends AzureWizardExecuteStep<T> {
+export abstract class ActionSchemaBaseStep<T extends FunctionV2WizardContext> extends AzureWizardExecuteStep<T> {
     public constructor(readonly action: ParsedAction, readonly priority: number) {
         super();
     }

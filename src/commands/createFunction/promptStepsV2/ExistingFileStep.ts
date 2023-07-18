@@ -7,11 +7,11 @@ import { AzExtOpenDialogOptions } from "@microsoft/vscode-azext-utils";
 import { Uri } from "vscode";
 import { Utils } from 'vscode-uri';
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { PromptSchemaBaseStep } from "./PromptSchemaBaseStep";
 
-export class ExistingFileStep<T extends FunctionWizardV2Context> extends PromptSchemaBaseStep<T> {
+export class ExistingFileStep<T extends FunctionV2WizardContext> extends PromptSchemaBaseStep<T> {
     public constructor(readonly input: ParsedInput) {
         super(input);
     }

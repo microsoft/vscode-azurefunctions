@@ -6,9 +6,11 @@
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 
-export abstract class PromptSchemaBaseStep<T extends FunctionWizardV2Context> extends AzureWizardPromptStep<T> {
+// TODO: Create more prompt steps where value is used to determine the prompt (string = input, boolean/enum = quickpick)
+// if required is false, then add a skip for now (for quickpick only) or allow "undefined"
+export abstract class PromptSchemaBaseStep<T extends FunctionV2WizardContext> extends AzureWizardPromptStep<T> {
 
     public constructor(readonly input: ParsedInput) {
         super();
@@ -42,12 +44,4 @@ export abstract class PromptSchemaBaseStep<T extends FunctionWizardV2Context> ex
     public shouldPrompt(context: T): boolean {
         return !context[this.input.assignTo];
     }
-
-    // value used to determine the prompt (string = input, boolean/enum = quickpick)
-    // if required is false, then add a skip for now (for quickpick only)
-
-    // resource types
-    // Existingfile needs to open a file dialog
-
-
 }

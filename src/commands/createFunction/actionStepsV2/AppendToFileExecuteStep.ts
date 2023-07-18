@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { WriteToFileExecuteStep } from "./WriteToFileExecuteStep";
 
-export class AppendToFileExecuteStep<T extends FunctionWizardV2Context> extends WriteToFileExecuteStep<T> {
+export class AppendToFileExecuteStep<T extends FunctionV2WizardContext> extends WriteToFileExecuteStep<T> {
     protected async writeToFile(context: T, filePath: string): Promise<void> {
         const existingContent = await AzExtFsExtra.readFile(filePath);
         const sourceKey = nonNullProp(this.action, 'source');

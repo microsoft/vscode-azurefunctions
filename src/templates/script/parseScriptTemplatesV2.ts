@@ -90,8 +90,8 @@ export interface ParsedInput extends RawUserPrompt, RawInput {
 }
 
 export interface ParsedJob extends RawJob {
-    prompts: ParsedInput[];
-    executes: ParsedAction[];
+    parsedInputs: ParsedInput[];
+    parsedActions: ParsedAction[];
 }
 
 export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings: object[], resources: Resources): FunctionTemplateV2[] {
@@ -101,21 +101,21 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
         // look into jobs-- each job can be an Azure Wizard. Name is the title
         const parsedJobs: ParsedJob[] = [];
         for (const job of templateV2.jobs) {
-            const prompts: ParsedInput[] = [];
+            const parsedInputs: ParsedInput[] = [];
             job.inputs.forEach(input => {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const userPrompt = userPrompts.find(up => up.id.toLocaleLowerCase() === input.paramId.toLocaleLowerCase())!;
-                prompts.push(Object.assign(input, userPrompt));
+                parsedInputs.push(Object.assign(input, userPrompt));
             });
 
-            const executes: ParsedAction[] = [];
+            const parsedActions: ParsedAction[] = [];
             for (const action of job.actions) {
                 const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase())
                 if (parsedAction) {
-                    executes.push(parsedAction);
+                    parsedActions.push(parsedAction);
                 }
             }
-            parsedJobs.push(Object.assign(job, { prompts, executes }));
+            parsedJobs.push(Object.assign(job, { parsedInputs, parsedActions }));
         }
         const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
         const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');

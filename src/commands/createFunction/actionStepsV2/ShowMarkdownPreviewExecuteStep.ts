@@ -5,10 +5,10 @@
 
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import { showMarkdownPreviewContent } from "../../../utils/textUtils";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { ActionSchemaBaseStep } from "./ActionSchemaBaseStep";
 
-export class ShowMarkdownPreviewExecuteStep<T extends FunctionWizardV2Context> extends ActionSchemaBaseStep<T> {
+export class ShowMarkdownPreviewExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaBaseStep<T> {
     public async executeAction(context: T): Promise<void> {
         const filename = nonNullProp(this.action, 'filePath');
         const content = context.functionTemplateV2?.files[filename] || '';

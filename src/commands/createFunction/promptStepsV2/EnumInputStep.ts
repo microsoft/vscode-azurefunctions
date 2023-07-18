@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { PromptSchemaBaseStep } from "./PromptSchemaBaseStep";
 
-export class EnumInputStep<T extends FunctionWizardV2Context> extends PromptSchemaBaseStep<T> {
+export class EnumInputStep<T extends FunctionV2WizardContext> extends PromptSchemaBaseStep<T> {
     protected async promptAction(context: T): Promise<string> {
         const enums = nonNullProp(this.input, 'enum');
         const picks: IAzureQuickPickItem<string>[] = enums.map(e => { return { data: e.value, label: e.display }; });

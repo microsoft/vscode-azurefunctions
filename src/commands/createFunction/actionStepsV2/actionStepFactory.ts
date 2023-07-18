@@ -6,14 +6,14 @@
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
 import { ActionType } from "../../../constants";
 import { ParsedAction } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionWizardV2Context } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { AppendToFileExecuteStep } from "./AppendToFileExecuteStep";
 import { GetTemplateFileContentExecuteStep } from "./GetTemplateFileContentExecuteStep";
 import { ReplaceTokensInTextExecuteStep } from "./ReplaceTokensInTextExecuteStep";
 import { ShowMarkdownPreviewExecuteStep } from "./ShowMarkdownPreviewExecuteStep";
 import { WriteToFileExecuteStep } from "./WriteToFileExecuteStep";
 
-export function actionStepFactory<T extends FunctionWizardV2Context>(action: ParsedAction, priority: number): AzureWizardExecuteStep<T> {
+export function actionStepFactory<T extends FunctionV2WizardContext>(action: ParsedAction, priority: number): AzureWizardExecuteStep<T> {
     switch (action.type) {
         case ActionType.AppendToFile:
             return new AppendToFileExecuteStep(action, priority);

@@ -14,7 +14,7 @@ import { FunctionTemplateV2 } from '../../templates/FunctionTemplateV2';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { FunctionWizardV2Context } from './FunctionV2WizardContext';
+import { FunctionV2WizardContext } from './FunctionV2WizardContext';
 
 interface ICachedFunction {
     projectPath: string;
@@ -35,7 +35,7 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     }
 }
 
-export abstract class FunctionCreateStepBase<T extends FunctionWizardV2Context> extends AzureWizardExecuteStep<T> {
+export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 220;
 
     /**
