@@ -6,6 +6,7 @@
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import fetch from 'cross-fetch';
 import { window } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
 import { functionFilter } from '../constants';
@@ -82,10 +83,15 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
             } else if (errorType === '400') {
-                // stringify JSON object to match the format in the portal
-                functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
-                body = { input: functionInput };
-                responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body: JSON.stringify(body) })).bodyAsText;
+                const response = await fetch(triggerRequest.url, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        // stringify JSON object to match the format in the portal
+                        input: JSON.stringify(functionInput),
+                    }),
+                    headers: headers.toJSON(),
+                });
+                responseText = await response.text();
             } else {
                 context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
