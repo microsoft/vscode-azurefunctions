@@ -8,11 +8,12 @@ import { MessageItem } from "vscode";
 import { localize } from "../../localize";
 
 export async function showFlexDeployConfirmation(context: IDeployContext, site: ParsedSite, deployCommandId: string): Promise<void> {
-    const learnMoreLink: string = 'https://aka.ms/flexconsumption-remotebuild';
+    // Waiting for public preview before pointing users to any documentation
+    // const learnMoreLink: string = 'https://aka.ms/flexconsumption-remotebuild';
     const remoteDeploy: MessageItem = { title: localize('remoteDeploy', 'Deploy with Remote Build ') };
-    const input: MessageItem = await showCustomDeployConfirmation(context, site, deployCommandId, { items: [remoteDeploy], learnMoreLink });
+    const input: MessageItem = await showCustomDeployConfirmation(context, site, deployCommandId, { items: [remoteDeploy] });
 
-    // TODO: Allow users to have a "don't ask again option"
+    // We should allow users to have a "don't ask again option" for public preview
     if (input === remoteDeploy) {
         context.flexConsumptionRemoteBuild = true;
     }
