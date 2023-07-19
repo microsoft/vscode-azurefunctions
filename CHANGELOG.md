@@ -1,5 +1,16 @@
 # Change Log
 
+## 1.12.1 - 2023-07-19
+
+### Added
+* Add Ballerina language support by @xlight05 in https://github.com/microsoft/vscode-azurefunctions/pull/3584
+
+### Changed
+* Print a warning if the function project root can't be found on deploy by @mkfrey in https://github.com/microsoft/vscode-azurefunctions/pull/3764
+
+### Fixed
+* Fix executing service bus topic trigger by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3763
+
 ## 1.12.0 - 2023-07-13
 
 ### Added
