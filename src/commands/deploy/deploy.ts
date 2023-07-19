@@ -5,9 +5,9 @@
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
 import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, remoteBuildSetting } from '../../constants';
+import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, hostFileName, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -45,7 +45,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
-    const projectPath: string = nonNullValue(await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder));
+    const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
+    if (projectPath === undefined) {
+        const message: string = localize('functionProjectRootNotFound', 'No azure function project root could be found. This can be caused by a missing {0} file.', hostFileName);
+        throw new Error(message);
+    }
+
     const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, { action: CodeAction.Deploy, defaultAppSetting: 'defaultFunctionAppToDeploy', projectPath });
     if (treeUtils.isAzExtTreeItem(arg1)) {
         if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
