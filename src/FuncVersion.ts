@@ -16,14 +16,21 @@ export enum FuncVersion {
 
 export const latestGAVersion: FuncVersion = FuncVersion.v4;
 export const funcVersionLink: string = 'https://aka.ms/AA1tpij';
+const funcRuntimeVersionWarningLink: string = 'https://aka.ms/function-runtime-host-warning';
 
 export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     const recommended: string = localize('recommended', '(Recommended)');
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
         { label: 'Azure Functions v4', description: recommended, data: FuncVersion.v4 },
-        { label: 'Azure Functions v3', data: FuncVersion.v3 },
-        { label: 'Azure Functions v2', data: FuncVersion.v2 },
-        { label: 'Azure Functions v1', data: FuncVersion.v1 }
+        { label: 'Azure Functions v3', data: FuncVersion.v3, description: '(EOL)' },
+        { label: 'Azure Functions v2', data: FuncVersion.v2, description: '(EOL)' },
+        { label: 'Azure Functions v1', data: FuncVersion.v1 }, {
+            label: localize('runtimeWarning', `$(extensions-warning-message) Azure Functions runtime v2.x and v3.x have reached the EOL. Learn more...`),
+            onPicked: async () => {
+                await openUrl(funcRuntimeVersionWarningLink);
+            },
+            data: undefined
+        }
     ];
 
     picks = picks.filter(p => osSupportsVersion(p.data));

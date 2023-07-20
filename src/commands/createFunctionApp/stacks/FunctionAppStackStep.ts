@@ -54,13 +54,15 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
 
     private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
         const picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = await getStackPicks(context);
+        const majorVersion = getMajorVersion(context.version);
+        const isEol = Number(majorVersion) === 2 || Number(majorVersion) === 3;
         if (picks.length === 0) {
-            const majorVersion = getMajorVersion(context.version);
             const noPicksMessage = context.stackFilter ?
                 localize('noStacksFoundWithFilter', '$(warning) No stacks found for "{0}" on Azure Functions v{1}', context.stackFilter, majorVersion) :
                 localize('noStacksFound', '$(warning) No stacks found for Azure Functions v{0}', majorVersion);
+            const upgradeMessage = localize('eolWarning', '$(warning) No stacks found for Azure Functions v{0} due to being EOL. Upgrade your runtime version to see available stacks.')
             picks.push({
-                label: noPicksMessage,
+                label: isEol ? upgradeMessage : noPicksMessage,
                 data: undefined,
                 onPicked: () => {
                     // do nothing
@@ -70,7 +72,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
 
         picks.push({
             label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
-            description: localize('currentFuncVersion', 'Current: {0}', context.version),
+            description: localize('currentFuncVersion', 'Current: {0}', context.version) + (isEol ? ' $(warning)' : ''),
             data: undefined,
             suppressPersistence: true
         });

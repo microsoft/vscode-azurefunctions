@@ -68,7 +68,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                 }
 
                 if (shouldShowEolWarning(minorVersion)) {
-                    description = localize('endOfLife', `$(extensions-warning-message)`)
+                    description = '$(extensions-warning-message)'
                     hasEndOfLife = true;
                 }
 
