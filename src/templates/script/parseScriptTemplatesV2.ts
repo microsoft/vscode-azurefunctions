@@ -5,7 +5,7 @@
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ActionType, ProjectLanguage } from '../../constants';
-import { FunctionTemplateV2 } from '../FunctionTemplateV2';
+import { FunctionV2Template } from '../FunctionTemplateV2';
 import { ResourceType } from '../IBindingTemplate';
 
 /**
@@ -94,9 +94,9 @@ export interface ParsedJob extends RawJob {
     parsedActions: ParsedAction[];
 }
 
-export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings: object[], resources: Resources): FunctionTemplateV2[] {
+export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings: object[], resources: Resources): FunctionV2Template[] {
     const userPrompts: RawUserPrompt[] = parseUserPrompts(rawBindings, resources);
-    const templates: FunctionTemplateV2[] = [];
+    const templates: FunctionV2Template[] = [];
     for (const templateV2 of rawTemplates) {
         // look into jobs-- each job can be an Azure Wizard. Name is the title
         const parsedJobs: ParsedJob[] = [];

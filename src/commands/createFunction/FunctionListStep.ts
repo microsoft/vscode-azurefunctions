@@ -9,7 +9,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionTemplateV2 } from '../../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../../templates/FunctionTemplateV2';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
@@ -86,7 +86,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource)
             }
 
-            const result: IFunctionTemplate | FunctionTemplateV2 | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
+            const result: IFunctionTemplate | FunctionV2Template | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
                 context.telemetry.properties.templateId = 'skipForNow';
                 break;
@@ -119,13 +119,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         return !context.functionTemplate && context['buildTool'] !== JavaBuildTool.maven;
     }
 
-    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | FunctionTemplateV2 | TemplatePromptResult>[]> {
+    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | FunctionV2Template | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
 
-        let templates: (IFunctionTemplate | FunctionTemplateV2)[] = [];
+        let templates: (IFunctionTemplate | FunctionV2Template)[] = [];
         if (languageModel) {
             templates = await templateProvider.getFunctionV2Templates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey)
         } else {
@@ -133,7 +133,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         }
 
         context.telemetry.measurements.templateCount = templates.length;
-        const picks: IAzureQuickPickItem<IFunctionTemplate | FunctionTemplateV2 | TemplatePromptResult>[] = templates
+        const picks: IAzureQuickPickItem<IFunctionTemplate | FunctionV2Template | TemplatePromptResult>[] = templates
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
@@ -223,7 +223,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
  * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
  * Otherwise sort alphabetically
  */
-function sortTemplates(a: IFunctionTemplate | FunctionTemplateV2, b: IFunctionTemplate | FunctionTemplateV2, templateFilter: TemplateFilter): number {
+function sortTemplates(a: IFunctionTemplate | FunctionV2Template, b: IFunctionTemplate | FunctionV2Template, templateFilter: TemplateFilter): number {
     if (templateFilter === TemplateFilter.Verified) {
         function getPriority(id: string): number {
             if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger

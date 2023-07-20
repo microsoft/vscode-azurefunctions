@@ -5,7 +5,7 @@
 
 import { ParsedJob, RawTemplateV2 } from "./script/parseScriptTemplatesV2";
 
-export interface FunctionTemplateV2 extends RawTemplateV2 {
+export interface FunctionV2Template extends RawTemplateV2 {
     id: string;
     isHttpTrigger: boolean;
     isTimerTrigger: boolean;

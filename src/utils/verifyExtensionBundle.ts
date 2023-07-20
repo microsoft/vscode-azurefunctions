@@ -11,13 +11,13 @@ import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWiza
 import { ProjectLanguage, extInstallCommand, extensionsCsprojFileName, hostFileName, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
 import { IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
-import { FunctionTemplateV2 } from '../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../templates/FunctionTemplateV2';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
 
-export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate | FunctionTemplateV2): Promise<void> {
+export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): Promise<void> {
     // v1 doesn't support bundles
     // http and timer triggers don't need a bundle
     // F# and C# specify extensions as dependencies in their proj file instead of using a bundle

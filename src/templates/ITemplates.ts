@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionTemplateV2 } from "./FunctionTemplateV2";
+import { FunctionV2Template } from "./FunctionTemplateV2";
 import { IBindingTemplate } from "./IBindingTemplate";
 import { IFunctionTemplate } from "./IFunctionTemplate";
 
 export interface ITemplates {
     functionTemplates: IFunctionTemplate[];
-    functionTemplatesV2: FunctionTemplateV2[];
+    functionTemplatesV2: FunctionV2Template[];
     bindingTemplates: IBindingTemplate[];
 }

@@ -9,7 +9,7 @@ import { ProjectLanguage } from '../../constants';
 import { IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
-import { FunctionTemplateV2 } from '../FunctionTemplateV2';
+import { FunctionV2Template } from '../FunctionTemplateV2';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
@@ -86,7 +86,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         await Promise.resolve();
     }
 
-    public includeTemplate(template: FunctionTemplateV2): boolean {
+    public includeTemplate(template: FunctionV2Template): boolean {
         return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase()
             && template.programmingModel === 'v2';
     }
