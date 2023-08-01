@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.12.2 - 2023-08-01
+
+### Fixed
+* Fixed an issue where deployment failed due to empty lines in the `.funcignore` file.
+
 ## 1.12.1 - 2023-07-19
 
 ### Added
