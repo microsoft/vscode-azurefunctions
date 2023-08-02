@@ -8,7 +8,7 @@ import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { AzExtPipelineResponse, createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
 import { FuncVersion, funcVersionLink } from '../../../FuncVersion';
-import { hiddenStacksSetting } from '../../../constants';
+import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { localize } from '../../../localize';
 import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
@@ -84,7 +84,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
 
         if (!stackHasPicks) {
             picks.push({
-                label: localize('noRuntimeStacksAvailable', 'No valid runtime stacks available'),
+                label: noRuntimeStacksAvailableLabel,
                 group: stack.displayText,
                 data: undefined
             });

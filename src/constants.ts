@@ -180,3 +180,4 @@ export const functionFilter = {
 };
 
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
+export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');
