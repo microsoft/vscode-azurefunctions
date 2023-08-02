@@ -349,7 +349,10 @@
         "submenus": [
             {
                 "id": "azureFunctions.submenus.workspaceActions",
-                "icon": "resources/azure-functions.png",
+                "icon": {
+                    "light": "resources/azure-functions.svg",
+                    "dark": "resources/azure-functions.svg"
+                },
                 "label": "Azure Functions"
             }
         ],
