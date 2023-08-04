@@ -73,7 +73,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             'Content-Type': 'application/json',
         });
         if (client) {
-            headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
+            headers.set('x-functions-key', (await client.listHostKeys()).masterKey ?? '');
         }
         try {
             responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body: JSON.stringify(body) })).bodyAsText;
