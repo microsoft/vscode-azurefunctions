@@ -1154,7 +1154,7 @@
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^2.1.1",
+        "@microsoft/vscode-azext-azureappservice": "^2.2.2",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.1",
         "@microsoft/vscode-azext-utils": "^2.0.0",
