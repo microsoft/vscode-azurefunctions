@@ -10,6 +10,9 @@ import { commands } from "vscode";
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { createServiceConnector } from '../serviceConnector/createServiceConnector';
+import { deleteServiceConnector } from '../serviceConnector/deleteServiceConnector';
+import { validateServiceConnector } from '../serviceConnector/validateServiceConnector';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
@@ -104,4 +107,7 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapTreeNodeCommandCallback(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createServiceConnector', createServiceConnector);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteServiceConnector', deleteServiceConnector);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.validateServiceConnector', validateServiceConnector);
 }

@@ -344,6 +344,21 @@
                 "command": "azureFunctions.viewProperties",
                 "title": "%azureFunctions.viewProperties%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.createServiceConnector",
+                "title": "%azureFunctions.createServiceConnector%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.deleteServiceConnector",
+                "title": "%azureFunctions.deleteServiceConnector%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.validateServiceConnector",
+                "title": "%azureFunctions.validateServiceConnector%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [
@@ -621,6 +636,21 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*folder/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.createServiceConnector",
+                    "when": "view == azureResourceGroups && viewItem =~ /serviceConnectorGroupItem/",
+                    "group": "4@1"
+                },
+                {
+                    "command": "azureFunctions.deleteServiceConnector",
+                    "when": "view == azureResourceGroups && viewItem =~ /serviceConnectorItem/",
+                    "group": "4@2"
+                },
+                {
+                    "command": "azureFunctions.validateServiceConnector",
+                    "when": "view == azureResourceGroups && viewItem =~ /serviceConnectorItem/",
+                    "group": "4@3"
                 }
             ],
             "explorer/context": [
@@ -1157,6 +1187,7 @@
         "@microsoft/vscode-azext-azureappservice": "^2.2.2",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.1",
+        "@microsoft/vscode-azext-serviceconnector": "file:../vscode-azuretools/serviceconnector/microsoft-vscode-azext-serviceconnector-0.0.1.tgz",
         "@microsoft/vscode-azext-utils": "^2.0.0",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",

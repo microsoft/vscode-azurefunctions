@@ -7,6 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
+import { registerServiceConnectorExtensionVariables } from '@microsoft/vscode-azext-serviceconnector';
 import { IActionContext, apiUtils, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
@@ -44,6 +45,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
+    registerServiceConnectorExtensionVariables(ext);
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
