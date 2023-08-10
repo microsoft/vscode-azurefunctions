@@ -77,7 +77,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         return this.resourcesLanguage || getScriptResourcesLanguage();
     }
 
-    private getTemplatePaths(rootPath: string): ITemplatePaths {
+    protected getTemplatePaths(rootPath: string): ITemplatePaths {
         const templates: string = path.join(rootPath, 'templates-v2', 'templates.json');
         const bindings: string = path.join(rootPath, 'bindings-v2', 'userPrompts.json');
         const resources: string = path.join(rootPath, 'resources-v2', 'Resources.json');
