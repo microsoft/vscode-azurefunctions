@@ -24,8 +24,8 @@ import { IFunctionWizardContext } from './IFunctionWizardContext';
  */
 export async function createFunctionFromCommand(
     context: IActionContext,
-    folderPath?: string | LocalProjectTreeItem,
-    templateId?: string,
+    folderPath?: string | LocalProjectTreeItem | unknown,
+    templateId?: string | unknown[],
     functionName?: string,
     functionSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
@@ -36,8 +36,10 @@ export async function createFunctionFromCommand(
     }
 
     await createFunctionInternal(context, {
-        folderPath,
-        templateId,
+        // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
+        folderPath: typeof folderPath === 'string' ? folderPath : undefined,
+        // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
+        templateId: typeof templateId === 'string' ? templateId : undefined,
         functionName,
         functionSettings,
         language: <api.ProjectLanguage>language,

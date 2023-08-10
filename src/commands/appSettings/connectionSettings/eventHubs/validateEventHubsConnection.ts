@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName, localEventHubsEmulatorConnectionRegExp } from "../../../../constants";
 import { IHostJsonV2, INetheriteTaskJson } from "../../../../funcConfig/host";
@@ -35,7 +35,7 @@ export async function validateEventHubsConnection(context: Omit<ISetConnectionSe
         }
     }
 
-    const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
+    const wizardContext: IActionContext = Object.assign(context, { projectPath });
     const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 

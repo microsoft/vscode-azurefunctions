@@ -9,6 +9,7 @@ import { previewPythonModel, ProjectLanguage } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
+import { BallerinaInitVSCodeStep } from './InitVSCodeStep/BallerinaInitVSCodeStep';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
@@ -24,6 +25,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // Display all languages, even if we don't have full support for them
         const languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [
+            { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.CSharpScript, data: { language: ProjectLanguage.CSharpScript } },
             { label: ProjectLanguage.FSharp, data: { language: ProjectLanguage.FSharp } },
@@ -83,6 +85,9 @@ export async function addInitVSCodeSteps(
         case ProjectLanguage.CSharpScript:
         case ProjectLanguage.FSharpScript:
             executeSteps.push(new DotnetScriptInitVSCodeStep());
+            break;
+        case ProjectLanguage.Ballerina:
+            executeSteps.push(new BallerinaInitVSCodeStep());
             break;
         default:
             executeSteps.push(new ScriptInitVSCodeStep());

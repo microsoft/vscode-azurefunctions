@@ -53,7 +53,7 @@ export namespace bundleFeedUtils {
 
         const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
         const validVersions: string[] = Object.keys(feed.bundleVersions).filter((v: string) => !!semver.valid(v));
-        const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || feed.defaultVersionRange, validVersions);
+        const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || await getLatestVersionRange(context), validVersions);
         if (!bundleVersion) {
             throw new Error(localize('failedToFindBundleVersion', 'Failed to find bundle version satisfying range "{0}".', bundleMetadata.version));
         } else {
@@ -89,9 +89,12 @@ export namespace bundleFeedUtils {
         return false;
     }
 
-    export async function getLatestVersionRange(context: IActionContext): Promise<string> {
-        const feed: IBundleFeed = await getBundleFeed(context, undefined);
-        return feed.defaultVersionRange;
+    export async function getLatestVersionRange(_context: IActionContext): Promise<string> {
+        // const feed: IBundleFeed = await getBundleFeed(context, undefined);
+        // return feed.defaultVersionRange;
+        // New default bundle version causes issues (ex: https://github.com/microsoft/vscode-azurefunctions/issues/3711)
+        // Using old version range as seen in https://github.com/Azure/azure-functions-host/pull/9324
+        return '[3.*, 4.0.0)';
     }
 
     export async function addDefaultBundle(context: IActionContext, hostJson: IHostJsonV2): Promise<void> {

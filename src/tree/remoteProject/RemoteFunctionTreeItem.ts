@@ -19,7 +19,8 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
     private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string, func: FunctionEnvelope) {
-        super(parent, config, name, func);
+        super(parent, config, name, func, false);
+        this.commandId = 'azureResourceGroups.viewProperties';
     }
 
     public static async create(context: IActionContext, parent: RemoteFunctionsTreeItem, func: FunctionEnvelope): Promise<RemoteFunctionTreeItem> {

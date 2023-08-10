@@ -19,7 +19,8 @@ export enum TemplateType {
     Script = 'Script',
     ScriptBundle = 'ScriptBundle',
     Dotnet = '.NET',
-    Java = 'Java'
+    Java = 'Java',
+    Ballerina = 'Ballerina',
 }
 
 export abstract class TemplateProviderBase implements Disposable {

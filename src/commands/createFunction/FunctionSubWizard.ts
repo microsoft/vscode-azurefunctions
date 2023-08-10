@@ -14,6 +14,8 @@ import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNa
 import { FunctionV2WizardContext } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
+import { BallerinaFunctionCreateStep } from './ballerinaSteps/BallerinaFunctionCreateStep';
+import { BallerinaFunctionNameStep } from './ballerinaSteps/BallerinaFunctionNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
@@ -47,6 +49,9 @@ export class FunctionSubWizard {
             switch (context.language) {
                 case ProjectLanguage.Java:
                     promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
+                    break;
+                case ProjectLanguage.Ballerina:
+                    promptSteps.push(new BallerinaFunctionNameStep());
                     break;
                 case ProjectLanguage.CSharp:
                 case ProjectLanguage.FSharp:
@@ -94,6 +99,9 @@ export class FunctionSubWizard {
                         break;
                     case ProjectLanguage.TypeScript:
                         executeSteps.push(new TypeScriptFunctionCreateStep());
+                        break;
+                    case ProjectLanguage.Ballerina:
+                        executeSteps.push(new BallerinaFunctionCreateStep());
                         break;
                     default:
                         if (isV2PythonModel) {

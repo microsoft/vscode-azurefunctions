@@ -45,7 +45,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-            this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
+            this._debugPorts.set(folder, this.getDebugConfigPort(debugConfiguration));
             if (hostStartTaskNameRegExp.test(debugConfiguration.preLaunchTask as string)) {
                 context.telemetry.properties.isActivationEvent = 'false';
                 context.telemetry.suppressIfSuccessful = false;
@@ -60,6 +60,10 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
 
         // Always return the debugConfiguration passed in. If we return undefined we would block debugging and we don't want that.
         return result;
+    }
+
+    protected getDebugConfigPort(debugConfiguration: DebugConfiguration): number | undefined {
+        return <number | undefined>debugConfiguration.port;
     }
 
     protected getDebugPortOrPipeName(folder: WorkspaceFolder): number | string {

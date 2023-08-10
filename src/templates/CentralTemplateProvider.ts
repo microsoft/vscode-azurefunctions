@@ -19,6 +19,8 @@ import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { TemplateProviderBase } from './TemplateProviderBase';
+import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
+import { getBallerinaVerifiedTemplateIds } from './ballerina/getBallerinaVerifiedTemplateIds';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
@@ -61,6 +63,9 @@ export class CentralTemplateProvider implements Disposable {
             case ProjectLanguage.Java:
                 providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
+            case ProjectLanguage.Ballerina:
+                providers.push(new BallerinaTemplateProvider(version, projectPath, language, projectTemplateKey));
+                break;
             default:
                 if (isPythonV2Plus(language, languageModel)) {
                     providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
@@ -74,6 +79,7 @@ export class CentralTemplateProvider implements Disposable {
                 }
                 break;
         }
+
         return providers;
     }
 
@@ -86,7 +92,7 @@ export class CentralTemplateProvider implements Disposable {
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
-                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
+                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }

@@ -32,6 +32,7 @@ export enum ProjectLanguage {
     PowerShell = 'PowerShell',
     Python = 'Python',
     TypeScript = 'TypeScript',
+    Ballerina = 'Ballerina',
     Custom = 'Custom'
 }
 
@@ -67,6 +68,12 @@ export const settingsGradleFileName: string = 'settings.gradle';
 export enum JavaBuildTool {
     maven = 'maven',
     gradle = 'gradle'
+}
+
+export const ballerinaTomlFileName: string = "Ballerina.toml"
+export enum BallerinaBackend {
+    jvm = 'jvm',
+    native = 'native'
 }
 
 export enum PackageManager {
@@ -183,3 +190,4 @@ export enum ActionType {
     WriteToFile = "WriteToFile",
     GetTemplateFileContent = "GetTemplateFileContent"
 }
+export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');

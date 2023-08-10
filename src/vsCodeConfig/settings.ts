@@ -80,6 +80,7 @@ export function getRootFunctionsWorkerRuntime(language: string | undefined): str
         case ProjectLanguage.CSharp:
         case ProjectLanguage.FSharp:
             return 'dotnet';
+        case ProjectLanguage.Ballerina:
         case ProjectLanguage.Java:
             return 'java';
         case ProjectLanguage.Python:
