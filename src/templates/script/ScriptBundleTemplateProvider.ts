@@ -60,7 +60,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         return bundleMetadata && bundleMetadata.id || bundleFeedUtils.defaultBundleId;
     }
 
-    private async getBundleInfo(): Promise<IBundleMetadata | undefined> {
+    protected async getBundleInfo(): Promise<IBundleMetadata | undefined> {
         let data: unknown;
         if (this.projectPath) {
             const hostJsonPath: string = path.join(this.projectPath, hostFileName);

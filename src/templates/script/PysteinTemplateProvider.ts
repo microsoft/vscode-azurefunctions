@@ -10,13 +10,16 @@ import { IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
 import { FunctionV2Template } from '../FunctionTemplateV2';
+import { IBindingTemplate } from '../IBindingTemplate';
+import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
-import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
+import { TemplateType } from '../TemplateProviderBase';
+import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
+import { english, getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
 
 
-export class PysteinTemplateProvider extends TemplateProviderBase {
+export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     public templateType: TemplateType = TemplateType.Script;
 
     protected get backupSubpath(): string {
@@ -28,23 +31,14 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
     protected _rawBindings: object[];
     protected _language: string;
     // TODO: Remove hardcoded language
-    public resourcesLanguage: string = 'en';
-
-    public async getCachedTemplates(): Promise<ITemplates | undefined> {
-        return await this.getBackupTemplates();
-    }
-
-    public async getLatestTemplateVersion(_context: IActionContext): Promise<string> {
-        return '1.0.0';
-    }
+    public resourcesLanguage: string = english;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        return await this.getBackupTemplates();
         // just use backup templates until template feed deploys v2 templates
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
         const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(context, bundleMetadata, latestTemplateVersion);
-        this._language = this.getResourcesLanguage();
-        const resourcesUrl: string = release.resources.replace('{locale}', this.language);
+        const language = this.getResourcesLanguage();
+        const resourcesUrl: string = release.resources.replace('{locale}', language);
         const urls: string[] = [release.userPrompts, resourcesUrl, release.functions];
 
         [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
@@ -71,24 +65,12 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         }
     }
 
-    public async updateBackupTemplates(): Promise<void> {
-        // NOTE: No-op as the templates are only bundled with this extension.
-        await Promise.resolve();
-    }
+    public includeTemplate(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): boolean {
+        if (bundleFeedUtils.isFunctionTemplateV2(template)) {
+            return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase();
+        }
 
-    public async cacheTemplates(): Promise<void> {
-        // NOTE: No-op as the templates are only bundled with this extension.
-        await Promise.resolve();
-    }
-
-    public async clearCachedTemplates(): Promise<void> {
-        // NOTE: No-op as the templates are only bundled with this extension.
-        await Promise.resolve();
-    }
-
-    public includeTemplate(template: FunctionV2Template): boolean {
-        return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase()
-            && template.programmingModel === 'v2';
+        return false;
     }
 
     protected getResourcesLanguage(): string {
@@ -101,14 +83,6 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
         const resources: string = path.join(rootPath, 'resources-v2', 'Resources.json');
 
         return { templates, bindings, resources };
-    }
-
-    private async getBundleInfo(): Promise<IBundleMetadata | undefined> {
-        // hard-code this for now, but this should be retrieved from the template feed at some point
-        return {
-            "id": "Microsoft.Azure.Functions.ExtensionBundle",
-            "version": "[4.*, 5.0.0)"
-        }
     }
 }
 

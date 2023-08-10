@@ -23,7 +23,6 @@ export namespace bundleFeedUtils {
         bundleVersions: {
             [bundleVersion: string]: {
                 templates: string;
-                templatesV2: string
             };
         };
         templates: {
@@ -82,7 +81,7 @@ export namespace bundleFeedUtils {
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
-    function isFunctionTemplateV2(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): template is FunctionV2Template {
+    export function isFunctionTemplateV2(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): template is FunctionV2Template {
         if ('programmingModel' in template) {
             return template.programmingModel === 'v2';
         }
@@ -128,42 +127,7 @@ export namespace bundleFeedUtils {
             url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
         }
 
-        // TODO: Get the bundlefeed properly-- waiting on deployment of V2 templates
-        const bundleFeed = await feedUtils.getJsonFeed(context, url) as IBundleFeed;
-        /** V2-SCHEMA: Here, the parsed body should look like:
-            * { templates: {
-            * v1: {},
-            * v2: {
-            * 1.0.0: {
-            *   ├── Schemas
-                │   ├── action-schemas.json
-                │   └── template-schema.json
-                ├── Bindings
-                │   └── userPrompts.json
-                ├── Templates-V2
-                │   └── TimerTrigger-Python
-                │       ├── function_app.py
-                │       ├── function_body.py
-                │       ├── template.json
-                │       └── timer_trigger_template.md
-            *}
-        **/
-
-        // TESTING CODE FOR V2-SCHEMA
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        bundleFeed.bundleVersions['1.0.0'].templatesV2 = "1.0.0";
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        bundleFeed.templates.v2 = {
-            '1.0.0': {
-                resources: "https://nasoniwinconsum89a4.blob.core.windows.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/3.22.0/StaticContent/v2/resources/Resources.json",
-                userPrompts: "https://nasoniwinconsum89a4.blob.core.windows.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/3.18.0/StaticContent/v2/bindings/userPrompts.json",
-                functions: "https://nasoniwinconsum89a4.blob.core.windows.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/3.18.0/StaticContent/v2/templates/templates.json"
-            }
-        };
-
-        return bundleFeed;
-
-        // return feedUtils.getJsonFeed(context, url);
+        return feedUtils.getJsonFeed(context, url);
     }
 
     export function overwriteExtensionBundleVersion(hostJson: IHostJsonV2, expectedRange: string, newRange: string): void {
