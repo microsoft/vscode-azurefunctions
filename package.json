@@ -63,7 +63,7 @@
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "title": "%azureFunctions.createFunctionApp%",
-                    "type": "microsoft.web/sites",
+                    "type": "FunctionApp",
                     "detail": "%azureFunctions.createFunctionAppDetail%"
                 }
             ],
