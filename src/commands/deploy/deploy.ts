@@ -5,7 +5,7 @@
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
 import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, ExecuteActivityContext, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, hostFileName, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -13,6 +13,7 @@ import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreTools
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
@@ -30,7 +31,7 @@ import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext;
+export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
     await deploy(context, target, functionAppId);
@@ -51,7 +52,13 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(message);
     }
 
-    const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, { action: CodeAction.Deploy, defaultAppSetting: 'defaultFunctionAppToDeploy', projectPath });
+    const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, {
+        action: CodeAction.Deploy,
+        defaultAppSetting: 'defaultFunctionAppToDeploy',
+        projectPath,
+        ...(await createActivityContext())
+    });
+
     if (treeUtils.isAzExtTreeItem(arg1)) {
         if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
             !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue)) {
