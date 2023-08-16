@@ -12,7 +12,7 @@ export async function showFlexDeployConfirmation(context: IDeployContext, site: 
     // const learnMoreLink: string = 'https://aka.ms/flexconsumption-remotebuild';
     const remoteDeploy: MessageItem = { title: localize('remoteDeploy', 'Deploy with Remote Build ') };
     const input: MessageItem = await showCustomDeployConfirmation(context, site, deployCommandId, { items: [remoteDeploy] });
-
+    context.flexConsumptionRemoteBuild = false;
     // We should allow users to have a "don't ask again option" for public preview
     if (input === remoteDeploy) {
         context.flexConsumptionRemoteBuild = true;
