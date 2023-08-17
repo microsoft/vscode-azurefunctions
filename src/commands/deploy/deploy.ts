@@ -5,7 +5,7 @@
 
 import type { SiteConfigResource } from '@azure/arm-appservice';
 import { IDeployContext, IDeployPaths, getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, ExecuteActivityContext, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { CodeAction, ConnectionType, DurableBackend, DurableBackendValues, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, hostFileName, remoteBuildSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -13,6 +13,7 @@ import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreTools
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
@@ -27,10 +28,11 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
+import { showFlexDeployConfirmation } from './showFlexDeployConfirmation';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext;
+export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
     await deploy(context, target, functionAppId);
@@ -51,7 +53,13 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(message);
     }
 
-    const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, { action: CodeAction.Deploy, defaultAppSetting: 'defaultFunctionAppToDeploy', projectPath });
+    const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, {
+        action: CodeAction.Deploy,
+        defaultAppSetting: 'defaultFunctionAppToDeploy',
+        projectPath,
+        ...(await createActivityContext())
+    });
+
     if (treeUtils.isAzExtTreeItem(arg1)) {
         if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
             !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue)) {
@@ -88,7 +96,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
-    const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
+    const isFlexConsumption: boolean = await client.getIsConsumptionV2(actionContext);
+    actionContext.telemetry.properties.isFlexConsumption = String(isFlexConsumption);
+    // don't use remote build setting for consumption v2
+    const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
         await validateRemoteBuild(context, node.site, context.workspaceFolder, language);
@@ -96,6 +107,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
+    } else if (isFlexConsumption) {
+        context.deployMethod = 'flexconsumption';
     }
 
     const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
@@ -112,7 +125,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
-        await showDeployConfirmation(context, node.site, 'azureFunctions.deploy');
+        const deployCommandId = 'azureFunctions.deploy';
+        if (context.deployMethod === 'flexconsumption') {
+            await showFlexDeployConfirmation(context, node.site, deployCommandId);
+        } else {
+            await showDeployConfirmation(context, node.site, deployCommandId);
+        }
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
@@ -125,7 +143,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
     }
 
-    if (isZipDeploy) {
+    // app settings shouldn't be checked with flex consumption plans
+    if (isZipDeploy && !isFlexConsumption) {
         await verifyAppSettings({
             context,
             node,
