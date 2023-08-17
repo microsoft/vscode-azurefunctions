@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.12.4 - 2023-08-17
+
+### Fixed
+* Minor improvements to deployment logic by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3760
+
 ## 1.12.3 - 2023-08-10
 
 ### Fixed
