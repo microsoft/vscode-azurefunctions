@@ -28,6 +28,7 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
+import { showFlexDeployConfirmation } from './showFlexDeployConfirmation';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -95,7 +96,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
-    const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
+    const isFlexConsumption: boolean = await client.getIsConsumptionV2(actionContext);
+    actionContext.telemetry.properties.isFlexConsumption = String(isFlexConsumption);
+    // don't use remote build setting for consumption v2
+    const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
         await validateRemoteBuild(context, node.site, context.workspaceFolder, language);
@@ -103,6 +107,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
+    } else if (isFlexConsumption) {
+        context.deployMethod = 'flexconsumption';
     }
 
     const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
@@ -119,7 +125,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
-        await showDeployConfirmation(context, node.site, 'azureFunctions.deploy');
+        const deployCommandId = 'azureFunctions.deploy';
+        if (context.deployMethod === 'flexconsumption') {
+            await showFlexDeployConfirmation(context, node.site, deployCommandId);
+        } else {
+            await showDeployConfirmation(context, node.site, deployCommandId);
+        }
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
@@ -132,7 +143,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
     }
 
-    if (isZipDeploy) {
+    // app settings shouldn't be checked with flex consumption plans
+    if (isZipDeploy && !isFlexConsumption) {
         await verifyAppSettings({
             context,
             node,
