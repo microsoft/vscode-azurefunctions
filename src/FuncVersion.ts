@@ -16,19 +16,21 @@ export enum FuncVersion {
 
 export const latestGAVersion: FuncVersion = FuncVersion.v4;
 export const funcVersionLink: string = 'https://aka.ms/AA1tpij';
+const funcRuntimeWarningLabel: string = localize('runtimeWarning', `$(extensions-warning-message) Azure Functions runtimes v2 and v3 have reached the end of life.`);
 
 export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     const recommended: string = localize('recommended', '(Recommended)');
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
         { label: 'Azure Functions v4', description: recommended, data: FuncVersion.v4 },
-        { label: 'Azure Functions v3', data: FuncVersion.v3 },
-        { label: 'Azure Functions v2', data: FuncVersion.v2 },
-        { label: 'Azure Functions v1', data: FuncVersion.v1 }
+        { label: 'Azure Functions v3', data: FuncVersion.v3, description: '$(extensions-warning-message)' },
+        { label: 'Azure Functions v2', data: FuncVersion.v2, description: '$(extensions-warning-message)' },
+        { label: 'Azure Functions v1', data: FuncVersion.v1 },
+        { label: funcRuntimeWarningLabel, data: undefined, onPicked: () => {/*do nothing*/ } }
     ];
 
     picks = picks.filter(p => osSupportsVersion(p.data));
 
-    const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };
+    const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn about Azure Functions versioning...'), description: '', data: undefined };
     picks.push(learnMoreQp);
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };

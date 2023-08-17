@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, openUrl } from '@microsoft/vscode-azext-utils';
+import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -53,24 +54,31 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
     }
 
     private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
-        const picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = await getStackPicks(context);
+        let picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = await getStackPicks(context);
+        if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
+            // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []
+            picks = [];
+        }
+
+        const majorVersion = getMajorVersion(context.version);
+        const isEol = Number(majorVersion) === 2 || Number(majorVersion) === 3;
         if (picks.length === 0) {
-            const majorVersion = getMajorVersion(context.version);
             const noPicksMessage = context.stackFilter ?
                 localize('noStacksFoundWithFilter', '$(warning) No stacks found for "{0}" on Azure Functions v{1}', context.stackFilter, majorVersion) :
                 localize('noStacksFound', '$(warning) No stacks found for Azure Functions v{0}', majorVersion);
+            const upgradeMessage = localize('eolWarning', '$(warning) No stacks found for Azure Functions v{0} due to being EOL. Learn how to upgrade to V4...', majorVersion)
             picks.push({
-                label: noPicksMessage,
+                label: isEol ? upgradeMessage : noPicksMessage,
                 data: undefined,
-                onPicked: () => {
-                    // do nothing
+                onPicked: async () => {
+                    await openUrl('https://aka.ms/function-runtime-host-warning');
                 }
             })
         }
 
         picks.push({
             label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
-            description: localize('currentFuncVersion', 'Current: {0}', context.version),
+            description: localize('currentFuncVersion', 'Current: {0}', context.version) + (isEol ? ' $(warning)' : ''),
             data: undefined,
             suppressPersistence: true
         });

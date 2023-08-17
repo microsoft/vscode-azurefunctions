@@ -1,5 +1,32 @@
 # Change Log
 
+## 1.12.3 - 2023-08-10
+
+### Fixed
+* `(intermediate value).parsedBody.map is not a function` error when deploying Function App [#3769](https://github.com/microsoft/vscode-azurefunctions/issues/3769)
+* Fail to connect to log stream [#3775](https://github.com/microsoft/vscode-azurefunctions/issues/3775)
+* Unexpected status code: 401 when executing remote function [#3788](https://github.com/microsoft/vscode-azurefunctions/pull/3788)
+* Azure Functions icon not appearing in the workspace view when using a light theme [#3783](https://github.com/microsoft/vscode-azurefunctions/issues/3783)
+
+### Changed
+* Azure Functions runtime V2 and V3 now show EOL warnings [#3771](https://github.com/microsoft/vscode-azurefunctions/pull/3771)
+
+## 1.12.2 - 2023-08-01
+
+### Fixed
+* Fixed an issue where deployment failed due to empty lines in the `.funcignore` file.
+
+## 1.12.1 - 2023-07-19
+
+### Added
+* Add Ballerina language support by @xlight05 in https://github.com/microsoft/vscode-azurefunctions/pull/3584
+
+### Changed
+* Print a warning if the function project root can't be found on deploy by @mkfrey in https://github.com/microsoft/vscode-azurefunctions/pull/3764
+
+### Fixed
+* Fix executing service bus topic trigger by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3763
+
 ## 1.12.0 - 2023-07-13
 
 ### Added
