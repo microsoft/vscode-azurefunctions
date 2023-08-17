@@ -103,7 +103,7 @@
     "azureFunctions.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azureFunctions.uninstallFuncCoreTools": "Uninstall Azure Functions Core Tools",
     "azureFunctions.validateFuncCoreTools": "Validate the Azure Functions Core Tools is installed before debugging.",
-    "azureFunctions.validateServiceConnector": "Validate Service Connector",
+    "azureFunctions.validateServiceConnector": "Validate",
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",

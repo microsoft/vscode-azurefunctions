@@ -22,7 +22,7 @@ export async function validateServiceConnector(context: IActionContext, item?: S
     const activityContext = {
         ...context,
         ...await createActivityContext(),
-        activityTitle: localize('validateServiceConnector', 'Validate Service Connector'),
+        activityTitle: localize('validate', 'Validate'),
     }
 
     await validateLinker(activityContext, item.id, item.subscription, serviceConnectorName);
