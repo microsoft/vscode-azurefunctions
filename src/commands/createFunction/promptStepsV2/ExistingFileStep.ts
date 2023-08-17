@@ -9,9 +9,9 @@ import { Utils } from 'vscode-uri';
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
-import { PromptSchemaBaseStep } from "./PromptSchemaBaseStep";
+import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 
-export class ExistingFileStep<T extends FunctionV2WizardContext> extends PromptSchemaBaseStep<T> {
+export class ExistingFileStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {
     public constructor(readonly input: ParsedInput) {
         super(input);
     }

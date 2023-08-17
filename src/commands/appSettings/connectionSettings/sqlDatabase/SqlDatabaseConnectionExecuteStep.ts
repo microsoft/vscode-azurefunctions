@@ -5,11 +5,11 @@
 
 import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType } from '../../../../constants';
+import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getSqlDatabaseConnectionString } from '../getLocalConnectionSetting';
-import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
-export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends SetConnectionSettingBaseStep<T> {
+export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 250;
     public debugDeploySetting: ConnectionKeyValues = ConnectionKey.SQL;
 

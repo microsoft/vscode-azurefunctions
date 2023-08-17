@@ -8,9 +8,9 @@ import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
-import { ActionSchemaBaseStep } from "./ActionSchemaBaseStep";
+import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 
-export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaBaseStep<T> {
+export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {
     public async executeAction(context: T): Promise<void> {
         context.newFilePath = await this.getFilePath(context);
         await this.writeToFile(context, context.newFilePath);

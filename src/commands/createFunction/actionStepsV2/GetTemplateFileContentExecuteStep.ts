@@ -5,9 +5,9 @@
 
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
-import { ActionSchemaBaseStep } from "./ActionSchemaBaseStep";
+import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 
-export class GetTemplateFileContentExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaBaseStep<T> {
+export class GetTemplateFileContentExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {
     public async executeAction(context: T): Promise<void> {
         const filePath = nonNullProp(this.action, 'filePath');
         let source: string | undefined = context.functionTemplateV2?.files[filePath];
