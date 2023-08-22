@@ -699,6 +699,10 @@
                 {
                     "command": "azureFunctions.viewProperties",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.validateServiceConnector",
+                    "when": "never"
                 }
             ],
             "editor/context": [
