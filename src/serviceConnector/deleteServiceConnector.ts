@@ -22,7 +22,7 @@ export async function deleteServiceConnector(context: IActionContext, item?: Slo
     const activityContext = {
         ...context,
         ...await createActivityContext(),
-        activityTitle: localize('deleteServiceConnector', 'Delete Service Connector'),
+        activityTitle: localize('deleteServiceConnector', 'Delete connection'),
     }
 
     await deleteLinker(activityContext, item.id, item.subscription, serviceConnectorName);
