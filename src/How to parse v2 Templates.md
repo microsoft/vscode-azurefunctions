@@ -1,7 +1,27 @@
-How to parse v2 Templates
+## How the extension parses Templates V2
 
-After getting the urls, we have
-- userPrompts which are shaped like this:
+### Bundle feed
+
+The templates come from the extension [bundle feed](https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json) under the `templates.v2` property.
+The extension looks at the `bundleVersions` to determine what the latest version is. It then uses the three properties `functions`, `userPrompts`, and `resources` to retrieve the jsons used to parse the templates.
+
+**NOTE: For v1, we use `bindings` instead of `userPrompts`**
+
+### Functions
+This .json file contains all of the actions, jobs, and content of the template triggers. Each function template contain the following JSON objects:
+
+`jobs`: Contains the different scenarios that the template can be used. An example of a `job` is "Add BlobTrigger function to the main file".
+<br>Each job has an `actions` array. These are the actions that VS Code must interpret and execute.
+<br>Each job also has an `inputs` array. These are similar to bindings. The "paramId" correlates with the "id" property of userPrompt.
+
+`actions`: The template itself has an `actions` array that is different from the `jobs.actions` array.
+<br>It contains _all_ the actions that could be used by the template. Note that not every action is used by every job.
+
+`files`: Contains an object where the key is the file name and the value is the content.
+
+### UserPrompts
+The `userPrompts.json` are used with by the templates to know what strings to display to the user when retrieving input.
+The userPrompts are shaped like this:
 {
   id: "httpTrigger-route",
   name: "httpTrigger-route",
@@ -9,30 +29,27 @@ After getting the urls, we have
   help: "$httpTrigger_route_help",
 }
 
-First, we need to replace the name, label, and help with their values from the resources file.
-So, the rawUserPrompts should be combined with the resources to create IUserPrompts.
+The userPrompts must be combined with the resource files to get the localized strings.
+It provides the input with a name, label, help, some have validators and quite a few other properties.
+The input contains information such as defaultValue, required, assignTo token, and more.
 
-Then, each raw template has a "jobs" array. These will be presented to users as potential actions that they can take with this template.
-    Each job has a "actions" array. These are the actions that VS Code must interpret and execute.
-    Each job also has an "inputs" array. These are similar to bindings. The "paramId" correlates with the "id" property of userPrompt. userPrompt provides the input with a name, label, help, some have validators and quite a few other properties.
-    The input has the useful information such as defaultValue, required, assignTo token, and more.
+### Resources
+The `resources.json` comes in many languages. The extension will use the user's locale to determine which resource file to use.
 
-Then IUserPrompts will be used with create IJobs. IJobs will be attached to the parsed templates (whatever that ends up being). The idea is that we never have to refer to the raw templates and correlate the ids again.
-We will attach _all_ the data we need for project creation to the parsed templates.
+In order to make the userPrompts human readable, we replace `name`, `label`, and `help` with the localized resources file string values.
+
+### How the extension parses the templates
+Any resource from the bundle feed that we have not altered in anyway is referred to as a "raw" resource.
+
+For example, `rawUserPrompts` are combined with the resources to create `UserPrompts` objects.
+
+Each `RawTemplateV2` has a `jobs` array. These are presented to users as potential actions that they can take with this template.
+
+Then `UserPrompts` will be used with create `Jobs`. `Jobs` will be attached to the `FunctionV2Template`. `FunctionV2Templates` should encapsulate all of the data such that no raw resource should have to be referenced to again.
+
+### Actions and Inputs
 
 Actions and Inputs are indepedent from each other. Inputs are the equivalent of "promptSteps" and actions are "executeSteps"
 
-In FunctionSubWizard, there is an "addBindingSteps". This is the equivalent of adding "promptSteps" based on the user scenario.
-For V2, we should skip this and present the user a choice of actions to take. The actions will be based on the "jobs" array of the parsed templates.
-
-Maybe something like this?
-JobsPromptStep
-    - This will present the user with a list of jobs to choose from
-    - The user will select a job and then we will create the appropriate promptSteps and executeSteps based on the job's actions and inputs
-    - The user will then be presented with the promptSteps and executeSteps via the subWizard
-
-Should I change FunctionSubWizard to add this or make a new file?
-Could probably extend FunctionListStep for a v2 version as well.
-
-When I create the execute steps, I should pass in the prompt's inputs to the execute step, otherwise I'll have to do a look up after the fact.
-Ideally, I run wizard.prompt() and then can check the assignTo of the executes and see if there are any prompts that match up with it. If there are, then I can replace with `assignTo` with `replaceToken`
+In `FunctionSubWizard`, there is an "addBindingSteps". This is the equivalent of adding "promptSteps" based on the user scenario.
+For V2, we present the user a choice of actions to take. The actions are based on the `jobs` array of the parsed templates and based off of that, it will push `promptSteps` and `executeSteps` to create an `AzureWizard`

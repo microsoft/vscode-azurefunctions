@@ -36,8 +36,6 @@ export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> ex
             }
         }
 
-        // special case for existingfile/new file
-
         return undefined;
     }
 

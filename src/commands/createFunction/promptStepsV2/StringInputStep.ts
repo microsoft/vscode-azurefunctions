@@ -42,8 +42,4 @@ export class StringInputStep<T extends FunctionV2WizardContext> extends PromptSc
 
         return undefined;
     }
-
-    public shouldPrompt(context: T): boolean {
-        return !context[this.input.assignTo];
-    }
 }
