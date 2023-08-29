@@ -11,14 +11,14 @@ import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 export class GetTemplateFileContentExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {
     public async executeAction(context: T): Promise<void> {
         const filePath = nonNullProp(this.action, 'filePath');
-        let source: string | undefined = context.functionTemplateV2?.files[filePath];
+        let source: string | undefined = context.functionV2Template?.files[filePath];
         if (!source) {
             throw new Error(localize('templateNotFound', `Could not find file "${filePath}" in template`));
         }
 
         /**
          * Technically, this should be done by the action [ReplaceTokenInText](https://github.com/Azure/azure-functions-templates/blob/dev/Docs/Actions/ReplaceTokensInText.md)
-         * But I have yet to see a job contain this action, so it needs to happen when we get the template file content.
+         * But as of today, no job contain this action, so it needs to happen when we get the template file content.
          */
         // all tokens saved on the context are prefixed with '$('
         const assignToTokens = Object.keys(context).filter(k => k.startsWith('$('));

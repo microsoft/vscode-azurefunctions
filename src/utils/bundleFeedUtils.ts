@@ -8,7 +8,7 @@ import * as semver from 'semver';
 import { ext, TemplateSource } from '../extensionVariables';
 import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
-import { FunctionV2Template } from '../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../templates/FunctionV2Template';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
 import { feedUtils } from './feedUtils';
@@ -74,14 +74,14 @@ export namespace bundleFeedUtils {
     export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): boolean {
         const bundleTemplateTypes: string[] = ['durable', 'signalr'];
         // I don't think v2 templates are ever a bundle template? Will have to verify this
-        if (isFunctionTemplateV2(template)) {
+        if (isFunctionV2Template(template)) {
             return true;
         }
 
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
-    export function isFunctionTemplateV2(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): template is FunctionV2Template {
+    export function isFunctionV2Template(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): template is FunctionV2Template {
         if ('programmingModel' in template) {
             return template.programmingModel === 'v2';
         }

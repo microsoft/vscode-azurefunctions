@@ -11,7 +11,7 @@ import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWiza
 import { ProjectLanguage, extInstallCommand, extensionsCsprojFileName, hostFileName, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
 import { IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
-import { FunctionV2Template } from '../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../templates/FunctionV2Template';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';

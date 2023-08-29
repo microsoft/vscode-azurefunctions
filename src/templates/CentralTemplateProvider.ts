@@ -14,7 +14,7 @@ import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { FunctionV2Template } from './FunctionTemplateV2';
+import { FunctionV2Template } from './FunctionV2Template';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';

@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionV2Template } from '../../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../../templates/FunctionV2Template';
 import { ParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 export interface FunctionV2WizardContext extends IFunctionWizardContext {
-    functionTemplateV2?: FunctionV2Template;
+    functionV2Template?: FunctionV2Template;
     job?: ParsedJob;
 
     newFilePath?: string;

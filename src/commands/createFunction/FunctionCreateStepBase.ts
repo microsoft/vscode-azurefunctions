@@ -10,7 +10,7 @@ import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../../templates/FunctionV2Template';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
@@ -44,7 +44,7 @@ export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> 
     public abstract executeCore(context: T): Promise<string>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: IFunctionTemplate | FunctionV2Template = nonNullValue(context.functionTemplate ?? context.functionTemplateV2);
+        const template: IFunctionTemplate | FunctionV2Template = nonNullValue(context.functionTemplate ?? context.functionV2Template);
         context.telemetry.properties.projectLanguage = context.language;
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
@@ -78,7 +78,7 @@ export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> 
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.functionTemplate || !!context.functionTemplateV2;
+        return !!context.functionTemplate || !!context.functionV2Template;
     }
 }
 

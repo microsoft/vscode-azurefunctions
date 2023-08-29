@@ -3,24 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 
-export class EnumInputStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {
-    protected async promptAction(context: T): Promise<string> {
-        const enums = nonNullProp(this.input, 'enum');
-        const picks: IAzureQuickPickItem<string>[] = enums.map(e => { return { data: e.value, label: e.display }; });
+export abstract class QuickPickInputStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {
+    protected async promptAction<U>(context: T): Promise<U | undefined> {
+        const picks: IAzureQuickPickItem<U | undefined>[] = await this.getPicks<U>(context);
 
         if (!this.input.required) {
             picks.push({
                 label: localize('skipForNow', '$(clock) Skip for now'),
-                data: 'skipForNow',
+                data: undefined,
                 suppressPersistence: true
             });
         }
 
         return (await context.ui.showQuickPick(picks, { placeHolder: this.input.help })).data;
     }
+
+    protected abstract getPicks<U>(context: T): Promise<IAzureQuickPickItem<U>[]>;
 }

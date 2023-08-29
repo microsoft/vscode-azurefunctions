@@ -11,7 +11,7 @@ import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 export class ShowMarkdownPreviewExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {
     public async executeAction(context: T): Promise<void> {
         const filename = nonNullProp(this.action, 'filePath');
-        const content = context.functionTemplateV2?.files[filename] ?? '';
+        const content = context.functionV2Template?.files[filename] ?? '';
         await showMarkdownPreviewContent(content, filename, /* openToSide: */ true);
     }
 }

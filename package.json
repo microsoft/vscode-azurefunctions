@@ -1038,7 +1038,7 @@
                         "default": true
                     },
                     "azureFunctions.functionSubpath": {
-                        "scope": "resource",
+                        "scope": "machine-overridable",
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"

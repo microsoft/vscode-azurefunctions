@@ -8,8 +8,6 @@ import { localize } from "../../../localize";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
 
-// TODO: Create more prompt steps where value is used to determine the prompt (string = input, boolean/enum = quickpick)
-// if required is false, then add a skip for now (for quickpick only) or allow "undefined"
 export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> extends AzureWizardPromptStep<T> {
 
     public constructor(readonly input: ParsedInput) {

@@ -6,10 +6,10 @@
 import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
 import { FuncVersion } from '../../FuncVersion';
-import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
+import { JavaBuildTool, ProjectLanguage, TemplateFilter, skipForNowQuickPickItem, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../../templates/FunctionV2Template';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
@@ -77,7 +77,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
         const templateProvider = ext.templateProvider.get(context);
-        while (!context.functionTemplate && !context.functionTemplateV2) {
+        while (!context.functionTemplate && !context.functionV2Template) {
             let placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
                 localize('selectFuncTemplate', 'Select a template for your function');
@@ -105,7 +105,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.telemetry.properties.reloaded = 'true';
             } else {
                 if ('wizards' in result) {
-                    context.functionTemplateV2 = result;
+                    context.functionV2Template = result;
                 } else {
                     context.functionTemplate = result;
                 }
@@ -139,11 +139,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .map(t => { return { label: t.name, data: t }; });
 
         if (this._isProjectWizard) {
-            picks.unshift({
-                label: localize('skipForNow', '$(clock) Skip for now'),
-                data: 'skipForNow',
-                suppressPersistence: true
-            });
+            picks.unshift(skipForNowQuickPickItem);
         }
 
         if (templates.length === 0) {

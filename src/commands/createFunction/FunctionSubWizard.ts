@@ -6,7 +6,7 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionTemplateV2';
+import { FunctionV2Template } from '../../templates/FunctionV2Template';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
@@ -36,7 +36,7 @@ export class FunctionSubWizard {
     public static async createSubWizard(context: FunctionV2WizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
 
-        let template: IFunctionTemplate | FunctionV2Template | undefined = context.functionTemplate ?? context.functionTemplateV2;
+        let template: IFunctionTemplate | FunctionV2Template | undefined = context.functionTemplate ?? context.functionV2Template;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
 

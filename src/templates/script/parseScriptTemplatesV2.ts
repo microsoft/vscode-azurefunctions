@@ -5,7 +5,7 @@
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ActionType, ProjectLanguage } from '../../constants';
-import { FunctionV2Template } from '../FunctionTemplateV2';
+import { FunctionV2Template } from '../FunctionV2Template';
 import { ResourceType } from '../IBindingTemplate';
 
 /**

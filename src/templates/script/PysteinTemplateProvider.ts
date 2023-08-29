@@ -9,13 +9,13 @@ import { ProjectLanguage } from '../../constants';
 import { IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
-import { FunctionV2Template } from '../FunctionTemplateV2';
+import { FunctionV2Template } from '../FunctionV2Template';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateType } from '../TemplateProviderBase';
 import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
-import { english, getScriptResourcesLanguage } from './getScriptResourcesLanguage';
+import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
 
 
@@ -30,8 +30,6 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     protected _rawTemplates: RawTemplateV2[];
     protected _rawBindings: object[];
     protected _language: string;
-    // TODO: Remove hardcoded language
-    public resourcesLanguage: string = english;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         // just use backup templates until template feed deploys v2 templates
@@ -66,7 +64,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     }
 
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): boolean {
-        if (bundleFeedUtils.isFunctionTemplateV2(template)) {
+        if (bundleFeedUtils.isFunctionV2Template(template)) {
             return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase();
         }
 

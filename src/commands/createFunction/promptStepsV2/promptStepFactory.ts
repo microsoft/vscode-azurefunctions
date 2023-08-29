@@ -7,6 +7,7 @@ import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { ResourceType } from "../../../templates/IBindingTemplate";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { BooleanInputStep } from "./BooleanInputStep";
 import { EnumInputStep } from "./EnumInputStep";
 import { ExistingFileStep } from "./ExistingFileStep";
 import { NewFileStep } from "./NewFileStep";
@@ -16,6 +17,8 @@ export function promptStepFactory<T extends FunctionV2WizardContext>(input: Pars
     switch (input.value) {
         case 'enum':
             return new EnumInputStep(input);
+        case 'boolean':
+            return new BooleanInputStep(input);
         default:
             switch (input.resource) {
                 case ResourceType.ExistingFile:

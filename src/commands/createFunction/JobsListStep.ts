@@ -20,13 +20,12 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
     }
 
     public async prompt(context: FunctionV2WizardContext): Promise<void> {
-        // TODO: come up with a better placeholder
-        const placeHolder: string = localize('selectJob', 'Select a job');
+        const placeHolder: string = localize('selectJob', 'Select template creation type');
         context.job = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder })).data;
     }
 
     public shouldPrompt(context: FunctionV2WizardContext): boolean {
-        return !context.job && !!context.functionTemplateV2;
+        return !context.job && !!context.functionV2Template;
     }
 
     public async getSubWizard(context: FunctionV2WizardContext): Promise<IWizardOptions<FunctionV2WizardContext> | undefined> {
@@ -55,12 +54,12 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
     public async configureBeforePrompt(context: FunctionV2WizardContext): Promise<void> {
         // if this is a new project, we can default to the new project job
         if (this.isProjectWizard) {
-            context.job = context.functionTemplateV2!.wizards.find(j => j.type === JobType.CreateNewApp);
+            context.job = context.functionV2Template!.wizards.find(j => j.type === JobType.CreateNewApp);
         }
     }
 
     private async getPicks(context: FunctionV2WizardContext): Promise<IAzureQuickPickItem<ParsedJob>[]> {
-        let picks = context.functionTemplateV2!.wizards.map((w) => { return { label: w.name, data: w } });
+        let picks = context.functionV2Template!.wizards.map((w) => { return { label: w.name, data: w } });
         // verify if this is a function project-- if so, remove the createNewApp job
         if (await isFunctionProject(context.projectPath)) {
             picks = picks.filter(p => p.data.type !== JobType.CreateNewApp);

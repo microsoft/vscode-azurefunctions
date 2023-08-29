@@ -10,7 +10,7 @@ import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
-import { FunctionV2Template } from './FunctionTemplateV2';
+import { FunctionV2Template } from './FunctionV2Template';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
