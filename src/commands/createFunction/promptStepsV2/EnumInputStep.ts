@@ -4,23 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { localize } from "../../../localize";
 import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
-import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
+import { QuickPickInputStep } from "./QuickPickInputStep";
 
-export class EnumInputStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {
-    protected async promptAction(context: T): Promise<string> {
+export class EnumInputStep<T extends FunctionV2WizardContext> extends QuickPickInputStep<T> {
+    protected async getPicks(_context: T): Promise<IAzureQuickPickItem<string>[]> {
         const enums = nonNullProp(this.input, 'enum');
-        const picks: IAzureQuickPickItem<string>[] = enums.map(e => { return { data: e.value, label: e.display }; });
-
-        if (!this.input.required) {
-            picks.push({
-                label: localize('skipForNow', '$(clock) Skip for now'),
-                data: 'skipForNow',
-                suppressPersistence: true
-            });
-        }
-
-        return (await context.ui.showQuickPick(picks, { placeHolder: this.input.help })).data;
+        return enums.map(e => { return { data: e.value, label: e.display }; });
     }
 }
