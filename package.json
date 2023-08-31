@@ -1038,7 +1038,7 @@
                         "default": true
                     },
                     "azureFunctions.functionSubpath": {
-                        "scope": "machine-overridable",
+                        "scope": "resource",
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
@@ -1156,8 +1156,8 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^2.2.4",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
-        "@microsoft/vscode-azext-azureutils": "^2.0.1",
-        "@microsoft/vscode-azext-utils": "^2.0.5",
+        "@microsoft/vscode-azext-azureutils": "^2.0.2",
+        "@microsoft/vscode-azext-utils": "^2.1.0",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",

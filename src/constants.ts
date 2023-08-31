@@ -173,6 +173,11 @@ export const nodeDefaultModel: { modelVersion: undefined, label: string } = { mo
 export const nodeModels = [nodeDefaultModel, nodeV4Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
 
+export const pythonV2Model: { modelVersion: number, label: string } = { modelVersion: 2, label: localize('pyModelV2', 'Model V2 (Recommended)') };
+export const pythonV1Model: { modelVersion: undefined, label: string } = { modelVersion: undefined, label: localize('pyModelV1', 'Model V1') }
+
+export const pythonModels = [pythonV2Model, pythonV1Model];
+
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {
     type: 'microsoft.web/sites',

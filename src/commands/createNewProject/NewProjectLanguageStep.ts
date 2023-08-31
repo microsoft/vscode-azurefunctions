@@ -5,8 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { ProjectLanguage, nodeLearnMoreLink, nodeModels, previewPythonModel } from '../../constants';
-import { pythonNewModelPreview } from '../../constants-nls';
+import { ProjectLanguage, nodeLearnMoreLink, nodeModels, pythonModels } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -45,7 +44,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
@@ -101,6 +99,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
+                promptSteps.push(new ProgrammingModelStep({
+                    models: pythonModels,
+                }));
                 executeSteps.push(new PythonProjectCreateStep());
                 break;
             case ProjectLanguage.PowerShell:

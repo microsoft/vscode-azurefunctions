@@ -28,6 +28,13 @@ export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputS
         return !context[this.input.assignTo];
     }
 
+    public async configureBeforePrompt(context: T): Promise<void> {
+        // if this is a new project, use the default value provided
+        if (context.job?.type === JobType.CreateNewApp) {
+            context[this.input.assignTo] = this.input.defaultValue.split('.')[0]; // remove file extension (if any);
+        }
+    }
+
     protected async validateInputCore(context: FunctionV2WizardContext, input: string | undefined): Promise<string | undefined> {
         const error = super.validateInput(input);
         if (error) {
@@ -43,7 +50,7 @@ export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputS
 
     protected async validateFunctionNameCore(context: FunctionV2WizardContext, name: string): Promise<string | undefined> {
         // if this is a new project, then we should overwrite the file
-        if (context.job?.type !== JobType.CreateNewApp) {
+        if (context.job?.type === JobType.CreateNewApp) {
             return undefined;
         } else if (await AzExtFsExtra.pathExists(Utils.joinPath(Uri.file(context.projectPath), name))) {
             return localize('existingFileError', 'A file with the name "{0}" already exists.', name);

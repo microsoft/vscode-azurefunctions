@@ -27,7 +27,7 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
             }
         });
 
-        const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more about Model V4...'), description: '', data: undefined };
+        const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more about programming models...'), description: '', data: undefined };
         if (this._learnMoreLink) {
             modelsPick.push(learnMoreQp);
         }
@@ -56,8 +56,8 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
             context.languageModel = this._models[0].modelVersion;
         }
 
-        // this only impacts node for now so only check the feature flag for node
+        // this only impacts python/node for now so only check for those languages
         return context.languageModel === undefined &&
-            (context.language === 'JavaScript' || context.language === 'TypeScript');
+            (context.language === 'JavaScript' || context.language === 'TypeScript' || context.language === 'Python');
     }
 }

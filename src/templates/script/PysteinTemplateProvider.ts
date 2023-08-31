@@ -16,11 +16,12 @@ import { ITemplates } from '../ITemplates';
 import { TemplateType } from '../TemplateProviderBase';
 import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
+import { RawTemplateV2, TemplateSchemaVersion, parseScriptTemplates } from './parseScriptTemplatesV2';
 
 
 export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     public templateType: TemplateType = TemplateType.Script;
+    public templateSchemaVersion: TemplateSchemaVersion = 'v2';
 
     protected get backupSubpath(): string {
         return path.join('pystein');
@@ -37,7 +38,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(context, bundleMetadata, latestTemplateVersion);
         const language = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
-        const urls: string[] = [release.userPrompts, resourcesUrl, release.functions];
+        const urls: string[] = [release.userPrompts ?? release.bindings, resourcesUrl, release.functions];
 
         [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
 

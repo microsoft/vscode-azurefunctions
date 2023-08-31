@@ -17,13 +17,15 @@ export interface Resources {
     en: { [key: string]: string | undefined };
 }
 
+export type TemplateSchemaVersion = 'v1' | 'v2';
+
 export interface RawTemplateV2 {
     actions: ParsedAction[];
     author?: string;
     name: string;
     id?: string;
     description: string;
-    programmingModel: 'v1' | 'v2';
+    programmingModel: string;
     language: ProjectLanguage;
     jobs: RawJob[]
     files: { [filename: string]: string };
@@ -135,6 +137,7 @@ export function parseUserPrompts(rawUserPrompts: object[], resources: Resources)
             const paramName = userPrompt[key] as unknown;
             if (typeof paramName === 'string' && paramName.startsWith('$')) {
                 const resourceKey = paramName.substring(1);
+                // TODO: handle localization
                 userPrompt[key] = resources['en'][resourceKey];
             }
         }

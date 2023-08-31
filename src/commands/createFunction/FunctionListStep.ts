@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
 import { FuncVersion } from '../../FuncVersion';
-import { JavaBuildTool, ProjectLanguage, TemplateFilter, skipForNowQuickPickItem, templateFilterSetting } from '../../constants';
+import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { FunctionV2Template } from '../../templates/FunctionV2Template';
@@ -139,7 +139,11 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .map(t => { return { label: t.name, data: t }; });
 
         if (this._isProjectWizard) {
-            picks.unshift(skipForNowQuickPickItem);
+            picks.unshift({
+                label: localize('skipForNow', '$(clock) Skip for now'),
+                data: 'skipForNow',
+                suppressPersistence: true
+            });
         }
 
         if (templates.length === 0) {

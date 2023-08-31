@@ -14,6 +14,7 @@ import { FunctionV2Template } from './FunctionV2Template';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
+import { TemplateSchemaVersion } from './script/parseScriptTemplatesV2';
 
 export enum TemplateType {
     Script = 'Script',
@@ -31,6 +32,7 @@ export abstract class TemplateProviderBase implements Disposable {
     public readonly language: ProjectLanguage;
     public readonly projectPath: string | undefined;
     public resourcesLanguage: string | undefined;
+    public templateSchemaVersion: TemplateSchemaVersion | undefined;
 
     /**
      * Indicates a related setting/file changed, so we should refresh the worker runtime key next time we get templates
