@@ -1,8 +1,9 @@
 steps:
 - task: NodeTool@0
-  displayName: 'Use Node 18.x'
+  displayName: 'Use Node'
   inputs:
-    versionSpec: 18.x
+    versionSource: fromFile
+    versionFilePath: .nvmrc
 
 - task: Npm@1
   displayName: 'npm ci'
