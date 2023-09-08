@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { ResourceType } from "../../../templates/IBindingTemplate";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { BooleanInputStep } from "./BooleanInputStep";
 import { EnumInputStep } from "./EnumInputStep";
 import { ExistingFileStep } from "./ExistingFileStep";

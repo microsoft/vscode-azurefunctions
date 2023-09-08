@@ -5,13 +5,15 @@
 
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { assertTemplateIsV2 } from "../../../utils/templateVersionUtils";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 
 export class GetTemplateFileContentExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {
     public async executeAction(context: T): Promise<void> {
         const filePath = nonNullProp(this.action, 'filePath');
-        let source: string | undefined = context.functionV2Template?.files[filePath];
+        assertTemplateIsV2(context.functionTemplate);
+        let source: string | undefined = context.functionTemplate.files[filePath];
         if (!source) {
             throw new Error(localize('templateNotFound', `Could not find file "${filePath}" in template`));
         }

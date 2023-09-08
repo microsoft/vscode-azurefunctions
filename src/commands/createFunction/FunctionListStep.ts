@@ -9,14 +9,12 @@ import { FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionV2Template';
-import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { FunctionTemplates, IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
-import { FunctionV2WizardContext } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 
@@ -39,8 +37,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templateProvider = ext.templateProvider.get(context);
-            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
-            const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
+            const templates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
+            const foundTemplate: FunctionTemplates | undefined = templates.find((t: FunctionTemplates) => {
                 if (this._options.templateId) {
                     const actualId: string = t.id.toLowerCase();
                     const expectedId: string = this._options.templateId.toLowerCase();
@@ -73,11 +71,11 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     }
 
-    public async prompt(context: FunctionV2WizardContext): Promise<void> {
+    public async prompt(context: IFunctionWizardContext): Promise<void> {
         let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
         const templateProvider = ext.templateProvider.get(context);
-        while (!context.functionTemplate && !context.functionV2Template) {
+        while (!context.functionTemplate) {
             let placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
                 localize('selectFuncTemplate', 'Select a template for your function');
@@ -86,7 +84,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource)
             }
 
-            const result: IFunctionTemplate | FunctionV2Template | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
+            const result: FunctionTemplates | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
                 context.telemetry.properties.templateId = 'skipForNow';
                 break;
@@ -104,11 +102,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), context.languageModel, nonNullProp(context, 'version'));
                 context.telemetry.properties.reloaded = 'true';
             } else {
-                if ('wizards' in result) {
-                    context.functionV2Template = result;
-                } else {
-                    context.functionTemplate = result;
-                }
+                context.functionTemplate = result;
             }
         }
 
@@ -119,21 +113,17 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         return !context.functionTemplate && context['buildTool'] !== JavaBuildTool.maven;
     }
 
-    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | FunctionV2Template | TemplatePromptResult>[]> {
+    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<FunctionTemplates | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
 
-        let templates: (IFunctionTemplate | FunctionV2Template)[] = [];
-        if (languageModel) {
-            templates = await templateProvider.getFunctionV2Templates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey)
-        } else {
-            templates = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
-        }
+        let templates: FunctionTemplates[] = [];
+        templates = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
 
         context.telemetry.measurements.templateCount = templates.length;
-        const picks: IAzureQuickPickItem<IFunctionTemplate | FunctionV2Template | TemplatePromptResult>[] = templates
+        const picks: IAzureQuickPickItem<FunctionTemplates | TemplatePromptResult>[] = templates
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
@@ -164,13 +154,15 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 suppressPersistence: true
             });
         }
-
-        picks.push({
-            label: localize('selectFilter', '$(gear) Change template filter'),
-            description: localize('currentFilter', 'Current: {0}', templateFilter),
-            data: 'changeFilter',
-            suppressPersistence: true
-        });
+        if (!languageModel) {
+            // don't offer template filter for v2 schema
+            picks.push({
+                label: localize('selectFilter', '$(gear) Change template filter'),
+                description: localize('currentFilter', 'Current: {0}', templateFilter),
+                data: 'changeFilter',
+                suppressPersistence: true
+            });
+        }
 
         if (getWorkspaceSetting<boolean>('showReloadTemplates')) {
             picks.push({
@@ -223,7 +215,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
  * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
  * Otherwise sort alphabetically
  */
-function sortTemplates(a: IFunctionTemplate | FunctionV2Template, b: IFunctionTemplate | FunctionV2Template, templateFilter: TemplateFilter): number {
+function sortTemplates(a: FunctionTemplates, b: FunctionTemplates, templateFilter: TemplateFilter): number {
     if (templateFilter === TemplateFilter.Verified) {
         function getPriority(id: string): number {
             if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger

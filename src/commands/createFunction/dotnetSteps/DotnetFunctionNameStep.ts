@@ -6,14 +6,16 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from "../../../localize";
-import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
+import { FunctionTemplates } from '../../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
+import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
+import { IDotnetFunctionWizardContext, getFileExtension } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionNameStep extends FunctionNameStepBase<IDotnetFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IDotnetFunctionWizardContext): Promise<string | undefined> {
-        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        assertTemplateIsV1(template);
         return await this.getUniqueFsPath(context.projectPath, template.defaultFunctionName, getFileExtension(context));
     }
 

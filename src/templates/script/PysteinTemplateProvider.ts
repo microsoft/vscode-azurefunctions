@@ -9,9 +9,9 @@ import { ProjectLanguage } from '../../constants';
 import { IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
-import { FunctionV2Template } from '../FunctionV2Template';
+import { verifyTemplateIsV2 } from '../../utils/templateVersionUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
-import { IFunctionTemplate } from '../IFunctionTemplate';
+import { FunctionTemplates } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateType } from '../TemplateProviderBase';
 import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
@@ -33,7 +33,6 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     protected _language: string;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        // just use backup templates until template feed deploys v2 templates
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
         const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(context, bundleMetadata, latestTemplateVersion);
         const language = this.getResourcesLanguage();
@@ -55,17 +54,15 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         this._rawBindings = <object[]>await AzExtFsExtra.readJSON(paths.bindings);
         this._resources = await AzExtFsExtra.readJSON(paths.resources);
 
-        const functionTemplatesV2 = parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources);
-
         return {
             functionTemplates: [],
-            functionTemplatesV2,
+            functionTemplatesV2: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             bindingTemplates: []
         }
     }
 
-    public includeTemplate(template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): boolean {
-        if (bundleFeedUtils.isFunctionV2Template(template)) {
+    public includeTemplate(template: FunctionTemplates | IBindingTemplate): boolean {
+        if (verifyTemplateIsV2(template)) {
             return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase();
         }
 

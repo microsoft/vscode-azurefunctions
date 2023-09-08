@@ -5,8 +5,8 @@
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ActionType, ProjectLanguage } from '../../constants';
-import { FunctionV2Template } from '../FunctionV2Template';
 import { ResourceType } from '../IBindingTemplate';
+import { FunctionV2Template } from '../IFunctionTemplate';
 
 /**
  * Describes script template resources to be used for parsing
@@ -100,13 +100,11 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
     const userPrompts: RawUserPrompt[] = parseUserPrompts(rawBindings, resources);
     const templates: FunctionV2Template[] = [];
     for (const templateV2 of rawTemplates) {
-        // look into jobs-- each job can be an Azure Wizard. Name is the title
         const parsedJobs: ParsedJob[] = [];
         for (const job of templateV2.jobs) {
             const parsedInputs: ParsedInput[] = [];
             job.inputs.forEach(input => {
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                const userPrompt = userPrompts.find(up => up.id.toLocaleLowerCase() === input.paramId.toLocaleLowerCase())!;
+                const userPrompt = userPrompts.find(up => up.id.toLocaleLowerCase() === input.paramId.toLocaleLowerCase());
                 parsedInputs.push(Object.assign(input, userPrompt));
             });
 

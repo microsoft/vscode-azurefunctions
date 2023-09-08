@@ -5,15 +5,16 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
+import { ext } from '../../../extensionVariables';
+import { FunctionTemplates } from '../../../templates/IFunctionTemplate';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
-import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
+import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
-import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
+import { IDotnetFunctionWizardContext, getFileExtension } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
     private constructor() {
@@ -26,7 +27,8 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
     }
 
     public async executeCore(context: IDotnetFunctionWizardContext): Promise<string> {
-        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        assertTemplateIsV1(template);
 
         const functionName: string = nonNullProp(context, 'functionName');
         const args: string[] = [];

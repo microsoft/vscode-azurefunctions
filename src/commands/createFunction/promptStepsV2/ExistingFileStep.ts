@@ -7,7 +7,7 @@ import { AzExtFsExtra, AzExtOpenDialogOptions } from "@microsoft/vscode-azext-ut
 import { Uri } from "vscode";
 import { Utils } from 'vscode-uri';
 import { JobType, ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 

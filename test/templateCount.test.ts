@@ -5,7 +5,7 @@
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, FuncVersion, FunctionTemplates, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
 import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion, skipStagingTemplateSource } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
@@ -72,7 +72,7 @@ function addSuite(source: TemplateSource | undefined): void {
 
                 await runWithTestActionContext('getFunctionTemplates', async context => {
                     await runForTemplateSource(context, source, async (provider: CentralTemplateProvider) => {
-                        const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey);
+                        const templates: FunctionTemplates[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey);
                         assert.equal(templates.length, expectedCount);
                     });
                 });

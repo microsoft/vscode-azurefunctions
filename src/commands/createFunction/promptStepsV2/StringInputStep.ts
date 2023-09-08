@@ -6,7 +6,7 @@
 import { AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 
 export class StringInputStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {

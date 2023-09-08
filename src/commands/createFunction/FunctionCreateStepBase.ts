@@ -10,11 +10,11 @@ import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionV2Template';
-import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { FunctionTemplates } from '../../templates/IFunctionTemplate';
+import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { FunctionV2WizardContext } from './FunctionV2WizardContext';
+import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
     projectPath: string;
@@ -35,7 +35,7 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     }
 }
 
-export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 220;
 
     /**
@@ -44,7 +44,7 @@ export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> 
     public abstract executeCore(context: T): Promise<string>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: IFunctionTemplate | FunctionV2Template = nonNullValue(context.functionTemplate ?? context.functionV2Template);
+        const template: FunctionTemplates = nonNullValue(context.functionTemplate);
         context.telemetry.properties.projectLanguage = context.language;
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
@@ -57,7 +57,7 @@ export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         if (await AzExtFsExtra.pathExists(hostFilePath)) {
-            if (context.functionTemplate?.isDynamicConcurrent) {
+            if (verifyTemplateIsV1(context.functionTemplate) && context.functionTemplate?.isDynamicConcurrent) {
                 const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
                 hostJson.concurrency = {
                     dynamicConcurrencyEnabled: true,
@@ -78,7 +78,7 @@ export abstract class FunctionCreateStepBase<T extends FunctionV2WizardContext> 
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.functionTemplate || !!context.functionV2Template;
+        return !!context.functionTemplate;
     }
 }
 

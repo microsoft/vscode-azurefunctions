@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 
 export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> extends AzureWizardPromptStep<T> {
 
@@ -38,6 +38,6 @@ export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> ex
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context[this.input.assignTo];
+        return context[this.input.assignTo] === undefined;
     }
 }

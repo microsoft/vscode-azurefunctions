@@ -14,9 +14,8 @@ import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { FunctionV2Template } from './FunctionV2Template';
 import { IBindingTemplate } from './IBindingTemplate';
-import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { FunctionTemplates, IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { TemplateProviderBase } from './TemplateProviderBase';
 import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
@@ -83,8 +82,13 @@ export class CentralTemplateProvider implements Disposable {
         return providers;
     }
 
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplate[]> {
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionTemplates[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
+        // v2 templates don't have a categories property, so just return all
+        if (languageModel) {
+            return templates.functionTemplatesV2;
+        }
+
         switch (templateFilter) {
             case TemplateFilter.All:
                 return templates.functionTemplates;
@@ -94,22 +98,6 @@ export class CentralTemplateProvider implements Disposable {
             default:
                 const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
-        }
-    }
-
-
-    public async getFunctionV2Templates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionV2Template[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
-        switch (templateFilter) {
-            case TemplateFilter.All:
-                return templates.functionTemplatesV2;
-            // TODO: Verify if schema V2 templates have categories
-            // case TemplateFilter.Core:
-            //     return templates.functionTemplatesV2.filter((t: IFunctionTemplateV2) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
-            case TemplateFilter.Verified:
-            default:
-                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
-                return templates.functionTemplatesV2.filter((t: FunctionV2Template) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }
 
@@ -281,7 +269,7 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate | FunctionV2Template): boolean {
+    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | FunctionTemplates): boolean {
         return provider.includeTemplate(template) && (!('language' in template) || template.language.toLowerCase() === provider.language.toLowerCase());
     }
 

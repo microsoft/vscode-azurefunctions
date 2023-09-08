@@ -10,9 +10,8 @@ import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
-import { FunctionV2Template } from './FunctionV2Template';
 import { IBindingTemplate } from './IBindingTemplate';
-import { IFunctionTemplate } from './IFunctionTemplate';
+import { FunctionTemplates } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { TemplateSchemaVersion } from './script/parseScriptTemplatesV2';
 
@@ -30,6 +29,7 @@ export abstract class TemplateProviderBase implements Disposable {
     public abstract templateType: TemplateType;
     public readonly version: FuncVersion;
     public readonly language: ProjectLanguage;
+    public readonly languageModel?: number;
     public readonly projectPath: string | undefined;
     public resourcesLanguage: string | undefined;
     public templateSchemaVersion: TemplateSchemaVersion | undefined;
@@ -83,7 +83,7 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Unless this is overidden, all templates will be included
      */
-    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate | FunctionV2Template): boolean {
+    public includeTemplate(_template: FunctionTemplates | IBindingTemplate): boolean {
         return true;
     }
 

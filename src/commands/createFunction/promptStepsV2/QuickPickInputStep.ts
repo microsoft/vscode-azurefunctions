@@ -5,7 +5,7 @@
 
 import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 
 export abstract class QuickPickInputStep<T extends FunctionV2WizardContext> extends PromptSchemaStepBase<T> {

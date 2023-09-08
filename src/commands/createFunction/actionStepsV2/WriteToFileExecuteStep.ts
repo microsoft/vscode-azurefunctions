@@ -6,7 +6,7 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 

@@ -8,7 +8,7 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
-import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -39,7 +39,10 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
 
     testCases.push({
         ...getPythonValidateOptions('.venv', version),
-        inputs: [TestInput.UseDefaultValue]
+        inputs: [
+            'Model V1',
+            TestInput.UseDefaultValue
+        ]
     });
 
     const appName: string = 'javaApp';
@@ -70,10 +73,22 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
 
 testCases.push({ ...getCustomValidateOptions(FuncVersion.v3) });
 
+// for creating Model V2 projects
+testCases.push({
+    ...getPythonValidateOptions('.venv', defaultTestFuncVersion, 2),
+    inputs: [
+        TestInput.UseDefaultValue,
+        TestInput.UseDefaultValue
+    ],
+    languageModel: 2,
+});
+
 const parallelTests: ParallelTest[] = [];
+
 for (const testCase of testCases) {
     for (const source of allTemplateSources) {
-        let title = `${testCase.language} ${testCase.version}`;
+        const languageModelVersion = testCase.languageModel ? ` V${testCase.languageModel}` : '';
+        let title = `${testCase.language} ${testCase.version}${languageModelVersion}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;
         }
@@ -82,7 +97,9 @@ for (const testCase of testCases) {
         parallelTests.push({
             title,
             // Java template provider based on maven, which does not support gradle project for now
-            skip: shouldSkipVersion(testCase.version) || (testCase.description === JavaBuildTool.gradle && source !== TemplateSource.Backup),
+            skip: shouldSkipVersion(testCase.version) || (testCase.description === JavaBuildTool.gradle && source !== TemplateSource.Backup) ||
+                // v2 schema doesn't support staging
+                (source === TemplateSource.Staging && !!testCase.languageModel),
             // lots of errors like "The process cannot access the file because it is being used by another process" 😢
             suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {

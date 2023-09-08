@@ -6,10 +6,10 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { JobType, ParsedJob } from '../../templates/script/parseScriptTemplatesV2';
+import { assertTemplateIsV2 } from '../../utils/templateVersionUtils';
 import { ScriptProjectCreateStep } from '../createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
 import { isFunctionProject } from '../createNewProject/verifyIsProject';
-import { FunctionV2WizardContext } from './FunctionV2WizardContext';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { FunctionV2WizardContext, IFunctionWizardContext } from './IFunctionWizardContext';
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
 import { promptStepFactory } from './promptStepsV2/promptStepFactory';
 
@@ -25,7 +25,7 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
     }
 
     public shouldPrompt(context: FunctionV2WizardContext): boolean {
-        return !context.job && !!context.functionV2Template;
+        return !context.job && !!context.functionTemplate;
     }
 
     public async getSubWizard(context: FunctionV2WizardContext): Promise<IWizardOptions<FunctionV2WizardContext> | undefined> {
@@ -54,12 +54,14 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
     public async configureBeforePrompt(context: FunctionV2WizardContext): Promise<void> {
         // if this is a new project, we can default to the new project job
         if (this.isProjectWizard) {
-            context.job = context.functionV2Template!.wizards.find(j => j.type === JobType.CreateNewApp);
+            assertTemplateIsV2(context.functionTemplate);
+            context.job = context.functionTemplate.wizards.find(j => j.type === JobType.CreateNewApp);
         }
     }
 
     private async getPicks(context: FunctionV2WizardContext): Promise<IAzureQuickPickItem<ParsedJob>[]> {
-        let picks = context.functionV2Template!.wizards.map((w) => { return { label: w.name, data: w } });
+        assertTemplateIsV2(context.functionTemplate);
+        let picks = context.functionTemplate.wizards.map((w) => { return { label: w.name, data: w } });
         // verify if this is a function project-- if so, remove the createNewApp job
         if (await isFunctionProject(context.projectPath)) {
             picks = picks.filter(p => p.data.type !== JobType.CreateNewApp);

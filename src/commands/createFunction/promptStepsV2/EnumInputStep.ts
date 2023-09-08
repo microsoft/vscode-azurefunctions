@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { QuickPickInputStep } from "./QuickPickInputStep";
 
 export class EnumInputStep<T extends FunctionV2WizardContext> extends QuickPickInputStep<T> {

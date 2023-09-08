@@ -8,7 +8,7 @@ import { Uri } from "vscode";
 import { Utils } from 'vscode-uri';
 import { localize } from "../../../localize";
 import { JobType } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { StringInputStep } from "./StringInputStep";
 
 export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputStep<T> {

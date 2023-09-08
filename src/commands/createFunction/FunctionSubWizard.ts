@@ -6,12 +6,10 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
-import { FunctionV2Template } from '../../templates/FunctionV2Template';
-import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { FunctionTemplates, IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
-import { FunctionV2WizardContext } from './FunctionV2WizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
 import { BallerinaFunctionCreateStep } from './ballerinaSteps/BallerinaFunctionCreateStep';
@@ -33,10 +31,10 @@ import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
 export class FunctionSubWizard {
-    public static async createSubWizard(context: FunctionV2WizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+    public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
 
-        let template: IFunctionTemplate | FunctionV2Template | undefined = context.functionTemplate ?? context.functionV2Template;
+        let template: FunctionTemplates | undefined = context.functionTemplate;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
 

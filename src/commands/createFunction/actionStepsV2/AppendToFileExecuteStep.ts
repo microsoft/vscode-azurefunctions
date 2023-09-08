@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionV2WizardContext } from "../FunctionV2WizardContext";
+import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { WriteToFileExecuteStep } from "./WriteToFileExecuteStep";
 
 export class AppendToFileExecuteStep<T extends FunctionV2WizardContext> extends WriteToFileExecuteStep<T> {

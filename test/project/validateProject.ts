@@ -147,7 +147,7 @@ export function getFSharpValidateOptions(targetFramework: string, version: FuncV
     };
 }
 
-export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultTestFuncVersion, languageModel?: number): IValidateProjectOptions {
     const expectedTasks: string[] = ['host start'];
     if (venvName) {
         expectedTasks.push('pip install (functions)');
@@ -162,6 +162,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
             'azureFunctions.deploySubpath': '.',
             'azureFunctions.scmDoBuildDuringDeployment': true,
             'azureFunctions.pythonVenv': venvName,
+            'azureFunctions.projectLanguageModel': languageModel,
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
@@ -338,7 +339,8 @@ export interface IValidateProjectOptions {
     language: ProjectLanguage;
     displayLanguage?: RegExp;
     version: FuncVersion;
-    expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
+    languageModel?: number;
+    expectedSettings: { [key: string]: string | boolean | object | number | undefined | RegExp };
     expectedPaths: ExpectedPath[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
@@ -385,7 +387,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const settings: { [key: string]: string | boolean } = await AzExtFsExtra.readJSON<{ [key: string]: string }>(path.join(rootPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
-        const expectedValue: RegExp | string | boolean | object | undefined = options.expectedSettings[key];
+        const expectedValue: RegExp | string | boolean | object | number | undefined = options.expectedSettings[key];
         if (key === 'debug.internalConsoleOptions' && getContainingWorkspace(rootPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
         } else if (expectedValue instanceof RegExp) {

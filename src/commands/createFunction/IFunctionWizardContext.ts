@@ -7,16 +7,26 @@ import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { DurableBackendValues } from "../../constants";
 import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
-import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
+import { FunctionTemplates } from "../../templates/IFunctionTemplate";
+import { ParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
 
 export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext {
-    functionTemplate?: IFunctionTemplate;
+    functionTemplate?: FunctionTemplates;
     functionName?: string;
 
     // Durable Functions
     hasDurableStorage?: boolean;
     newDurableStorageType?: DurableBackendValues;
+}
+
+export interface FunctionV2WizardContext extends IFunctionWizardContext {
+    job?: ParsedJob;
+    newFilePath?: string;
+
+    // follow the format of `assignTo`: value
+    // `assignTo` is the common ID between the inputs and the actions
+    replaceTokens?: { [key: string]: string }[];
 }
 
 export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: BindingSettingValue): void {

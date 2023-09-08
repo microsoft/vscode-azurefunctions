@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
@@ -50,10 +51,17 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
         context.languageModel = result.data;
     }
 
-    public shouldPrompt(context: IProjectWizardContext): boolean {
+    public async configureBeforePrompt(context: IProjectWizardContext): Promise<void> {
         // auto-select the default model if there is only one
         if (this._models.length === 1) {
             context.languageModel = this._models[0].modelVersion;
+        }
+    }
+
+    public shouldPrompt(context: IProjectWizardContext): boolean {
+        // programming model is only supported for v4 runtime
+        if (context.version !== FuncVersion.v4) {
+            return false;
         }
 
         // this only impacts python/node for now so only check for those languages
