@@ -44,8 +44,6 @@ class CSharpFunctionTester extends FunctionTesterBase {
 for (const source of allTemplateSources) {
     addSuite(FuncVersion.v2, 'netcoreapp2.1', source);
     addSuite(FuncVersion.v3, 'netcoreapp3.1', source);
-    addSuite(FuncVersion.v3, 'net5.0', source, true);
-    addSuite(FuncVersion.v4, 'net5.0', source, true);
     addSuite(FuncVersion.v4, 'net6.0', source, true);
     addSuite(FuncVersion.v4, 'net6.0', source, false);
     addSuite(FuncVersion.v4, 'net7.0', source, true);
