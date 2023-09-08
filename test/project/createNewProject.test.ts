@@ -17,9 +17,6 @@ interface CreateProjectTestCase extends ICreateProjectTestOptions {
 const testCases: CreateProjectTestCase[] = [
     { ...getCSharpValidateOptions('netcoreapp2.1', FuncVersion.v2) },
     { ...getCSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
-    { ...getCSharpValidateOptions('net5.0', FuncVersion.v3), inputs: [/5/], description: 'net5.0 isolated v3' },
-    // https://github.com/Azure/azure-functions-tooling-feed/pull/289/files#r697703951
-    // { ...getCSharpValidateOptions('net5.0', FuncVersion.v4), inputs: [/5/], description: 'net5.0 isolated v4' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
