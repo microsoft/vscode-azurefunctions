@@ -144,6 +144,10 @@ export abstract class TemplateProviderBase implements Disposable {
             key = `${key}.${env.language}`;
         }
 
+        if (this.templateSchemaVersion) {
+            key = `${key}.${this.templateSchemaVersion}`;
+        }
+
         return key;
     }
 

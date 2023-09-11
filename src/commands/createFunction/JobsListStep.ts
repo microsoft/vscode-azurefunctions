@@ -13,7 +13,6 @@ import { FunctionV2WizardContext, IFunctionWizardContext } from './IFunctionWiza
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
 import { promptStepFactory } from './promptStepsV2/promptStepFactory';
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public constructor(readonly isProjectWizard?: boolean) {
         super();
