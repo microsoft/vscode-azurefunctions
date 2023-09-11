@@ -78,14 +78,14 @@ function addSuite(tester: FunctionTesterBase): void {
             ]
         },
         {
-            functionName: 'ServiceBus trigger',
+            functionName: 'ServiceBus Queue trigger',
             inputs: [
                 'mysbqueue', // Use existing app setting
                 'ServiceBusConnectionString'
             ]
         },
         {
-            functionName: 'ServiceBus trigger',
+            functionName: 'ServiceBus Topic trigger',
             inputs: [
                 'mysbtopic', // Use existing app setting
                 'mysubscription',
