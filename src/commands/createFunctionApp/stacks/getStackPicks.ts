@@ -9,6 +9,7 @@ import { AzExtPipelineResponse, createGenericClient } from '@microsoft/vscode-az
 import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
 import { FuncVersion, funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
+import { previewDescription } from '../../../constants-nls';
 import { localize } from '../../../localize';
 import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
@@ -37,7 +38,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                 const previewOs = getFlagOs(minorVersion.stackSettings, 'isPreview');
                 switch (previewOs) {
                     case 'All':
-                        description = localize('preview', '(Preview)');
+                        description = previewDescription;
                         break;
                     case 'Linux':
                     case 'Windows':
