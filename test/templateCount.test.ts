@@ -5,7 +5,7 @@
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { CentralTemplateProvider, FuncVersion, FunctionTemplates, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
 import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion, skipStagingTemplateSource } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
@@ -31,7 +31,9 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.CSharp, version: FuncVersion.v1, expectedCount: 12 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v2, expectedCount: 11 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 12, projectTemplateKey: 'netcoreapp3.1' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 10, projectTemplateKey: 'net5.0-isolated' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 12, projectTemplateKey: 'net6.0' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 10, projectTemplateKey: 'net5.0-isolated' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 10, projectTemplateKey: 'net6.0-isolated' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 10, projectTemplateKey: 'net7.0-isolated' },
             { language: ProjectLanguage.Python, version: FuncVersion.v2, expectedCount: 12 },
@@ -70,7 +72,7 @@ function addSuite(source: TemplateSource | undefined): void {
 
                 await runWithTestActionContext('getFunctionTemplates', async context => {
                     await runForTemplateSource(context, source, async (provider: CentralTemplateProvider) => {
-                        const templates: FunctionTemplates[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey);
+                        const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey);
                         assert.equal(templates.length, expectedCount);
                     });
                 });

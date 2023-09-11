@@ -8,7 +8,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunctionInternal, FunctionTemplates, FuncVersion, getRandomHexString, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
+import { createFunctionInternal, FuncVersion, getRandomHexString, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelSuiteOptions, ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
 
@@ -22,7 +22,6 @@ export abstract class FunctionTesterBase implements Disposable {
     public projectPath: string;
     public readonly version: FuncVersion;
     public abstract language: ProjectLanguage;
-    public languageModel?: number;
     public source: TemplateSource;
 
     private readonly testedFunctions: string[] = [];
@@ -34,8 +33,7 @@ export abstract class FunctionTesterBase implements Disposable {
     }
 
     public get suiteName(): string {
-        const languageModel = this.languageModel ? ` V${this.languageModel}` : '';
-        return `Create Function${languageModel} ${this.language} ${this.version}  (${this.source})`;
+        return `Create Function ${this.language} ${this.version} (${this.source})`;
     }
 
     /**
@@ -49,7 +47,7 @@ export abstract class FunctionTesterBase implements Disposable {
                 await this.initializeTestFolder(this.projectPath);
 
                 // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
-                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.languageModel, this.version, TemplateFilter.Verified, undefined);
+                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
             });
         });
     }
@@ -57,7 +55,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             await runForTemplateSource(context, this.source, async (templateProvider) => {
-                const templates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.languageModel, this.version, TemplateFilter.Verified, undefined);
+                const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
         });

@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { FuncVersion, ProjectLanguage, TemplateSource } from '../../extension.bundle';
+import * as vscode from 'vscode';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, shouldSkipVersion } from '../global.test';
+import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTesterV1 extends FunctionTesterBase {
@@ -95,6 +97,20 @@ for (const source of allTemplateSources) {
                 timerTrigger,
                 '0 * 0/5 * * *'
             );
+        });
+
+        // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
+        test('createFunction API (deprecated)', async () => {
+            const templateId: string = 'HttpTrigger-JavaScript';
+            const functionName: string = 'createFunctionApi';
+            const authLevel: string = 'Anonymous';
+            // Intentionally testing weird casing for authLevel
+            await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
+                await runWithFuncSetting(funcVersionSetting, FuncVersion.v1, async () => {
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', jsTester.projectPath, templateId, functionName, { aUtHLevel: authLevel });
+                });
+            });
+            await jsTester.validateFunction(jsTester.projectPath, functionName, [authLevel]);
         });
     });
 }

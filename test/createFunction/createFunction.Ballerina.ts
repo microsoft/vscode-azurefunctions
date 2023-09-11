@@ -12,7 +12,6 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
 
 class BallerinaFunctionTester extends FunctionTesterBase {
-    public languageModel?: number | undefined;
     public language: ProjectLanguage = ProjectLanguage.Ballerina;
 
     public getExpectedPaths(functionName: string): string[] {
