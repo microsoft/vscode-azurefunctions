@@ -119,9 +119,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
 
-        let templates: FunctionTemplates[] = [];
-        templates = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
-
+        const templates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<FunctionTemplates | TemplatePromptResult>[] = templates
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
