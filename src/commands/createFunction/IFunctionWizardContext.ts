@@ -23,11 +23,8 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
 export interface FunctionV2WizardContext extends IFunctionWizardContext {
     job?: ParsedJob;
     newFilePath?: string;
-
-    // follow the format of `assignTo`: value
-    // `assignTo` is the common ID between the inputs and the actions
-    replaceTokens?: { [key: string]: string }[];
 }
+
 
 export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: BindingSettingValue): void {
     context[setting.name.toLowerCase()] = value;
