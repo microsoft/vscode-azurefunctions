@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { defaultDescription } from "./constants-nls";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -167,10 +169,10 @@ export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
  * Any significantly changed new model should use an incremented number.
  */
 export const nodeV4ModelVersion: number = 4;
-export const nodeV4Model: { modelVersion: number, label: string } = { modelVersion: nodeV4ModelVersion, label: localize('modelV4', 'Model V4 (Preview)') };
-export const nodeDefaultModel: { modelVersion: undefined, label: string } = { modelVersion: undefined, label: localize('modelV3', 'Model V3') }
+export const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: nodeV4ModelVersion, label: localize('modelV4', 'Model V4'), description: defaultDescription };
+export const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
 
-export const nodeModels = [nodeDefaultModel, nodeV4Model];
+export const nodeModels = [nodeDefaultModel, nodeV3Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
 
 export const webProvider: string = 'Microsoft.Web';
