@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { defaultDescription } from "./constants-nls";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -168,12 +167,19 @@ export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
  * The new Node.js model is 4.
  * Any significantly changed new model should use an incremented number.
  */
-export const nodeV4ModelVersion: number = 4;
-export const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: nodeV4ModelVersion, label: localize('modelV4', 'Model V4'), description: defaultDescription };
-export const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
+export const nodeDefaultModelVersion: number = 4;
+const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: nodeDefaultModelVersion, label: localize('modelV4', 'Model V4') };
+const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
 
 export const nodeModels = [nodeDefaultModel, nodeV3Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
+
+export const pythonDefaultModelVersion: number = 2;
+const pythonV2Model: IAzureQuickPickItem<number | undefined> = { data: pythonDefaultModelVersion, label: localize('pyModelV2', 'Model V2') };
+const pythonV1Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('pyModelV1', 'Model V1') }
+
+export const pythonModels = [pythonV2Model, pythonV1Model];
+export const pythonLearnMoreLink = 'https://aka.ms/AAmlyrc';
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {
@@ -182,4 +188,14 @@ export const functionFilter = {
 };
 
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
+
+/** @link https://github.com/Azure/azure-functions-templates/tree/dev/Docs/Actions */
+export enum ActionType {
+    AppendToFile = "AppendToFile",
+    // never actually have seen this step, but it's in the schema
+    ReplaceTokensInText = "ReplaceTokensInText",
+    ShowMarkdownPreview = "ShowMarkdownPreview",
+    WriteToFile = "WriteToFile",
+    GetTemplateFileContent = "GetTemplateFileContent"
+}
 export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');

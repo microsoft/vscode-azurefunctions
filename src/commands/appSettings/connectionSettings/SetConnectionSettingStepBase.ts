@@ -8,7 +8,7 @@ import { CodeAction, ConnectionKeyValues } from "../../../constants";
 import { MismatchBehavior, setLocalAppSetting } from "../../../funcConfig/local.settings";
 import { ISetConnectionSettingContext } from "./ISetConnectionSettingContext";
 
-export abstract class SetConnectionSettingBaseStep<T extends ISetConnectionSettingContext> extends AzureWizardExecuteStep<T> {
+export abstract class SetConnectionSettingStepBase<T extends ISetConnectionSettingContext> extends AzureWizardExecuteStep<T> {
     public abstract readonly debugDeploySetting: ConnectionKeyValues;
 
     protected async setConnectionSetting(context: T, value: string): Promise<void> {

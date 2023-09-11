@@ -6,11 +6,11 @@
 import { ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
+import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
-import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
-export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends SetConnectionSettingBaseStep<T> {
+export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 240;
     public debugDeploySetting: ConnectionKeyValues = ConnectionKey.EventHubs;
 

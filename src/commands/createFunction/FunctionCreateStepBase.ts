@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
-import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { nonNullProp } from '../../utils/nonNull';
+import { FunctionTemplates } from '../../templates/IFunctionTemplate';
+import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -44,8 +44,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public abstract executeCore(context: T): Promise<string>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
-
+        const template: FunctionTemplates = nonNullValue(context.functionTemplate);
         context.telemetry.properties.projectLanguage = context.language;
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
@@ -58,7 +57,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         if (await AzExtFsExtra.pathExists(hostFilePath)) {
-            if (context.functionTemplate?.isDynamicConcurrent) {
+            if (verifyTemplateIsV1(context.functionTemplate) && context.functionTemplate?.isDynamicConcurrent) {
                 const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
                 hostJson.concurrency = {
                     dynamicConcurrencyEnabled: true,

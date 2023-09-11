@@ -9,7 +9,8 @@ import { ext, TemplateSource } from '../extensionVariables';
 import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
-import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { FunctionTemplates, IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { TemplateSchemaVersion } from '../templates/script/parseScriptTemplatesV2';
 import { feedUtils } from './feedUtils';
 import { nugetUtils } from './nugetUtils';
 
@@ -26,22 +27,34 @@ export namespace bundleFeedUtils {
         };
         templates: {
             v1: { // This is the feed's internal schema version, aka _not_ the runtime version
-                [templateVersion: string]: ITemplatesRelease;
+                [templateVersion: string]: ITemplatesReleaseV1;
+            };
+            v2: { // This is the feed's internal schema version, aka _not_ the runtime version
+                [templateVersion: string]: ITemplatesReleaseV2;
             };
         };
     }
 
-    export interface ITemplatesRelease {
+    export interface ITemplatesReleaseBase {
         functions: string;
-        bindings: string;
         resources: string;
     }
 
-    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<string> {
+    export interface ITemplatesReleaseV1 extends ITemplatesReleaseBase {
+        bindings: string;
+    }
+
+    export interface ITemplatesReleaseV2 extends ITemplatesReleaseBase {
+        userPrompts: string;
+        // it is not supposed to exist in the v2 schema, but sometimes userPrompts accidentally gets replaced with bindings
+        bindings?: string;
+    }
+
+    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateSchemaVersion: TemplateSchemaVersion = 'v1'): Promise<string> {
         bundleMetadata = bundleMetadata || {};
 
         const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
-        const validVersions: string[] = Object.keys(feed.bundleVersions).filter((v: string) => !!semver.valid(v));
+        const validVersions: string[] = Object.keys(feed.templates[templateSchemaVersion]).filter((v: string) => !!semver.valid(v));
         const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || await getLatestVersionRange(context), validVersions);
         if (!bundleVersion) {
             throw new Error(localize('failedToFindBundleVersion', 'Failed to find bundle version satisfying range "{0}".', bundleMetadata.version));
@@ -50,12 +63,17 @@ export namespace bundleFeedUtils {
         }
     }
 
-    export async function getRelease(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesRelease> {
+    export async function getRelease(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesReleaseV1> {
         const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
         return feed.templates.v1[templateVersion];
     }
 
-    export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
+    export async function getReleaseV2(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesReleaseV2> {
+        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
+        return feed.templates.v2[templateVersion];
+    }
+
+    export function isBundleTemplate(template: FunctionTemplates | IBindingTemplate): boolean {
         const bundleTemplateTypes: string[] = ['durable', 'signalr'];
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }

@@ -40,6 +40,7 @@ export enum ResourceType {
     EventHub = 'EventHub',
     ServiceBus = 'ServiceBus',
     ExistingFile = 'Existingfile',
+    NewFile = 'Newfile'
 }
 
 export enum ValueType {

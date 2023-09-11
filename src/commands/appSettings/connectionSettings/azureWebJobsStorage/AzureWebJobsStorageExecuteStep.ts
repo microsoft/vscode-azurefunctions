@@ -5,11 +5,11 @@
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
+import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getStorageConnectionString } from '../getLocalConnectionSetting';
-import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
-export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingBaseStep<T> {
+export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 230;
     public debugDeploySetting: ConnectionKeyValues = ConnectionKey.Storage;
 

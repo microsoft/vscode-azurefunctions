@@ -66,9 +66,8 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
                     content = content.replace(new RegExp(escapeRegExp(setting.assignTo), 'g'), context[setting.name.toLowerCase()] as string);
                 }
             }
-            // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
-            // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions for function_body.
-            await AzExtFsExtra.writeFile(functionScriptPath, existingContent + (isFunctionApp ? '' : '\r\n\r\n') + content);
+
+            await AzExtFsExtra.appendFile(functionScriptPath, content);
 
             return functionScriptPath;
         }

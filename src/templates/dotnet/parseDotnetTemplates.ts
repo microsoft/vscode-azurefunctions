@@ -8,8 +8,9 @@ import { ProjectLanguage, sqlBindingTemplateRegex, TemplateFilter } from '../../
 import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
+import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
-import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
+import { FunctionTemplates, IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 
 /**
@@ -103,6 +104,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
 
     return {
         functionTemplates,
+        functionTemplatesV2: [], // CSharp does not support v2 templates
         bindingTemplates: [] // CSharp does not support binding templates
     };
 }
@@ -118,10 +120,14 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
         const templateProvider = ext.templateProvider.get(jsContext);
-        const jsTemplates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
+        const jsTemplates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
+            assertTemplateIsV1(csharpTemplate);
+
             const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
-            const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
+            const jsTemplate: FunctionTemplates | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
+            assertTemplateIsV1(jsTemplate);
+
             if (jsTemplate) {
                 csharpTemplate.name = jsTemplate.name;
                 csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;

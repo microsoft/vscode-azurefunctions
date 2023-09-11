@@ -5,18 +5,18 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import { FuncVersion } from '../FuncVersion';
 import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
-import { extensionsCsprojFileName, extInstallCommand, hostFileName, ProjectLanguage, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
+import { ProjectLanguage, extInstallCommand, extensionsCsprojFileName, hostFileName, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
 import { IHostJsonV2 } from '../funcConfig/host';
-import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
-import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { FunctionTemplates } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
 
-export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<void> {
+export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: FunctionTemplates | IBindingTemplate): Promise<void> {
     // v1 doesn't support bundles
     // http and timer triggers don't need a bundle
     // F# and C# specify extensions as dependencies in their proj file instead of using a bundle

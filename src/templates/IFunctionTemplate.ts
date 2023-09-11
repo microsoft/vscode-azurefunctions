@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IBindingSetting } from './IBindingTemplate';
+import { ParsedJob, RawTemplateV2 } from './script/parseScriptTemplatesV2';
 
 export enum TemplateCategory {
     Core = '$temp_category_core'
@@ -27,3 +28,15 @@ export interface IFunctionTemplate {
     // a defined triggerType means that the template is from the new programming model
     triggerType?: string;
 }
+
+export interface FunctionV2Template extends RawTemplateV2 {
+    id: string;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
+
+    // jobs translate to Azure Wizards
+    wizards: ParsedJob[];
+}
+
+
+export type FunctionTemplates = IFunctionTemplate | FunctionV2Template;

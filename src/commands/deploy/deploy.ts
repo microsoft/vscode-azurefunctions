@@ -77,7 +77,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
-    // TODO: telemetry for language model.
+    context.telemetry.properties.languageModel = String(languageModel);
 
     if (language === ProjectLanguage.Python && !node.site.isLinux) {
         context.errorHandling.suppressReportIssue = true;

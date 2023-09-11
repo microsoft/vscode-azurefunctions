@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../../localize';
-import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { nonNullProp } from '../../utils/nonNull';
+import { FunctionTemplates } from '../../templates/IFunctionTemplate';
+import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
-        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        assertTemplateIsV1(template);
+
         const uniqueFunctionName: string | undefined = await this.getUniqueFunctionName(context);
         context.functionName = await context.ui.showInputBox({
             placeHolder: localize('funcNamePlaceholder', 'Function name'),

@@ -11,8 +11,9 @@ import { ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
 import { IBindingTemplate } from './IBindingTemplate';
-import { IFunctionTemplate } from './IFunctionTemplate';
+import { FunctionTemplates } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
+import { TemplateSchemaVersion } from './script/parseScriptTemplatesV2';
 
 export enum TemplateType {
     Script = 'Script',
@@ -28,8 +29,10 @@ export abstract class TemplateProviderBase implements Disposable {
     public abstract templateType: TemplateType;
     public readonly version: FuncVersion;
     public readonly language: ProjectLanguage;
+    public readonly languageModel?: number;
     public readonly projectPath: string | undefined;
     public resourcesLanguage: string | undefined;
+    public templateSchemaVersion: TemplateSchemaVersion | undefined;
 
     /**
      * Indicates a related setting/file changed, so we should refresh the worker runtime key next time we get templates
@@ -80,7 +83,7 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Unless this is overidden, all templates will be included
      */
-    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate): boolean {
+    public includeTemplate(_template: FunctionTemplates | IBindingTemplate): boolean {
         return true;
     }
 
@@ -139,6 +142,10 @@ export abstract class TemplateProviderBase implements Disposable {
 
         if (env.language && !/^en(-us)?$/i.test(env.language)) {
             key = `${key}.${env.language}`;
+        }
+
+        if (this.templateSchemaVersion) {
+            key = `${key}.${this.templateSchemaVersion}`;
         }
 
         return key;

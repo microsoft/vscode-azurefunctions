@@ -6,8 +6,8 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as path from 'path';
-import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
+import { ext } from '../../extensionVariables';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { getRandomHexString } from '../../utils/fs';
@@ -110,7 +110,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         return this.resourcesLanguage || getScriptResourcesLanguage();
     }
 
-    private getTemplatePaths(rootPath: string): ITemplatePaths {
+    protected getTemplatePaths(rootPath: string): ITemplatePaths {
         const language: string = this.getResourcesLanguage();
         // Unlike templates.json and bindings.json, Resources.json has a capital letter
         const resources: string = path.join(rootPath, 'resources', `Resources${language === english ? '' : '.' + language}.json`);

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, IActionContext } from "@microsoft/vscode-azext-utils";
+import { JobType } from "./templates/script/parseScriptTemplatesV2";
 
 export interface AzureFunctionsExtensionApi {
     apiVersion: string;
@@ -52,6 +53,10 @@ export interface ICreateFunctionOptions {
      * A filter specifying the langauges to display when creating a project (if there's not already a project)
      */
     languageFilter?: RegExp;
+
+    languageModel?: number;
+
+    jobType?: JobType;
 
     /**
      * The version of the project. Defaults to the latest GA version
