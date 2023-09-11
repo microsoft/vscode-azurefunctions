@@ -7,7 +7,6 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWi
 import { localize } from '../../localize';
 import { JobType, ParsedJob } from '../../templates/script/parseScriptTemplatesV2';
 import { assertTemplateIsV2 } from '../../utils/templateVersionUtils';
-import { ScriptProjectCreateStep } from '../createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
 import { isFunctionProject } from '../createNewProject/verifyIsProject';
 import { FunctionV2WizardContext, IFunctionWizardContext } from './IFunctionWizardContext';
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
@@ -39,10 +38,6 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
                 // add index to increment the priority number
                 executeSteps.push(actionStepFactory(pa, index));
             });
-
-            if (context.job.type === JobType.CreateNewApp) {
-                executeSteps.push(new ScriptProjectCreateStep());
-            }
 
             return { promptSteps, executeSteps };
         }

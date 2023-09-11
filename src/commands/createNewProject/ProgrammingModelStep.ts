@@ -5,23 +5,38 @@
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
 import { FuncVersion } from '../../FuncVersion';
+import { recommendedDescription } from '../../constants-nls';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
     private _models: IAzureQuickPickItem<number | undefined>[] = [];
+    private _defaultModel?: number;
     private _learnMoreLink: string | undefined;
 
-    public constructor(options: { models: IAzureQuickPickItem<number | undefined>[], learnMoreLink?: string }) {
+    public constructor(options: {
+        models: IAzureQuickPickItem<number | undefined>[],
+        defaultModel?: number,
+        learnMoreLink?: string
+    }) {
         super();
         this._models = Array.isArray(options.models) ? options.models : [options.models];
+        this._defaultModel = options.defaultModel;
         this._learnMoreLink = options.learnMoreLink;
     }
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // duplicate the array so we don't modify the original
         const modelsPick: IAzureQuickPickItem<number | undefined>[] = this._models.slice();
+
+        // add the description to default model
+        if (this._defaultModel !== undefined) {
+            const defaultModel = modelsPick.find(p => p.data === this._defaultModel);
+            if (defaultModel) {
+                defaultModel.description = recommendedDescription;
+            }
+        }
 
         const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more about programming models...'), description: '', data: undefined };
         if (this._learnMoreLink) {
