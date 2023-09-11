@@ -8,25 +8,20 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
-type ProgrammingModel = { modelVersion: number | undefined, label: string };
 export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
-    private _models: ProgrammingModel[] = [];
+    private _models: IAzureQuickPickItem<number | undefined>[] = [];
     private _learnMoreLink: string | undefined;
 
-    public constructor(options: { models: ProgrammingModel | ProgrammingModel[], learnMoreLink?: string }) {
+    public constructor(options: { models: IAzureQuickPickItem<number | undefined>[], learnMoreLink?: string }) {
         super();
         this._models = Array.isArray(options.models) ? options.models : [options.models];
         this._learnMoreLink = options.learnMoreLink;
     }
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
-        const modelsPick: IAzureQuickPickItem<number | undefined>[] = this._models.map(model => {
-            return {
-                label: model.label,
-                data: model.modelVersion
-            }
-        });
+        // duplicate the array so we don't modify the original
+        const modelsPick: IAzureQuickPickItem<number | undefined>[] = this._models.slice();
 
         const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more about programming models...'), description: '', data: undefined };
         if (this._learnMoreLink) {
@@ -54,7 +49,7 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
     public async configureBeforePrompt(context: IProjectWizardContext): Promise<void> {
         // auto-select the default model if there is only one
         if (this._models.length === 1) {
-            context.languageModel = this._models[0].modelVersion;
+            context.languageModel = this._models[0].data;
         }
     }
 
