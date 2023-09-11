@@ -28,7 +28,6 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'Ballerina', ...getBallerinaValidateOptions(), deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'C# .NET 5', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net5.0'), createProjectInputs: [/net.*5/i], deployInputs: [/net.*5/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 6', buildMachineOsToSkip: ['darwin', 'win32'], ...getCSharpValidateOptions('net6.0', FuncVersion.v4), createProjectInputs: [/net.*6/i], deployInputs: [/net.*6/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7/i] },
     { title: 'Python', buildMachineOsToSkip: 'win32', ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.7/], deployInputs: [getRotatingPythonVersion()] }
