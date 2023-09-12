@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { localize } from "../../../localize";
-import { FunctionTemplates } from '../../../templates/IFunctionTemplate';
+import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { IJavaProjectWizardContext, getJavaClassName, getJavaFunctionFilePath, getJavaPackagePath } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -14,7 +14,7 @@ import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class JavaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
     protected async getUniqueFunctionName(context: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string | undefined> {
-        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplateBase = nonNullProp(context, 'functionTemplate');
         assertTemplateIsV1(template);
 
         const packageName: string = nonNullProp(context, 'javaPackageName');

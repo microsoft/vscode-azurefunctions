@@ -10,7 +10,7 @@ import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
-import { FunctionTemplates } from '../../templates/IFunctionTemplate';
+import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
@@ -44,7 +44,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public abstract executeCore(context: T): Promise<string>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: FunctionTemplates = nonNullValue(context.functionTemplate);
+        const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
         context.telemetry.properties.projectLanguage = context.language;
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;

@@ -15,7 +15,7 @@ import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { IBindingTemplate } from './IBindingTemplate';
-import { FunctionTemplates, IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { FunctionTemplateBase, IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { TemplateProviderBase } from './TemplateProviderBase';
 import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
@@ -82,13 +82,9 @@ export class CentralTemplateProvider implements Disposable {
         return providers;
     }
 
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionTemplates[]> {
+    /* Ignored by the v2 schema */
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionTemplateBase[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
-        // v2 templates don't have a categories property, so just return all
-        if (languageModel) {
-            return templates.functionTemplatesV2;
-        }
-
         switch (templateFilter) {
             case TemplateFilter.All:
                 return templates.functionTemplates;
@@ -97,7 +93,7 @@ export class CentralTemplateProvider implements Disposable {
             case TemplateFilter.Verified:
             default:
                 const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
-                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
+                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)))
         }
     }
 
@@ -206,7 +202,6 @@ export class CentralTemplateProvider implements Disposable {
         }))).reduce((t1: ITemplates, t2: ITemplates) => {
             return {
                 functionTemplates: t1.functionTemplates.concat(t2.functionTemplates),
-                functionTemplatesV2: t1.functionTemplatesV2.concat(t2.functionTemplatesV2),
                 bindingTemplates: t1.bindingTemplates.concat(t2.bindingTemplates)
             };
         });
@@ -258,7 +253,6 @@ export class CentralTemplateProvider implements Disposable {
         if (result) {
             return {
                 functionTemplates: result.functionTemplates.filter(f => this.includeTemplate(provider, f)),
-                functionTemplatesV2: result.functionTemplatesV2.filter(f => this.includeTemplate(provider, f)),
                 bindingTemplates: result.bindingTemplates.filter(b => this.includeTemplate(provider, b))
             };
         } else if (latestErrorMessage) {
@@ -269,8 +263,10 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | FunctionTemplates): boolean {
-        return provider.includeTemplate(template) && (!('language' in template) || template.language.toLowerCase() === provider.language.toLowerCase());
+    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | FunctionTemplateBase): boolean {
+        return provider.includeTemplate(template) && (!('language' in template) ||
+            (template.language.toLowerCase() === provider.language.toLowerCase() &&
+                provider.templateSchemaVersion === template.templateSchemaVersion));
     }
 
     private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, latestTemplateVersion: string): Promise<ITemplates | undefined> {

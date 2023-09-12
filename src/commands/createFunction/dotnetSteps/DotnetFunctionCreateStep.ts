@@ -7,7 +7,7 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
-import { FunctionTemplates } from '../../../templates/IFunctionTemplate';
+import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -27,7 +27,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
     }
 
     public async executeCore(context: IDotnetFunctionWizardContext): Promise<string> {
-        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplateBase = nonNullProp(context, 'functionTemplate');
         assertTemplateIsV1(template);
 
         const functionName: string = nonNullProp(context, 'functionName');

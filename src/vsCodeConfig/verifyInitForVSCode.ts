@@ -4,17 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
+import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
+import { ProjectLanguage, funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
 import { localize } from '../localize';
+import { TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
+import { getTemplateVersionFromLanguageAndModel } from '../utils/templateVersionUtils';
 import { getWorkspaceSetting } from './settings';
 
 export interface VerifiedInit {
     language: ProjectLanguage,
     languageModel: number | undefined,
-    version: FuncVersion
+    version: FuncVersion,
+    templateSchemaVersion: TemplateSchemaVersion
 }
 
 /**
@@ -35,9 +38,12 @@ export async function verifyInitForVSCode(context: IActionContext, fsPath: strin
         version = nonNullOrEmptyValue(tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath)), funcVersionSetting);
     }
 
+    const templateSchemaVersion = getTemplateVersionFromLanguageAndModel(<ProjectLanguage>language, languageModel);
+
     return {
         language: <ProjectLanguage>language,
         languageModel,
-        version: <FuncVersion>version
+        version: <FuncVersion>version,
+        templateSchemaVersion
     };
 }

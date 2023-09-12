@@ -6,9 +6,9 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
@@ -18,12 +18,13 @@ import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
+import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplateDir, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 
 export class DotnetTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Dotnet;
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
         super(version, projectPath, language, projectTemplateKey);

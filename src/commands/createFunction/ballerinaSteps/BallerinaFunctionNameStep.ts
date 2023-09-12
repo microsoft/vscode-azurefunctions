@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from "../../../localize";
-import { FunctionTemplates } from '../../../templates/IFunctionTemplate';
+import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { IBallerinaProjectWizardContext, getBallerinaFunctionFilePath, getBallerinaPackagePath } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
@@ -13,7 +13,7 @@ import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class BallerinaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardContext & IBallerinaProjectWizardContext> {
     protected async getUniqueFunctionName(context: IFunctionWizardContext & IBallerinaProjectWizardContext): Promise<string | undefined> {
-        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplateBase = nonNullProp(context, 'functionTemplate');
         assertTemplateIsV1(template);
 
         return await this.getUniqueFsPath(getBallerinaPackagePath(context.projectPath), template.defaultFunctionName, '.bal');

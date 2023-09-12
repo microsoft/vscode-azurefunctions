@@ -6,13 +6,13 @@
 import { AzExtFsExtra, AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../../localize';
-import { FunctionTemplates } from '../../templates/IFunctionTemplate';
+import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
-        const template: FunctionTemplates = nonNullProp(context, 'functionTemplate');
+        const template: FunctionTemplateBase = nonNullProp(context, 'functionTemplate');
         assertTemplateIsV1(template);
 
         const uniqueFunctionName: string | undefined = await this.getUniqueFunctionName(context);

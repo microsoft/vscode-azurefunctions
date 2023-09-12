@@ -8,7 +8,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunctionInternal, FunctionTemplates, FuncVersion, getRandomHexString, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
+import { createFunctionInternal, FunctionTemplateBase, FuncVersion, getRandomHexString, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelSuiteOptions, ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
 
@@ -55,7 +55,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             await runForTemplateSource(context, this.source, async (templateProvider) => {
-                const templates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
+                const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
         });

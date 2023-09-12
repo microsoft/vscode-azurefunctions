@@ -7,12 +7,12 @@ import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { DurableBackendValues } from "../../constants";
 import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
-import { FunctionTemplates } from "../../templates/IFunctionTemplate";
+import { FunctionTemplateBase } from "../../templates/IFunctionTemplate";
 import { ParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
 
 export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext {
-    functionTemplate?: FunctionTemplates;
+    functionTemplate?: FunctionTemplateBase;
     functionName?: string;
 
     // Durable Functions

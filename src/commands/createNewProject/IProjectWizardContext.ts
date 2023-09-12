@@ -5,8 +5,9 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
-import { ProjectLanguage } from "../../constants";
 import { FuncVersion } from "../../FuncVersion";
+import { ProjectLanguage } from "../../constants";
+import { TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
 import { cliFeedUtils } from "../../utils/cliFeedUtils";
 
 export interface IProjectWizardContext extends IActionContext {
@@ -17,7 +18,9 @@ export interface IProjectWizardContext extends IActionContext {
     language?: ProjectLanguage;
     languageModel?: number;
     languageFilter?: RegExp;
+
     version: FuncVersion;
+    templateSchemaVersion?: TemplateSchemaVersion;
     projectTemplateKey: string | undefined;
     workerRuntime?: cliFeedUtils.IWorkerRuntime;
     openBehavior?: OpenBehavior;

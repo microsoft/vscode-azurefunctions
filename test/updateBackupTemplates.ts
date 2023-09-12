@@ -43,6 +43,7 @@ suite('Backup templates', () => {
                     continue;
                 }
 
+                /* Currently doesn't back up v2 schema templates */
                 const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, undefined, version, worker.projectTemplateKey);
 
                 const context = await createTestActionContext();

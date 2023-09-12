@@ -7,6 +7,7 @@ import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ActionType, ProjectLanguage } from '../../constants';
 import { ResourceType } from '../IBindingTemplate';
 import { FunctionV2Template } from '../IFunctionTemplate';
+import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**
  * Describes script template resources to be used for parsing
@@ -17,13 +18,11 @@ export interface Resources {
     en: { [key: string]: string | undefined };
 }
 
-export type TemplateSchemaVersion = 'v1' | 'v2';
-
 export interface RawTemplateV2 {
     actions: ParsedAction[];
     author?: string;
     name: string;
-    id?: string;
+    id: string;
     description: string;
     programmingModel: string;
     language: ProjectLanguage;
@@ -120,7 +119,13 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
         const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
         const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
 
-        templates.push(Object.assign(templateV2, { wizards: parsedJobs, id: nonNullValue(templateV2.id), isHttpTrigger, isTimerTrigger }));
+        templates.push(Object.assign(templateV2, {
+            wizards: parsedJobs,
+            id: nonNullValue(templateV2.id),
+            isHttpTrigger,
+            isTimerTrigger,
+            templateSchemaVersion: TemplateSchemaVersion.v2
+        }));
     }
 
     return templates;
