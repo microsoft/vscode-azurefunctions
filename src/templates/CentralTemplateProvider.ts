@@ -93,7 +93,7 @@ export class CentralTemplateProvider implements Disposable {
             case TemplateFilter.Verified:
             default:
                 const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
-                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)))
+                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }
 

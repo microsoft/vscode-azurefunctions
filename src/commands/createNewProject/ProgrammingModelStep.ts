@@ -74,7 +74,6 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
     }
 }
 
-
 interface ProgrammingModelStepOptions {
     models: IAzureQuickPickItem<number | undefined>[],
     defaultModel?: number,
