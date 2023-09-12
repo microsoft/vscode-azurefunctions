@@ -14,7 +14,7 @@ import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
-import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../../utils/programmingModelUtils';
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
@@ -89,7 +89,9 @@ __azurite_db*__.json`));
         };
 
         await bundleFeedUtils.addDefaultBundle(context, hostJson);
-        if (context.languageModel && context.languageModel > 1) {
+
+        // new programming models need to have a higher version of the extension bundle
+        if (isPythonV2Plus(context.language, context.languageModel) && isNodeV4Plus(context)) {
             bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[4.*, 5.0.0)");
         }
 

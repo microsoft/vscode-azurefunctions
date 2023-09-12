@@ -49,6 +49,7 @@ export async function verifyAppSettings(options: {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
+        // feature flag is necessary for the new programming model
         if (isNodeV4Plus(options) || isPythonV2Plus(options.language, options.languageModel)) {
             updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
         }
