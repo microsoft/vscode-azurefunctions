@@ -65,7 +65,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             throw new UserCancelledError('viewSampleProjects');
         } else {
             context.language = result.language;
-            // TODO: Make this better, but for now, we know if it's not Python, there's no way it'll be v2
+            // TODO: Probably should include a ProgrammingModelStep for all languages and set there. but for now we know if it's not Python, there's no way it'll be v2
             if (result.language !== ProjectLanguage.Python) {
                 context.templateSchemaVersion = TemplateSchemaVersion.v1;
             }
