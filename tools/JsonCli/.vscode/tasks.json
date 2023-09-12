@@ -12,22 +12,6 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish (5.0)",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "publish",
-                "--configuration",
-                "Release",
-                "--framework",
-                "net5.0",
-                "--output",
-                "${workspaceFolder}/../../resources/dotnetJsonCli/net5.0/",
-                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
             "label": "publish (6.0)",
             "command": "dotnet",
             "type": "process",
@@ -55,6 +39,22 @@
                 "net7.0",
                 "--output",
                 "${workspaceFolder}/../../resources/dotnetJsonCli/net7.0/",
+                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish (8.0)",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "--framework",
+                "net8.0",
+                "--output",
+                "${workspaceFolder}/../../resources/dotnetJsonCli/net8.0/",
                 "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
             ],
             "problemMatcher": "$msCompile"
