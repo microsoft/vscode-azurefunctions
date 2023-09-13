@@ -11,6 +11,7 @@ import { FuncVersion } from '../../../FuncVersion';
 import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
@@ -46,7 +47,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             }
 
             // feature flag needs to be enabled to use multiple entry points
-            if (isNodeV4Plus(context)) {
+            if (isNodeV4Plus(context) || context.templateSchemaVersion === TemplateSchemaVersion.v2) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 this.localSettingsJson.Values!["AzureWebJobsFeatureFlags"] = "EnableWorkerIndexing";
             }

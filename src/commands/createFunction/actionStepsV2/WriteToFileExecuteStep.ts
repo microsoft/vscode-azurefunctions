@@ -6,6 +6,7 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
+import { isDocumentOpened } from "../../../utils/textUtils";
 import { FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
@@ -14,7 +15,9 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
     public async executeAction(context: T): Promise<void> {
         context.newFilePath = await this.getFilePath(context);
         await this.writeToFile(context, context.newFilePath);
-        await window.showTextDocument(await workspace.openTextDocument(Uri.file(context.newFilePath)));
+        if (!isDocumentOpened(Uri.file(context.newFilePath))) {
+            await window.showTextDocument(await workspace.openTextDocument(Uri.file(context.newFilePath)));
+        }
     }
 
     protected async writeToFile(context: T, filePath: string): Promise<void> {

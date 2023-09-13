@@ -74,3 +74,7 @@ export async function showMarkdownPreviewFile(uri: vscode.Uri, openToSide: boole
             : 'markdown.showPreview',
         uri);
 }
+
+export function isDocumentOpened(uri: vscode.Uri): boolean {
+    return vscode.workspace.textDocuments.some((doc) => doc.uri.toString() === uri.toString());
+}
