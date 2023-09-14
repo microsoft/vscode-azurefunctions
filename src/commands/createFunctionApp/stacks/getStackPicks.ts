@@ -7,7 +7,7 @@ import { ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { AzExtPipelineResponse, createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
-import { FuncVersion, funcVersionLink } from '../../../FuncVersion';
+import { funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
 import { localize } from '../../../localize';
@@ -213,14 +213,6 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
                     if (minor.stackSettings.windowsRuntimeSettings?.isHidden) {
                         delete minor.stackSettings.windowsRuntimeSettings;
                     }
-                }
-
-                if (minor.stackSettings.windowsRuntimeSettings?.supportedFunctionsExtensionVersions.includes(FuncVersion.v3) &&
-                    minor.stackSettings.windowsRuntimeSettings?.supportedFunctionsExtensionVersions.includes(FuncVersion.v4)) {
-                    // Temporary workaround becausecurrently there are stacks that support both v3 and v4, but if netFrameworkVersion v6.0
-                    // is set for ~3 app, it will break so delete the netFrameworkVersion and only set to v6.0 for ~4
-                    // https://github.com/microsoft/vscode-azurefunctions/issues/2990
-                    delete minor.stackSettings.windowsRuntimeSettings.siteConfigPropertiesDictionary.netFrameworkVersion;
                 }
             }
         }
