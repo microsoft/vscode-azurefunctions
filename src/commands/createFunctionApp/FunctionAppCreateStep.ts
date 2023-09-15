@@ -9,9 +9,9 @@ import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
 import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
-import { ConnectionKey, contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
+import { ConnectionKey, ProjectLanguage, contentConnectionStringKey, contentShareKey, extensionVersionKey, runFromPackageKey, webProvider } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
@@ -99,11 +99,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteConfig> {
         const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
-        // https://github.com/microsoft/vscode-azurefunctions/issues/2990
-        if (context.newSiteOS === 'windows' && context.version === FuncVersion.v4) {
-            stackSettings.siteConfigPropertiesDictionary.netFrameworkVersion = 'v6.0'
-        }
-
         const newSiteConfig: SiteConfig = stackSettings.siteConfigPropertiesDictionary;
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
