@@ -14,5 +14,5 @@ export const nodeV4Suffix = '-4.x';
 export function isNodeV4Plus(context: { language?: ProjectLanguage | string, languageModel?: number }): boolean {
     const { language, languageModel } = context;
     return (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) &&
-        languageModel !== undefined && languageModel > 4;
+        languageModel !== undefined && languageModel === 4;
 }

@@ -68,13 +68,17 @@ export async function createFunctionInternal(context: IActionContext, options: a
         return;
     }
 
-    const { language, languageModel, version } = await verifyInitForVSCode(context, projectPath, options.language, /* TODO: languageModel: */ undefined, options.version);
+    const { language, languageModel, version, templateSchemaVersion } = await verifyInitForVSCode(context, projectPath, options.language, options.languageModel, options.version);
     const hasDurableStorage: boolean = await durableUtils.verifyHasDurableStorage(language, projectPath);
 
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
-    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey, hasDurableStorage });
+    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey, hasDurableStorage, templateSchemaVersion });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [new FunctionListStep({ templateId: options.templateId, functionSettings: options.functionSettings, isProjectWizard: false })]
+        promptSteps: [new FunctionListStep({
+            templateId: options.templateId,
+            functionSettings: options.functionSettings,
+            isProjectWizard: false,
+        })]
     });
     await wizard.prompt();
     await wizard.execute();

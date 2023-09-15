@@ -47,7 +47,7 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
 
     public async configureBeforePrompt(context: FunctionV2WizardContext): Promise<void> {
         // if this is a new project, we can default to the new project job
-        if (this.isProjectWizard) {
+        if (this.isProjectWizard && !!context.functionTemplate) {
             assertTemplateIsV2(context.functionTemplate);
             context.job = context.functionTemplate.wizards.find(j => j.type === JobType.CreateNewApp);
         }

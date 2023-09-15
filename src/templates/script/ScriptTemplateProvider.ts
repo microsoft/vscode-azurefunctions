@@ -15,12 +15,13 @@ import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
+import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { english, getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';
 
 export class ScriptTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     protected get backupSubpath(): string {
         return path.join('script', this.version);

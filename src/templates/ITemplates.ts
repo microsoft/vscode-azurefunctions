@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IBindingTemplate } from "./IBindingTemplate";
-import { FunctionV2Template, IFunctionTemplate } from "./IFunctionTemplate";
+import { FunctionTemplateBase } from "./IFunctionTemplate";
 
 export interface ITemplates {
-    functionTemplates: IFunctionTemplate[];
-    functionTemplatesV2: FunctionV2Template[];
+    functionTemplates: FunctionTemplateBase[];
     bindingTemplates: IBindingTemplate[];
 }

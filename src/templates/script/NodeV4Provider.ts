@@ -8,12 +8,14 @@ import * as path from 'path';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
+import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';
 
 export class NodeV4Provider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
+    // still hard-coded templates that are in the v1 schema
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     protected get backupSubpath(): string {
         return path.join('nodejs-4.x');

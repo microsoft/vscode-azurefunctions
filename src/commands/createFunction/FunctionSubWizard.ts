@@ -6,8 +6,10 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
-import { FunctionTemplates, IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
+import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
+import { isNodeV4Plus } from '../../utils/programmingModelUtils';
+import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -24,8 +26,6 @@ import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
 import { NodeV4FunctionCreateStep } from './scriptSteps/NodeV4FunctionCreateStep';
 import { NodeV4FunctionNameStep } from './scriptSteps/NodeV4FunctionNameStep';
-import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
-import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
@@ -34,16 +34,9 @@ export class FunctionSubWizard {
     public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
 
-        let template: FunctionTemplates | undefined = context.functionTemplate;
+        const template: FunctionTemplateBase | undefined = context.functionTemplate;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-
-            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
-
-            if (isV2PythonModel) {
-                promptSteps.push(new PythonScriptStep());
-            }
-
             switch (context.language) {
                 case ProjectLanguage.Java:
                     promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
@@ -58,8 +51,7 @@ export class FunctionSubWizard {
                 default:
                     if (isNodeV4Plus(context)) {
                         promptSteps.push(new NodeV4FunctionNameStep())
-                    } else if (!isV2PythonModel) {
-                        // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
+                    } else if (context.templateSchemaVersion === TemplateSchemaVersion.v1) {
                         promptSteps.push(new ScriptFunctionNameStep());
                     }
                     break;
@@ -71,14 +63,13 @@ export class FunctionSubWizard {
             }
 
             // if skip for now, we need to just skip this step as well
-            if (!!template && Number(context.languageModel) > 1) {
+            if (!!template && context.templateSchemaVersion === TemplateSchemaVersion.v2) {
                 // wizards is a unique property of v2 templates
                 promptSteps.push(new JobsListStep(isProjectWizard));
                 // the JobListStep will create the rest of the wizard
                 return { promptSteps };
             } else {
-                // if the languageModel is 1, then it's a IFunctionTemplate
-                template = template as IFunctionTemplate;
+                assertTemplateIsV1(template);
                 addBindingSettingSteps(template.userPromptedSettings, promptSteps);
             }
 
@@ -102,11 +93,7 @@ export class FunctionSubWizard {
                         executeSteps.push(new BallerinaFunctionCreateStep());
                         break;
                     default:
-                        if (isV2PythonModel) {
-                            executeSteps.push(new PythonFunctionCreateStep());
-                        } else {
-                            executeSteps.push(new ScriptFunctionCreateStep());
-                        }
+                        executeSteps.push(new ScriptFunctionCreateStep());
                         break;
                 }
             }

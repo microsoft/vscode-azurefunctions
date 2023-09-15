@@ -11,10 +11,10 @@ import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { ITemplates } from '../ITemplates';
+import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
+import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
 import { english } from '../script/getScriptResourcesLanguage';
 import { parseScriptTemplates } from '../script/parseScriptTemplates';
-import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
-import { TemplateType } from '../TemplateProviderBase';
 
 /**
  * Describes templates output before it has been parsed
@@ -28,6 +28,7 @@ interface IRawJavaTemplates {
  */
 export class JavaTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.Java;
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     protected get backupSubpath(): string {
         return path.join('java', this.version);

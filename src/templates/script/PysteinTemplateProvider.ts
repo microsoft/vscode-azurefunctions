@@ -11,17 +11,17 @@ import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
 import { verifyTemplateIsV2 } from '../../utils/templateVersionUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
-import { FunctionTemplates } from '../IFunctionTemplate';
+import { FunctionTemplateBase } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateType } from '../TemplateProviderBase';
+import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { RawTemplateV2, TemplateSchemaVersion, parseScriptTemplates } from './parseScriptTemplatesV2';
+import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
 
 
 export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     public templateType: TemplateType = TemplateType.Script;
-    public templateSchemaVersion: TemplateSchemaVersion = 'v2';
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v2;
 
     protected get backupSubpath(): string {
         return path.join('pystein');
@@ -42,8 +42,8 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
 
         return {
-            functionTemplates: [],
-            functionTemplatesV2: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
+            functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
+            // no bindings for V2 schema
             bindingTemplates: []
         }
     }
@@ -55,13 +55,12 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         this._resources = await AzExtFsExtra.readJSON(paths.resources);
 
         return {
-            functionTemplates: [],
-            functionTemplatesV2: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
+            functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             bindingTemplates: []
         }
     }
 
-    public includeTemplate(template: FunctionTemplates | IBindingTemplate): boolean {
+    public includeTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {
         if (verifyTemplateIsV2(template)) {
             return template.language.toLowerCase() === ProjectLanguage.Python.toLowerCase();
         }

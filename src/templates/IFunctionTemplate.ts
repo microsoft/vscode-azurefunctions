@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ProjectLanguage } from '../constants';
 import { IBindingSetting } from './IBindingTemplate';
+import { TemplateSchemaVersion } from './TemplateProviderBase';
 import { ParsedJob, RawTemplateV2 } from './script/parseScriptTemplatesV2';
 
 export enum TemplateCategory {
@@ -11,32 +13,36 @@ export enum TemplateCategory {
 }
 
 /**
- * Describes a template used for creating a function trigger (i.e. an HttpTrigger or TimerTrigger)
+ * Describes a V1 template used for creating a function trigger (i.e. an HttpTrigger or TimerTrigger)
  */
-export interface IFunctionTemplate {
-    id: string;
-    name: string;
+export interface IFunctionTemplate extends FunctionTemplateBase {
     defaultFunctionName: string;
-    language: string;
-    isHttpTrigger: boolean;
-    isTimerTrigger: boolean;
     isSqlBindingTemplate: boolean;
     userPromptedSettings: IBindingSetting[];
     categories: TemplateCategory[];
     categoryStyle?: string;
     isDynamicConcurrent: boolean;
-    // a defined triggerType means that the template is from the new programming model
+
+    // a defined triggerType means that the template is part of Node V4 programming model
     triggerType?: string;
 }
 
-export interface FunctionV2Template extends RawTemplateV2 {
-    id: string;
-    isHttpTrigger: boolean;
-    isTimerTrigger: boolean;
-
+/**
+ * Describes a V2 template used for creating a function trigger (i.e. an HttpTrigger or TimerTrigger)
+ */
+export interface FunctionV2Template extends RawTemplateV2, FunctionTemplateBase {
     // jobs translate to Azure Wizards
     wizards: ParsedJob[];
 }
 
-
-export type FunctionTemplates = IFunctionTemplate | FunctionV2Template;
+/**
+ * Describes common properties between the V1 and V2 templates
+ */
+export interface FunctionTemplateBase {
+    id: string;
+    name: string;
+    language: ProjectLanguage;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
+    templateSchemaVersion: TemplateSchemaVersion
+}

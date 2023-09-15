@@ -7,10 +7,10 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWi
 import { QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels } from '../../constants';
 import { localize } from '../../localize';
+import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
-import { JobsListStep } from '../createFunction/JobsListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
@@ -65,7 +65,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             throw new UserCancelledError('viewSampleProjects');
         } else {
             context.language = result.language;
-            context.languageModel = result.model;
+            // TODO: Probably should include a ProgrammingModelStep for all languages and set there. but for now we know if it's not Python, there's no way it'll be v2
+            if (result.language !== ProjectLanguage.Python) {
+                context.templateSchemaVersion = TemplateSchemaVersion.v1;
+            }
         }
     }
 
@@ -83,7 +86,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 promptSteps.push(new ProgrammingModelStep({
                     models: nodeModels,
                     defaultModel: nodeDefaultModelVersion,
-                    learnMoreLink: nodeLearnMoreLink
+                    learnMoreLink: nodeLearnMoreLink,
+                    isProjectWizard: true
                 }));
                 executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
@@ -91,7 +95,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 promptSteps.push(new ProgrammingModelStep({
                     models: nodeModels,
                     defaultModel: nodeDefaultModelVersion,
-                    learnMoreLink: nodeLearnMoreLink
+                    learnMoreLink: nodeLearnMoreLink,
+                    isProjectWizard: true
                 }));
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
@@ -104,7 +109,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 promptSteps.push(new ProgrammingModelStep({
                     models: pythonModels,
                     defaultModel: pythonDefaultModelVersion,
-                    learnMoreLink: pythonLearnMoreLink
+                    learnMoreLink: pythonLearnMoreLink,
+                    isProjectWizard: true
                 }));
                 executeSteps.push(new PythonProjectCreateStep());
                 break;
@@ -134,13 +140,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         promptSteps.push(new FunctionListStep({
             isProjectWizard: true,
             templateId: this._templateId,
-            functionSettings: this._functionSettings
+            functionSettings: this._functionSettings,
         }));
-
-        if (context.languageModel) {
-            promptSteps.push(new JobsListStep(true));
-        }
-
 
         return wizardOptions;
     }

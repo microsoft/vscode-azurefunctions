@@ -11,10 +11,11 @@ import { FuncVersion } from '../../../FuncVersion';
 import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
-import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../../utils/programmingModelUtils';
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
@@ -46,7 +47,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             }
 
             // feature flag needs to be enabled to use multiple entry points
-            if (isNodeV4Plus(context)) {
+            if (isNodeV4Plus(context) || context.templateSchemaVersion === TemplateSchemaVersion.v2) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 this.localSettingsJson.Values!["AzureWebJobsFeatureFlags"] = "EnableWorkerIndexing";
             }
@@ -89,7 +90,9 @@ __azurite_db*__.json`));
         };
 
         await bundleFeedUtils.addDefaultBundle(context, hostJson);
-        if (context.languageModel && context.languageModel > 1) {
+
+        // new programming models need to have a higher version of the extension bundle
+        if (isPythonV2Plus(context.language, context.languageModel) && isNodeV4Plus(context)) {
             bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[4.*, 5.0.0)");
         }
 

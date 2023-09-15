@@ -10,8 +10,9 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
-import { FunctionTemplates, IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
+import { FunctionTemplateBase, IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
+import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**
  * Describes a dotnet template before it has been parsed
@@ -82,7 +83,8 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
         categories: [TemplateCategory.Core], // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
-        isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false
+        isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false,
+        templateSchemaVersion: TemplateSchemaVersion.v1
     };
 }
 
@@ -104,7 +106,6 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
 
     return {
         functionTemplates,
-        functionTemplatesV2: [], // CSharp does not support v2 templates
         bindingTemplates: [] // CSharp does not support binding templates
     };
 }
@@ -120,12 +121,13 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
         const templateProvider = ext.templateProvider.get(jsContext);
-        const jsTemplates: FunctionTemplates[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
+        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
             assertTemplateIsV1(csharpTemplate);
+            csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;
 
             const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
-            const jsTemplate: FunctionTemplates | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
+            const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
             assertTemplateIsV1(jsTemplate);
 
             if (jsTemplate) {

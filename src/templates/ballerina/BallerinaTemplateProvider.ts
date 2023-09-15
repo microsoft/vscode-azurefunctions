@@ -8,12 +8,13 @@ import * as path from 'path';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
+import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from '../script/getScriptResourcesLanguage';
 import { parseScriptTemplates } from '../script/parseScriptTemplates';
 
 export class BallerinaTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Ballerina;
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     protected get backupSubpath(): string {
         return path.join('ballerina');
@@ -57,7 +58,7 @@ export class BallerinaTemplateProvider extends TemplateProviderBase {
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return this.isFunctionTemplate(template)
             && template.language === this.language
-            && !!template.triggerType
+            && !!template.triggerType;
     }
 
     protected async parseTemplates(rootPath: string): Promise<ITemplates> {

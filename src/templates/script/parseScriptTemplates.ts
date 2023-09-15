@@ -10,6 +10,7 @@ import { localize } from '../../localize';
 import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
+import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**
  * Describes a script template before it has been parsed
@@ -258,7 +259,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         categories: rawTemplate.metadata.category || [],
         categoryStyle: rawTemplate.metadata.categoryStyle,
         isDynamicConcurrent: (rawTemplate.id.includes('ServiceBusQueueTrigger') || rawTemplate.id.includes('BlobTrigger') || rawTemplate.id.includes('QueueTrigger')) ? true : false,
-        triggerType: rawTemplate.metadata.triggerType
+        triggerType: rawTemplate.metadata.triggerType,
+        templateSchemaVersion: TemplateSchemaVersion.v1
     };
 }
 
@@ -286,7 +288,6 @@ export function parseScriptTemplates(rawResources: object, rawTemplates: object[
         }
     }
 
-    // this is for parsing V1 templates, so no functionTemplatesV2
-    return { functionTemplates, bindingTemplates, functionTemplatesV2: [] };
+    return { functionTemplates, bindingTemplates };
 }
 

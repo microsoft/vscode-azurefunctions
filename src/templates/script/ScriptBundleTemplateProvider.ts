@@ -13,12 +13,13 @@ import { feedUtils } from '../../utils/feedUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
-import { TemplateType } from '../TemplateProviderBase';
+import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { ScriptTemplateProvider } from './ScriptTemplateProvider';
 import { parseScriptTemplates } from './parseScriptTemplates';
 
 export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.ScriptBundle;
+    public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
 
     protected get backupSubpath(): string {
         return bundleFeedUtils.defaultBundleId;

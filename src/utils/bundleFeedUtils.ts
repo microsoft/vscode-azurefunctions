@@ -9,8 +9,8 @@ import { ext, TemplateSource } from '../extensionVariables';
 import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
-import { FunctionTemplates, IFunctionTemplate } from '../templates/IFunctionTemplate';
-import { TemplateSchemaVersion } from '../templates/script/parseScriptTemplatesV2';
+import { FunctionTemplateBase, IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { feedUtils } from './feedUtils';
 import { nugetUtils } from './nugetUtils';
 
@@ -50,7 +50,7 @@ export namespace bundleFeedUtils {
         bindings?: string;
     }
 
-    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateSchemaVersion: TemplateSchemaVersion = 'v1'): Promise<string> {
+    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateSchemaVersion: TemplateSchemaVersion): Promise<string> {
         bundleMetadata = bundleMetadata || {};
 
         const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
@@ -73,7 +73,7 @@ export namespace bundleFeedUtils {
         return feed.templates.v2[templateVersion];
     }
 
-    export function isBundleTemplate(template: FunctionTemplates | IBindingTemplate): boolean {
+    export function isBundleTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {
         const bundleTemplateTypes: string[] = ['durable', 'signalr'];
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
