@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels } from '../../constants';
+import { ProjectLanguage, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels } from '../../constants';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
@@ -85,7 +85,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             case ProjectLanguage.JavaScript:
                 promptSteps.push(new ProgrammingModelStep({
                     models: nodeModels,
-                    defaultModel: nodeDefaultModelVersion,
+                    // no default model until v4 GAs
+                    // defaultModel: nodeDefaultModelVersion,
                     learnMoreLink: nodeLearnMoreLink,
                     isProjectWizard: true
                 }));
@@ -94,7 +95,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             case ProjectLanguage.TypeScript:
                 promptSteps.push(new ProgrammingModelStep({
                     models: nodeModels,
-                    defaultModel: nodeDefaultModelVersion,
+                    // no default model until v4 GAs
+                    // defaultModel: nodeDefaultModelVersion,
                     learnMoreLink: nodeLearnMoreLink,
                     isProjectWizard: true
                 }));
