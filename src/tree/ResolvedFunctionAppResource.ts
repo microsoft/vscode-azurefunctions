@@ -6,7 +6,6 @@
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
 import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { ServiceConnectorGroupTreeItem } from "@microsoft/vscode-azext-serviceconnector";
 import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, TreeItemIconPath, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
@@ -48,7 +47,6 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _logFilesTreeItem: LogFilesTreeItem;
     private _siteFilesTreeItem: SiteFilesTreeItem;
-    private _serviceConnectorNode!: ServiceConnectorGroupTreeItem;
 
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
@@ -237,13 +235,12 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             site: this.site,
             contextValuesToAdd: ['azFunc']
         });
-        this._serviceConnectorNode = new ServiceConnectorGroupTreeItem(proxyTree, this.site.id);
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._serviceConnectorNode];
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
         if (!this.site.isSlot) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
