@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.13.0 - 2023-09-19
+## 1.13.0 - 2023-09-20
 
 ### Added
 * Python V2 programming model GA by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3799
