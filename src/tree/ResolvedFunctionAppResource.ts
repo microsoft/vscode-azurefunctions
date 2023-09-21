@@ -237,7 +237,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             site: this.site,
             contextValuesToAdd: ['azFunc']
         });
-        this._serviceConnectorNode = new ServiceConnectorGroupTreeItem(proxyTree, this.site.id);
+        this._serviceConnectorNode = new ServiceConnectorGroupTreeItem(proxyTree, this.site.id, ['azFunc']);
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
