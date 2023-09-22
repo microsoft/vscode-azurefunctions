@@ -639,17 +639,17 @@
                 },
                 {
                     "command": "azureFunctions.createServiceConnector",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /serviceConnectorGroupItem/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*serviceConnectorGroupItem/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteServiceConnector",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /serviceConnectorItem/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*serviceConnectorItem/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.validateServiceConnector",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /serviceConnectorItem/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*serviceConnectorItem/",
                     "group": "1@2"
                 }
             ],
@@ -1191,8 +1191,8 @@
         "@microsoft/vscode-azext-azureappservice": "^2.2.5",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.2",
-        "@microsoft/vscode-azext-serviceconnector": "^0.1.2",
         "@microsoft/vscode-azext-utils": "^2.1.0",
+        "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",
