@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { previewDescription } from "./constants-nls";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -169,10 +168,10 @@ export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
  * Any significantly changed new model should use an incremented number.
  */
 export const nodeDefaultModelVersion: number = 4;
-const nodeV4Model: IAzureQuickPickItem<number | undefined> = { data: nodeDefaultModelVersion, label: localize('modelV4', 'Model V4'), description: previewDescription };
-const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
+const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: nodeDefaultModelVersion, label: localize('modelV4', 'Model V4') };
+const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
 
-export const nodeModels = [nodeDefaultModel, nodeV4Model];
+export const nodeModels = [nodeDefaultModel, nodeV3Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
 
 export const pythonDefaultModelVersion: number = 2;
