@@ -834,7 +834,7 @@ export const backupStacks: string = `{
                     "linuxRuntimeSettings": {
                       "runtimeVersion": "Python|3.10",
                       "remoteDebuggingSupported": false,
-                      "isPreview": true,
+                      "isPreview": false,
                       "isDefault": false,
                       "isHidden": false,
                       "appInsightsSettings": {
