@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Last updated on 2023-01-09
+// Last updated on 2023-09-25
 export const backupStacks: string = `{
     "value": [
       {
@@ -797,13 +797,44 @@ export const backupStacks: string = `{
               "value": "3",
               "minorVersions": [
                 {
+                  "displayText": "Python 3.11",
+                  "value": "3.11",
+                  "stackSettings": {
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "Python|3.11",
+                      "remoteDebuggingSupported": false,
+                      "isPreview": false,
+                      "isDefault": true,
+                      "isHidden": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "3.11"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "python"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "Python|3.11"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "endOfLifeDate": "2027-10-31T00:00:00Z"
+                    }
+                  }
+                },
+                {
                   "displayText": "Python 3.10",
                   "value": "3.10",
                   "stackSettings": {
                     "linuxRuntimeSettings": {
                       "runtimeVersion": "Python|3.10",
                       "remoteDebuggingSupported": false,
-                      "isPreview": true,
+                      "isPreview": false,
                       "isDefault": false,
                       "isHidden": false,
                       "appInsightsSettings": {
