@@ -1,5 +1,27 @@
 # Change Log
 
+## 1.13.1 - 2023-09-26
+
+### Added
+* Enable Python 3.11 for GA
+
+### Changed
+* Remove preview label from Node v4 programming model and make it the default over v3
+* Remove '-alpha.7' from v4 node projects
+
+## 1.13.0 - 2023-09-20
+
+### Added
+* Python V2 programming model GA by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3799
+* Python V2 blueprint support by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3799
+* .NET 8 SDK support @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3841
+
+### Fixed
+* Fix Windows files node feature by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3813
+* Function app creation not setting `netFrameworkVersion` properly by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3847
+
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.12.4...v1.13.0
+
 ## 1.12.4 - 2023-08-17
 
 ### Fixed
