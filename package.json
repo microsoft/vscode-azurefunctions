@@ -31,9 +31,21 @@
     "activationEvents": [
         "onDebugInitialConfigurations",
         "onFileSystem:vscode-azurefunctions-static-content",
+        "onStartupFinished",
         "onUri",
         "onView:azureWorkspace",
         "workspaceContains:**/host.json"
+    ],
+    "enabledApiProposals": [
+        "chatAgents",
+        "chatAgents2",
+        "chatAgents2Additions",
+        "chatProvider",
+        "chatRequestAccess",
+        "chatVariables",
+        "interactive",
+        "interactiveUserActions",
+        "readonlyMessage"
     ],
     "main": "./main.js",
     "capabilities": {
@@ -1190,6 +1202,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^2.2.7",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.0",
+        "@microsoft/vscode-azext-azureauth": "^1.2.1",
         "@microsoft/vscode-azext-azureutils": "^2.0.2",
         "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
         "@microsoft/vscode-azext-utils": "^2.1.0",
