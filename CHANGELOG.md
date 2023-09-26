@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.13.1 - 2023-09-26
+
+### Added
+* Enable Python 3.11 for GA
+
+### Changed
+* Remove preview label from Node v4 programming model and make it the default over v3
+* Remove '-alpha.7' from v4 node projects
+
 ## 1.13.0 - 2023-09-20
 
 ### Added
