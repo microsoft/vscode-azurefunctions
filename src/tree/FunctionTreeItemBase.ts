@@ -12,22 +12,87 @@ import { IParsedHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
-import { ApplicationSettings, FuncHostRequest } from './IProjectTreeItem';
+import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectResource, getProjectContextValue } from './projectContextValues';
+
+export interface IFunction {
+    project: IProjectTreeItem;
+
+    name: string;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
+    isAnonymous: boolean;
+    triggerBindingType: string | undefined;
+
+    getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined>;
+}
+
+export abstract class FunctionBase implements IFunction {
+    constructor(public readonly project: IProjectTreeItem, public readonly name: string, public readonly config: ParsedFunctionJson, public readonly func?: FunctionEnvelope) { }
+
+    public abstract getKey(context: IActionContext): Promise<string | undefined>;
+
+    public async getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined> {
+        if (!this.isHttpTrigger) {
+            return undefined;
+        } else {
+            const funcHostReq = await this.project.getHostRequest(context);
+            const hostUrl = new url.URL(funcHostReq.url);
+            let triggerUrl: url.URL;
+            if (this.func?.invokeUrlTemplate) {
+                triggerUrl = new url.URL(this.func?.invokeUrlTemplate);
+                triggerUrl.protocol = hostUrl.protocol; // invokeUrlTemplate seems to use the wrong protocol sometimes. Make sure it matches the hostUrl
+            } else {
+                triggerUrl = hostUrl;
+                const route: string = (this.config.triggerBinding && this.config.triggerBinding.route) || this.name;
+                const hostJson: IParsedHostJson = await this.project.getHostJson(context);
+                triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
+            }
+
+            const key: string | undefined = await this.getKey(context);
+            if (key) {
+                triggerUrl.searchParams.set('code', key);
+            }
+
+            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized };
+        }
+    }
+
+    public get isHttpTrigger(): boolean {
+        // invokeUrlTemplate take precedence. Config can't always be retrieved
+        return !!this.func?.invokeUrlTemplate || this.config.isHttpTrigger;
+    }
+
+    public get isTimerTrigger(): boolean {
+        return this.config.isTimerTrigger;
+    }
+
+    public get isAnonymous(): boolean {
+        return this.config.authLevel === HttpAuthLevel.anonymous;
+    }
+
+    public get triggerBindingType(): string | undefined {
+        return this.config.triggerBinding?.type;
+    }
+}
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;
     public readonly name: string;
+    public readonly project: IProjectTreeItem;
 
     protected readonly _config: ParsedFunctionJson;
     private _disabled: boolean;
     private _func: FunctionEnvelope | undefined;
+
+    public readonly function: FunctionBase;
 
     protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: FunctionEnvelope | undefined, enableProperties: boolean = true) {
         super(parent);
         this._config = config;
         this.name = name;
         this._func = func;
+        this.project = this.parent.parent;
 
         if (enableProperties) {
             this.commandId = 'azureFunctions.viewProperties';

@@ -2,68 +2,47 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import * as path from 'path';
-import { Disposable, workspace, WorkspaceFolder } from "vscode";
-import { tryGetFunctionProjectRoot } from "./commands/createNewProject/verifyIsProject";
+import { Disposable } from "vscode";
 import { getFunctionAppName, getJavaDebugSubpath } from "./commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep";
-import { funcVersionSetting, JavaBuildTool, javaBuildTool, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from "./constants";
-import { FuncVersion, tryParseFuncVersion } from "./FuncVersion";
+import { JavaBuildTool, ProjectLanguage, javaBuildTool } from "./constants";
 import { localize } from "./localize";
 import { InitLocalProjectTreeItem } from "./tree/localProject/InitLocalProjectTreeItem";
 import { InvalidLocalProjectTreeItem } from "./tree/localProject/InvalidLocalProjectTreeItem";
 import { LocalProjectTreeItem } from "./tree/localProject/LocalProjectTreeItem";
 import { dotnetUtils } from "./utils/dotnetUtils";
 import { getWorkspaceSetting } from "./vsCodeConfig/settings";
+import { listLocalProjects } from "./workspace/listLocalProjects";
 
 export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider {
 
     public disposables: Disposable[] = [];
 
     public async provideResources(parent: AzExtParentTreeItem): Promise<AzExtTreeItem[] | null | undefined> {
+        const children: AzExtTreeItem[] = [];
 
-        return await callWithTelemetryAndErrorHandling('AzureAccountTreeItemWithProjects.provideResources', async (context: IActionContext) => {
-            const children: AzExtTreeItem[] = [];
+        Disposable.from(...this._projectDisposables).dispose();
+        this._projectDisposables = [];
 
-            Disposable.from(...this._projectDisposables).dispose();
-            this._projectDisposables = [];
+        const localProjects = await listLocalProjects();
 
-            const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
-            for (const folder of folders) {
-                const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder);
-                if (projectPath) {
-                    try {
-                        const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                        const languageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
-                        const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
-                        if (language === undefined || version === undefined) {
-                            children.push(new InitLocalProjectTreeItem(parent, projectPath, folder));
-                        } else {
-                            let preCompiledProjectPath: string | undefined;
-                            let effectiveProjectPath: string;
-                            let isIsolated: boolean | undefined;
-                            const compiledProjectInfo: CompiledProjectInfo | undefined = await getCompiledProjectInfo(context, projectPath, language);
-                            if (compiledProjectInfo) {
-                                preCompiledProjectPath = projectPath;
-                                effectiveProjectPath = compiledProjectInfo.compiledProjectPath;
-                                isIsolated = compiledProjectInfo.isIsolated;
-                            } else {
-                                effectiveProjectPath = projectPath;
-                            }
+        for (const project of localProjects.projects) {
+            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, project);
+            this._projectDisposables.push(treeItem);
+            children.push(treeItem);
+        }
 
+        for (const unintializedProject of localProjects.unintializedProjects) {
+            children.push(new InitLocalProjectTreeItem(parent, unintializedProject.projectPath, unintializedProject.workspaceFolder));
+        }
 
-                            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, { effectiveProjectPath, folder, language, languageModel, version, preCompiledProjectPath, isIsolated });
-                            this._projectDisposables.push(treeItem);
-                            children.push(treeItem);
-                        }
-                    } catch (error) {
-                        children.push(new InvalidLocalProjectTreeItem(parent, projectPath, error, folder));
-                    }
-                }
-            }
-            return children;
-        });
+        for (const invalidProject of localProjects.invalidProjects) {
+            children.push(new InvalidLocalProjectTreeItem(parent, invalidProject.projectPath, invalidProject.error, invalidProject.workspaceFolder));
+        }
+
+        return children;
     }
     private _projectDisposables: Disposable[] = [];
 
@@ -72,9 +51,9 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
     }
 }
 
-type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
+export type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
 
-async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
+export async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
         const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, projectLanguage, projectPath);
         if (projFiles.length === 1) {
