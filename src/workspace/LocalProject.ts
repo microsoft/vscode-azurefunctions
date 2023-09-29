@@ -5,15 +5,15 @@
 
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import { Task, tasks } from "vscode";
-import { FuncVersion } from "../../FuncVersion";
-import { hostFileName, localSettingsFileName } from "../../constants";
-import { IParsedHostJson, parseHostJson } from "../../funcConfig/host";
-import { ILocalSettingsJson, MismatchBehavior, getLocalSettingsJson, setLocalAppSetting } from "../../funcConfig/local.settings";
-import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncPortMap } from "../../funcCoreTools/funcHostTask";
-import { requestUtils } from "../../utils/requestUtils";
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from "../IProjectTreeItem";
-import { ProjectSource } from "../projectContextValues";
-import { LocalProjectOptions } from "./LocalProjectTreeItem";
+import { FuncVersion } from "../FuncVersion";
+import { hostFileName, localSettingsFileName } from "../constants";
+import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
+import { ILocalSettingsJson, MismatchBehavior, getLocalSettingsJson, setLocalAppSetting } from "../funcConfig/local.settings";
+import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncPortMap } from "../funcCoreTools/funcHostTask";
+import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
+import { LocalProjectOptions } from "../tree/localProject/LocalProjectTreeItem";
+import { ProjectSource } from "../tree/projectContextValues";
+import { requestUtils } from "../utils/requestUtils";
 import path = require("path");
 
 export class LocalProject implements IProjectTreeItem {

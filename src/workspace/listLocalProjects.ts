@@ -10,9 +10,9 @@ import { CompiledProjectInfo, getCompiledProjectInfo } from "../LocalResourcePro
 import { tryGetFunctionProjectRoot } from "../commands/createNewProject/verifyIsProject";
 import { ProjectLanguage, funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting } from "../constants";
 import { IProjectTreeItem } from "../tree/IProjectTreeItem";
-import { LocalProject } from "../tree/localProject/LocalProject";
 import { LocalProjectOptions } from "../tree/localProject/LocalProjectTreeItem";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
+import { LocalProject } from "./LocalProject";
 
 export type WorkspaceProject = { options: LocalProjectOptions } & IProjectTreeItem;
 

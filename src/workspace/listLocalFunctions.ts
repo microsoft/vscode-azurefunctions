@@ -9,10 +9,10 @@ import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
-import { LocalFunction } from "../tree/localProject/LocalFunctionTreeItem";
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
+import { LocalFunction } from "./LocalFunction";
 import { WorkspaceProject } from "./listLocalProjects";
 import path = require("path");
 

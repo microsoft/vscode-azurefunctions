@@ -3,53 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope, HostKeys } from '@azure/arm-appservice';
-import { IFunctionKeys, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { HostKeys } from '@azure/arm-appservice';
+import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { ViewPropertiesModel } from '@microsoft/vscode-azureresources-api';
 import { ProgressLocation, window } from 'vscode';
 import { ext } from '../../extensionVariables';
-import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
+import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
-import { FunctionBase, FunctionTreeItemBase } from '../FunctionTreeItemBase';
-import { IProjectTreeItem } from '../IProjectTreeItem';
+import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
+import { RemoteFunction } from './RemoteFunction';
 import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
-
-export class RemoteFunction extends FunctionBase {
-    constructor(
-        public readonly project: IProjectTreeItem,
-        public readonly name: string,
-        public readonly config: ParsedFunctionJson,
-        private readonly site: ParsedSite,
-        public readonly data?: FunctionEnvelope,
-    ) {
-        super(project, name, config, data);
-    }
-
-    public async getKey(context: IActionContext): Promise<string | undefined> {
-        if (this.isAnonymous) {
-            return undefined;
-        }
-
-        const client = await this.site.createClient(context);
-        if (this.config.authLevel === HttpAuthLevel.function) {
-            try {
-                const functionKeys: IFunctionKeys = await client.listFunctionKeys(this.name);
-                return nonNullProp(functionKeys, 'default');
-            } catch (error) {
-                if (parseError(error).errorType === 'NotFound') {
-                    // There are no function-specific keys, fall through to admin key
-                } else {
-                    throw error;
-                }
-            }
-        }
-
-        const hostKeys: HostKeys = await client.listHostKeys();
-        return nonNullProp(hostKeys, 'masterKey');
-    }
-}
 
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
