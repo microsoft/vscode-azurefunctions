@@ -20,7 +20,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly function: FunctionBase;
     private _disabled: boolean;
 
-    protected constructor(parent: AzExtParentTreeItem, private readonly func: IFunction, enableProperties: boolean = true) {
+    protected constructor(parent: AzExtParentTreeItem, func: IFunction, enableProperties: boolean = true) {
         super(parent);
         this.project = this.parent.parent;
         this.function = func;
@@ -39,7 +39,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     }
 
     public get isHttpTrigger(): boolean {
-        return this.func.isHttpTrigger;
+        return this.function.isHttpTrigger;
     }
 
     public get isTimerTrigger(): boolean {
@@ -108,8 +108,8 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(context: IActionContext): Promise<void> {
-        if (this.func.data) {
-            this._disabled = !!this.func.data.isDisabled;
+        if (this.function.data) {
+            this._disabled = !!this.function.data.isDisabled;
         } else {
             const version: FuncVersion = await this.project.getVersion(context);
             if (version === FuncVersion.v1) {
