@@ -7,7 +7,7 @@ import { FunctionEnvelope, HostKeys } from "@azure/arm-appservice";
 import { IFunctionKeys, ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { IActionContext, nonNullProp, parseError } from "@microsoft/vscode-azext-utils";
 import { HttpAuthLevel, ParsedFunctionJson } from "../../funcConfig/function";
-import { FunctionBase } from "../FunctionTreeItemBase";
+import { FunctionBase } from "../FunctionBase";
 import { IProjectTreeItem } from "../IProjectTreeItem";
 
 export class RemoteFunction extends FunctionBase {

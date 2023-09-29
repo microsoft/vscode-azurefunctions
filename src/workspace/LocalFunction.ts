@@ -6,7 +6,7 @@
 import { FunctionEnvelope } from "@azure/arm-appservice";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { FunctionBase } from "../tree/FunctionTreeItemBase";
+import { FunctionBase } from "../tree/FunctionBase";
 import { FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
 
 export interface IFunction {
