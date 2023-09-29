@@ -3,19 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtFsExtra, AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, GenericTreeItem, IActionContext, InvalidTreeItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
 import { functionJsonFileName } from '../../constants';
-import { ParsedFunctionJson } from '../../funcConfig/function';
-import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
-import { nonNullProp } from '../../utils/nonNull';
-import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
-import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
+import { ProjectNotRunningError, listLocalFunctions } from '../../workspace/listLocalFunctions';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalProjectTreeItem } from './LocalProjectTreeItem';
@@ -34,22 +29,20 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const isFunctionalProgrammingModel = isPythonV2Plus(this.parent.language, this.parent.languageModel) || isNodeV4Plus(this.parent);
+        try {
+            const localFunctionsResult = await listLocalFunctions(this.parent.project);
 
-        if (this.parent.isIsolated || isFunctionalProgrammingModel) {
-            return await this.getChildrenForHostedProjects(context);
-        } else {
-            const functions: string[] = await getFunctionFolders(context, this.parent.effectiveProjectPath);
-            const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
-                functions,
-                'azFuncInvalidLocalFunction',
-                async func => {
-                    const functionJsonPath: string = path.join(this.parent.effectiveProjectPath, func, functionJsonFileName);
-                    const config: ParsedFunctionJson = new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
-                    return LocalFunctionTreeItem.create(context, this, func, config, functionJsonPath, undefined);
-                },
-                (func: string) => func
-            );
+            const children: AzExtTreeItem[] = [];
+            for (const localFunction of localFunctionsResult.functions) {
+                children.push(await LocalFunctionTreeItem.create(context, this, localFunction));
+            }
+
+            for (const invalidLocalFunction of localFunctionsResult.invalidFunctions) {
+                children.push(new InvalidTreeItem(this, invalidLocalFunction.error, {
+                    label: invalidLocalFunction.name,
+                    contextValue: 'azFuncInvalidLocalFunction'
+                }))
+            }
 
             if (this.parent.preCompiledProjectPath) {
                 const ti: GenericTreeItem = new GenericTreeItem(this, {
@@ -64,6 +57,20 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
             }
 
             return children;
+        } catch (error: unknown) {
+            if (error instanceof ProjectNotRunningError) {
+                const ti: GenericTreeItem = new GenericTreeItem(this, {
+                    label: localize('startDebugging', 'Start debugging to update this list...'),
+                    iconPath: new ThemeIcon('info'),
+                    commandId: 'workbench.action.debug.start',
+                    contextValue: 'startDebugging'
+                });
+                // By default `GenericTreeItem` will pass itself as the args, but VS Code doesn't seem to like that so pass empty array
+                ti.commandArgs = [];
+                return [ti];
+            } else {
+                throw error;
+            }
         }
     }
 
@@ -77,38 +84,6 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         }
     }
 
-    /**
-     * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
-     */
-    private async getChildrenForHostedProjects(context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (runningFuncTaskMap.has(this.parent.workspaceFolder)) {
-            const hostRequest = await this.parent.getHostRequest(context);
-            const functions = await requestUtils.sendRequestWithExtTimeout(context, {
-                url: `${hostRequest.url}/admin/functions`,
-                method: 'GET',
-                rejectUnauthorized: hostRequest.rejectUnauthorized
-            });
-            return await this.createTreeItemsWithErrorHandling(
-                <FunctionEnvelope[]>functions.parsedBody,
-                'azFuncInvalidLocalFunction',
-                async func => {
-                    func = requestUtils.convertToAzureSdkObject(func);
-                    return LocalFunctionTreeItem.create(context, this, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), undefined, func);
-                },
-                func => func.name
-            );
-        } else {
-            const ti: GenericTreeItem = new GenericTreeItem(this, {
-                label: localize('startDebugging', 'Start debugging to update this list...'),
-                iconPath: new ThemeIcon('info'),
-                commandId: 'workbench.action.debug.start',
-                contextValue: 'startDebugging'
-            });
-            // By default `GenericTreeItem` will pass itself as the args, but VS Code doesn't seem to like that so pass empty array
-            ti.commandArgs = [];
-            return [ti];
-        }
-    }
 }
 
 export async function getFunctionFolders(context: IActionContext, projectPath: string): Promise<string[]> {
