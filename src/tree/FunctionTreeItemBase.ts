@@ -4,31 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as url from 'url';
 import { FuncVersion } from '../FuncVersion';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
+import { IFunction } from '../workspace/listLocalFunctions';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectResource, getProjectContextValue } from './projectContextValues';
 
-export interface IFunction {
-    project: IProjectTreeItem;
-
-    name: string;
-    isHttpTrigger: boolean;
-    isTimerTrigger: boolean;
-    isAnonymous: boolean;
-    triggerBindingType: string | undefined;
-
-    getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined>;
-}
-
 export abstract class FunctionBase implements IFunction {
-    constructor(public readonly project: IProjectTreeItem, public readonly name: string, public readonly config: ParsedFunctionJson, public readonly func?: FunctionEnvelope) { }
+    constructor(
+        public readonly project: IProjectTreeItem,
+        public readonly name: string,
+        public readonly config: ParsedFunctionJson,
+        public readonly data?: FunctionEnvelope
+    ) { }
 
     public abstract getKey(context: IActionContext): Promise<string | undefined>;
 
@@ -39,8 +33,8 @@ export abstract class FunctionBase implements IFunction {
             const funcHostReq = await this.project.getHostRequest(context);
             const hostUrl = new url.URL(funcHostReq.url);
             let triggerUrl: url.URL;
-            if (this.func?.invokeUrlTemplate) {
-                triggerUrl = new url.URL(this.func?.invokeUrlTemplate);
+            if (this.data?.invokeUrlTemplate) {
+                triggerUrl = new url.URL(this.data?.invokeUrlTemplate);
                 triggerUrl.protocol = hostUrl.protocol; // invokeUrlTemplate seems to use the wrong protocol sometimes. Make sure it matches the hostUrl
             } else {
                 triggerUrl = hostUrl;
@@ -60,7 +54,7 @@ export abstract class FunctionBase implements IFunction {
 
     public get isHttpTrigger(): boolean {
         // invokeUrlTemplate take precedence. Config can't always be retrieved
-        return !!this.func?.invokeUrlTemplate || this.config.isHttpTrigger;
+        return !!this.data?.invokeUrlTemplate || this.config.isHttpTrigger;
     }
 
     public get isTimerTrigger(): boolean {
@@ -78,21 +72,14 @@ export abstract class FunctionBase implements IFunction {
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;
-    public readonly name: string;
     public readonly project: IProjectTreeItem;
-
-    protected readonly _config: ParsedFunctionJson;
-    private _disabled: boolean;
-    private _func: FunctionEnvelope | undefined;
-
     public readonly function: FunctionBase;
+    private _disabled: boolean;
 
-    protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: FunctionEnvelope | undefined, enableProperties: boolean = true) {
+    protected constructor(parent: AzExtParentTreeItem, private readonly func: IFunction, enableProperties: boolean = true) {
         super(parent);
-        this._config = config;
-        this.name = name;
-        this._func = func;
         this.project = this.parent.parent;
+        this.function = func;
 
         if (enableProperties) {
             this.commandId = 'azureFunctions.viewProperties';
@@ -100,32 +87,31 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this.name;
+        return this.function.name;
     }
 
     public get label(): string {
-        return this.name;
+        return this.function.name;
     }
 
     public get isHttpTrigger(): boolean {
-        // invokeUrlTemplate take precedence. Config can't always be retrieved
-        return !!this._func?.invokeUrlTemplate || this._config.isHttpTrigger;
+        return this.func.isHttpTrigger;
     }
 
     public get isTimerTrigger(): boolean {
-        return this._config.isTimerTrigger;
+        return this.function.isTimerTrigger;
     }
 
     public get isAnonymous(): boolean {
-        return this._config.authLevel === HttpAuthLevel.anonymous;
+        return this.function.isAnonymous;
     }
 
     public get rawConfig(): {} {
-        return this._config.data;
+        return this.function.config;
     }
 
     public get triggerBindingType(): string | undefined {
-        return this._config.triggerBinding?.type;
+        return this.function.triggerBindingType;
     }
 
     public get contextValue(): string {
@@ -163,53 +149,29 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     }
 
     public get disabledStateKey(): string {
-        return `AzureWebJobs.${this.name}.Disabled`;
+        return `AzureWebJobs.${this.function.name}.Disabled`;
     }
-
-    public abstract getKey(context: IActionContext): Promise<string | undefined>;
 
     public async initAsync(context: IActionContext): Promise<void> {
         await this.refreshDisabledState(context);
     }
 
     public async getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined> {
-        if (!this.isHttpTrigger) {
-            return undefined;
-        } else {
-            const funcHostReq = await this.parent.parent.getHostRequest(context);
-            const hostUrl = new url.URL(funcHostReq.url);
-            let triggerUrl: url.URL;
-            if (this._func?.invokeUrlTemplate) {
-                triggerUrl = new url.URL(this._func?.invokeUrlTemplate);
-                triggerUrl.protocol = hostUrl.protocol; // invokeUrlTemplate seems to use the wrong protocol sometimes. Make sure it matches the hostUrl
-            } else {
-                triggerUrl = hostUrl;
-                const route: string = (this._config.triggerBinding && this._config.triggerBinding.route) || this.name;
-                const hostJson: IParsedHostJson = await this.parent.parent.getHostJson(context);
-                triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
-            }
-
-            const key: string | undefined = await this.getKey(context);
-            if (key) {
-                triggerUrl.searchParams.set('code', key);
-            }
-
-            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized };
-        }
+        return this.function.getTriggerRequest(context);
     }
 
     /**
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(context: IActionContext): Promise<void> {
-        if (this._func) {
-            this._disabled = !!this._func.isDisabled;
+        if (this.func.data) {
+            this._disabled = !!this.func.data.isDisabled;
         } else {
-            const version: FuncVersion = await this.parent.parent.getVersion(context);
+            const version: FuncVersion = await this.project.getVersion(context);
             if (version === FuncVersion.v1) {
-                this._disabled = this._config.disabled;
+                this._disabled = this.function.config.disabled;
             } else {
-                const appSettings: ApplicationSettings = await this.parent.parent.getApplicationSettings(context);
+                const appSettings: ApplicationSettings = await this.project.getApplicationSettings(context);
 
                 /**
                  * The docs only officially mentioned 'true' and 'false', but here is what I found:

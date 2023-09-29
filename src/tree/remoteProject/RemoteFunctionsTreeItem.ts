@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
+import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { SlotTreeItem } from '../SlotTreeItem';
-import { getFunctionNameFromId, RemoteFunctionTreeItem } from './RemoteFunctionTreeItem';
+import { RemoteFunction, RemoteFunctionTreeItem, getFunctionNameFromId } from './RemoteFunctionTreeItem';
 
 export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
     public readonly parent: SlotTreeItem;
@@ -75,7 +76,13 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
-            async (fe: FunctionEnvelope) => await RemoteFunctionTreeItem.create(context, this, fe),
+            async (fe: FunctionEnvelope) => await RemoteFunctionTreeItem.create(context, this, new RemoteFunction(
+                this.parent,
+                getFunctionNameFromId(nonNullProp(fe, 'id')),
+                new ParsedFunctionJson(fe.config),
+                this.parent.site,
+                fe,
+            )),
             (fe: FunctionEnvelope) => {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }

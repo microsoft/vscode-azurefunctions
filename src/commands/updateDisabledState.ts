@@ -5,9 +5,9 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
+import { FuncVersion } from '../FuncVersion';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
@@ -37,7 +37,7 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
     }
     await node.parent.parent.refresh(context);
 
-    const message: string = isDisabled ? localize('disabledFunction', 'Disabled function "{0}".', node.name) : localize('enabledFunction', 'Enabled function "{0}".', node.name);
+    const message: string = isDisabled ? localize('disabledFunction', 'Disabled function "{0}".', node.function.name) : localize('enabledFunction', 'Enabled function "{0}".', node.function.name);
     // don't wait
     void window.showInformationMessage(message);
     ext.outputChannel.appendLog(message, { resourceName: node.parent.parent.label });

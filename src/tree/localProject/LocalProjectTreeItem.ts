@@ -44,7 +44,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    private readonly localProject: IProjectTreeItem;
+    public readonly project: WorkspaceProject;
 
     public constructor(parent: AzExtParentTreeItem, localProject: WorkspaceProject) {
         const options = localProject.options;
@@ -57,7 +57,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this.language = options.language;
         this.languageModel = options.languageModel;
         this.isIsolated = !!options.isIsolated;
-        this.localProject = localProject;
+        this.project = localProject;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
@@ -70,7 +70,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
-        return this.localProject.getHostRequest(context);
+        return this.project.getHostRequest(context);
     }
 
     public dispose(): void {
@@ -101,19 +101,19 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
-        return this.localProject.getHostJson(context);
+        return this.project.getHostJson(context);
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {
-        return this.localProject.getVersion(context);
+        return this.project.getVersion(context);
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
-        return this.localProject.getApplicationSettings(context);
+        return this.project.getApplicationSettings(context);
     }
 
     public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
-        await this.localProject.setApplicationSetting(context, key, value);
+        await this.project.setApplicationSetting(context, key, value);
     }
 
     private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {
