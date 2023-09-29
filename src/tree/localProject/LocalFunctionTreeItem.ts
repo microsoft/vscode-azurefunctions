@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { ILocalFunction } from '../../workspace/listLocalFunctions';
+import { ILocalFunction } from '../../workspace/LocalFunction';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 

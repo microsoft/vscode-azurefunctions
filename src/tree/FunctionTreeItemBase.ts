@@ -11,7 +11,7 @@ import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { IFunction } from '../workspace/listLocalFunctions';
+import { IFunction } from '../workspace/LocalFunction';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectResource, getProjectContextValue } from './projectContextValues';

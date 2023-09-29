@@ -4,10 +4,29 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope } from "@azure/arm-appservice";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { FunctionBase } from "../tree/FunctionTreeItemBase";
-import { IProjectTreeItem } from "../tree/IProjectTreeItem";
-import { ILocalFunction } from "./listLocalFunctions";
+import { FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
+
+export interface IFunction {
+    project: IProjectTreeItem;
+
+    data?: FunctionEnvelope;
+    config: ParsedFunctionJson;
+    name: string;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
+    isAnonymous: boolean;
+    triggerBindingType: string | undefined;
+
+    getKey(context: IActionContext): Promise<string | undefined>
+    getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined>;
+}
+
+export interface ILocalFunction extends IFunction {
+    functionJsonPath?: string;
+}
 
 export class LocalFunction extends FunctionBase implements ILocalFunction {
     constructor(

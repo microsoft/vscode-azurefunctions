@@ -8,32 +8,13 @@ import { AzExtFsExtra, IActionContext, callWithTelemetryAndErrorHandling, nonNul
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
-import { FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
-import { LocalFunction } from "./LocalFunction";
+import { ILocalFunction, LocalFunction } from "./LocalFunction";
 import { WorkspaceProject } from "./listLocalProjects";
 import path = require("path");
 
-export interface IFunction {
-    project: IProjectTreeItem;
-
-    data?: FunctionEnvelope;
-    config: ParsedFunctionJson;
-    name: string;
-    isHttpTrigger: boolean;
-    isTimerTrigger: boolean;
-    isAnonymous: boolean;
-    triggerBindingType: string | undefined;
-
-    getKey(context: IActionContext): Promise<string | undefined>
-    getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined>;
-}
-
-export interface ILocalFunction extends IFunction {
-    functionJsonPath?: string;
-}
 
 export class ProjectNotRunningError extends Error {
 }
@@ -88,7 +69,7 @@ export async function listLocalFunctions(project: WorkspaceProject): Promise<Lis
 /**
  * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
 */
-async function getFunctionsForHostedProject(context: IActionContext, project: WorkspaceProject): Promise<IFunction[]> {
+async function getFunctionsForHostedProject(context: IActionContext, project: WorkspaceProject): Promise<ILocalFunction[]> {
     if (runningFuncTaskMap.has(project.options.folder)) {
         const hostRequest = await project.getHostRequest(context);
         const functions = await requestUtils.sendRequestWithExtTimeout(context, {
