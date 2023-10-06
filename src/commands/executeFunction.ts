@@ -17,8 +17,9 @@ import { FuncHostRequest } from '../tree/IProjectTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
+import { IFunction } from '../workspace/LocalFunction';
 
-export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
+export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase | IFunction): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         const noItemFoundErrorMessage: string = localize('noFunctions', 'No functions found.');
@@ -28,16 +29,17 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         });
     }
 
-    const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
+    const func = node instanceof FunctionTreeItemBase ? node.function : node;
+
     const triggerBindingType: string | undefined = node.triggerBindingType;
     context.telemetry.properties.triggerBindingType = triggerBindingType;
 
     let functionInput: string | {} = '';
-    if (!node.isTimerTrigger) {
+    if (!func.isTimerTrigger) {
         const prompt: string = localize('enterRequestBody', 'Enter request body');
         let value: string | undefined;
         if (triggerBindingType) {
-            const version: FuncVersion = await node.parent.parent.getVersion(context);
+            const version: FuncVersion = await node.project.getVersion(context);
             const templateProvider = ext.templateProvider.get(context);
             value = await templateProvider.tryGetSampleData(context, version, triggerBindingType);
             if (value) {
@@ -57,21 +59,23 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
 
     let triggerRequest: FuncHostRequest;
     let body: {};
-    if (node.isHttpTrigger) {
-        triggerRequest = nonNullValue(await node.getTriggerRequest(context), 'triggerRequest');
+    if (func.isHttpTrigger) {
+        triggerRequest = nonNullValue(await func.getTriggerRequest(context), 'triggerRequest');
         body = functionInput;
     } else {
-        triggerRequest = await node.parent.parent.getHostRequest(context);
+        triggerRequest = await func.project.getHostRequest(context);
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        triggerRequest.url = `${triggerRequest.url}/admin/functions/${node.function.name}`;
+        triggerRequest.url = `${triggerRequest.url}/admin/functions/${func.name}`;
         body = { input: functionInput };
     }
 
     let responseText: string | null | undefined;
-    await node.runWithTemporaryDescription(context, localize('executing', 'Executing...'), async () => {
+    const execute = async () => {
         const headers = createHttpHeaders({
             'Content-Type': 'application/json',
         });
+
+        const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
         if (client) {
             headers.set('x-functions-key', (await client.listHostKeys()).masterKey ?? '');
         }
@@ -97,8 +101,16 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
                 throw error;
             }
         }
-    });
+    }
 
-    const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.function.name, responseText) : localize('executed', 'Executed function "{0}"', node.function.name);
+    if (node instanceof FunctionTreeItemBase) {
+        await node.runWithTemporaryDescription(context, localize('executing', 'Executing...'), async () => {
+            await execute();
+        });
+    } else {
+        await execute();
+    }
+
+    const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', func.name, responseText) : localize('executed', 'Executed function "{0}"', func.name);
     void window.showInformationMessage(message);
 }
