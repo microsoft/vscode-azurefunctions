@@ -25,7 +25,7 @@ interface InvalidLocalProject extends UnitializedLocalProject {
 }
 
 interface ListWorkspaceProjectsResult {
-    projects: WorkspaceProject[];
+    initializedProjects: WorkspaceProject[];
     unintializedProjects: UnitializedLocalProject[];
     invalidProjects: InvalidLocalProject[];
 }
@@ -34,7 +34,7 @@ export async function listLocalProjects(): Promise<ListWorkspaceProjectsResult> 
     const result = await callWithTelemetryAndErrorHandling('listLocalProjects', async (context) => {
         context.errorHandling.rethrow = true;
         const result: ListWorkspaceProjectsResult = {
-            projects: [],
+            initializedProjects: [],
             unintializedProjects: [],
             invalidProjects: [],
         };
@@ -63,7 +63,7 @@ export async function listLocalProjects(): Promise<ListWorkspaceProjectsResult> 
                         } else {
                             effectiveProjectPath = projectPath;
                         }
-                        result.projects.push(new LocalProject({
+                        result.initializedProjects.push(new LocalProject({
                             effectiveProjectPath,
                             folder: workspaceFolder,
                             language,
