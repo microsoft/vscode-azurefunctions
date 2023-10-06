@@ -63,7 +63,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     } else {
         triggerRequest = await node.parent.parent.getHostRequest(context);
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        triggerRequest.url = `${triggerRequest.url}/admin/functions/${node.name}`;
+        triggerRequest.url = `${triggerRequest.url}/admin/functions/${node.function.name}`;
         body = { input: functionInput };
     }
 
@@ -99,6 +99,6 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         }
     });
 
-    const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.name, responseText) : localize('executed', 'Executed function "{0}"', node.name);
+    const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.function.name, responseText) : localize('executed', 'Executed function "{0}"', node.function.name);
     void window.showInformationMessage(message);
 }
