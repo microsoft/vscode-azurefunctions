@@ -62,7 +62,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         const workspaceProjects = await listLocalProjects();
 
-        for (const project of workspaceProjects.projects) {
+        for (const project of workspaceProjects.initializedProjects) {
             hasLocalProject = true;
             const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, project);
             this._projectDisposables.push(treeItem);

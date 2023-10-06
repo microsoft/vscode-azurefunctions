@@ -22,7 +22,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
 
         const localProjects = await listLocalProjects();
 
-        for (const project of localProjects.projects) {
+        for (const project of localProjects.initializedProjects) {
             const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, project);
             this._projectDisposables.push(treeItem);
             children.push(treeItem);
