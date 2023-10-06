@@ -5,9 +5,9 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
+import { FuncVersion } from '../FuncVersion';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 

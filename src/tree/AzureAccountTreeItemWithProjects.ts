@@ -6,16 +6,12 @@
 import { AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { getFunctionAppName, getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
-import { funcVersionSetting, hostFileName, javaBuildTool, JavaBuildTool, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting } from '../constants';
+import { Disposable, workspace } from 'vscode';
+import { funcVersionSetting, hostFileName, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { dotnetUtils } from '../utils/dotnetUtils';
 import { treeUtils } from '../utils/treeUtils';
-import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { listLocalProjects } from '../workspace/listLocalProjects';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { InitLocalProjectTreeItem } from './localProject/InitLocalProjectTreeItem';
 import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
@@ -64,43 +60,25 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         Disposable.from(...this._projectDisposables).dispose();
         this._projectDisposables = [];
 
-        const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
-        for (const folder of folders) {
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder);
-            if (projectPath) {
-                try {
-                    hasLocalProject = true;
+        const workspaceProjects = await listLocalProjects();
 
-                    const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                    const languageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
-                    const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
-                    if (language === undefined || version === undefined) {
-                        children.push(new InitLocalProjectTreeItem(this, projectPath, folder));
-                    } else {
-                        let preCompiledProjectPath: string | undefined;
-                        let effectiveProjectPath: string;
-                        let isIsolated: boolean | undefined;
-                        const compiledProjectInfo: CompiledProjectInfo | undefined = await getCompiledProjectInfo(context, projectPath, language);
-                        if (compiledProjectInfo) {
-                            preCompiledProjectPath = projectPath;
-                            effectiveProjectPath = compiledProjectInfo.compiledProjectPath;
-                            isIsolated = compiledProjectInfo.isIsolated;
-                        } else {
-                            effectiveProjectPath = projectPath;
-                        }
+        for (const project of workspaceProjects.initializedProjects) {
+            hasLocalProject = true;
+            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, project);
+            this._projectDisposables.push(treeItem);
+            children.push(treeItem);
+            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(project.options.folder.uri.fsPath, hostFileName)));
+            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(project.options.folder.uri.fsPath, '*', hostFileName)));
+        }
 
+        for (const unintializedProject of workspaceProjects.unintializedProjects) {
+            hasLocalProject = true;
+            children.push(new InitLocalProjectTreeItem(this, unintializedProject.projectPath, unintializedProject.workspaceFolder));
+        }
 
-                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, languageModel, version, preCompiledProjectPath, isIsolated });
-                        this._projectDisposables.push(treeItem);
-                        children.push(treeItem);
-                    }
-                } catch (error) {
-                    children.push(new InvalidLocalProjectTreeItem(this, projectPath, error, folder));
-                }
-            }
-
-            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, hostFileName)));
-            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, '*', hostFileName)));
+        for (const invalidProject of workspaceProjects.invalidProjects) {
+            hasLocalProject = true;
+            children.push(new InvalidLocalProjectTreeItem(this, invalidProject.projectPath, invalidProject.error, invalidProject.workspaceFolder));
         }
 
         if (!hasLocalProject && children.length > 0 && children[0] instanceof GenericTreeItem) {
@@ -143,32 +121,5 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         }
 
         return super.pickTreeItemImpl(expectedContextValues);
-    }
-}
-
-type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
-
-async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
-    if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
-        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, projectLanguage, projectPath);
-        if (projFiles.length === 1) {
-            const targetFramework: string = await dotnetUtils.getTargetFramework(projFiles[0]);
-            const isIsolated = await dotnetUtils.getIsIsolated(projFiles[0]);
-            return { compiledProjectPath: path.join(projectPath, dotnetUtils.getDotnetDebugSubpath(targetFramework)), isIsolated };
-        } else {
-            throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
-        }
-    } else if (projectLanguage === ProjectLanguage.Java) {
-        const buildTool: JavaBuildTool | undefined = getWorkspaceSetting(javaBuildTool, projectPath);
-        const functionAppName: string | undefined = await getFunctionAppName(projectPath, buildTool);
-        if (!functionAppName) {
-            throw new Error(localize('unableToGetFunctionAppName', 'Unable to detect property "functionAppName" in pom.xml.'));
-        } else {
-            return { compiledProjectPath: path.join(projectPath, getJavaDebugSubpath(functionAppName, buildTool)), isIsolated: false };
-        }
-    } else if (projectLanguage === ProjectLanguage.Ballerina) {
-        return { compiledProjectPath: projectPath, isIsolated: false };
-    } else {
-        return undefined;
     }
 }

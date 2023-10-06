@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Disposable, Task, tasks, TaskScope, WorkspaceFolder } from 'vscode';
+import { Disposable, TaskScope, WorkspaceFolder } from 'vscode';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
-import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
-import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
-import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { getFuncPortFromTaskOrProject, isFuncHostTask, onFuncTaskStarted, runningFuncPortMap } from '../../funcCoreTools/funcHostTask';
+import { functionJsonFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
+import { IParsedHostJson } from '../../funcConfig/host';
+import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
 import { FuncVersion } from '../../FuncVersion';
-import { requestUtils } from '../../utils/requestUtils';
+import { WorkspaceProject } from '../../workspace/LocalProject';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
@@ -41,11 +40,13 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     public readonly language: ProjectLanguage;
     public readonly languageModel: number | undefined;
     public readonly isIsolated: boolean;
+    public readonly project: WorkspaceProject;
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    public constructor(parent: AzExtParentTreeItem, options: LocalProjectOptions) {
+    public constructor(parent: AzExtParentTreeItem, localProject: WorkspaceProject) {
+        const options = localProject.options;
         super(parent, options.preCompiledProjectPath || options.effectiveProjectPath, options.folder);
         this.effectiveProjectPath = options.effectiveProjectPath;
         this.workspacePath = options.folder.uri.fsPath;
@@ -55,6 +56,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this.language = options.language;
         this.languageModel = options.languageModel;
         this.isIsolated = !!options.isIsolated;
+        this.project = localProject;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
@@ -66,26 +68,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
-        let port = runningFuncPortMap.get(this.workspaceFolder);
-        if (!port) {
-            const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === this.workspaceFolder && isFuncHostTask(t));
-            port = await getFuncPortFromTaskOrProject(context, funcTask, this.effectiveProjectPath);
-        }
-
-        const url = `http://localhost:${port}`;
-        try {
-            await requestUtils.sendRequestWithExtTimeout(context, { url: url, method: 'GET' });
-        } catch {
-            try {
-                const httpsUrl = url.replace('http', 'https');
-                await requestUtils.sendRequestWithExtTimeout(context, { url: httpsUrl, method: 'GET', rejectUnauthorized: false });
-                return { url: httpsUrl, rejectUnauthorized: false };
-            } catch {
-                // ignore
-            }
-        }
-
-        return { url: url };
+        return this.project.getHostRequest(context);
     }
 
     public dispose(): void {
@@ -115,25 +98,20 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         return undefined;
     }
 
-    public async getHostJson(): Promise<IParsedHostJson> {
-        const version: FuncVersion = await this.getVersion();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-        const data = await AzExtFsExtra.readJSON<any>(path.join(this.effectiveProjectPath, hostFileName));
-        return parseHostJson(data, version);
+    public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
+        return this.project.getHostJson(context);
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    public async getVersion(): Promise<FuncVersion> {
-        return this.version;
+    public async getVersion(context: IActionContext): Promise<FuncVersion> {
+        return this.project.getVersion(context);
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
-        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(this.effectiveProjectPath, localSettingsFileName));
-        return localSettings.Values || {};
+        return this.project.getApplicationSettings(context);
     }
 
     public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
-        await setLocalAppSetting(context, this.effectiveProjectPath, key, value, MismatchBehavior.Overwrite);
+        await this.project.setApplicationSetting(context, key, value);
     }
 
     private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {
