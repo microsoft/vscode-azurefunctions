@@ -34,9 +34,10 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
         { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
     );
 
+    // test python v1 model
     testCases.push({
         ...getPythonValidateOptions('.venv', version),
-        inputs: [TestInput.UseDefaultValue]
+        inputs: [/Model V1/i, TestInput.UseDefaultValue]
     });
 
     const appName: string = 'javaApp';
