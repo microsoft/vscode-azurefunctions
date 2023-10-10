@@ -128,9 +128,9 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
 
             const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
             const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
-            assertTemplateIsV1(jsTemplate);
 
             if (jsTemplate) {
+                assertTemplateIsV1(jsTemplate);
                 csharpTemplate.name = jsTemplate.name;
                 csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;
                 for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
