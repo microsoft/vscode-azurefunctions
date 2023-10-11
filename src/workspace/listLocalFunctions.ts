@@ -11,13 +11,10 @@ import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
+import { ProjectNotRunningError } from "../vscode-azurefunctions.api";
 import { ILocalFunction, LocalFunction } from "./LocalFunction";
-import { WorkspaceProject } from "./LocalProject";
+import { LocalProjectInternal } from "./listLocalProjects";
 import path = require("path");
-
-
-export class ProjectNotRunningError extends Error {
-}
 
 interface InvalidLocalFunction {
     error: unknown;
@@ -32,7 +29,7 @@ interface ListLocalFunctionsResult {
 /**
  * @throws {ProjectNotRunningError} if a locally running project is required to list functions, but none was found
  */
-export async function listLocalFunctions(project: WorkspaceProject): Promise<ListLocalFunctionsResult> {
+export async function listLocalFunctions(project: LocalProjectInternal): Promise<ListLocalFunctionsResult> {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return (await callWithTelemetryAndErrorHandling('listLocalFunctions', async (context) => {
         context.errorHandling.rethrow = true;
@@ -69,7 +66,7 @@ export async function listLocalFunctions(project: WorkspaceProject): Promise<Lis
 /**
  * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
 */
-async function getFunctionsForHostedProject(context: IActionContext, project: WorkspaceProject): Promise<ILocalFunction[]> {
+async function getFunctionsForHostedProject(context: IActionContext, project: LocalProjectInternal): Promise<ILocalFunction[]> {
     if (runningFuncTaskMap.has(project.options.folder)) {
         const hostRequest = await project.getHostRequest(context);
         const functions = await requestUtils.sendRequestWithExtTimeout(context, {

@@ -8,7 +8,7 @@ import { Disposable } from "vscode";
 import { InitLocalProjectTreeItem } from "./tree/localProject/InitLocalProjectTreeItem";
 import { InvalidLocalProjectTreeItem } from "./tree/localProject/InvalidLocalProjectTreeItem";
 import { LocalProjectTreeItem } from "./tree/localProject/LocalProjectTreeItem";
-import { listLocalProjects } from "./workspace/listLocalProjects";
+import { LocalProjectInternal, listLocalProjects } from "./workspace/listLocalProjects";
 
 export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider {
 
@@ -23,7 +23,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
         const localProjects = await listLocalProjects();
 
         for (const project of localProjects.initializedProjects) {
-            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, project);
+            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, project as LocalProjectInternal);
             this._projectDisposables.push(treeItem);
             children.push(treeItem);
         }

@@ -11,7 +11,7 @@ import { funcVersionSetting, hostFileName, projectLanguageSetting, projectSubpat
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { listLocalProjects } from '../workspace/listLocalProjects';
+import { listLocalProjects, LocalProjectInternal } from '../workspace/listLocalProjects';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { InitLocalProjectTreeItem } from './localProject/InitLocalProjectTreeItem';
 import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
@@ -64,7 +64,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         for (const project of workspaceProjects.initializedProjects) {
             hasLocalProject = true;
-            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, project);
+            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, project as LocalProjectInternal);
             this._projectDisposables.push(treeItem);
             children.push(treeItem);
             this._projectDisposables.push(createRefreshFileWatcher(this, path.join(project.options.folder.uri.fsPath, hostFileName)));

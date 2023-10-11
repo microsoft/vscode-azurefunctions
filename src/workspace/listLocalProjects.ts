@@ -10,30 +10,29 @@ import { tryGetFunctionProjectRoot } from "../commands/createNewProject/verifyIs
 import { getFunctionAppName, getJavaDebugSubpath } from "../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep";
 import { JavaBuildTool, ProjectLanguage, funcVersionSetting, javaBuildTool, projectLanguageModelSetting, projectLanguageSetting } from "../constants";
 import { localize } from "../localize";
+import { IProjectTreeItem } from "../tree/IProjectTreeItem";
 import { dotnetUtils } from "../utils/dotnetUtils";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
-import { LocalProject, WorkspaceProject } from "./LocalProject";
+import { ListLocalProjectsResult } from "../vscode-azurefunctions.api";
+import { LocalProject } from "./LocalProject";
 import path = require("path");
 
-interface UnitializedLocalProject {
-    workspaceFolder: vscode.WorkspaceFolder;
-    projectPath: string;
+export type LocalProjectOptionsInternal = {
+    effectiveProjectPath: string;
+    folder: vscode.WorkspaceFolder;
+    version: FuncVersion;
+    language: ProjectLanguage;
+    languageModel?: number;
+    preCompiledProjectPath?: string
+    isIsolated?: boolean;
 }
 
-interface InvalidLocalProject extends UnitializedLocalProject {
-    error: unknown;
-}
+export type LocalProjectInternal = { options: LocalProjectOptionsInternal } & IProjectTreeItem;
 
-interface ListWorkspaceProjectsResult {
-    initializedProjects: WorkspaceProject[];
-    unintializedProjects: UnitializedLocalProject[];
-    invalidProjects: InvalidLocalProject[];
-}
-
-export async function listLocalProjects(): Promise<ListWorkspaceProjectsResult> {
+export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
     const result = await callWithTelemetryAndErrorHandling('listLocalProjects', async (context) => {
         context.errorHandling.rethrow = true;
-        const result: ListWorkspaceProjectsResult = {
+        const result: ListLocalProjectsResult = {
             initializedProjects: [],
             unintializedProjects: [],
             invalidProjects: [],

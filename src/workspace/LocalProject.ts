@@ -10,18 +10,16 @@ import { hostFileName, localSettingsFileName } from "../constants";
 import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
 import { ILocalSettingsJson, MismatchBehavior, getLocalSettingsJson, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncPortMap } from "../funcCoreTools/funcHostTask";
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
-import { LocalProjectOptions } from "../tree/localProject/LocalProjectTreeItem";
+import { ApplicationSettings, FuncHostRequest } from "../tree/IProjectTreeItem";
 import { ProjectSource } from "../tree/projectContextValues";
 import { requestUtils } from "../utils/requestUtils";
+import { LocalProjectInternal, LocalProjectOptionsInternal } from "./listLocalProjects";
 import path = require("path");
 
-export type WorkspaceProject = { options: LocalProjectOptions } & IProjectTreeItem;
-
-export class LocalProject implements WorkspaceProject {
+export class LocalProject implements LocalProjectInternal {
     source: ProjectSource = ProjectSource.Local;
 
-    constructor(public readonly options: LocalProjectOptions) { }
+    constructor(public readonly options: LocalProjectOptionsInternal) { }
 
     public async getHostJson(): Promise<IParsedHostJson> {
         const version: FuncVersion = await this.getVersion();
