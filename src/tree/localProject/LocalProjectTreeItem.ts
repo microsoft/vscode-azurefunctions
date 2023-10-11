@@ -11,22 +11,13 @@ import { functionJsonFileName, localSettingsFileName, ProjectLanguage } from '..
 import { IParsedHostJson } from '../../funcConfig/host';
 import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
 import { FuncVersion } from '../../FuncVersion';
-import { WorkspaceProject } from '../../workspace/LocalProject';
+import { LocalProjectInternal } from '../../workspace/listLocalProjects';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
-export type LocalProjectOptions = {
-    effectiveProjectPath: string;
-    folder: WorkspaceFolder;
-    version: FuncVersion;
-    language: ProjectLanguage;
-    languageModel?: number;
-    preCompiledProjectPath?: string
-    isIsolated?: boolean;
-}
 
 export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {
     public static contextValue: string = 'azFuncLocalProject';
@@ -40,12 +31,12 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     public readonly language: ProjectLanguage;
     public readonly languageModel: number | undefined;
     public readonly isIsolated: boolean;
-    public readonly project: WorkspaceProject;
+    public readonly project: LocalProjectInternal;
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    public constructor(parent: AzExtParentTreeItem, localProject: WorkspaceProject) {
+    public constructor(parent: AzExtParentTreeItem, localProject: LocalProjectInternal) {
         const options = localProject.options;
         super(parent, options.preCompiledProjectPath || options.effectiveProjectPath, options.folder);
         this.effectiveProjectPath = options.effectiveProjectPath;

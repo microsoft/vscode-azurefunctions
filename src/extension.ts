@@ -35,6 +35,8 @@ import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
+import { listLocalFunctions } from './workspace/listLocalFunctions';
+import { listLocalProjects } from './workspace/listLocalProjects';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -109,7 +111,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         createFunction: createFunctionFromApi,
         downloadAppSettings: downloadAppSettingsFromApi,
         uploadAppSettings: uploadAppSettingsFromApi,
-        apiVersion: '1.8.0'
+        listLocalProjects: listLocalProjects,
+        listLocalFunctions: listLocalFunctions,
+        apiVersion: '1.9.0'
     }]);
 }
 
