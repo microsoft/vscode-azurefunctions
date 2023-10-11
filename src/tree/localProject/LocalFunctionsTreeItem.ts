@@ -10,11 +10,13 @@ import { functionJsonFileName } from '../../constants';
 import { localize } from '../../localize';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import { ProjectNotRunningError } from '../../vscode-azurefunctions.api';
 import { listLocalFunctions } from '../../workspace/listLocalFunctions';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalProjectTreeItem } from './LocalProjectTreeItem';
+
+export class ProjectNotRunningError extends Error {
+}
 
 export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     public readonly parent: LocalProjectTreeItem;

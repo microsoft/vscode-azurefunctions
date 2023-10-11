@@ -8,10 +8,9 @@ import { AzExtFsExtra, IActionContext, callWithTelemetryAndErrorHandling, nonNul
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
-import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
+import { ProjectNotRunningError, getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
-import { ProjectNotRunningError } from "../vscode-azurefunctions.api";
 import { ILocalFunction, LocalFunction } from "./LocalFunction";
 import { LocalProjectInternal } from "./listLocalProjects";
 import path = require("path");
