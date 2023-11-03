@@ -162,11 +162,12 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 });
             }
 
-            newSiteConfig.appSettings = appSettings;
-
-            return newSiteConfig;
         }
+
+        newSiteConfig.appSettings = appSettings;
+        return newSiteConfig;
     }
+}
 
 function getNewFileShareName(siteName: string): string {
     const randomLetters: number = 6;
