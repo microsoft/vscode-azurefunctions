@@ -153,10 +153,18 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
                 value: context.appInsightsComponent.instrumentationKey
             });
+
+            if (isElasticPremium && context.newSiteStack?.stack.value === 'java') {
+                // turn on full monitoring for Java on Elastic Premium
+                appSettings.push({
+                    name: 'APPLICATIONINSIGHTS_ENABLE_AGENT',
+                    value: 'true'
+                });
+            }
+
         }
 
         newSiteConfig.appSettings = appSettings;
-
         return newSiteConfig;
     }
 }
