@@ -82,6 +82,13 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             ]
         },
         {
+            functionName: 'Event Grid Cloud Event trigger',
+            inputs: [
+                'TestCompany.TestFunction'
+            ],
+            skip: isIsolated
+        },
+        {
             functionName: 'Azure Event Hub trigger',
             inputs: [
                 'TestCompany.TestFunction',
