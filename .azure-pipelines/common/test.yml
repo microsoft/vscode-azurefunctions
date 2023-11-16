@@ -48,11 +48,6 @@ steps:
     version: 6.0.x
     includePreviewVersions: true
 
-- task: UseDotNet@2
-  displayName: 'Use .NET sdk 5.0.x'
-  inputs:
-    version: 5.0.x
-
 - task: Npm@1
   displayName: 'Test'
   inputs:
