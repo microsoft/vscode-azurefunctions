@@ -15,11 +15,7 @@ jobs:
           signType: '$(SignType)'
         env:
           TeamName: 'AzureTools'
-      - task: UseDotNet@2
-        displayName: 'Use .NET sdk 5.0.x'
-        inputs:
-          version: 5.0.x
-
+          
       - task: UseDotNet@2
         displayName: 'Use .NET sdk 6.0.x'
         inputs:
@@ -43,16 +39,6 @@ jobs:
         inputs:
           projects: '$(ProjectPath)'
           arguments: '--configuration $(BuildConfiguration)'
-
-      - task: DotNetCoreCLI@2
-        displayName: 'dotnet publish 5.0'
-        inputs:
-          command: publish
-          publishWebProjects: false
-          projects: '$(ProjectPath)'
-          arguments: '--configuration $(BuildConfiguration) --framework net5.0 --no-build'
-          zipAfterPublish: false
-          modifyOutputPath: false
 
       - task: DotNetCoreCLI@2
         displayName: 'dotnet publish 6.0'
