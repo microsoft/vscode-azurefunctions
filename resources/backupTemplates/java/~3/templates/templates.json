@@ -200,7 +200,7 @@
       ]
     },
     "files": {
-      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.annotation.*;\nimport com.microsoft.azure.functions.*;\n\n/**\n * Azure Functions with Cosmos DB trigger.\n */\npublic class $className$ {\n    /**\n     * This function will be invoked when there are inserts or updates in the specified database and collection.\n     */\n    @FunctionName(\"$functionName$\")\n    public void run(\n        @CosmosDBTrigger(\n            name = \"items\",\n            databaseName = \"$databaseName$\",\n            collectionName = \"$collectionName$\",\n            leaseCollectionName=\"$leaseCollectionName$\",\n            connectionStringSetting = \"$connectionStringSetting$\",\n            createLeaseCollectionIfNotExists = $createLeaseCollectionIfNotExists$\n        )\n        Object[] items,\n        final ExecutionContext context\n    ) {\n        context.getLogger().info(\"Java Cosmos DB trigger function executed.\");\n        context.getLogger().info(\"Documents count: \" + items.length);\n    }\n}\n"
+      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.annotation.*;\nimport com.microsoft.azure.functions.*;\n\n/**\n * Azure Functions with Cosmos DB trigger.\n * \n * This template uses an outdated version of the Azure Cosmos DB extension. Learn about the new extension at https://aka.ms/cosmos-db-azure-functions-extension-v4\n */\npublic class $className$ {\n    /**\n     * This function will be invoked when there are inserts or updates in the specified database and collection.\n     */\n    @FunctionName(\"$functionName$\")\n    public void run(\n        @CosmosDBTrigger(\n            name = \"items\",\n            databaseName = \"$databaseName$\",\n            collectionName = \"$collectionName$\",\n            leaseCollectionName=\"$leaseCollectionName$\",\n            connectionStringSetting = \"$connectionStringSetting$\",\n            createLeaseCollectionIfNotExists = $createLeaseCollectionIfNotExists$\n        )\n        Object[] items,\n        final ExecutionContext context\n    ) {\n        context.getLogger().info(\"Java Cosmos DB trigger function executed.\");\n        context.getLogger().info(\"Documents count: \" + items.length);\n    }\n}\n"
     }
   },
   {
@@ -395,7 +395,162 @@
       ]
     },
     "files": {
-      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.annotation.*;\nimport com.microsoft.azure.functions.*;\nimport java.util.*;\n\nimport com.microsoft.durabletask.*;\nimport com.microsoft.durabletask.azurefunctions.DurableActivityTrigger;\nimport com.microsoft.durabletask.azurefunctions.DurableClientContext;\nimport com.microsoft.durabletask.azurefunctions.DurableClientInput;\nimport com.microsoft.durabletask.azurefunctions.DurableOrchestrationTrigger;\n\n/**\n * Please follow the below steps to run this durable function sample\n * 1. Send an HTTP GET/POST request to endpoint `StartHelloCities` to run a durable function\n * 2. Send request to statusQueryGetUri in `StartHelloCities` response to get the status of durable function\n * For more instructions, please refer https://aka.ms/durable-function-java\n * \n * Please add com.microsoft:durabletask-azure-functions to your project dependencies\n * Please add `\"extensions\": { \"durableTask\": { \"hubName\": \"JavaTestHub\" }}` to your host.json\n */\npublic class $className$ {\n    /**\n     * This HTTP-triggered function starts the orchestration.\n     */\n    @FunctionName(\"StartOrchestration\")\n    public HttpResponseMessage startOrchestration(\n            @HttpTrigger(name = \"req\", methods = {HttpMethod.GET, HttpMethod.POST}, authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<Optional<String>> request,\n            @DurableClientInput(name = \"durableContext\") DurableClientContext durableContext,\n            final ExecutionContext context) {\n        context.getLogger().info(\"Java HTTP trigger processed a request.\");\n\n        DurableTaskClient client = durableContext.getClient();\n        String instanceId = client.scheduleNewOrchestrationInstance(\"Cities\");\n        context.getLogger().info(\"Created new Java orchestration with instance ID = \" + instanceId);\n        return durableContext.createCheckStatusResponse(request, instanceId);\n    }\n\n    /**\n     * This is the orchestrator function. The OrchestrationRunner.loadAndRun() static\n     * method is used to take the function input and execute the orchestrator logic.\n     */\n    @FunctionName(\"Cities\")\n    public String citiesOrchestrator(\n            @DurableOrchestrationTrigger(name = \"taskOrchestrationContext\") TaskOrchestrationContext ctx) {\n        String result = \"\";\n        result += ctx.callActivity(\"Capitalize\", \"Tokyo\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"London\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"Seattle\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"Austin\", String.class).await();\n        return result;\n    }\n\n    /**\n     * This is the activity function that gets invoked by the orchestration.\n     */\n    @FunctionName(\"Capitalize\")\n    public String capitalize(\n            @DurableActivityTrigger(name = \"name\") String name,\n            final ExecutionContext context) {\n        context.getLogger().info(\"Capitalizing: \" + name);\n        return name.toUpperCase();\n    }\n}"
+      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.annotation.*;\nimport com.microsoft.azure.functions.*;\nimport java.util.*;\n\nimport com.microsoft.durabletask.*;\nimport com.microsoft.durabletask.azurefunctions.DurableActivityTrigger;\nimport com.microsoft.durabletask.azurefunctions.DurableClientContext;\nimport com.microsoft.durabletask.azurefunctions.DurableClientInput;\nimport com.microsoft.durabletask.azurefunctions.DurableOrchestrationTrigger;\n\n/**\n * Please follow the below steps to run this durable function sample\n * 1. Send an HTTP GET/POST request to endpoint `StartHelloCities` to run a durable function\n * 2. Send request to statusQueryGetUri in `StartHelloCities` response to get the status of durable function\n * For more instructions, please refer https://aka.ms/durable-function-java\n * \n * Please add com.microsoft:durabletask-azure-functions to your project dependencies\n * Please add `\"extensions\": { \"durableTask\": { \"hubName\": \"JavaTestHub\" }}` to your host.json\n */\npublic class $className$ {\n    /**\n     * This HTTP-triggered function starts the orchestration.\n     */\n    @FunctionName(\"StartOrchestration\")\n    public HttpResponseMessage startOrchestration(\n            @HttpTrigger(name = \"req\", methods = {HttpMethod.GET, HttpMethod.POST}, authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<Optional<String>> request,\n            @DurableClientInput(name = \"durableContext\") DurableClientContext durableContext,\n            final ExecutionContext context) {\n        context.getLogger().info(\"Java HTTP trigger processed a request.\");\n\n        DurableTaskClient client = durableContext.getClient();\n        String instanceId = client.scheduleNewOrchestrationInstance(\"Cities\");\n        context.getLogger().info(\"Created new Java orchestration with instance ID = \" + instanceId);\n        return durableContext.createCheckStatusResponse(request, instanceId);\n    }\n\n    /**\n     * This is the orchestrator function, which can schedule activity functions, create durable timers,\n     * or wait for external events in a way that's completely fault-tolerant.\n     */\n    @FunctionName(\"Cities\")\n    public String citiesOrchestrator(\n            @DurableOrchestrationTrigger(name = \"ctx\") TaskOrchestrationContext ctx) {\n        String result = \"\";\n        result += ctx.callActivity(\"Capitalize\", \"Tokyo\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"London\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"Seattle\", String.class).await() + \", \";\n        result += ctx.callActivity(\"Capitalize\", \"Austin\", String.class).await();\n        return result;\n    }\n\n    /**\n     * This is the activity function that gets invoked by the orchestration.\n     */\n    @FunctionName(\"Capitalize\")\n    public String capitalize(\n            @DurableActivityTrigger(name = \"name\") String name,\n            final ExecutionContext context) {\n        context.getLogger().info(\"Capitalizing: \" + name);\n        return name.toUpperCase();\n    }\n}"
+    }
+  },
+  {
+    "id": "SqlOutputBinding-Java",
+    "metadata": {
+      "name": "SqlOutputBinding",
+      "description": "$SqlOutputBinding_description",
+      "defaultFunctionName": "SqlOutputBindingJava",
+      "language": "Java",
+      "userPrompt": [
+        "table",
+        "SqlConnectionString"
+      ]
+    },
+    "bundle": [
+      "~4"
+    ],
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "type": "sql",
+          "name": "items",
+          "direction": "out",
+          "commandText": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.HttpMethod;\nimport com.microsoft.azure.functions.HttpRequestMessage;\nimport com.microsoft.azure.functions.HttpResponseMessage;\nimport com.microsoft.azure.functions.HttpStatus;\nimport com.microsoft.azure.functions.OutputBinding;\nimport com.microsoft.azure.functions.annotation.AuthorizationLevel;\nimport com.microsoft.azure.functions.annotation.FunctionName;\nimport com.microsoft.azure.functions.annotation.HttpTrigger;\nimport com.microsoft.azure.functions.sql.annotation.SQLOutput;\nimport com.fasterxml.jackson.core.JsonParseException;\nimport com.fasterxml.jackson.databind.JsonMappingException;\nimport com.fasterxml.jackson.databind.ObjectMapper;\n\nimport java.io.IOException;\nimport java.util.Optional;\n\npublic class $className$ {\n    /**\n     * Visit Visit https://aka.ms/sqlbindingsoutput to learn how to use this output binding\n     * \n     * These tasks should be completed prior to running:\n     * 1. Add com.microsoft.azure.functions:azure-functions-java-library-sql and com.fasterxml.jackson.core:jackson-databind to your project dependencies\n     * 2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\n     * 3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle\" and the version to \"[4.*, 5.0.0)\"\n     */\n    @FunctionName(\"$functionName$\")\n    public HttpResponseMessage run(\n            @HttpTrigger(\n                name = \"req\",\n                methods = {HttpMethod.POST},\n                authLevel = AuthorizationLevel.FUNCTION,\n                route = \"\")\n                HttpRequestMessage<Optional<String>> request,\n            @SQLOutput(\n                name = \"output\",\n                commandText = \"$table$\",\n                connectionStringSetting = \"$SqlConnectionString$\")\n                OutputBinding<TodoItem> output) throws JsonParseException, JsonMappingException, IOException {\n\n        String json = request.getBody().get();\n        ObjectMapper mapper = new ObjectMapper();\n        TodoItem todoItem = mapper.readValue(json, TodoItem.class);\n        output.setValue(todoItem);\n\n        return request.createResponseBuilder(HttpStatus.OK).header(\"Content-Type\", \"application/json\").body(todoItem).build();\n    }\n\n    public static class TodoItem {\n        public String Id;\n        public int Priority;\n        public String Description;\n\n        public String getId() {\n            return Id;\n        }\n    \n        public void setId(String id) {\n            Id = id;\n        }\n    \n        public int getPriority() {\n            return Priority;\n        }\n    \n        public void setPriority(int priority) {\n            Priority = priority;\n        }\n    \n        public String getDescription() {\n            return Description;\n        }\n    \n        public void setDescription(String description) {\n            Description = description;\n        }\n    }\n}"
+    }
+  },
+  {
+    "id": "SqlInputBinding-Java",
+    "metadata": {
+      "name": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "defaultFunctionName": "SqlInputBindingJava",
+      "language": "Java",
+      "userPrompt": [
+        "object",
+        "SqlConnectionString"
+      ]
+    },
+    "bundle": [
+      "~4"
+    ],
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "type": "sql",
+          "name": "results",
+          "direction": "in",
+          "commandText": "SELECT * FROM [dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.HttpMethod;\nimport com.microsoft.azure.functions.HttpRequestMessage;\nimport com.microsoft.azure.functions.HttpResponseMessage;\nimport com.microsoft.azure.functions.HttpStatus;\nimport com.microsoft.azure.functions.annotation.AuthorizationLevel;\nimport com.microsoft.azure.functions.annotation.FunctionName;\nimport com.microsoft.azure.functions.annotation.HttpTrigger;\nimport com.microsoft.azure.functions.sql.annotation.SQLInput;\n\nimport java.util.Optional;\n\npublic class $className$ {\n    /**\n     * Visit https://aka.ms/sqlbindingsinput to learn how to use this input binding\n     * \n     * These tasks should be completed prior to running:\n     * 1. Add com.microsoft.azure.functions:azure-functions-java-library-sql to your project dependencies\n     * 2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\n     * 3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle\" and the version to \"[4.*, 5.0.0)\"\n     */\n    @FunctionName(\"$functionName$\")\n    public HttpResponseMessage run(\n            @HttpTrigger(\n                name = \"req\",\n                methods = {HttpMethod.GET},\n                authLevel = AuthorizationLevel.FUNCTION,\n                route = \"\")\n                HttpRequestMessage<Optional<String>> request,\n            @SQLInput(\n                name = \"result\",\n                commandText = \"SELECT * FROM $object$\",\n                commandType = \"Text\",\n                connectionStringSetting = \"$SqlConnectionString$\")\n                Object[] result) {\n\n        return request.createResponseBuilder(HttpStatus.OK).header(\"Content-Type\", \"application/json\").body(result).build();\n    }\n}"
+    }
+  },
+  {
+    "id": "DaprPublishOutputBinding-Java",
+    "metadata": {
+      "name": "DaprPublishOutputBinding",
+      "description": "$daprPublishOutputBinding_description",
+      "defaultFunctionName": "DaprPublishOutputBinding",
+      "language": "Java"
+    },
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "schedule": "*/10 * * * * *",
+          "name": "myTimer",
+          "type": "timerTrigger",
+          "direction": "in"
+        },
+        {
+          "type": "daprPublish",
+          "direction": "out",
+          "name": "pubEvent",
+          "pubsubname": "pubsub",
+          "topic": "B"
+        },
+        {
+          "type": "daprTopicTrigger",
+          "pubsubname": "pubsub",
+          "topic": "A",
+          "name": "subEvent",
+          "direction": "in",
+          "dataType": "string"
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\r\n\r\nimport java.time.LocalDateTime;\r\nimport java.util.logging.Logger;\r\nimport com.fasterxml.jackson.core.JsonProcessingException;\r\nimport com.fasterxml.jackson.databind.JsonNode;\r\nimport com.fasterxml.jackson.databind.ObjectMapper;\r\nimport com.microsoft.azure.functions.ExecutionContext;\r\nimport com.microsoft.azure.functions.OutputBinding;\r\nimport com.microsoft.azure.functions.annotation.FunctionName;\r\nimport com.microsoft.azure.functions.annotation.TimerTrigger;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprPublishOutput;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprTopicTrigger;\r\n\r\npublic class $className$ {\r\n    /*\r\n    Visit https://aka.ms/azure-functions-dapr to learn how to use the Dapr extension.\r\n    These tasks should be completed prior to running :\r\n      1. Install Dapr\r\n      2. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n    Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n    Function will be invoked by Timer trigger and publish messages to message bus.\r\n    */\r\n    @FunctionName(\"DaprPublishOutputBindingFunc\")\r\n    public String run(\r\n            @TimerTrigger(name = \"keepAliveTrigger\", schedule = \"*/10 * * * * *\") String timerInfo,\r\n            @DaprPublishOutput(\r\n                pubSubName = \"pubsub\",\r\n                topic = \"A\")\r\n            OutputBinding<String> payload,\r\n            final ExecutionContext context) {\r\n        context.getLogger().info(\"Java DaprPublish output binding function processed a request.\");\r\n\r\n        String data = \"Invoked by Timer trigger: Hello, World! The time is \" + LocalDateTime.now();\r\n        String pubsubPayload = String.format(\"{\\\"payload\\\":\\\" %s \\\"}\", data);  \r\n\r\n        payload.setValue(pubsubPayload);\r\n\r\n        return pubsubPayload;\r\n    }\r\n\r\n    /*\r\n    If you want to act on the published message on topic A, please uncomment below Azure function to receive message published on topic A, \r\n    this function will log the received message on topic A\r\n    */\r\n    \r\n    // @FunctionName(\"DaprTopicTriggerTest\")\r\n    // public void runDaprTopicTriggerTest(\r\n    //     @DaprTopicTrigger(\r\n    //         pubSubName = \"pubsub\",\r\n    //         topic = \"A\")\r\n    //         String request,\r\n    //     final ExecutionContext context) throws JsonProcessingException {\r\n\r\n    //     Logger logger = context.getLogger();\r\n        \r\n    //     logger.info(\"Java Dapr Topic Trigger function processed a request from the Dapr Runtime.\");\r\n\r\n    //     // Get the CloudEvent data from the request body as a JSON string\r\n    //     ObjectMapper objectMapper = new ObjectMapper();\r\n    //     JsonNode jsonNode = objectMapper.readTree(request).get(\"data\");\r\n    //     String serializedJson = objectMapper.writeValueAsString(jsonNode);\r\n    //     logger.info(\"Topic A received a message: \" + serializedJson);\r\n    // }\r\n}"
+    }
+  },
+  {
+    "id": "DaprServiceInvocationTrigger-Java",
+    "metadata": {
+      "name": "DaprServiceInvocationTrigger",
+      "description": "$daprServiceInvocationTrigger_description",
+      "defaultFunctionName": "DaprServiceInvocationTriggerJava",
+      "language": "Java"
+    },
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "type": "daprServiceInvocationTrigger",
+          "name": "payload",
+          "direction": "in"
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\r\n\r\nimport java.util.Optional;\r\nimport java.util.logging.Logger;\r\nimport com.microsoft.azure.functions.ExecutionContext;\r\nimport com.microsoft.azure.functions.HttpMethod;\r\nimport com.microsoft.azure.functions.HttpRequestMessage;\r\nimport com.microsoft.azure.functions.HttpResponseMessage;\r\nimport com.microsoft.azure.functions.HttpStatus;\r\nimport com.microsoft.azure.functions.OutputBinding;\r\nimport com.microsoft.azure.functions.annotation.AuthorizationLevel;\r\nimport com.microsoft.azure.functions.annotation.FunctionName;\r\nimport com.microsoft.azure.functions.annotation.HttpTrigger;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprServiceInvocationTrigger;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprInvokeOutput;\r\n\r\npublic class $className$ {\r\n    /*\r\n    Visit https://aka.ms/azure-functions-dapr to learn how to use the Dapr extension.\r\n    These tasks should be completed prior to running :\r\n      1. Install Dapr\r\n      2. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n    Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n    Invoke function app by dapr cli in cmd prompt: dapr invoke --app-id functionapp --method {yourFunctionName}  --data '{ \\\"data\\\": {\\\"value\\\": { \\\"orderId\\\": \\\"41\\\" } } }'\r\n    Invoke function app by http trigger: \r\n    curl 'http://localhost:7071/api/invoke/functionapp/{yourFunctionName}' `\r\n    --header 'Content-Type: application/json' `\r\n    --data '{\r\n        \"data\": {\r\n            \"value\": {\r\n                \"orderId\": \"41\"\r\n            }\r\n        }\r\n    }'\r\n    <param name=\"payload\">Payload of dapr service invocation trigger.</param>\r\n    <param name=\"functionContext\">Function context.</param>\r\n    */\r\n    @FunctionName(\"DaprServiceInvocationTriggerFunc\")\r\n    public void run(\r\n        @DaprServiceInvocationTrigger(\r\n            methodName = \"DaprServiceInvocationTriggerFunc\") String payload,\r\n        final ExecutionContext context) {\r\n\r\n        Logger logger = context.getLogger();\r\n        logger.info(\"Azure function triggered by Dapr Service Invocation Trigger.\");\r\n        logger.info(\"Dapr service invocation trigger payload: \" + payload);\r\n    }\r\n\r\n    /*\r\n    Azure function with Dapr Invoke output binding.\r\n     */\r\n    @FunctionName(\"DaprInvokeOuputBinding\")\r\n    public HttpResponseMessage runDaprInvokeOuput(\r\n            @HttpTrigger(\r\n                route = \"invoke/{appId}/{methodName}\",\r\n                name = \"req\",\r\n                methods = {HttpMethod.GET, HttpMethod.POST},\r\n                authLevel = AuthorizationLevel.ANONYMOUS)\r\n                HttpRequestMessage<Optional<String>> request,\r\n            @DaprInvokeOutput(\r\n                appId = \"{appId}\", \r\n                methodName = \"{methodName}\", \r\n                httpVerb = \"POST\") \r\n                OutputBinding<String> output,\r\n            final ExecutionContext context) {\r\n        context.getLogger().info(\"Java HTTP trigger processed a request.\");\r\n\r\n        // Parse query parameter\r\n        final String query = request.getQueryParameters().get(\"name\");\r\n        final String body = request.getBody().orElse(query);\r\n\r\n        String jsoString = String.format(\"{\\\"body\\\":%s}\", body);\r\n        context.getLogger().info(jsoString);\r\n        output.setValue(jsoString);\r\n\r\n        return request.createResponseBuilder(HttpStatus.OK).body(jsoString).build();\r\n    }\r\n}"
+    }
+  },
+  {
+    "id": "DaprTopicTrigger-Java",
+    "metadata": {
+      "name": "DaprTopicTrigger",
+      "description": "$daprTopicTrigger_description",
+      "defaultFunctionName": "DaprTopicTriggerJava",
+      "language": "Java"
+    },
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "type": "daprTopicTrigger",
+          "pubsubname": "messagebus",
+          "topic": "A",
+          "name": "subEvent",
+          "direction": "in",
+          "dataType": "string"
+        },
+        {
+          "type": "daprState",
+          "stateStore": "statestore",
+          "direction": "out",
+          "name": "value",
+          "key": "product"
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\r\n\r\nimport com.fasterxml.jackson.core.JsonProcessingException;\r\nimport com.fasterxml.jackson.databind.JsonNode;\r\nimport com.fasterxml.jackson.databind.ObjectMapper;\r\nimport com.microsoft.azure.functions.ExecutionContext;\r\nimport com.microsoft.azure.functions.OutputBinding;\r\nimport com.microsoft.azure.functions.annotation.FunctionName;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprStateOutput;\r\nimport com.microsoft.azure.functions.dapr.annotation.DaprTopicTrigger;\r\n\r\n\r\npublic class $className$ {\r\n\r\n    /*\r\n    Visit https://aka.ms/azure-functions-dapr to learn how to use the Dapr extension.\r\n    These tasks should be completed prior to running :\r\n      1. Install Dapr\r\n      2. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n    Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- mvn azure-functions:run\r\n    Invoke function app in cmd promt: dapr publish --pubsub pubsub --publish-app-id functionapp --topic Q --data '{\\\"value\\\": { \\\"orderId\\\": \\\"42\\\" } }'\r\n    */\r\n    @FunctionName(\"DaprTopicTriggerFunc\")\r\n    public String run(\r\n        @DaprTopicTrigger(\r\n            pubSubName = \"pubsub\",\r\n            topic = \"Q\")\r\n            String request,\r\n        @DaprStateOutput(\r\n            stateStore = \"statestore\",\r\n            key = \"product\")\r\n        OutputBinding<String> product,\r\n        final ExecutionContext context) throws JsonProcessingException {\r\n        context.getLogger().info(\"Java DaprTopic trigger with DaprState output binding function processed a request from the Dapr Runtime.\");\r\n\r\n        // Get the CloudEvent data from the request body as a JSON string\r\n        ObjectMapper objectMapper = new ObjectMapper();\r\n        JsonNode jsonNode = objectMapper.readTree(request).get(\"data\");\r\n        String serializedJson = objectMapper.writeValueAsString(jsonNode);\r\n        product.setValue(serializedJson);\r\n\r\n        return serializedJson;\r\n    }\r\n}"
     }
   }
 ]
