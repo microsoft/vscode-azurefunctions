@@ -16,7 +16,8 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         'ServiceBusTopicTrigger',
         'ServiceBusQueueTrigger',
         'CosmosDBTrigger',
-        'EventGridTrigger'
+        'EventGridTrigger',
+        'EventGridCloudEventTrigger',
     ];
 
     if (version === FuncVersion.v1) {
