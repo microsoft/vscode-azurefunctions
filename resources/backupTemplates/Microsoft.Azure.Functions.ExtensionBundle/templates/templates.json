@@ -145,7 +145,7 @@
     "files": {
       "readme.md": "# BlobTrigger - Python\r\n\r\nThe `BlobTrigger` makes it incredibly easy to react to new Blobs inside of Azure Blob Storage. This sample demonstrates a simple use case of processing data from a given Blob using Python.\r\n\r\n## How it works\r\n\r\nFor a `BlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
       "sample.dat": "samples-workitems/workitem.txt",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(myblob: func.InputStream):\r\n    logging.info(f\"Python blob trigger function processed blob \\n\"\r\n                 f\"Name: {myblob.name}\\n\"\r\n                 f\"Blob Size: {myblob.length} bytes\")\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import InputStream\r\n\r\n\r\ndef main(myblob: InputStream):\r\n    logging.info(f\"Python blob trigger function processed blob \\n\"\r\n                 f\"Name: {myblob.name}\\n\"\r\n                 f\"Blob Size: {myblob.length} bytes\")\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -227,11 +227,12 @@
           "type": "cosmosDBTrigger",
           "name": "input",
           "direction": "in",
-          "connectionStringSetting": "",
+          "leaseContainerName": "leases",
+          "connection": "",
           "databaseName": "",
-          "collectionName": "",
-          "leaseCollectionName": "leases",
-          "createLeaseCollectionIfNotExists": true
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true,
+          "startFromBeginning": false
         }
       ]
     },
@@ -247,49 +248,11 @@
       "categoryStyle": "cosmosDB",
       "enabledInTryMode": false,
       "userPrompt": [
-        "connectionStringSetting",
+        "connection",
         "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
-      ]
-    }
-  },
-  {
-    "id": "CosmosDBTrigger-Custom",
-    "runtime": "2",
-    "files": {},
-    "function": {
-      "bindings": [
-        {
-          "type": "cosmosDBTrigger",
-          "name": "documents",
-          "direction": "in",
-          "leaseCollectionName": "leases",
-          "connectionStringSetting": "",
-          "databaseName": "",
-          "collectionName": "",
-          "createLeaseCollectionIfNotExists": true
-        }
-      ]
-    },
-    "metadata": {
-      "defaultFunctionName": "CosmosTrigger",
-      "description": "$CosmosDBTrigger_description",
-      "name": "Azure Cosmos DB trigger",
-      "language": "Custom",
-      "category": [
-        "$temp_category_core",
-        "$temp_category_dataProcessing"
-      ],
-      "categoryStyle": "cosmosDB",
-      "enabledInTryMode": false,
-      "userPrompt": [
-        "connectionStringSetting",
-        "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
       ]
     }
   },
@@ -306,11 +269,12 @@
           "type": "cosmosDBTrigger",
           "name": "documents",
           "direction": "in",
-          "leaseCollectionName": "leases",
-          "connectionStringSetting": "",
+          "leaseContainerName": "leases",
+          "connection": "",
           "databaseName": "",
-          "collectionName": "",
-          "createLeaseCollectionIfNotExists": true
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true,
+          "startFromBeginning": false
         }
       ]
     },
@@ -326,11 +290,11 @@
       "categoryStyle": "cosmosDB",
       "enabledInTryMode": false,
       "userPrompt": [
-        "connectionStringSetting",
+        "connection",
         "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
       ]
     }
   },
@@ -345,13 +309,14 @@
       "bindings": [
         {
           "type": "cosmosDBTrigger",
-          "name": "Documents",
+          "name": "documents",
           "direction": "in",
-          "leaseCollectionName": "leases",
-          "connectionStringSetting": "",
+          "leaseContainerName": "leases",
+          "connection": "",
           "databaseName": "",
-          "collectionName": "",
-          "createLeaseCollectionIfNotExists": true
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true,
+          "startFromBeginning": false
         }
       ]
     },
@@ -367,11 +332,11 @@
       "categoryStyle": "cosmosDB",
       "enabledInTryMode": false,
       "userPrompt": [
-        "connectionStringSetting",
+        "connection",
         "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
       ]
     }
   },
@@ -380,7 +345,7 @@
     "runtime": "2",
     "files": {
       "sample.dat": "[\r\n\t{\r\n\t\t\"id\": \"sample\"\r\n\t}\r\n]",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(documents: func.DocumentList) -> str:\r\n    if documents:\r\n        logging.info('Document id: %s', documents[0]['id'])\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import DocumentList\r\n\r\n\r\ndef main(documents: DocumentList) -> str:\r\n    if documents:\r\n        logging.info('Document id: %s', documents[0]['id'])\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -389,11 +354,12 @@
           "type": "cosmosDBTrigger",
           "name": "documents",
           "direction": "in",
-          "leaseCollectionName": "leases",
-          "connectionStringSetting": "",
+          "leaseContainerName": "leases",
+          "connection": "",
           "databaseName": "",
-          "collectionName": "",
-          "createLeaseCollectionIfNotExists": true
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true,
+          "startFromBeginning": false
         }
       ]
     },
@@ -409,55 +375,14 @@
       "categoryStyle": "cosmosDB",
       "enabledInTryMode": false,
       "userPrompt": [
-        "connectionStringSetting",
+        "connection",
         "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
       ],
       "filters": [
         "Python3"
-      ]
-    }
-  },
-  {
-    "id": "CosmosDBTrigger-TypeScript",
-    "runtime": "2",
-    "files": {
-      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst cosmosDBTrigger: AzureFunction = async function (context: Context, documents: any[]): Promise<void> {\r\n    if (!!documents && documents.length > 0) {\r\n        context.log('Document Id: ', documents[0].id);\r\n    }\r\n}\r\n\r\nexport default cosmosDBTrigger;\r\n",
-      "sample.dat": "[\r\n\t{\r\n\t\t\"id\": \"sample\"\r\n\t}\r\n]"
-    },
-    "function": {
-      "bindings": [
-        {
-          "type": "cosmosDBTrigger",
-          "name": "documents",
-          "direction": "in",
-          "leaseCollectionName": "leases",
-          "connectionStringSetting": "",
-          "databaseName": "",
-          "collectionName": "",
-          "createLeaseCollectionIfNotExists": true
-        }
-      ]
-    },
-    "metadata": {
-      "defaultFunctionName": "CosmosTrigger",
-      "description": "$CosmosDBTrigger_description",
-      "name": "Azure Cosmos DB trigger",
-      "language": "TypeScript",
-      "category": [
-        "$temp_category_core",
-        "$temp_category_dataProcessing"
-      ],
-      "categoryStyle": "cosmosDB",
-      "enabledInTryMode": false,
-      "userPrompt": [
-        "connectionStringSetting",
-        "databaseName",
-        "collectionName",
-        "leaseCollectionName",
-        "createLeaseCollectionIfNotExists"
       ]
     }
   },
@@ -640,7 +565,7 @@
     "id": "DurableFunctionsEntity-Python",
     "runtime": "2",
     "files": {
-      "__init__.py": "import logging\r\nimport json\r\n\r\nimport azure.functions as func\r\nimport azure.durable_functions as df\r\n\r\n\r\ndef entity_function(context: df.DurableOrchestrationContext):\r\n\r\n    current_value = context.get_state(lambda: 0)\r\n    operation = context.operation_name\r\n    if operation == \"add\":\r\n        amount = context.get_input()\r\n        current_value += amount\r\n        context.set_result(current_value)\r\n    elif operation == \"reset\":\r\n        current_value = 0\r\n    elif operation == \"get\":\r\n        context.set_result(current_value)\r\n    \r\n    context.set_state(current_value)\r\n\r\nmain = df.Entity.create(entity_function)"
+      "__init__.py": "import logging\r\nimport json\r\n\r\nfrom azure.durable_functions import DurableOrchestrationContext, Entity\r\n\r\n\r\ndef entity_function(context: DurableOrchestrationContext):\r\n\r\n    current_value = context.get_state(lambda: 0)\r\n    operation = context.operation_name\r\n    if operation == \"add\":\r\n        amount = context.get_input()\r\n        current_value += amount\r\n        context.set_result(current_value)\r\n    elif operation == \"reset\":\r\n        current_value = 0\r\n    elif operation == \"get\":\r\n        context.set_result(current_value)\r\n    \r\n    context.set_state(current_value)\r\n\r\nmain = Entity.create(entity_function)"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -1031,7 +956,7 @@
     "id": "DurableFunctionsHttpStart-Python",
     "runtime": "2",
     "files": {
-      "__init__.py": "# This function an HTTP starter function for Durable Functions.\r\n# Before running this sample, please:\r\n# - create a Durable orchestration function\r\n# - create a Durable activity function (default name is \"Hello\")\r\n# - add azure-functions-durable to requirements.txt\r\n# - run pip install -r requirements.txt\r\n \r\nimport logging\r\n\r\nimport azure.functions as func\r\nimport azure.durable_functions as df\r\n\r\n\r\nasync def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:\r\n    client = df.DurableOrchestrationClient(starter)\r\n    instance_id = await client.start_new(req.route_params[\"functionName\"], None, None)\r\n\r\n    logging.info(f\"Started orchestration with ID = '{instance_id}'.\")\r\n\r\n    return client.create_check_status_response(req, instance_id)"
+      "__init__.py": "# This function an HTTP starter function for Durable Functions.\r\n# Before running this sample, please:\r\n# - create a Durable orchestration function\r\n# - create a Durable activity function (default name is \"Hello\")\r\n# - add azure-functions-durable to requirements.txt\r\n# - run pip install -r requirements.txt\r\n \r\nimport logging\r\n\r\nfrom azure.functions import HttpRequest, HttpResponse\r\nfrom azure.durable_functions import DurableOrchestrationClient\r\n\r\n\r\nasync def main(req: HttpRequest, starter: str) -> HttpResponse:\r\n    client = DurableOrchestrationClient(starter)\r\n    instance_id = await client.start_new(req.route_params[\"functionName\"], None, None)\r\n\r\n    logging.info(f\"Started orchestration with ID = '{instance_id}'.\")\r\n\r\n    return client.create_check_status_response(req, instance_id)"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -1213,7 +1138,7 @@
     "id": "DurableFunctionsOrchestrator-Python",
     "runtime": "2",
     "files": {
-      "__init__.py": "# This function is not intended to be invoked directly. Instead it will be\r\n# triggered by an HTTP starter function.\r\n# Before running this sample, please:\r\n# - create a Durable activity function (default name is \"Hello\")\r\n# - create a Durable HTTP starter function\r\n# - add azure-functions-durable to requirements.txt\r\n# - run pip install -r requirements.txt\r\n\r\nimport logging\r\nimport json\r\n\r\nimport azure.functions as func\r\nimport azure.durable_functions as df\r\n\r\n\r\ndef orchestrator_function(context: df.DurableOrchestrationContext):\r\n    result1 = yield context.call_activity('Hello', \"Tokyo\")\r\n    result2 = yield context.call_activity('Hello', \"Seattle\")\r\n    result3 = yield context.call_activity('Hello', \"London\")\r\n    return [result1, result2, result3]\r\n\r\nmain = df.Orchestrator.create(orchestrator_function)"
+      "__init__.py": "# This function is not intended to be invoked directly. Instead it will be\r\n# triggered by an HTTP starter function.\r\n# Before running this sample, please:\r\n# - create a Durable activity function (default name is \"Hello\")\r\n# - create a Durable HTTP starter function\r\n# - add azure-functions-durable to requirements.txt\r\n# - run pip install -r requirements.txt\r\n\r\nimport logging\r\nimport json\r\n\r\nfrom azure.durable_functions import DurableOrchestrationContext, Orchestrator\r\n\r\n\r\ndef orchestrator_function(context: DurableOrchestrationContext):\r\n    result1 = yield context.call_activity('Hello', \"Tokyo\")\r\n    result2 = yield context.call_activity('Hello', \"Seattle\")\r\n    result3 = yield context.call_activity('Hello', \"London\")\r\n    return [result1, result2, result3]\r\n\r\nmain = Orchestrator.create(orchestrator_function)"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -1390,7 +1315,7 @@
     "runtime": "2",
     "files": {
       "sample.dat": "{\r\n  'topic': '/subscriptions/5b4b650e-28b9-4790-b3ab-ddbd88d727c4/resourcegroups/test/providers/Microsoft.EventHub/namespaces/test',\r\n  'subject': 'eventhubs/test',\r\n  'eventType': 'captureFileCreated',\r\n  'eventTime': '2017-07-14T23:10:27.7689666Z',\r\n  'id': '7b11c4ce-1c34-4416-848b-1730e766f126',\r\n  'data': {\r\n    'fileUrl': 'https://test.blob.core.windows.net/debugging/testblob.txt',\r\n    'fileType': 'AzureBlockBlob',\r\n    'partitionId': '1',\r\n    'sizeInBytes': 0,\r\n    'eventCount': 0,\r\n    'firstSequenceNumber': -1,\r\n    'lastSequenceNumber': -1,\r\n    'firstEnqueueTime': '0001-01-01T00:00:00',\r\n    'lastEnqueueTime': '0001-01-01T00:00:00'\r\n  },\r\n  \"dataVersion\": \"\", \r\n  \"metadataVersion\": \"1\" \r\n}\r\n",
-      "__init__.py": "import json\r\nimport logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(event: func.EventGridEvent):\r\n    result = json.dumps({\r\n        'id': event.id,\r\n        'data': event.get_json(),\r\n        'topic': event.topic,\r\n        'subject': event.subject,\r\n        'event_type': event.event_type,\r\n    })\r\n\r\n    logging.info('Python EventGrid trigger processed an event: %s', result)\r\n"
+      "__init__.py": "import json\r\nimport logging\r\n\r\nfrom azure.functions import EventGridEvent\r\n\r\n\r\ndef main(event: EventGridEvent):\r\n    result = json.dumps({\r\n        'id': event.id,\r\n        'data': event.get_json(),\r\n        'topic': event.topic,\r\n        'subject': event.subject,\r\n        'event_type': event.event_type,\r\n    })\r\n\r\n    logging.info('Python EventGrid trigger processed an event: %s', result)\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -1601,14 +1526,14 @@
     "runtime": "2",
     "files": {
       "sample.dat": "Test Message",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(event: func.EventHubEvent):\r\n    logging.info('Python EventHub trigger processed an event: %s',\r\n                 event.get_body().decode('utf-8'))\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import EventHubEvent\r\nfrom typing import List\r\n\r\n\r\ndef main(events: List[EventHubEvent]):\r\n    for event in events:\r\n        logging.info('Python EventHub trigger processed an event: %s',\r\n                      event.get_body().decode('utf-8'))\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
       "bindings": [
         {
           "type": "eventHubTrigger",
-          "name": "event",
+          "name": "events",
           "direction": "in",
           "eventHubName": "samples-workitems",
           "connection": "",
@@ -1848,7 +1773,7 @@
     "runtime": "2",
     "files": {
       "sample.dat": "{\r\n    \"name\": \"Azure\"\r\n}",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(req: func.HttpRequest) -> func.HttpResponse:\r\n    logging.info('Python HTTP trigger function processed a request.')\r\n\r\n    name = req.params.get('name')\r\n    if not name:\r\n        try:\r\n            req_body = req.get_json()\r\n        except ValueError:\r\n            pass\r\n        else:\r\n            name = req_body.get('name')\r\n\r\n    if name:\r\n        return func.HttpResponse(f\"Hello, {name}. This HTTP triggered function executed successfully.\")\r\n    else:\r\n        return func.HttpResponse(\r\n             \"This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.\",\r\n             status_code=200\r\n        )\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import HttpRequest, HttpResponse\r\n\r\n\r\ndef main(req: HttpRequest) -> HttpResponse:\r\n    logging.info('Python HTTP trigger function processed a request.')\r\n\r\n    name = req.params.get('name')\r\n    if not name:\r\n        try:\r\n            req_body = req.get_json()\r\n        except ValueError:\r\n            pass\r\n        else:\r\n            name = req_body.get('name')\r\n\r\n    if name:\r\n        return HttpResponse(f\"Hello, {name}. This HTTP triggered function executed successfully.\")\r\n    else:\r\n        return HttpResponse(\r\n            \"This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.\",\r\n            status_code=200\r\n        )\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -2298,7 +2223,7 @@
     "files": {
       "readme.md": "# KafkaOutput - Python\r\n\r\nThe `KafkaOutput` makes it incredibly easy to send a new events to a Kafka Broker. This sample demonstrates a simple use case of sending data to a given Kafka Broker using Python.\r\n\r\n## How it works\r\n\r\nFor a `KafkaOutput` to work, you must provide a topic name which dictates where the messages should be sent to with authentication.\r\n\r\n## Configuration\r\n\r\n### EventHubs for Kafka\r\n\r\nAdd `BrokerList` and `KafkaPassword` to your `local.settings.json`\r\n\r\n_local.settings.json_\r\n\r\n```json\r\n{\r\n  \"IsEncrypted\": false,\r\n  \"Values\": {\r\n    \"AzureWebJobsStorage\": \"UseDevelopmentStorage=true\",\r\n    \"FUNCTIONS_WORKER_RUNTIME\": \"node\",\r\n    \"BrokerList\": \"{YOUR_EVENT_HUBS_NAMESPACE}.servicebus.windows.net:9093\",\r\n    \"KafkaPassword\": \"{EVENT_HUBS_CONNECTION_STRING}\"\r\n  }\r\n}\r\n```\r\n\r\n### Others\r\n\r\nModify `function.json` or `KafkaOutput` attribute according to your broker.",
       "sample.dat": "{\r\n    \"message\": \"hello\"\r\n}",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse:\r\n    logging.info('Python HTTP trigger function processed a request.')\r\n\r\n    message = req.params.get('message')\r\n    if not message:\r\n        try:\r\n            req_body = req.get_json()\r\n        except ValueError:\r\n            pass\r\n        else:\r\n            message = req_body.get('message')\r\n\r\n    if message:\r\n        out.set(message)\r\n        return func.HttpResponse(f\"Message received: {message}. The message transfered to the kafka broker.\")\r\n    else:\r\n        return func.HttpResponse(\r\n             \"This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.\",\r\n             status_code=200\r\n        )\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import HttpRequest, HttpResponse, Out\r\n\r\n\r\ndef main(req: HttpRequest, out: Out[str]) -> HttpResponse:\r\n    logging.info('Python HTTP trigger function processed a request.')\r\n\r\n    message = req.params.get('message')\r\n    if not message:\r\n        try:\r\n            req_body = req.get_json()\r\n        except ValueError:\r\n            pass\r\n        else:\r\n            message = req_body.get('message')\r\n\r\n    if message:\r\n        out.set(message)\r\n        return HttpResponse(f\"Message received: {message}. The message transfered to the kafka broker.\")\r\n    else:\r\n        return HttpResponse(\r\n            \"This HTTP triggered function executed successfully but no message was passed. Please pass message as request parameter or in body for sending data to Kafka\",\r\n            status_code=200\r\n        )\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -2598,7 +2523,7 @@
     "files": {
       "readme.md": "# KafkaTrigger - Python\r\n\r\nThe `KafkaTrigger` makes it incredibly easy to react to new events from a Kafka Broker. This sample demonstrates a simple use case of processing data from a given Kafka Broker using Python.\r\n\r\n## How it works\r\n\r\nFor a `KafkaTrigger` to work, you must provide a topic name which dictates where the messages should be read from with authentication.\r\n\r\n## Configuration\r\n\r\n### EventHubs for Kafka\r\n\r\nAdd `BrokerList` and `KafkaPassword` to your `local.settings.json`\r\n\r\n_local.settings.json_\r\n\r\n```json\r\n{\r\n  \"IsEncrypted\": false,\r\n  \"Values\": {\r\n    \"AzureWebJobsStorage\": \"UseDevelopmentStorage=true\",\r\n    \"FUNCTIONS_WORKER_RUNTIME\": \"python\",\r\n    \"BrokerList\": \"{YOUR_EVENT_HUBS_NAMESPACE}.servicebus.windows.net:9093\",\r\n    \"KafkaPassword\": \"{EVENT_HUBS_CONNECTION_STRING}\"\r\n  }\r\n}\r\n```\r\n\r\n### Others\r\n\r\nModify `function.json` or `KafkaTrigger` attribute according to your broker.",
       "sample.dat": "sample queue data",
-      "__init__.py": "import logging\r\nfrom azure.functions import KafkaEvent\r\n\r\ndef main(kevent : KafkaEvent):\r\n    logging.info(kevent.get_body().decode('utf-8'))\r\n    logging.info(kevent.metadata)\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import KafkaEvent\r\n\r\n\r\ndef main(kevent : KafkaEvent):\r\n    logging.info(kevent.get_body().decode('utf-8'))\r\n    logging.info(kevent.metadata)\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -2831,7 +2756,7 @@
     "files": {
       "readme.md": "# QueueTrigger - Python\r\n\r\nThe `QueueTrigger` makes it incredibly easy to react to new Queues inside of Azure Queue Storage. This sample demonstrates a simple use case of processing data from a given Queue.\r\n\r\n## How it works\r\n\r\nFor a `QueueTrigger` to work, you provide a path which dictates where the queue messages are located inside your container.\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation\r\n",
       "sample.dat": "sample queue data",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(msg: func.QueueMessage) -> None:\r\n    logging.info('Python queue trigger function processed a queue item: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import QueueMessage\r\n\r\n\r\ndef main(msg: QueueMessage) -> None:\r\n    logging.info('Python queue trigger function processed a queue item: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -2869,7 +2794,7 @@
     "id": "QueueTrigger-TypeScript",
     "runtime": "2",
     "files": {
-      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst queueTrigger: AzureFunction = async function (context: Context, myQueueItem: string): Promise<void> {\r\n    context.log('Queue trigger function processed work item', myQueueItem);\r\n};\r\n\r\nexport default queueTrigger;\r\n",
+      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst queueTrigger: AzureFunction = async function (context: Context, myQueueItem: any): Promise<void> {\r\n    context.log('Queue trigger function processed work item', myQueueItem);\r\n};\r\n\r\nexport default queueTrigger;\r\n",
       "readme.md": "# QueueTrigger - TypeScript\r\n\r\nThe `QueueTrigger` makes it incredibly easy to react to new Queues inside of Azure Queue Storage. This sample demonstrates a simple use case of processing data from a given Queue using C#.\r\n\r\n## How it works\r\n\r\nFor a `QueueTrigger` to work, you provide a path which dictates where the queue messages are located inside your container.\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
       "sample.dat": "sample queue data"
     },
@@ -3047,7 +2972,7 @@
     "files": {
       "readme.md": "# RabbitMQTrigger - C<span>#</span>\r\n\r\nThe `RabbitMQTrigger` makes it incredibly easy to react to new events from a RabbitMQ queue. This sample demonstrates a simple use case of processing data from a given RabbitMQ Queue using C#.\r\n\r\n## How it works\r\n\r\nFor a `RabbitMQTrigger` to work, you must provide a queue name which dictates where the queue messages should be read from.",
       "sample.dat": "sample queue data",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(myQueueItem) -> None:\r\n    logging.info('Python rabbitmq trigger function processed a queue item: %s', myQueueItem)\r\n"
+      "__init__.py": "import logging\r\n\r\ndef main(myQueueItem) -> None:\r\n    logging.info('Python rabbitmq trigger function processed a queue item: %s', myQueueItem)\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -3484,7 +3409,7 @@
     "runtime": "2",
     "files": {
       "sample.dat": "Service Bus Message",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(msg: func.ServiceBusMessage):\r\n    logging.info('Python ServiceBus queue trigger processed message: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import ServiceBusMessage\r\n\r\n\r\ndef main(msg: ServiceBusMessage):\r\n    logging.info('Python ServiceBus queue trigger processed message: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -3701,7 +3626,7 @@
     "files": {
       "README.md": "# Python ServiceBusTopicTrigger\r\n",
       "sample.dat": "Service Bus Message",
-      "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(message: func.ServiceBusMessage):\r\n    # Log the Service Bus Message as plaintext\r\n\r\n    message_content_type = message.content_type\r\n    message_body = message.get_body().decode(\"utf-8\")\r\n\r\n    logging.info(\"Python ServiceBus topic trigger processed message.\")\r\n    logging.info(\"Message Content Type: \" + message_content_type)\r\n    logging.info(\"Message Body: \" + message_body)\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import ServiceBusMessage\r\n\r\n\r\ndef main(message: ServiceBusMessage):\r\n    # Log the Service Bus Message as plaintext\r\n\r\n    message_content_type = message.content_type\r\n    message_body = message.get_body().decode(\"utf-8\")\r\n\r\n    logging.info(\"Python ServiceBus topic trigger processed message.\")\r\n    logging.info(\"Message Content Type: \" + message_content_type)\r\n    logging.info(\"Message Body: \" + message_body)\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
@@ -4030,6 +3955,405 @@
     }
   },
   {
+    "id": "SqlInputBinding-CSharp",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Input Binding - C<span>#</span>\r\n\r\nThe `SQL Input Binding` makes it easy to retrieve data from a database, returning the output of the query or stored procedure to the function.\r\n\r\n## How it works\r\n\r\nFor a `SQL Input Binding` to work, you can provide the query to retrieve data from an existing object in the database. For instance, you can set the query to `SELECT * FROM [dbo].[table1]` in the `commandText` attribute to return all the values from the `[dbo].[table1]` table in the database.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsinput)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "name": "req",
+          "type": "httpTrigger",
+          "direction": "in",
+          "methods": [
+            "get"
+          ]
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "name": "SQL Input Binding",
+      "language": "C#",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlInputBinding-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample SQL Input Binding\r\n * See https://aka.ms/sqlbindingsinput for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Update \"commandText\" in function.json - this should be the query to execute to retrieve the values being returned\r\n *      2. Add an app setting named \"SqlConnectionString\" containing the connection string\r\n *          to use for the SQL connection\r\n * @param context The Azure Function runtime context\r\n * @param req The HttpRequest that triggered this function\r\n * @param results The array of objects returned by the SQL input binding\r\n */\r\nmodule.exports = async function (context, req, results) {\r\n    context.log('Query results: ', JSON.stringify(results));\r\n    return {\r\n        status: 200,\r\n        body: results\r\n    };\r\n}\r\n",
+      "readme.md": "# SQL Input Binding - JavaScript\r\n\r\nThe `SQL Input Binding` makes it easy to retrieve data from a database, returning the output of the query or stored procedure to the function.\r\n\r\n## How it works\r\n\r\nFor a `SQL Input Binding` to work, you can provide the query to retrive data from an existing object in the database. For instance, you can set the query to `Select * From [dbo].[table1]` to query `[dbo].[table1]` in the `commandText` value in your `function.json`.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsinput)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "name": "req",
+          "type": "httpTrigger",
+          "direction": "in",
+          "methods": [
+            "get"
+          ]
+        },
+        {
+          "name": "$return",
+          "type": "http",
+          "direction": "out"
+        },
+        {
+          "type": "sql",
+          "name": "results",
+          "direction": "in",
+          "commandText": "SELECT * FROM [dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "name": "SQL Input Binding",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlInputBinding-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Input Binding - PowerShell\r\n\r\nThe `SQL Input Binding` makes it easy to retrieve data from a database, returning the output of the query or stored procedure to the function.\r\n\r\n## How it works\r\n\r\nFor a `SQL Input Binding` to work, you can provide the query to retrieve data from an existing object in the database. For instance, you can set the query to `SELECT * FROM [dbo].[table1]` in the `commandText` value in your `function.json` to return all the values from the `[dbo].[table1]` table in the database.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsinput).",
+      "run.ps1": "<#\r\nSample SQL Input Binding\r\nSee https://aka.ms/sqlbindingsinput for more information about using this binding\r\nThese tasks should be completed prior to running:\r\n    1. Update \"commandText\" in function.json - this should be the query to execute to retrieve the values being returned\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n@param Request The HttpRequest that triggered this function\r\n@param items The array of objects returned by the SQL input binding\r\n#>\r\nusing namespace System.Net\r\n\r\n# Trigger and input binding data are passed in via the param block.\r\nparam($Request, $items)\r\n\r\n# Write to the Azure Functions log stream.\r\nWrite-Host \"PowerShell function with SQL Input Binding processed a request.\"\r\n\r\n# Assign the value to return as the HTTP response. \r\n# The -Name value matches the name property in the function.json for the binding\r\nPush-OutputBinding -Name Response -Value ([HttpResponseContext]@{\r\n    StatusCode = [System.Net.HttpStatusCode]::OK\r\n    Body = $items\r\n})"
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "type": "httpTrigger",
+          "direction": "in",
+          "name": "Request",
+          "methods": [
+            "get"
+          ]
+        },
+        {
+          "type": "http",
+          "direction": "out",
+          "name": "Response"
+        },
+        {
+          "name": "items",
+          "type": "sql",
+          "direction": "in",
+          "commandText": "SELECT * FROM [dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "name": "SQL Input Binding",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlInputBinding-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Input Binding - Python\r\n\r\nThe `SQL Input Binding` makes it easy to retrieve data from a database, returning the output of the query or stored procedure to the function.\r\n\r\n## How it works\r\n\r\nFor a `SQL Input Binding` to work, you can provide the query to retrieve data from an existing object in the database. For instance, you can set the query to `SELECT * FROM [dbo].[table1]` in the `commandText` value in your `function.json` to return all the values from the `[dbo].[table1]` table in the database.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsinput).",
+      "__init__.py": "import json\r\n\r\nfrom azure.functions import HttpRequest, HttpResponse, SqlRowList\r\n\r\ndef main(req: HttpRequest, items: SqlRowList) -> HttpResponse:\r\n    \"\"\"Sample SQL Input Binding\r\n\r\n    See https://aka.ms/sqlbindingsinput for more information about using this binding\r\n\r\n    *IMPORTANT*\r\n        Local Development : You must have version >= 4.0.5030 of the Azure Function Core Tools installed.\r\n\r\n    These tasks should be completed prior to running :\r\n    1. Update \"commandText\" in function.json - this should be the query to execute to retrieve the values being returned\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n\r\n    Arguments:\r\n    req: The HttpRequest that triggered this function\r\n    items: The list of objects returned by the SQL input binding\r\n    \"\"\"\r\n\r\n    rows = list(map(lambda r: json.loads(r.to_json()), items))\r\n\r\n    return HttpResponse(\r\n        json.dumps(rows),\r\n        status_code=200,\r\n        mimetype=\"application/json\"\r\n    )\r\n"
+    },
+    "function": {
+      "scriptFile": "__init__.py",
+      "bindings": [
+        {
+          "authLevel": "function",
+          "type": "httpTrigger",
+          "direction": "in",
+          "name": "req",
+          "methods": [
+            "get"
+          ]
+        },
+        {
+          "type": "sql",
+          "name": "items",
+          "direction": "in",
+          "commandText": "SELECT * FROM [dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        },
+        {
+          "type": "http",
+          "direction": "out",
+          "name": "$return"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "name": "SQL Input Binding",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "filters": [
+        "Python3"
+      ]
+    }
+  },
+  {
+    "id": "SqlInputBinding-Typescript",
+    "runtime": "2",
+    "files": {
+      "index.ts": "import { AzureFunction, Context, HttpRequest } from \"@azure/functions\"\r\n\r\n/**\r\n * Sample SQL Input Binding\r\n * See https://aka.ms/sqlbindingsinput for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Update \"commandText\" in function.json - this should be the query to execute to retrieve the values being returned\r\n *      2. Add an app setting named \"SqlConnectionString\" containing the connection string\r\n *          to use for the SQL connection\r\n * @param context The Azure Function runtime context\r\n * @param req The HttpRequest that triggered this function\r\n * @param items The array of objects returned by the SQL input binding\r\n */\r\nconst sqlInputBinding: AzureFunction = async function (context: Context, req: HttpRequest, items: any[]): Promise<void> {\r\n    context.log('HTTP trigger with SQL input binding function processed a request.');\r\n    context.res = {\r\n        // status: 200, /* Defaults to 200 */\r\n        body: items\r\n    };\r\n};\r\n\r\nexport default sqlInputBinding;",
+      "readme.md": "# SQL Input Binding - Typescript\r\n\r\nThe `SQL Input Binding` makes it easy to retrieve data from a database, returning the output of the query or stored procedure to the function.\r\n\r\n## How it works\r\n\r\nFor a `SQL Input Binding` to work, you can provide the query to retrieve data from an existing object in the database. For instance, you can set the query to `SELECT * FROM [dbo].[table1]` in the `commandText` value in your `function.json` to return all the values from the `[dbo].[table1]` table in the database.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsinput)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "type": "httpTrigger",
+          "direction": "in",
+          "name": "req",
+          "methods": [
+            "get"
+          ]
+        },
+        {
+          "type": "sql",
+          "name": "items",
+          "direction": "in",
+          "commandText": "SELECT * FROM [dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        },
+        {
+          "type": "http",
+          "direction": "out",
+          "name": "res"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlInputBinding",
+      "description": "$SqlInputBinding_description",
+      "name": "SQL Input Binding",
+      "language": "Typescript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlOutputBinding-CSharp",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Output Binding - C<span>#</span>\r\n\r\nThe `SQL Output Binding` makes it easy to take an array of rows and upsert them into the user table (i.e. If a row doesn't already exist, it is added. If it does, it is updated).\r\n\r\n## How it works\r\n\r\nFor a `SQL Output Binding` to work, you provide the existing table in the database to upsert rows into. For instance, you can set the table to `[dbo].[table1]` in the `commandText` attribute to upsert into this table.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsoutput)"
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "name": "req",
+          "type": "httpTrigger",
+          "direction": "in",
+          "methods": [
+            "get"
+          ]
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlOutputBinding",
+      "description": "$SqlOutputBinding_description",
+      "name": "SQL Output Binding",
+      "language": "C#",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlOutputBinding-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample SQL Output Binding\r\n * See https://aka.ms/sqlbindingsoutput for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Update \"commandText\" in function.json - this should be the name of the table that you wish to upsert values to\r\n *      2. Add an app setting named \"SqlConnectionString\" containing the connection string\r\n *          to use for the SQL connection\r\n * @param context The Azure Function runtime context\r\n * @param req The HttpRequest that triggered this function\r\n */\r\nmodule.exports = async function (context, req) {\r\n    context.log('HTTP trigger with SQL output binding function processed a request.');\r\n\r\n    // Set results array to context.bindings for upsertion\r\n    // Note that this expects the body to be a JSON object or array of objects which have a property\r\n    // matching each of the columns in the table to upsert to.\r\n    context.bindings.results = JSON.stringify(req.body);\r\n\r\n    context.res = {\r\n        status: 201,\r\n        body: req.body\r\n    };\r\n}",
+      "readme.md": "# SQL Output Binding - JavaScript\r\n\r\nThe `SQL Output Binding` makes it easy to take an array of rows and upsert them into the user table (i.e. If a row doesn't already exist, it is added. If it does, it is updated).\r\n\r\n## How it works\r\n\r\nFor a `SQL Output Binding` to work, you provide the existing table in the database to upsert rows into. For instance, you can set the table to `[dbo].[table1]` in the `commandText` value in your `function.json` to upsert into this table.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsoutput)"
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "name": "req",
+          "direction": "in",
+          "type": "httpTrigger",
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "name": "$return",
+          "type": "http",
+          "direction": "out"
+        },
+        {
+          "type": "sql",
+          "name": "results",
+          "direction": "out",
+          "commandText": "[dbo].[table1]",
+          "commandType": "Text",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlOutputBinding",
+      "description": "$SqlOutputBinding_description",
+      "name": "SQL Output Binding",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlOutputBinding-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Output Binding - PowerShell\r\n\r\nThe `SQL Output Binding` makes it easy to take an array of rows and upsert them into the user table (i.e. If a row doesn't already exist, it is added. If it does, it is updated).\r\n\r\n## How it works\r\n\r\nFor a `SQL Output Binding` to work, you provide the existing table in the database to upsert rows into. For instance, you can set the table to `[dbo].[table1]` in the `commandText` value in your `function.json` to upsert into this table.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsoutput)",
+      "run.ps1": "<#\r\nSample SQL Output Binding\r\nSee https://aka.ms/sqlbindingsinput for more information about using this binding\r\nThese tasks should be completed prior to running :\r\n    1. Update \"commandText\" in function.json - this should be the name of the table that you wish to upsert values to\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n@param Request The HttpRequest that triggered this function\r\n#>\r\nusing namespace System.Net\r\n\r\n# Trigger binding data passed in via param block\r\nparam($Request)\r\n\r\n# Write to the Azure Functions log stream.\r\nWrite-Host \"PowerShell function with SQL Output Binding processed a request.\"\r\n\r\n# Update req_body with the body of the request\r\n# Note that this expects the body to be a JSON object or array of objects \r\n# which have a property matching each of the columns in the table to upsert to.\r\n$req_body = $Request.Body\r\n\r\n# Assign the value we want to pass to the SQL Output binding. \r\n# The -Name value corresponds to the name property in the function.json for the binding\r\nPush-OutputBinding -Name results -Value $req_body\r\n\r\n# Assign the value to return as the HTTP response. \r\n# The -Name value matches the name property in the function.json for the binding\r\nPush-OutputBinding -Name Response -Value ([HttpResponseContext]@{\r\n    StatusCode = [HttpStatusCode]::OK\r\n    Body = $req_body\r\n})"
+    },
+    "function": {
+      "bindings": [
+        {
+          "authLevel": "function",
+          "type": "httpTrigger",
+          "direction": "in",
+          "name": "Request",
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "type": "http",
+          "direction": "out",
+          "name": "Response"
+        },
+        {
+          "name": "results",
+          "type": "sql",
+          "direction": "out",
+          "commandText": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlOutputBinding",
+      "description": "$SqlOutputBinding_description",
+      "name": "SQL Output Binding",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlOutputBinding-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Output Binding - Python\r\n\r\nThe `SQL Output Binding` makes it easy to take a list of rows and upsert them into the user table (i.e. If a row doesn't already exist, it is added. If it does, it is updated).\r\n\r\n## How it works\r\n\r\nFor a `SQL Output Binding` to work, you provide the existing table in the database to upsert rows into. For instance, you can set the table to `[dbo].[table1]` in the `commandText` value in your `function.json` to upsert into this table.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqlbindingsoutput)",
+      "__init__.py": "import json\r\n\r\nfrom azure.functions import HttpRequest, HttpResponse, Out, SqlRowList, SqlRow\r\n\r\ndef main(req: HttpRequest, items: Out[SqlRowList]) -> HttpResponse:\r\n    \"\"\"Sample SQL Output Binding\r\n\r\n    See https://aka.ms/sqlbindingsoutput for more information about using this binding\r\n\r\n    *IMPORTANT*\r\n        Local Development : You must have version >= 4.0.5030 of the Azure Function Core Tools installed.\r\n\r\n    See https://github.com/Azure/azure-functions-sql-extension/issues/250 for the current state of Python support for the SQL binding\r\n\r\n    These tasks should be completed prior to running :\r\n    1. Update \"commandText\" in function.json - this should be the name of the table that you wish to upsert values to\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n\r\n    Arguments:\r\n    req: The HttpRequest that triggered this function\r\n    items: The objects to be upserted to the database\r\n    \"\"\"\r\n\r\n    # Note that this expects the body to be an array of JSON objects which\r\n    # have a property matching each of the columns in the table to upsert to.\r\n    body = json.loads(req.get_body())\r\n    rows = SqlRowList(map(lambda r: SqlRow.from_dict(r), body))\r\n    items.set(rows)\r\n\r\n    return HttpResponse(\r\n        body=req.get_body(),\r\n        status_code=201, # 201 Created\r\n        mimetype=\"application/json\"\r\n    )\r\n"
+    },
+    "function": {
+      "scriptFile": "__init__.py",
+      "bindings": [
+        {
+          "authLevel": "function",
+          "type": "httpTrigger",
+          "direction": "in",
+          "name": "req",
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "type": "sql",
+          "name": "items",
+          "direction": "out",
+          "commandText": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        },
+        {
+          "type": "http",
+          "direction": "out",
+          "name": "$return"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlOutputBinding",
+      "description": "$SqlOutputBinding_description",
+      "name": "SQL Output Binding",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "filters": [
+        "Python3"
+      ]
+    }
+  },
+  {
     "id": "TimerTrigger-CSharp",
     "runtime": "2",
     "files": {
@@ -4167,7 +4491,7 @@
     "files": {
       "readme.md": "# TimerTrigger - Python\r\n\r\nThe `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.\r\n\r\n## How it works\r\n\r\nFor a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: \"When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year\".\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation\r\n",
       "sample.dat": "",
-      "__init__.py": "import datetime\r\nimport logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(mytimer: func.TimerRequest) -> None:\r\n    utc_timestamp = datetime.datetime.utcnow().replace(\r\n        tzinfo=datetime.timezone.utc).isoformat()\r\n\r\n    if mytimer.past_due:\r\n        logging.info('The timer is past due!')\r\n\r\n    logging.info('Python timer trigger function ran at %s', utc_timestamp)\r\n"
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import TimerRequest\r\nfrom datetime import datetime, timezone\r\n\r\n\r\ndef main(mytimer: TimerRequest) -> None:\r\n    utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()\r\n\r\n    if mytimer.past_due:\r\n        logging.info('The timer is past due!')\r\n\r\n    logging.info('Python timer trigger function ran at %s', utc_timestamp)\r\n"
     },
     "function": {
       "scriptFile": "__init__.py",
