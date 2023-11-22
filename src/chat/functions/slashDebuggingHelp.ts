@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
-import { verbatimCopilotInteraction } from "./copilotInteractions";
+import { verbatimCopilotInteraction } from "../copilotInteractions";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
 
-export const debuggingHelpSlashCommand: AgentSlashCommand = [
+export const debuggingHelpSlashCommand: SlashCommand = [
     "debuggingHelp",
     {
         shortDescription: "Help with local function debugging",
@@ -16,10 +16,10 @@ export const debuggingHelpSlashCommand: AgentSlashCommand = [
     }
 ];
 
-async function slashDebuggingHelpHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+async function slashDebuggingHelpHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
     const { copilotResponded } = await verbatimCopilotInteraction(debuggingHelpSystemPrompt1, userContent, progress, token);
     if (!copilotResponded) {
-        progress.report({ content: new vscode.MarkdownString("Sorry, I can't help with that right now.\n") });
+        progress.report({ content: "Sorry, I can't help with that right now.\n" });
     }
     return { chatAgentResult: {}, followUp: [], };
 }

@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
-import { getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "./copilotInteractions";
-import { generateAlternativeCreateFunctionProjectFollowUps } from "./followUpGenerator";
-import { WellKnownFunctionProjectLanguage, WellKnownTemplate, getWellKnownCSharpTemplate, getWellKnownTypeScriptTemplate, isWellKnownFunctionProjectLanguage, wellKnownCSharpTemplateDisplayNames, wellKnownTypeScriptTemplateDisplayNames } from "./wellKnownThings";
+import { getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "../copilotInteractions";
+import { generateAlternativeCreateFunctionProjectFollowUps } from "../followUpGenerator";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
+import { WellKnownFunctionProjectLanguage, WellKnownTemplate, getWellKnownCSharpTemplate, getWellKnownTypeScriptTemplate, isWellKnownFunctionProjectLanguage, wellKnownCSharpTemplateDisplayNames, wellKnownTypeScriptTemplateDisplayNames } from "../wellKnownThings";
 
-export const createFunctionProjectSlashCommand: AgentSlashCommand = [
+export const createFunctionProjectSlashCommand: SlashCommand = [
     "createFunctionProject",
     {
         shortDescription: "Create a Function Project",
@@ -19,7 +19,7 @@ export const createFunctionProjectSlashCommand: AgentSlashCommand = [
     }
 ];
 
-async function createFunctionProjectHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+async function createFunctionProjectHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
     let markDownResponse: string = "";
     const followUps: vscode.InteractiveSessionFollowup[] = [];
 
@@ -46,7 +46,7 @@ async function createFunctionProjectHandler(userContent: string, _ctx: vscode.Ch
         console.log(e);
     }
 
-    progress.report({ content: new vscode.MarkdownString(markDownResponse ?? "Sorry, I can't help with that right now.\n") });
+    progress.report({ content: markDownResponse ?? "Sorry, I can't help with that right now.\n" });
 
     return { chatAgentResult: {}, followUp: followUps, };
 }
@@ -54,7 +54,7 @@ async function createFunctionProjectHandler(userContent: string, _ctx: vscode.Ch
 /**
  * Determines what language (if any) copilot suggested for creating a function project. The language will be verified to be well known.
  */
-async function determineLanguage(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<WellKnownFunctionProjectLanguage | undefined> {
+async function determineLanguage(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<WellKnownFunctionProjectLanguage | undefined> {
     const maybeJsonCopilotResponse = await getResponseAsStringCopilotInteraction(createFunctionProjectDetermineLanguageSystemPrompt1, userContent, progress, token);
     const language = getStringFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponse, "language");
     if (isWellKnownFunctionProjectLanguage(language)) {
@@ -67,7 +67,7 @@ async function determineLanguage(userContent: string, _ctx: vscode.ChatAgentCont
 /**
  * Determines what template (if any) copilot suggested for creating a function project. The template will be verified to be well known for the language. If the language is not well known, then the template will be ignored.
  */
-async function determineTemplate(language: WellKnownFunctionProjectLanguage | undefined, userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<WellKnownTemplate | undefined> {
+async function determineTemplate(language: WellKnownFunctionProjectLanguage | undefined, userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<WellKnownTemplate | undefined> {
     if (!isWellKnownFunctionProjectLanguage(language)) {
         language = "TypeScript";
     }

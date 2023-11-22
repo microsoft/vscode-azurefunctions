@@ -6,36 +6,28 @@
 
 import * as vscode from "vscode";
 import { ext } from '../extensionVariables';
-import { getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "./copilotInteractions";
-import { brainstormSlashCommand } from "./slashBrainstorm";
-import { createFunctionAppSlashCommand } from "./slashCreateFunctionApp";
-import { createFunctionProjectSlashCommand } from "./slashCreateFunctionProject";
-import { defaultSlashCommand } from "./slashDefault";
-import { deploySlashCommand } from "./slashDeploy";
-import { learnSlashCommand } from "./slashLearn";
+import { agentDescription, agentFullName, agentName } from "./agentConsts";
+import { AgentBenchmarker } from "./benchmarking/benchmarking";
+import { verbatimCopilotInteraction } from "./copilotInteractions";
+import { functionsSlashCommand } from "./functions/slashFunctions";
+import {
+    FallbackSlashCommandHandlers,
+    InvokeableSlashCommands,
+    SlashCommandHandlerResult,
+    SlashCommandOwner
+} from "./slashCommands";
 
-export type SlashCommandName = string;
-export type SlashCommandHandlerResult = { chatAgentResult: vscode.ChatAgentResult2, followUp?: vscode.ChatAgentFollowup[] };
-export type SlashCommandHandler = (userContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken) => Promise<SlashCommandHandlerResult>;
-export type SlashCommandConfig = { shortDescription: string, longDescription: string, determineCommandDescription?: string, handler: SlashCommandHandler };
-export type AgentSlashCommand = [SlashCommandName, SlashCommandConfig]
-
-const agentName = "azure-functions";
-const agentFullName = "Azure Functions Extension";
-const agentDescription = "Agent for Azure Functions development";
-
-export const slashCommands = new Map([
-    learnSlashCommand,
-    brainstormSlashCommand,
-    createFunctionAppSlashCommand,
-    createFunctionProjectSlashCommand,
-    deploySlashCommand,
-    // debuggingHelpSlashCommand,
+const agentSlashCommands: InvokeableSlashCommands = new Map([
+    functionsSlashCommand
 ]);
 
-const slashCommandsMarkdown = Array.from(slashCommands).map(([name, config]) => `- \`/${name}\` - ${config.longDescription || config.shortDescription}`).join("\n");
+const fallbackSlashCommandHandlers: FallbackSlashCommandHandlers = {
+    noInput: noInputHandler,
+    default: defaultHandler,
+};
+const agentSlashCommandOwner = new SlashCommandOwner(agentSlashCommands, fallbackSlashCommandHandlers);
 
-let previousSlashCommandHandlerResult: SlashCommandHandlerResult | undefined;
+const agentBenchmarker = new AgentBenchmarker(agentSlashCommandOwner);
 
 export function registerAgent() {
     try {
@@ -50,66 +42,41 @@ export function registerAgent() {
     }
 }
 
-async function handler(request: vscode.ChatAgentRequest, context: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<vscode.ProviderResult<vscode.ChatAgentResult2>> {
-    const prompt = request.prompt.trim();
-    const command = request.slashCommand?.name;
+async function handler(request: vscode.ChatAgentRequest, context: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<vscode.ChatAgentResult2 | undefined> {
+    const handleResult = await agentBenchmarker.handleRequestOrPrompt(request, context, progress, token) ||
+        await agentSlashCommandOwner.handleRequestOrPrompt(request, context, progress, token);
 
-    let handler: SlashCommandHandler | undefined;
-
-    if (!handler && prompt === "" && !command) {
-        handler = giveNoInputResponse;
+    if (handleResult !== undefined) {
+        return handleResult.chatAgentResult;
+    } else {
+        return undefined;
     }
-
-    if (!handler) {
-        const slashCommand = slashCommands.get(command || "");
-        if (slashCommand !== undefined) {
-            handler = slashCommand.handler;
-        }
-    }
-
-    if (!handler) {
-        const maybeCommand = await determineCommand(prompt, context, progress, token);
-        if (maybeCommand !== undefined) {
-            const slashCommand = slashCommands.get(maybeCommand);
-            if (slashCommand !== undefined) {
-                handler = slashCommand.handler;
-            }
-        }
-    }
-
-    if (!handler) {
-        handler = defaultSlashCommand[1].handler;
-    }
-
-    previousSlashCommandHandlerResult = await handler(prompt, context, progress, token);
-    return previousSlashCommandHandlerResult.chatAgentResult;
 }
 
-function followUpProvider(result: vscode.ChatAgentResult2, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.ChatAgentFollowup[]> {
-    if (result === previousSlashCommandHandlerResult?.chatAgentResult) {
-        return previousSlashCommandHandlerResult?.followUp || [];
-    } else {
-        return [];
-    }
+function followUpProvider(result: vscode.ChatAgentResult2, token: vscode.CancellationToken): vscode.ProviderResult<vscode.ChatAgentFollowup[]> {
+    return agentBenchmarker.getFollowUpForLastHandledSlashCommand(result, token) || agentSlashCommandOwner.getFollowUpForLastHandledSlashCommand(result, token) || [];
 }
 
 function getSlashCommands(_token: vscode.CancellationToken): vscode.ProviderResult<vscode.ChatAgentSlashCommand[]> {
-    return Array.from(slashCommands.entries()).map(([name, config]) => {
-        return { name: name, description: config.shortDescription };
-    });
+    return Array
+        .from(agentSlashCommands.entries())
+        .map(([name, config]) => ({ name: name, description: config.shortDescription }))
 }
 
-async function giveNoInputResponse(_userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, _token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
-    progress.report({ content: new vscode.MarkdownString(`Hi! I can help you with tasks related to Azure Functions development. If you know what you'd like to do, you can use the following commands to ask me for help:\n\n${slashCommandsMarkdown}\n\nOtherwise feel free to ask or tell me anything and I'll do my best to help.`) });
+async function defaultHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+    const defaultSystemPrompt1 = `You are an expert in using the Azure Extensions for VS Code. The user needs your help with something related to either Azure, VS Code, and/or the Azure Extensions for VS Code. Do your best to answer their question. The user is currently using VS Code and has one or more Azure Extensions for VS Code installed. Do not overwhelm the user with too much information. Keep responses short and sweet.`;
+
+    const { copilotResponded } = await verbatimCopilotInteraction(defaultSystemPrompt1, userContent, progress, token);
+    if (!copilotResponded) {
+        progress.report({ content: vscode.l10n.t("Sorry, I can't help with that right now.\n") });
+        return { chatAgentResult: {}, followUp: [], };
+    } else {
+        return { chatAgentResult: {}, followUp: [], };
+    }
+}
+
+async function noInputHandler(_userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, _token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+    const slashCommandsMarkdown = Array.from(agentSlashCommands).map(([name, config]) => `- \`/${name}\` - ${config.longDescription || config.shortDescription}`).join("\n");
+    progress.report({ content: `Hi! I can help you with tasks related to Azure Functions development. If you know what you'd like to do, you can use the following commands to ask me for help:\n\n${slashCommandsMarkdown}\n\nOtherwise feel free to ask or tell me anything and I'll do my best to help.` });
     return { chatAgentResult: {}, followUp: [] };
 }
-
-async function determineCommand(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
-    const availableCommandsJoined = Array.from(slashCommands.entries()).map(([name, config]) => `'${name}' (${config.determineCommandDescription || config.longDescription})`).join(", ")
-    const maybeJsonCopilotResponse = await getResponseAsStringCopilotInteraction(determineCommandSystemPrompt1(availableCommandsJoined), userContent, progress, token);
-    return getStringFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponse, "command");
-}
-
-const determineCommandSystemPrompt1 = (availableCommandsJoined) => `
-    You are an expert in Azure function development. You have several commands users can use to interact with you. The available commands are: ${availableCommandsJoined}. Your job is to determine which command would most help the user based on their query. Choose one of the available commands as the best command. Only repsond with a JSON object containing the command you choose. Do not respond in a coverstaional tone, only JSON.
-`;

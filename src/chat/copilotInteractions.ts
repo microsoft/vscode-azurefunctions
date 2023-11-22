@@ -5,18 +5,20 @@
 
 import * as vscode from "vscode";
 
-let cachedAccess: vscode.ChatAccess | undefined;
+const maxCachedAccessAge = 1000 * 30;
+let cachedAccess: { access: vscode.ChatAccess, requestedAt: number } | undefined;
 async function getChatAccess(): Promise<vscode.ChatAccess> {
-    if (cachedAccess === undefined || cachedAccess.isRevoked) {
-        cachedAccess = await vscode.chat.requestChatAccess("copilot");
+    if (cachedAccess === undefined || cachedAccess.access.isRevoked || cachedAccess.requestedAt < Date.now() - maxCachedAccessAge) {
+        const newAccess = await vscode.chat.requestChatAccess("copilot");
+        cachedAccess = { access: newAccess, requestedAt: Date.now() };
     }
-    return cachedAccess;
+    return cachedAccess.access;
 }
 
-const debug = false;
-export function debugProgress(progress: vscode.Progress<vscode.InteractiveProgress>, msg: string) {
-    if (debug) {
-        progress.report({ content: new vscode.MarkdownString(`\n\n${new Date().toISOString()} >> \`${msg.replace(/\n/g, "").trim()}\`\n\n`) });
+const showDebugCopilotInteractionAsProgress = false;
+function debugCopilotInteraction(progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, msg: string) {
+    if (showDebugCopilotInteractionAsProgress) {
+        progress.report({ content: `\n\n${new Date().toISOString()} >> \`${msg.replace(/\n/g, "").trim()}\`\n\n` });
     }
     console.log(`${new Date().toISOString()} >> \`${msg.replace(/\n/g, "").trim()}\``);
 }
@@ -24,46 +26,63 @@ export function debugProgress(progress: vscode.Progress<vscode.InteractiveProgre
 /**
  * Feeds {@link systemPrompt} and {@link userContent} to Copilot and redirects the response directly to ${@link progress}.
  */
-export async function verbatimCopilotInteraction(systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<{ copilotResponded: boolean, copilotResponse: string }> {
-    try {
-        const access = await getChatAccess();
-        const messages = [
-            {
-                role: vscode.ChatMessageRole.System,
-                content: systemPrompt
-            },
-            {
-                role: vscode.ChatMessageRole.User,
-                content: userContent
-            },
-        ];
-
-        const request = access.makeRequest(messages, {}, token);
-        const copilotResponse = await new Promise<string>((resolve, reject) => {
-            request.onDidStartResponseStream(async (stream) => {
-                try {
-                    let joinedFragements = "";
-                    for await (const fragment of stream.response) {
-                        joinedFragements += fragment;
-                        progress.report({ content: new vscode.MarkdownString(fragment) });
-                    }
-                    resolve(joinedFragements);
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        });
-        return { copilotResponded: true, copilotResponse: copilotResponse };
-    } catch (e) {
-        console.log(e);
-    }
-    return { copilotResponded: false, copilotResponse: "" };
+export async function verbatimCopilotInteraction(systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<{ copilotResponded: boolean, copilotResponse: string }> {
+    let joinedFragements = "";
+    await queueCopilotInteraction((fragment) => {
+        joinedFragements += fragment;
+        progress.report({ content: fragment });
+    }, systemPrompt, userContent, progress, token);
+    return { copilotResponded: true, copilotResponse: joinedFragements };
 }
 
 /**
  * Feeds {@link systemPrompt} and {@link userContent} to Copilot and directly returns its response.
  */
-export async function getResponseAsStringCopilotInteraction(systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
+export async function getResponseAsStringCopilotInteraction(systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
+    let joinedFragements = "";
+    await queueCopilotInteraction((fragment) => {
+        joinedFragements += fragment;
+    }, systemPrompt, userContent, progress, token);
+    return joinedFragements;
+}
+
+let copilotInteractionQueueRunning = false;
+type CopilotInteractionQueueItem = { onResponseFragment: (fragment: string) => void, systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken, resolve: () => void };
+const copilotInteractionQueue: CopilotInteractionQueueItem[] = [];
+
+export async function queueCopilotInteraction(onResponseFragment: (fragment: string) => void, systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<void> {
+    return new Promise<void>((resolve) => {
+        copilotInteractionQueue.push({ onResponseFragment, systemPrompt, userContent, progress, token, resolve });
+        if (!copilotInteractionQueueRunning) {
+            copilotInteractionQueueRunning = true;
+            void runCopilotInteractionQueue();
+        }
+    });
+}
+
+let lastCopilotInteractionRunTime: number = 0;
+const timeBetweenCopilotInteractions = 1500
+async function runCopilotInteractionQueue() {
+    while (copilotInteractionQueue.length > 0) {
+        const queueItem = copilotInteractionQueue.shift();
+        if (queueItem === undefined) {
+            continue;
+        }
+
+        const timeSinceLastCopilotInteraction = Date.now() - lastCopilotInteractionRunTime;
+        if (timeSinceLastCopilotInteraction < timeBetweenCopilotInteractions) {
+            await new Promise((resolve) => setTimeout(resolve, timeBetweenCopilotInteractions - timeSinceLastCopilotInteraction));
+        }
+
+        lastCopilotInteractionRunTime = Date.now();
+
+        await doCopilotInteraction(queueItem.onResponseFragment, queueItem.systemPrompt, queueItem.userContent, queueItem.progress, queueItem.token);
+        queueItem.resolve();
+    }
+    copilotInteractionQueueRunning = false;
+}
+
+async function doCopilotInteraction(onResponseFragment: (fragment: string) => void, systemPrompt: string, userContent: string, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<void> {
     try {
         const access = await getChatAccess();
         const messages = [
@@ -77,31 +96,13 @@ export async function getResponseAsStringCopilotInteraction(systemPrompt: string
             },
         ];
 
-        if (access.isRevoked) {
-            return undefined;
-        }
         const request = access.makeRequest(messages, {}, token);
-        const copilotResponse = await new Promise<string>((resolve, reject) => {
-            request.onDidStartResponseStream(async (stream) => {
-                try {
-                    let joinedFragements = "";
-                    for await (const fragment of stream.response) {
-                        joinedFragements += fragment;
-                    }
-                    resolve(joinedFragements);
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        });
-
-        debugProgress(progress, copilotResponse);
-
-        return copilotResponse;
+        for await (const fragment of request.response) {
+            onResponseFragment(fragment);
+        }
     } catch (e) {
-        console.log(e);
+        debugCopilotInteraction(progress, `Error: ${e}`);
     }
-    return undefined;
 }
 
 /**

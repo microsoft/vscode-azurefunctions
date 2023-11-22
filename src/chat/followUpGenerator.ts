@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { agentName } from "./agentConsts";
 import { getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "./copilotInteractions";
 import { WellKnownFunctionProjectLanguage, WellKnownTemplate, getWellKnownCSharpTemplate, getWellKnownTypeScriptTemplate, isWellKnownFunctionProjectLanguage, wellKnownCSharpTemplateDisplayNames, wellKnownTypeScriptTemplateDisplayNames } from "./wellKnownThings";
 
@@ -15,7 +16,7 @@ import { WellKnownFunctionProjectLanguage, WellKnownTemplate, getWellKnownCSharp
  * - Deploying a function project
  * - Creating a function app
  */
-export async function generateGeneralInteractionFollowUps(userContent: string, copilotContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
+export async function generateGeneralInteractionFollowUps(userContent: string, copilotContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
     try {
         const nextQuestionFollowUpsPromise = generateNextQuestionsFollowUps(userContent, copilotContent, ctx, progress, token);
         const createFunctionProjectFollowUpsPromise = generateCreateFunctionProjectFollowUps(userContent, copilotContent, ctx, progress, token);
@@ -37,36 +38,36 @@ export async function generateAlternativeCreateFunctionProjectFollowUps(language
     const result: vscode.InteractiveSessionReplyFollowup[] = [];
     if (language !== undefined && template !== undefined) {
         if (language === "C#" && getWellKnownTypeScriptTemplate(template)) {
-            result.push({ message: `@azure-functions create a project using the TypeScript ${template} template` });
+            result.push({ message: `@${agentName} create a project using the TypeScript ${template} template` });
         }
         if (language === "TypeScript" && getWellKnownCSharpTemplate(template)) {
-            result.push({ message: `@azure-functions create a project using the C# ${template} template` });
+            result.push({ message: `@${agentName} create a project using the C# ${template} template` });
         }
     }
     return result;
 }
 
-async function generateCreateFunctionProjectFollowUps(userContent: string, copilotContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
+async function generateCreateFunctionProjectFollowUps(userContent: string, copilotContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
     const createFunctionProjectFollowUps: vscode.InteractiveSessionReplyFollowup[] = [];
     const functionProjectionSuggestion = await wasCreatingFunctionProjectSuggested(userContent, copilotContent, ctx, progress, token);
     if (functionProjectionSuggestion !== false) {
         if (functionProjectionSuggestion.language !== undefined && functionProjectionSuggestion.template !== undefined) {
-            createFunctionProjectFollowUps.push({ message: `@azure-functions create a function project using the ${functionProjectionSuggestion.language} ${functionProjectionSuggestion.template} template` });
+            createFunctionProjectFollowUps.push({ message: `@${agentName} create a function project using the ${functionProjectionSuggestion.language} ${functionProjectionSuggestion.template} template` });
         } else if (functionProjectionSuggestion.language !== undefined) {
-            createFunctionProjectFollowUps.push({ message: `@azure-functions create a ${functionProjectionSuggestion.language} function project` });
+            createFunctionProjectFollowUps.push({ message: `@${agentName} create a ${functionProjectionSuggestion.language} function project` });
         } else if (functionProjectionSuggestion.template !== undefined) {
             if (getWellKnownCSharpTemplate(functionProjectionSuggestion.template)) {
-                createFunctionProjectFollowUps.push({ message: `@azure-functions create a function project using the C# ${functionProjectionSuggestion.template} template` });
+                createFunctionProjectFollowUps.push({ message: `@${agentName} create a function project using the C# ${functionProjectionSuggestion.template} template` });
             }
             if (getWellKnownTypeScriptTemplate(functionProjectionSuggestion.template)) {
-                createFunctionProjectFollowUps.push({ message: `@azure-functions create a function project using the TypeScript ${functionProjectionSuggestion.template} template` });
+                createFunctionProjectFollowUps.push({ message: `@${agentName} create a function project using the TypeScript ${functionProjectionSuggestion.template} template` });
             }
         }
     }
     return createFunctionProjectFollowUps;
 }
 
-export async function generateNextQuestionsFollowUps(_userContent: string, copilotContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
+export async function generateNextQuestionsFollowUps(_userContent: string, copilotContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<vscode.InteractiveSessionReplyFollowup[]> {
     const maybeJsonCopilotResponseLanguage = await getResponseAsStringCopilotInteraction(generateNextQuestionsFollowUpsSystemPrompt1, copilotContent, progress, token);
     const copilotGeneratedFollowUpQuestions = [
         getStringFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponseLanguage, "followUpOne")?.trim(),
@@ -76,7 +77,7 @@ export async function generateNextQuestionsFollowUps(_userContent: string, copil
     return copilotGeneratedFollowUpQuestions
         .map((q) => {
             if (q !== undefined && q !== "") {
-                return { message: `@azure-functions ${q}` };
+                return { message: `@${agentName} ${q}` };
             } else {
                 return undefined;
             }
@@ -87,7 +88,7 @@ export async function generateNextQuestionsFollowUps(_userContent: string, copil
 /**
  * Given a copilot response, determines if the response suggests creating a function project. If so, returns the language and template suggested for the project. If not, returns false.
  */
-async function wasCreatingFunctionProjectSuggested(userContent: string, copilotContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<false | { language: WellKnownFunctionProjectLanguage | undefined, template: WellKnownTemplate | undefined }> {
+async function wasCreatingFunctionProjectSuggested(userContent: string, copilotContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<false | { language: WellKnownFunctionProjectLanguage | undefined, template: WellKnownTemplate | undefined }> {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
     const copilotDeterminedLanguageFromUserContent = await new Promise<string | undefined>(async (resolve) => {
         const maybeJsonCopilotResponseLanguage = await getResponseAsStringCopilotInteraction(determineBestLanguageForUserSystemPrompt1, userContent, progress, token);

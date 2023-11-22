@@ -3,32 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDeployPaths, getDeployFsPath } from "@microsoft/vscode-azext-azureappservice";
 import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { ISubscriptionContext, callWithTelemetryAndErrorHandling } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { IFunctionAppWizardContext } from "../commands/createFunctionApp/IFunctionAppWizardContext";
-import { getStackPicks } from "../commands/createFunctionApp/stacks/getStackPicks";
-import { tryGetFunctionProjectRoot } from "../commands/createNewProject/verifyIsProject";
-import { ext } from '../extensionVariables';
-import { addLocalFuncTelemetry } from "../funcCoreTools/getLocalFuncCoreToolsVersion";
-import { SubscriptionTreeItem } from "../tree/SubscriptionTreeItem";
-import { createActivityContext } from "../utils/activityUtils";
-import { VerifiedInit, verifyInitForVSCode } from "../vsCodeConfig/verifyInitForVSCode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
-import { getBooleanFieldFromCopilotResponseMaybeWithStrJson, getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "./copilotInteractions";
+import { FuncVersion } from "../../FuncVersion";
+import { IFunctionAppWizardContext } from "../../commands/createFunctionApp/IFunctionAppWizardContext";
+import { getStackPicks } from "../../commands/createFunctionApp/stacks/getStackPicks";
+import { ProjectLanguage } from "../../constants";
+import { ext } from '../../extensionVariables';
+import { TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
+import { SubscriptionTreeItem } from "../../tree/SubscriptionTreeItem";
+import { VerifiedInit } from "../../vsCodeConfig/verifyInitForVSCode";
+import { getBooleanFieldFromCopilotResponseMaybeWithStrJson, getResponseAsStringCopilotInteraction, getStringFieldFromCopilotResponseMaybeWithStrJson } from "../copilotInteractions";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
 
-export const createFunctionAppSlashCommand: AgentSlashCommand = [
+export const createFunctionAppSlashCommand: SlashCommand = [
     "createFunctionApp",
     {
         shortDescription: "Create a Function App",
         longDescription: "Use this command to create a Function App resource in Azure.",
-        determineCommandDescription: "This command is best when users explicitly want to create a Function App resource in Azure. They may refer to a Function App as 'Function App', 'function', 'function resource', 'function app resource', 'function app' etc. Users will not use this command when asking if or how to do something with Azure Functions or a Function App.",
+        determineCommandDescription: "This command is best when users ask to create a Function App resource in Azure. They may refer to a Function App as 'Function App', 'function', 'function resource', 'function app resource', 'function app' etc. This command is not useful if the user is asking how to do something, or if something is possible.",
         handler: createFunctionAppHandler
     }
 ];
 
-async function createFunctionAppHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+async function createFunctionAppHandler(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
     try {
         const projectInfo = await getCurrentProjectDetails();
         const subscriptionIdOrNamePromise = determineSubscriptionIdOrName(userContent, _ctx, progress, token);
@@ -41,39 +40,39 @@ async function createFunctionAppHandler(userContent: string, _ctx: vscode.ChatAg
 
         if (subscriptionIdOrName !== undefined || region !== undefined || runtime !== undefined) {
             if (projectInfo !== undefined) {
-                progress.report({ content: new vscode.MarkdownString(`Ok, I can create a Function App for your current project starting with the following details:\n\n`) });
+                progress.report({ content: `Ok, I can create a Function App for your current project starting with the following details:\n\n` });
             } else {
-                progress.report({ content: new vscode.MarkdownString(`Ok, I can create a Function App for you starting with the following details:\n\n`) });
+                progress.report({ content: `Ok, I can create a Function App for you starting with the following details:\n\n` });
             }
             if (subscriptionIdOrName !== undefined) {
-                progress.report({ content: new vscode.MarkdownString(`- Subscription: ${subscriptionIdOrName.subscriptionName} (${subscriptionIdOrName.subscriptionId})\n`) });
+                progress.report({ content: `- Subscription: ${subscriptionIdOrName.subscriptionName} (${subscriptionIdOrName.subscriptionId})\n` });
             }
             if (region !== undefined) {
-                progress.report({ content: new vscode.MarkdownString(`- Region: ${region}\n`) });
+                progress.report({ content: `- Region: ${region}\n` });
             }
             if (runtime !== undefined) {
-                progress.report({ content: new vscode.MarkdownString(`- Runtime: ${runtime}\n`) });
+                progress.report({ content: `- Runtime: ${runtime}\n` });
             }
-            progress.report({ content: new vscode.MarkdownString(`\nIf that looks good to you, click 'Create Function App' to begin. If not, you can create a Function App via the command palette instead.\n`) });
+            progress.report({ content: `\nIf that looks good to you, click 'Create Function App' to begin. If not, you can create a Function App via the command palette instead.\n` });
         }
         return { chatAgentResult: {}, followUp: [{ title: "Create Function App", commandId: "azureFunctions.createFunctionApp", args: [] }], };
     } catch (e) {
         console.log(e);
     }
 
-    progress.report({ content: new vscode.MarkdownString("Sorry, I can't help with that right now.\n") });
+    progress.report({ content: "Sorry, I can't help with that right now.\n" });
     return { chatAgentResult: {}, followUp: [], };
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function determineUserReferencingCurrentProject(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<boolean> {
+async function determineUserReferencingCurrentProject(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<boolean> {
     const maybeJsonCopilotResponse = await getResponseAsStringCopilotInteraction(createFunctionAppDetermineUserReferencingCurrentProjectPrompt1, userContent, progress, token);
     return getBooleanFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponse, "userReferencingCurrentProject") === true;
 }
 
-async function determineSubscriptionIdOrName(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<{ subscriptionId: string, subscriptionName: string } | undefined> {
+async function determineSubscriptionIdOrName(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<{ subscriptionId: string, subscriptionName: string } | undefined> {
     const availableSubscriptions = await getAvailableSubscriptions();
     if (availableSubscriptions === undefined || availableSubscriptions.length === 0) {
         return undefined;
@@ -110,13 +109,13 @@ function getSubscriptionInfoFromSubscriptionTreeItem(subscriptionNode: Subscript
     return { subscriptionId: subscriptionContext.subscription.subscriptionId, subscriptionName: subscriptionContext.subscription.name };
 }
 
-async function determineRegion(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
+async function determineRegion(userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
     const maybeJsonCopilotResponse = await getResponseAsStringCopilotInteraction(createFunctionAppDetermineRegionPrompt1, userContent, progress, token);
     return getStringFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponse, "region") ??
         getStringFieldFromCopilotResponseMaybeWithStrJson(maybeJsonCopilotResponse, "location");
 }
 
-async function determineRuntime(userContent: string, projectInfo: VerifiedInit | undefined, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
+async function determineRuntime(userContent: string, projectInfo: VerifiedInit | undefined, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<string | undefined> {
     if (projectInfo !== undefined) {
         switch (projectInfo.language) {
             case "TypeScript":
@@ -151,29 +150,31 @@ async function determineRuntime(userContent: string, projectInfo: VerifiedInit |
 }
 
 async function getCurrentProjectDetails(): Promise<VerifiedInit | undefined> {
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
-    return new Promise(async (resolve) => {
-        await callWithTelemetryAndErrorHandling("azureFunctions.chat.determineRuntime", async (actionContext) => {
-            try {
-                const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, undefined);
-                addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
-                const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
-                if (projectPath === undefined) {
-                    throw new Error("");
-                }
-                const context = Object.assign(actionContext, deployPaths, {
-                    action: "Deploy", // CodeAction.Deploy
-                    defaultAppSetting: 'defaultFunctionAppToDeploy',
-                    projectPath,
-                    ...(await createActivityContext())
-                });
+    return { language: ProjectLanguage.TypeScript, languageModel: undefined, version: FuncVersion.v4, templateSchemaVersion: TemplateSchemaVersion.v2 };
 
-                resolve(await verifyInitForVSCode(context, context.effectiveDeployFsPath));
-            } catch {
-                resolve(undefined);
-            }
-        });
-    });
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
+    // return new Promise(async (resolve) => {
+    //     await callWithTelemetryAndErrorHandling("azureFunctions.chat.determineRuntime", async (actionContext) => {
+    //         try {
+    //             const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, undefined);
+    //             addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
+    //             const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
+    //             if (projectPath === undefined) {
+    //                 throw new Error("");
+    //             }
+    //             const context = Object.assign(actionContext, deployPaths, {
+    //                 action: "Deploy", // CodeAction.Deploy
+    //                 defaultAppSetting: 'defaultFunctionAppToDeploy',
+    //                 projectPath,
+    //                 ...(await createActivityContext())
+    //             });
+
+    //             resolve(await verifyInitForVSCode(context, context.effectiveDeployFsPath));
+    //         } catch {
+    //             resolve(undefined);
+    //         }
+    //     });
+    // });
 }
 
 const createFunctionAppDetermineUserReferencingCurrentProjectPrompt1 = `

@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
-import { verbatimCopilotInteraction } from "./copilotInteractions";
-import { generateGeneralInteractionFollowUps } from "./followUpGenerator";
+import { agentName } from "../agentConsts";
+import { verbatimCopilotInteraction } from "../copilotInteractions";
+import { generateGeneralInteractionFollowUps } from "../followUpGenerator";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
 
-export const learnSlashCommand: AgentSlashCommand = [
+export const learnSlashCommand: SlashCommand = [
     "learn",
     {
         shortDescription: "Learn about Azure Functions",
@@ -18,21 +19,21 @@ export const learnSlashCommand: AgentSlashCommand = [
     }
 ];
 
-async function slashLearnHandler(userContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+async function slashLearnHandler(userContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
     if (userContent.length === 0) {
-        progress.report({ content: new vscode.MarkdownString("If you want to learn more about Azure functions, simply ask me what it is you'd like to learn.\n") });
+        progress.report({ content: "If you want to learn more about Azure functions, simply ask me what it is you'd like to learn.\n" });
         return {
             chatAgentResult: {},
             followUp: [
-                { message: `@azure-functions what is the difference between Azure functions and Azure web apps?` },
-                { message: `@azure-functions how scalable is Azure functions?` },
-                { message: `@azure-functions is Azure functions serverless?` },
+                { message: `@${agentName} what is the difference between Azure functions and Azure web apps?` },
+                { message: `@${agentName} how scalable is Azure functions?` },
+                { message: `@${agentName} is Azure functions serverless?` },
             ],
         };
     } else {
         const { copilotResponded, copilotResponse } = await verbatimCopilotInteraction(learnSystemPrompt1, userContent, progress, token);
         if (!copilotResponded) {
-            progress.report({ content: new vscode.MarkdownString(vscode.l10n.t("Sorry, I can't help with that right now.\n")) });
+            progress.report({ content: vscode.l10n.t("Sorry, I can't help with that right now.\n") });
             return { chatAgentResult: {}, followUp: [], };
         } else {
             const followUps = await generateGeneralInteractionFollowUps(userContent, copilotResponse, ctx, progress, token);

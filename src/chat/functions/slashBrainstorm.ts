@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
-import { verbatimCopilotInteraction } from "./copilotInteractions";
-import { generateGeneralInteractionFollowUps } from "./followUpGenerator";
+import { verbatimCopilotInteraction } from "../copilotInteractions";
+import { generateGeneralInteractionFollowUps } from "../followUpGenerator";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
 
-export const brainstormSlashCommand: AgentSlashCommand = [
+export const brainstormSlashCommand: SlashCommand = [
     "brainstorm",
     {
         shortDescription: "Brainstorm about how you can use Azure Functions",
@@ -18,9 +18,9 @@ export const brainstormSlashCommand: AgentSlashCommand = [
     }
 ];
 
-async function brainstormHandler(userContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+async function brainstormHandler(userContent: string, ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
     if (userContent.length === 0) {
-        progress.report({ content: new vscode.MarkdownString("If you'd like to brainstorm about how you can use Azure Functions and VS Code to help you do something, let me know what it is you would like to do.\n") });
+        progress.report({ content: "If you'd like to brainstorm about how you can use Azure Functions and VS Code to help you do something, let me know what it is you would like to do.\n" });
         return {
             chatAgentResult: {},
             followUp: [
@@ -32,7 +32,7 @@ async function brainstormHandler(userContent: string, ctx: vscode.ChatAgentConte
     } else {
         const { copilotResponded, copilotResponse } = await verbatimCopilotInteraction(brainstormSystemPrompt2, userContent, progress, token);
         if (!copilotResponded) {
-            progress.report({ content: new vscode.MarkdownString("Sorry, I can't help with that right now.\n") });
+            progress.report({ content: "Sorry, I can't help with that right now.\n" });
             return { chatAgentResult: {}, followUp: [], };
         } else {
             const followUps = await generateGeneralInteractionFollowUps(userContent, copilotResponse, ctx, progress, token);

@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { AgentSlashCommand, SlashCommandHandlerResult } from "./agent";
+import { SlashCommand, SlashCommandHandlerResult } from "../slashCommands";
 
-export const deploySlashCommand: AgentSlashCommand = [
+export const deploySlashCommand: SlashCommand = [
     "deploy",
     {
         shortDescription: "Deploy your Function project to a Function app",
@@ -16,7 +16,7 @@ export const deploySlashCommand: AgentSlashCommand = [
     }
 ];
 
-async function deployHandler(_userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.InteractiveProgress>, _token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
-    progress.report({ content: new vscode.MarkdownString(`Ok, click 'Deploy to Function App' to begin.\n`) });
+async function deployHandler(_userContent: string, _ctx: vscode.ChatAgentContext, progress: vscode.Progress<vscode.ChatAgentExtendedProgress>, _token: vscode.CancellationToken): Promise<SlashCommandHandlerResult> {
+    progress.report({ content: `Ok, click 'Deploy to Function App' to begin.\n` });
     return { chatAgentResult: {}, followUp: [{ title: "Deploy to Function App", commandId: "azureFunctions.createNewProject", args: [] }], };
 }

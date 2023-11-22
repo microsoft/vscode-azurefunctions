@@ -5,76 +5,70 @@
 
 declare module 'vscode' {
 
-	export enum InteractiveSessionVoteDirection {
-		Down = 0,
-		Up = 1
-	}
+    export enum InteractiveSessionVoteDirection {
+        Down = 0,
+        Up = 1
+    }
 
-	export interface InteractiveSessionVoteAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'vote';
-		// sessionId: string;
-		responseId: string;
-		direction: InteractiveSessionVoteDirection;
-	}
+    export interface InteractiveSessionVoteAction {
+        kind: 'vote';
+        // sessionId: string;
+        responseId: string;
+        direction: InteractiveSessionVoteDirection;
+    }
 
-	export enum InteractiveSessionCopyKind {
-		// Keyboard shortcut or context menu
-		Action = 1,
-		Toolbar = 2
-	}
+    export enum InteractiveSessionCopyKind {
+        // Keyboard shortcut or context menu
+        Action = 1,
+        Toolbar = 2
+    }
 
-	export interface InteractiveSessionCopyAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'copy';
-		// sessionId: string;
-		responseId: string;
-		codeBlockIndex: number;
-		copyType: InteractiveSessionCopyKind;
-		copiedCharacters: number;
-		totalCharacters: number;
-		copiedText: string;
-	}
+    export interface InteractiveSessionCopyAction {
+        kind: 'copy';
+        // sessionId: string;
+        responseId: string;
+        codeBlockIndex: number;
+        copyType: InteractiveSessionCopyKind;
+        copiedCharacters: number;
+        totalCharacters: number;
+        copiedText: string;
+    }
 
-	export interface InteractiveSessionInsertAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'insert';
-		// sessionId: string;
-		responseId: string;
-		codeBlockIndex: number;
-		totalCharacters: number;
-		newFile?: boolean;
-	}
+    export interface InteractiveSessionInsertAction {
+        kind: 'insert';
+        // sessionId: string;
+        responseId: string;
+        codeBlockIndex: number;
+        totalCharacters: number;
+        newFile?: boolean;
+    }
 
-	export interface InteractiveSessionTerminalAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'runInTerminal';
-		// sessionId: string;
-		responseId: string;
-		codeBlockIndex: number;
-		languageId?: string;
-	}
+    export interface InteractiveSessionTerminalAction {
+        kind: 'runInTerminal';
+        // sessionId: string;
+        responseId: string;
+        codeBlockIndex: number;
+        languageId?: string;
+    }
 
-	export interface InteractiveSessionCommandAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'command';
-		command: InteractiveResponseCommand;
-	}
+    export interface InteractiveSessionCommandAction {
+        kind: 'command';
+        command: InteractiveResponseCommand;
+    }
 
-	export interface InteractiveSessionFollowupAction {
-		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		kind: 'followUp';
-		followup: InteractiveSessionReplyFollowup;
-	}
+    export interface InteractiveSessionFollowupAction {
+        kind: 'followUp';
+        followup: InteractiveSessionReplyFollowup;
+    }
 
-	export type InteractiveSessionUserAction = InteractiveSessionVoteAction | InteractiveSessionCopyAction | InteractiveSessionInsertAction | InteractiveSessionTerminalAction | InteractiveSessionCommandAction;
+    export type InteractiveSessionUserAction = InteractiveSessionVoteAction | InteractiveSessionCopyAction | InteractiveSessionInsertAction | InteractiveSessionTerminalAction | InteractiveSessionCommandAction;
 
-	export interface InteractiveSessionUserActionEvent {
-		action: InteractiveSessionUserAction;
-		providerId: string;
-	}
+    export interface InteractiveSessionUserActionEvent {
+        action: InteractiveSessionUserAction;
+        providerId: string;
+    }
 
-	export namespace interactive {
-		export const onDidPerformUserAction: Event<InteractiveSessionUserActionEvent>;
-	}
+    export namespace interactive {
+        export const onDidPerformUserAction: Event<InteractiveSessionUserActionEvent>;
+    }
 }
