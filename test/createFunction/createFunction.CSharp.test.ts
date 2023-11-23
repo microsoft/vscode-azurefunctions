@@ -60,7 +60,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             ]
         },
         {
-            functionName: 'Azure Cosmos DB trigger',
+            functionName: 'Azure Cosmos DB trigger (4.x)',
             inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting

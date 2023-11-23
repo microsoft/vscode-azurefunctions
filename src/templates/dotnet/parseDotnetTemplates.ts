@@ -103,6 +103,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
     }
 
     await copyCSharpSettingsFromJS(functionTemplates, version);
+    appendTriggerVersion(functionTemplates);
 
     return {
         functionTemplates,
@@ -173,4 +174,18 @@ function normalizeScriptId(id: string): string {
 
 function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '').replace(/trigger/i, '');
+}
+
+function appendTriggerVersion(csharpTemplates: IFunctionTemplate[]) {
+    const idsWithoutVersion: string[] = csharpTemplates.map(ft => /^(.*?)\.\d\.x$/.exec(ft.id)?.[1]).filter(id => id !== undefined) as string[];
+    const duplicateIds = idsWithoutVersion.filter((item, index) => idsWithoutVersion.indexOf(item) !== index);
+
+    for (const template of csharpTemplates) {
+        for (const dupe of duplicateIds) {
+            if (template.id.startsWith(dupe)) {
+                const templateVersion = /(\d\.x)$/.exec(template.id)?.[0];
+                template.name += ` (${templateVersion})`;
+            }
+        }
+    }
 }

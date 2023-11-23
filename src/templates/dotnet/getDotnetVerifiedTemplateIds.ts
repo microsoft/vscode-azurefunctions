@@ -33,6 +33,10 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
     }
 
     return verifiedTemplateIds.map(id => {
+        if (id === 'CosmosDBTrigger') {
+            // CosmosDBTrigger has 2.x, 3.x, and 4.x templates. Only 4.x should be considered "verified"
+            return new RegExp(`^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}\\.[4]+\\.x$`, 'i')
+        }
         return new RegExp(`^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}\\.[0-9]+\\.x$`, 'i');
     });
 }
