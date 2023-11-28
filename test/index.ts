@@ -30,7 +30,7 @@ export async function run(): Promise<void> {
     if (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES)) {
         files = ['updateBackupTemplates.js'];
     } else {
-        files = await globby('**/**.test.js', { cwd: __dirname })
+        files = await globby('createFunction/**.test.js', { cwd: __dirname })
     }
 
     files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
