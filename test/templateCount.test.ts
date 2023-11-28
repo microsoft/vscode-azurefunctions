@@ -39,7 +39,7 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 13 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 16 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 15 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 14 },
