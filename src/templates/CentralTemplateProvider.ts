@@ -179,8 +179,6 @@ export class CentralTemplateProvider implements Disposable {
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;
 
-        await this.clearTemplateCache(context, projectPath, language, languageModel, version);
-
         const cachedProviders = await this.getCachedProviders(context, projectPath, language, languageModel, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
@@ -275,8 +273,6 @@ export class CentralTemplateProvider implements Disposable {
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
             const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
-            // await provider.clearCachedTemplateMetadata();
-            // await provider.clearCachedTemplates(context);
             await provider.cacheTemplateMetadata(latestTemplateVersion);
             await provider.cacheTemplates(context);
             return result;
@@ -311,8 +307,6 @@ export class CentralTemplateProvider implements Disposable {
                 const backupTemplateVersion: string = await provider.getBackupTemplateVersion();
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates(context);
-                // await provider.clearCachedTemplateMetadata();
-                // await provider.clearCachedTemplates(context);
                 await provider.cacheTemplateMetadata(backupTemplateVersion);
                 await provider.cacheTemplates(context);
                 return result;
