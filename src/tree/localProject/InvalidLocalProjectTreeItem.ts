@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { WorkspaceFolder } from 'vscode';
+import { type AzExtParentTreeItem, type AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { type WorkspaceFolder } from 'vscode';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class InvalidLocalProjectTreeItem extends LocalProjectTreeItemBase {

@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import * as XRegExp from 'xregexp';
 import { localize } from "../../../localize";
-import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
+import { type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWizardContext> {
     public async prompt(context: IDotnetFunctionWizardContext): Promise<void> {

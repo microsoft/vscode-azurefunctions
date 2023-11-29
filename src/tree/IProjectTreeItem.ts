@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { IParsedHostJson } from '../funcConfig/host';
-import { FuncVersion } from '../FuncVersion';
-import { ProjectSource } from './projectContextValues';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type FuncVersion } from '../FuncVersion';
+import { type IParsedHostJson } from '../funcConfig/host';
+import { type ProjectSource } from './projectContextValues';
 
 export type ApplicationSettings = { [propertyName: string]: string };
 

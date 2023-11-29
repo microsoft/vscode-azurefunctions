@@ -6,18 +6,18 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { FuncVersion } from '../../../FuncVersion';
 import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
-import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
-import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { type IHostJsonV1, type IHostJsonV2 } from '../../../funcConfig/host';
+import { type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../../../utils/programmingModelUtils';
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {

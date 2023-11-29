@@ -11,7 +11,7 @@ import { ext } from '../../../extensionVariables';
 import * as fsUtil from '../../../utils/fs';
 import { mavenUtils } from '../../../utils/mavenUtils';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
+import { type IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class MavenProjectCreateStep extends ProjectCreateStepBase {

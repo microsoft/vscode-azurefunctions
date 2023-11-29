@@ -6,11 +6,11 @@
 import { AzureWizard } from "@microsoft/vscode-azext-utils";
 import { CodeAction, ConnectionKey } from "../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
-import { IConnectionPromptOptions } from "../IConnectionPromptOptions";
-import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
+import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
+import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 import { AzureWebJobsStorageExecuteStep } from "./AzureWebJobsStorageExecuteStep";
 import { AzureWebJobsStoragePromptStep } from "./AzureWebJobsStoragePromptStep";
-import { IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardContext";
+import { type IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardContext";
 
 export async function validateStorageConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
     if (context.action === CodeAction.Deploy) {

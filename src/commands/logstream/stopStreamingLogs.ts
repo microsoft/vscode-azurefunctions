@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
-import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
+import { isSlotTreeItem, type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 
 export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!node) {

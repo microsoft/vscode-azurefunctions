@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { openReadOnlyJson, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { Uri, window } from 'vscode';
 import { localize } from '../localize';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../tree/SlotTreeItem';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 
 export async function viewProperties(context: IActionContext, node: SlotTreeItem | LocalFunctionTreeItem): Promise<void> {

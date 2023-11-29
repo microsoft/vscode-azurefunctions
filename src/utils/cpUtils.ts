@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzExtOutputChannel } from '@microsoft/vscode-azext-utils';
+import { type IAzExtOutputChannel } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
 import * as os from 'os';
 import { localize } from '../localize';

@@ -3,12 +3,12 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope, HostKeys } from "@azure/arm-appservice";
-import { IFunctionKeys, ParsedSite } from "@microsoft/vscode-azext-azureappservice";
-import { IActionContext, nonNullProp, parseError } from "@microsoft/vscode-azext-utils";
-import { HttpAuthLevel, ParsedFunctionJson } from "../../funcConfig/function";
+import { type FunctionEnvelope, type HostKeys } from "@azure/arm-appservice";
+import { type IFunctionKeys, type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
+import { nonNullProp, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { HttpAuthLevel, type ParsedFunctionJson } from "../../funcConfig/function";
 import { FunctionBase } from "../FunctionBase";
-import { IProjectTreeItem } from "../IProjectTreeItem";
+import { type IProjectTreeItem } from "../IProjectTreeItem";
 
 export class RemoteFunction extends FunctionBase {
     constructor(

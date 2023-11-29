@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { Uri, WorkspaceFolder } from "vscode";
-import { FuncVersion } from "../../FuncVersion";
-import { ProjectLanguage } from "../../constants";
-import { TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
-import { cliFeedUtils } from "../../utils/cliFeedUtils";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { type Uri, type WorkspaceFolder } from "vscode";
+import { type FuncVersion } from "../../FuncVersion";
+import { type ProjectLanguage } from "../../constants";
+import { type TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
+import { type cliFeedUtils } from "../../utils/cliFeedUtils";
 
 export interface IProjectWizardContext extends IActionContext {
     projectPath: string;

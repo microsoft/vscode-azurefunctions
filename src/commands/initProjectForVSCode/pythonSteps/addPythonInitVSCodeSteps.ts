@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, type AzureWizardExecuteStep, type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { venvUtils } from '../../../utils/venvUtils';
 import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
-import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
-import { IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
+import { type IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
+import { type IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
 import { PythonAliasListStep } from "../../createNewProject/pythonSteps/PythonAliasListStep";
 import { PythonVenvCreateStep } from "../../createNewProject/pythonSteps/PythonVenvCreateStep";
 import { PythonInitVSCodeStep } from "../InitVSCodeStep/PythonInitVSCodeStep";

@@ -6,7 +6,7 @@
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { IBallerinaFunctionTemplate, IBallerinaFunctionWizardContext } from './IBallerinaFunctionWizardContext';
+import { type IBallerinaFunctionTemplate, type IBallerinaFunctionWizardContext } from './IBallerinaFunctionWizardContext';
 
 export class BallerinaFunctionCreateStep extends FunctionCreateStepBase<IBallerinaFunctionWizardContext> {
     public async executeCore(context: IBallerinaFunctionWizardContext): Promise<string> {

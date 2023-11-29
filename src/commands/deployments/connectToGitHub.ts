@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DeploymentsTreeItem, editScmType } from "@microsoft/vscode-azext-azureappservice";
-import { GenericTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
-import { functionFilter, ScmType } from "../../constants";
+import { type GenericTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { ScmType, functionFilter } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { isSlotTreeItem } from "../../tree/SlotTreeItem";
 

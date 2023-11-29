@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, parseError, type IParsedError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
-import { Uri } from "vscode";
+import { type Uri } from "vscode";
 import * as xml2js from "xml2js";
-import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
+import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
+import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName, type DurableBackendValues } from "../constants";
 import { ext } from "../extensionVariables";
-import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
+import { type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { dotnetUtils } from "./dotnetUtils";

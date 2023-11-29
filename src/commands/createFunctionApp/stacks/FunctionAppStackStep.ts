@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, openUrl } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
-import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
 import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 

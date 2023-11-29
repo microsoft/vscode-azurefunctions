@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, workspace, WorkspaceConfiguration, WorkspaceFolder } from "vscode";
+import { workspace, type DebugConfiguration, type WorkspaceConfiguration, type WorkspaceFolder } from "vscode";
 
 const configurationsKey: string = 'configurations';
 const launchKey: string = 'launch';

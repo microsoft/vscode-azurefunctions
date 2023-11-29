@@ -5,11 +5,11 @@
 
 import { isString } from 'util';
 import { ProjectLanguage, sqlBindingTemplateRegex } from '../../constants';
-import { IFunctionBinding, ParsedFunctionJson } from '../../funcConfig/function';
+import { ParsedFunctionJson, type IFunctionBinding } from '../../funcConfig/function';
 import { localize } from '../../localize';
-import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
-import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { type IBindingSetting, type IBindingTemplate, type IEnumValue, type ResourceType, type ValueType } from '../IBindingTemplate';
+import { type IFunctionTemplate, type TemplateCategory } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration } from "vscode";
+import { type DebugConfiguration } from "vscode";
 import { powershellDebugConfig } from "../../../debug/PowerShellDebugProvider";
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 

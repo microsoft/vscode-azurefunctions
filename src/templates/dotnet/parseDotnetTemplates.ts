@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage, sqlBindingTemplateRegex, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { FuncVersion } from '../../FuncVersion';
+import { type FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
-import { IBindingSetting, ValueType } from '../IBindingTemplate';
-import { FunctionTemplateBase, IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { ValueType, type IBindingSetting } from '../IBindingTemplate';
+import { TemplateCategory, type FunctionTemplateBase, type IFunctionTemplate } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**

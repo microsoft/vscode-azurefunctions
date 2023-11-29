@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDeployContext, ParsedSite, showCustomDeployConfirmation } from "@microsoft/vscode-azext-azureappservice";
-import { MessageItem } from "vscode";
+import { showCustomDeployConfirmation, type IDeployContext, type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
+import { type MessageItem } from "vscode";
 import { localize } from "../../localize";
 
 export async function showFlexDeployConfirmation(context: IDeployContext, site: ParsedSite, deployCommandId: string): Promise<void> {

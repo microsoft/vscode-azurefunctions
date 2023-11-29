@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentTreeItem } from "@microsoft/vscode-azext-azureappservice";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { type DeploymentTreeItem } from "@microsoft/vscode-azext-azureappservice";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionFilter } from "../../constants";
 import { ext } from "../../extensionVariables";
 

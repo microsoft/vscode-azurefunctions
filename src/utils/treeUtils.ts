@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { type AzExtTreeItem, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ext } from '../extensionVariables';
 

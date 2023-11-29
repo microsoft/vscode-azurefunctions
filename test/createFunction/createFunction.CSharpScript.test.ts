@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
+import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, type TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, shouldSkipVersion } from '../global.test';
 import { getDotnetScriptValidateOptions, validateProject } from '../project/validateProject';
 import { runWithFuncSetting } from '../runWithSetting';

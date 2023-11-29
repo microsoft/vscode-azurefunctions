@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
-import type { WebSiteManagementClient } from '@azure/arm-appservice';
-import type { CosmosDBManagementClient } from '@azure/arm-cosmosdb';
-import type { EventHubManagementClient } from '@azure/arm-eventhub';
-import type { ServiceBusManagementClient } from '@azure/arm-servicebus';
-import type { SqlManagementClient } from '@azure/arm-sql';
-import type { StorageManagementClient } from '@azure/arm-storage';
-import { AzExtClientContext, createAzureClient } from '@microsoft/vscode-azext-azureutils';
+import { type ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
+import { type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type CosmosDBManagementClient } from '@azure/arm-cosmosdb';
+import { type EventHubManagementClient } from '@azure/arm-eventhub';
+import { type ServiceBusManagementClient } from '@azure/arm-servicebus';
+import { type SqlManagementClient } from '@azure/arm-sql';
+import { type StorageManagementClient } from '@azure/arm-storage';
+import { createAzureClient, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
 // NOTE: The client is the only import that matters, the rest of the types disappear when compiled to JavaScript

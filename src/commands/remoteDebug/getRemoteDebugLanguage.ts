@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfig } from '@azure/arm-appservice';
+import { type SiteConfig } from '@azure/arm-appservice';
 import { RemoteDebugLanguage } from '@microsoft/vscode-azext-azureappservice';
 
 export function getRemoteDebugLanguage(siteConfig: SiteConfig, appServicePlan?: string): RemoteDebugLanguage {

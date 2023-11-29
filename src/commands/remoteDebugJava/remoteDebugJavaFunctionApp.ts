@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource, StringDictionary, User } from '@azure/arm-appservice';
-import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, findFreePort, IActionContext } from '@microsoft/vscode-azext-utils';
+import { type SiteConfigResource, type StringDictionary, type User } from '@azure/arm-appservice';
+import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, findFreePort, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { openUrl } from '../../utils/openUrl';
 import { DebugProxy } from './DebugProxy';
 

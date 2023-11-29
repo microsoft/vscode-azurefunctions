@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationRule, EHNamespace } from '@azure/arm-eventhub';
-import { IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
+import { type AuthorizationRule, type EHNamespace } from '@azure/arm-eventhub';
+import { type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 
 export interface IEventHubWizardContext extends ISubscriptionActionContext, IResourceGroupWizardContext {
     /**

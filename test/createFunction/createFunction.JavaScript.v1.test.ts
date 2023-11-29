@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { FuncVersion, ProjectLanguage, TemplateSource } from '../../extension.bundle';
+import { FuncVersion, ProjectLanguage, type TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, shouldSkipVersion } from '../global.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { apiUtils } from "@microsoft/vscode-azext-utils";
-import { AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
+import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
 import { localize } from "./localize";
 
 export async function getResourceGroupsApi(): Promise<AzureHostExtensionApi> {

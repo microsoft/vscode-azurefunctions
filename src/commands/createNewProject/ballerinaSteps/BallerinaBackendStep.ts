@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { BallerinaBackend } from "../../../constants";
 import { localize } from "../../../localize";
-import { IBallerinaProjectWizardContext } from "./IBallerinaProjectWizardContext";
+import { type IBallerinaProjectWizardContext } from "./IBallerinaProjectWizardContext";
 
 export class BallerinaBackendStep extends AzureWizardPromptStep<IBallerinaProjectWizardContext> {
 

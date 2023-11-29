@@ -5,9 +5,9 @@
 
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
-import { addParallelSuite, ParallelTest } from '../addParallelSuite';
+import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
-import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
+import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
 import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {

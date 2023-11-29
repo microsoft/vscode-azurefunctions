@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullProp } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionKeyValues, ConnectionType } from '../../../../constants';
+import { ConnectionKey, ConnectionType, type ConnectionKeyValues } from '../../../../constants';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getSqlDatabaseConnectionString } from '../getLocalConnectionSetting';
-import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 250;

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
+import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../extensionVariables";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 

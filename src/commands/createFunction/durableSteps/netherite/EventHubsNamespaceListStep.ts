@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
+import { type EHNamespace, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { createResourceClient } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep, getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IAzureQuickPickOptions, type ISubscriptionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { type IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { EventHubsNamespaceCreateStep } from './EventHubsNamespaceCreateStep';
 import { EventHubsNamespaceNameStep } from './EventHubsNamespaceNameStep';
 

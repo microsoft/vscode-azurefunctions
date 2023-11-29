@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IHostJsonV2 } from '../../../funcConfig/host';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IHostJsonV2 } from '../../../funcConfig/host';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class CustomProjectCreateStep extends ScriptProjectCreateStep {

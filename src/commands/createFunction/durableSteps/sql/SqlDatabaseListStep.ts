@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Database, Server, SqlManagementClient } from '@azure/arm-sql';
-import { getResourceGroupFromId, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { type Database, type Server, type SqlManagementClient } from '@azure/arm-sql';
+import { ResourceGroupListStep, getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, nonNullProp, nonNullValue, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IAzureQuickPickOptions, type ISubscriptionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { SqlDatabaseCreateStep } from './SqlDatabaseCreateStep';
 import { SqlDatabaseNameStep } from './SqlDatabaseNameStep';
 

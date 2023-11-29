@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 import { nonNullProp } from '../../../utils/nonNull';
 import { venvUtils } from '../../../utils/venvUtils';
-import { IPythonVenvWizardContext } from './IPythonVenvWizardContext';
+import { type IPythonVenvWizardContext } from './IPythonVenvWizardContext';
 import { getPythonVersion } from './pythonVersion';
 
 export class PythonVenvCreateStep extends AzureWizardExecuteStep<IPythonVenvWizardContext> {

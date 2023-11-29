@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { AppKind, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, type AzureWizardExecuteStep, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { localize } from '../localize';
-import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { type ICreateFunctionAppContext, type SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
 export interface IBaseResourceWithName {
     name?: string;

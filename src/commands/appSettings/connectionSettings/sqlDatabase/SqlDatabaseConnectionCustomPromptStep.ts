@@ -8,7 +8,7 @@ import { ConnectionType } from '../../../../constants';
 import { getInvalidLengthMessage } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseConnectionCustomPromptStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IBindingWizardContext } from '../../IBindingWizardContext';
+import { type IBindingWizardContext } from '../../IBindingWizardContext';
 import { StringPromptStep } from '../StringPromptStep';
-import { IEventHubWizardContext } from './IEventHubWizardContext';
+import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubNameStep extends StringPromptStep {
     public shouldPrompt(context: IEventHubWizardContext & IBindingWizardContext): boolean {

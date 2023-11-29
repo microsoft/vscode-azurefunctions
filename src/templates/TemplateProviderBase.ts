@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, env } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
-import { ProjectLanguage } from '../constants';
+import { type ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
-import { IBindingTemplate } from './IBindingTemplate';
-import { FunctionTemplateBase } from './IFunctionTemplate';
-import { ITemplates } from './ITemplates';
+import { type IBindingTemplate } from './IBindingTemplate';
+import { type FunctionTemplateBase } from './IFunctionTemplate';
+import { type ITemplates } from './ITemplates';
 
 export enum TemplateType {
     Script = 'Script',

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -15,9 +15,9 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { nonNullValue } from '../../utils/nonNull';
 import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
-import { IBindingTemplate } from '../IBindingTemplate';
-import { IFunctionTemplate } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { type IBindingTemplate } from '../IBindingTemplate';
+import { type IFunctionTemplate } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplateDir, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';

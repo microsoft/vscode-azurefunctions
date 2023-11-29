@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { hiddenStacksSetting } from "../../../constants";
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { promptForFuncVersion } from "../../../FuncVersion";
+import { hiddenStacksSetting } from "../../../constants";
 import { localize } from "../../../localize";
 import { cliFeedUtils } from "../../../utils/cliFeedUtils";
 import { dotnetUtils } from "../../../utils/dotnetUtils";
 import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
-import { IProjectWizardContext } from "../IProjectWizardContext";
+import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {

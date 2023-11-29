@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext, nonNullValue, openUrl } from "@microsoft/vscode-azext-utils";
-import { MessageItem } from "vscode";
+import { DialogResponses, nonNullValue, openUrl, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { type MessageItem } from "vscode";
 import { FuncVersion, funcVersionLink, tryParseFuncVersion } from "../../FuncVersion";
 import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersion";
 import { localize } from "../../localize";

@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
+import { type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
-import { IBaseResourceWithName, promptForResource } from '../../../../utils/azure';
+import { promptForResource, type IBaseResourceWithName } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { IEventHubWizardContext } from './IEventHubWizardContext';
+import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
     public async prompt(context: IEventHubWizardContext): Promise<void> {

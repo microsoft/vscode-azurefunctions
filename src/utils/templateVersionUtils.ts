@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectLanguage } from "../constants";
-import { IBindingTemplate } from "../templates/IBindingTemplate";
-import { FunctionTemplateBase, FunctionV2Template, IFunctionTemplate } from "../templates/IFunctionTemplate";
+import { type ProjectLanguage } from "../constants";
+import { type IBindingTemplate } from "../templates/IBindingTemplate";
+import { type FunctionTemplateBase, type FunctionV2Template, type IFunctionTemplate } from "../templates/IFunctionTemplate";
 import { TemplateSchemaVersion } from "../templates/TemplateProviderBase";
 import { isPythonV2Plus } from "./programmingModelUtils";
 

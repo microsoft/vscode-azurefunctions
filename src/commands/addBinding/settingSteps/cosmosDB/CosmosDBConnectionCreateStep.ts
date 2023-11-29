@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CosmosDBManagementClient, DatabaseAccountGetResults, DatabaseAccountListKeysResult } from '@azure/arm-cosmosdb';
+import { type CosmosDBManagementClient, type DatabaseAccountGetResults, type DatabaseAccountListKeysResult } from '@azure/arm-cosmosdb';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { createCosmosDBClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { IBindingWizardContext } from '../../IBindingWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
-import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
+import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
+import { type ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
 export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IBindingWizardContext & ICosmosDBWizardContext> {
     public async getConnection(context: ICosmosDBWizardContext): Promise<IConnection> {

@@ -6,7 +6,7 @@
 import { DialogResponses } from "@microsoft/vscode-azext-utils";
 import { unlinkSync } from 'fs';
 import * as vscode from 'vscode';
-import { IProjectWizardContext } from "../commands/createNewProject/IProjectWizardContext";
+import { type IProjectWizardContext } from "../commands/createNewProject/IProjectWizardContext";
 import { localize } from '../localize';
 import { openUrl } from '../utils/openUrl';
 import { cpUtils } from './cpUtils';

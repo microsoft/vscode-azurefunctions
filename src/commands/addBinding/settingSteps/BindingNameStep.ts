@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { ParsedFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
-import { IBindingWizardContext } from '../IBindingWizardContext';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
 import { StringPromptStep } from './StringPromptStep';
 
 export class BindingNameStep extends StringPromptStep {

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
+import { type AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
 import { ActionType } from "../../../constants";
-import { ParsedAction } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { type ParsedAction } from "../../../templates/script/parseScriptTemplatesV2";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { AppendToFileExecuteStep } from "./AppendToFileExecuteStep";
 import { GetTemplateFileContentExecuteStep } from "./GetTemplateFileContentExecuteStep";
 import { ShowMarkdownPreviewExecuteStep } from "./ShowMarkdownPreviewExecuteStep";

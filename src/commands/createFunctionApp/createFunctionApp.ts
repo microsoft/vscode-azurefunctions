@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { type AzExtParentTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
-import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
-import { ISiteCreatedOptions } from './showSiteCreated';
+import { type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { SubscriptionTreeItem, type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
+import { type ISiteCreatedOptions } from './showSiteCreated';
 
 function isSubscription(item?: AzExtParentTreeItem): boolean {
     try {

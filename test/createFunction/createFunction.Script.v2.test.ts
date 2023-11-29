@@ -10,7 +10,7 @@ import { FuncVersion, ProjectLanguage, durableUtils, funcVersionSetting, project
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
-import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
+import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
 
 abstract class NodeScriptFunctionTester extends FunctionTesterBase {
     protected override async initializeTestFolder(testFolder: string): Promise<void> {

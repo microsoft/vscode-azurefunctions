@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from "../../../localize";
-import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
-import { IBallerinaProjectWizardContext, getBallerinaFunctionFilePath, getBallerinaPackagePath } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
+import { getBallerinaFunctionFilePath, getBallerinaPackagePath, type IBallerinaProjectWizardContext } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class BallerinaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardContext & IBallerinaProjectWizardContext> {
     protected async getUniqueFunctionName(context: IFunctionWizardContext & IBallerinaProjectWizardContext): Promise<string | undefined> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppInsightsSettings, AppStack, CommonSettings, GitHubActionSettings } from './AppStackModel';
+import { type AppInsightsSettings, type AppStack, type CommonSettings, type GitHubActionSettings } from './AppStackModel';
 
 // Types copied from here:
 // https://github.com/Azure/azure-functions-ux/blob/3322f0b5151bbfcf7a08f281efe678ebac643dc0/server/src/stacks/2020-10-01/models/FunctionAppStackModel.ts

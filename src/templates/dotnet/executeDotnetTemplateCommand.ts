@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { SemVer, coerce as semVerCoerce } from 'semver';
-import { FuncVersion } from '../../FuncVersion';
+import { coerce as semVerCoerce, type SemVer } from 'semver';
+import { type FuncVersion } from '../../FuncVersion';
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";

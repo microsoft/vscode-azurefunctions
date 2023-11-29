@@ -6,9 +6,9 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
-import { IFunctionJson } from '../../../funcConfig/function';
+import { type IFunctionJson } from '../../../funcConfig/function';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { ScriptFunctionCreateStep } from './ScriptFunctionCreateStep';
 
 export class TypeScriptFunctionCreateStep extends ScriptFunctionCreateStep {

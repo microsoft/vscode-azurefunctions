@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HostKeys } from '@azure/arm-appservice';
+import { type HostKeys } from '@azure/arm-appservice';
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
-import { AzExtRequestPrepareOptions, parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { parseAzureResourceId, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
@@ -14,7 +14,7 @@ import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProje
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { SlotTreeItem } from "../tree/SlotTreeItem";
+import { type SlotTreeItem } from "../tree/SlotTreeItem";
 import { requestUtils } from '../utils/requestUtils';
 import { getRequiredQueryParameter } from './handleUri';
 

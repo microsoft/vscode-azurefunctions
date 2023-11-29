@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { JavaBuildTool } from '../../../constants';
+import { type JavaBuildTool } from '../../../constants';
 import { localize } from "../../../localize";
-import { IProjectWizardContext } from "../IProjectWizardContext";
+import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export interface IJavaProjectWizardContext extends IProjectWizardContext {
     javaVersion?: string;

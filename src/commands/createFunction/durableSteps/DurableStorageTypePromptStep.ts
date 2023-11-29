@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, openUrl } from "@microsoft/vscode-azext-utils";
-import { DurableBackend, DurableBackendValues } from "../../../constants";
+import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { DurableBackend, type DurableBackendValues } from "../../../constants";
 import { defaultDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
 import { FunctionSubWizard } from "../FunctionSubWizard";
-import { IFunctionWizardContext } from "../IFunctionWizardContext";
+import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 
 export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     private readonly _functionSettings: { [key: string]: string | undefined };

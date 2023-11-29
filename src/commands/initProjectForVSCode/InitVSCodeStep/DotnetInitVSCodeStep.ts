@@ -5,16 +5,16 @@
 
 import { DialogResponses, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
-import { func, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { type DebugConfiguration, type MessageItem, type TaskDefinition } from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
+import { ProjectLanguage, func, hostStartCommand } from '../../../constants';
 import { localize } from "../../../localize";
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
+import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
 const dotnetPublishTaskLabel: string = convertToFunctionsTaskLabel('publish');

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { IProjectWizardContext, OpenBehavior } from './IProjectWizardContext';
+import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 
 export class OpenBehaviorStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public async prompt(context: IProjectWizardContext): Promise<void> {

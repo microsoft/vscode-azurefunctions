@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzExtOpenDialogOptions } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, type AzExtOpenDialogOptions } from "@microsoft/vscode-azext-utils";
 import { Uri } from "vscode";
 import { Utils } from 'vscode-uri';
-import { JobType, ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { JobType, type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { PromptSchemaStepBase } from "./PromptSchemaStepBase";
 

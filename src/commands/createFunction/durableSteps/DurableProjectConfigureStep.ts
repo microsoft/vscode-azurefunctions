@@ -5,15 +5,15 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName } from '../../../constants';
 import { viewOutput } from '../../../constants-nls';
 import { ext } from '../../../extensionVariables';
-import { IHostJsonV2 } from '../../../funcConfig/host';
+import { type IHostJsonV2 } from '../../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { durableUtils } from '../../../utils/durableUtils';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 225;

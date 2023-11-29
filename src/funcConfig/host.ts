@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DurableBackend } from "../constants";
+import { type DurableBackend } from "../constants";
 import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {

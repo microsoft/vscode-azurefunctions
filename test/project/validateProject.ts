@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
-import { extensionId, FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContainingWorkspace, type IExtensionsJson, type ILaunchJson, type ITasksJson } from '../../extension.bundle';
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 

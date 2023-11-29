@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HostKeys } from '@azure/arm-appservice';
-import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { ViewPropertiesModel } from '@microsoft/vscode-azureresources-api';
+import { type HostKeys } from '@azure/arm-appservice';
+import { type IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type ViewPropertiesModel } from '@microsoft/vscode-azureresources-api';
 import { ProgressLocation, window } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
-import { RemoteFunction } from './RemoteFunction';
-import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
+import { type RemoteFunction } from './RemoteFunction';
+import { type RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;

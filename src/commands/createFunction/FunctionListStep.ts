@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IActionContext, type IAzureQuickPickItem, type IAzureQuickPickOptions, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
-import { FuncVersion } from '../../FuncVersion';
+import { type FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionTemplateBase, IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase, type IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 

@@ -6,7 +6,7 @@
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import { assertTemplateIsV2 } from "../../../utils/templateVersionUtils";
 import { showMarkdownPreviewContent } from "../../../utils/textUtils";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
 
 export class ShowMarkdownPreviewExecuteStep<T extends FunctionV2WizardContext> extends ActionSchemaStepBase<T> {

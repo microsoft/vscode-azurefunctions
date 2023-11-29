@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullValue, openUrl, type IAzureQuickPickItem, type IAzureQuickPickOptions } from '@microsoft/vscode-azext-utils';
 import { FuncVersion } from '../../FuncVersion';
 import { recommendedDescription } from '../../constants-nls';
 import { localize } from '../../localize';
 import { getTemplateVersionFromLanguageAndModel } from '../../utils/templateVersionUtils';
-import { IProjectWizardContext } from './IProjectWizardContext';
+import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;

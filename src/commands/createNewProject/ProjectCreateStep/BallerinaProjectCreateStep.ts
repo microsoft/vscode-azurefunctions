@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { BallerinaBackend, ballerinaTomlFileName } from '../../../constants';
 import { ballerinaUtils } from '../../../utils/ballerinaUtils';
-import { IBallerinaProjectWizardContext } from '../ballerinaSteps/IBallerinaProjectWizardContext';
+import { type IBallerinaProjectWizardContext } from '../ballerinaSteps/IBallerinaProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 import path = require('path');
 
