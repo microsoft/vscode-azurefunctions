@@ -474,6 +474,77 @@
           "help": "$cosmosDBIn_createLeaseContainerIfNotExists_help"
         }
       ]
+    },
+    {
+      "type": "sql",
+      "displayName": "$sql_output_displayName",
+      "direction": "out",
+      "enabledInTryMode": false,
+      "settings": [
+        {
+          "name": "table",
+          "value": "string",
+          "defaultValue": "[dbo].[table1]",
+          "required": true,
+          "label": "$sql_output_table_label",
+          "help": "$sql_output_table_help"
+        },
+        {
+          "name": "SqlConnectionString",
+          "value": "string",
+          "defaultValue": "",
+          "required": true,
+          "resource": "Sql",
+          "label": "$sql_output_connection_label",
+          "help": "$sql_output_connection_help"
+        }
+      ]
+    },
+    {
+      "type": "sql",
+      "displayName": "$sql_input_displayName",
+      "direction": "in",
+      "enabledInTryMode": false,
+      "settings": [
+        {
+          "name": "object",
+          "value": "string",
+          "defaultValue": "[dbo].[table1]",
+          "required": true,
+          "label": "$sql_input_object_label",
+          "help": "$sql_input_object_help"
+        },
+        {
+          "name": "SqlConnectionString",
+          "value": "string",
+          "defaultValue": "",
+          "required": true,
+          "resource": "Sql",
+          "label": "$sql_input_connection_label",
+          "help": "$sql_input_connection_help"
+        }
+      ]
+    },
+    {
+      "type": "daprPublish",
+      "displayName": "$daprPublishOutput_displayName",
+      "direction": "out",
+      "enabledInTryMode": true,
+      "settings": []
+    },
+    {
+      "type": "daprServiceInvocationTrigger",
+      "displayName": "$daprServiceInvocationTrigger_displayName",
+      "direction": "trigger",
+      "enabledInTryMode": true,
+      "settings": []
+    },
+    {
+      "type": "daprTopicTrigger",
+      "displayName": "$daprTopicTrigger_displayName",
+      "direction": "trigger",
+      "enabledInTryMode": true,
+      "settings": []
     }
   ]
 }
