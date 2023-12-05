@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { funcPackageName, PackageManager } from '../constants';
+import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { type FuncVersion } from '../FuncVersion';
+import { PackageManager, funcPackageName } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { nonNullValue } from '../utils/nonNull';

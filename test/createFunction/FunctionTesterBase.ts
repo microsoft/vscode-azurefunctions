@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext, type TestActionContext } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
-import { Disposable } from 'vscode';
-import { createFunctionInternal, FunctionTemplateBase, FuncVersion, getRandomHexString, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
-import { addParallelSuite, ParallelSuiteOptions, ParallelTest } from '../addParallelSuite';
+import { type Disposable } from 'vscode';
+import { createFunctionInternal, getRandomHexString, TemplateFilter, type FunctionTemplateBase, type FuncVersion, type ProjectLanguage, type TemplateSource } from '../../extension.bundle';
+import { addParallelSuite, type ParallelSuiteOptions, type ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
 
 export interface CreateFunctionTestCase {

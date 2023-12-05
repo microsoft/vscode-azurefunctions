@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ProjectLanguage } from '../../../constants';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export interface IDotnetFunctionWizardContext extends IFunctionWizardContext {
     namespace?: string;

@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
+import { type AccessKeys, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { IBindingWizardContext } from '../../IBindingWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
-import { IEventHubWizardContext } from './IEventHubWizardContext';
+import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
+import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<IEventHubWizardContext & IBindingWizardContext> {
     public async getConnection(context: IEventHubWizardContext): Promise<IConnection> {

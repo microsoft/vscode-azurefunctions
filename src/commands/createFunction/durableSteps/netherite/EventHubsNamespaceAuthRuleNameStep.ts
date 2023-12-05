@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationRule, EventHubManagementClient } from "@azure/arm-eventhub";
+import { type AuthorizationRule, type EventHubManagementClient } from "@azure/arm-eventhub";
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, nonNullValue, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { getInvalidLengthMessage } from "../../../../constants-nls";
 import { localize } from "../../../../localize";
 import { createEventHubClient } from "../../../../utils/azureClients";
 import { validateUtils } from "../../../../utils/validateUtils";
-import { IEventHubsConnectionWizardContext } from "../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
+import { type IEventHubsConnectionWizardContext } from "../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
 
 export class EventHubsNamespaceAuthRuleNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private authRules: AuthorizationRule[];

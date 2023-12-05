@@ -6,12 +6,12 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
-import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
-import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { type IFunctionBinding, type IFunctionJson } from '../../../funcConfig/function';
+import { type IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export function getScriptFileNameFromLanguage(language: string): string | undefined {
     switch (language) {

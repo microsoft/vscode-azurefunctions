@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { FuncVersion } from '../../../FuncVersion';
+import { type FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
-import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
-import { IDotnetFunctionWizardContext, getFileExtension } from './IDotnetFunctionWizardContext';
+import { getFileExtension, type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
     private constructor() {

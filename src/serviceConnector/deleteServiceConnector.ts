@@ -4,9 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ServiceConnectorTreeItem, deleteLinker } from "@microsoft/vscode-azext-serviceconnector";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../localize";
-import { SlotTreeItem } from "../tree/SlotTreeItem";
+import { type SlotTreeItem } from "../tree/SlotTreeItem";
 import { createActivityContext } from "../utils/activityUtils";
 import { pickFunctionApp } from "../utils/pickFunctionApp";
 

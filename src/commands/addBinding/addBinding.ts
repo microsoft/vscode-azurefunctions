@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
-import { Uri, WorkspaceFolder } from "vscode";
-import { ProjectLanguage, projectTemplateKeySetting } from "../../constants";
+import { type AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { Uri, type WorkspaceFolder } from "vscode";
+import { type FuncVersion } from "../../FuncVersion";
+import { projectTemplateKeySetting, type ProjectLanguage } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { FuncVersion } from "../../FuncVersion";
 import { localize } from "../../localize";
-import { LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
-import { LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
+import { type LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
+import { type LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
 import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
 import { verifyInitForVSCode } from "../../vsCodeConfig/verifyInitForVSCode";
 import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
+import { type IBindingWizardContext } from "./IBindingWizardContext";
 import { createBindingWizard } from "./createBindingWizard";
-import { IBindingWizardContext } from "./IBindingWizardContext";
 
 export async function addBinding(context: IActionContext, data: Uri | LocalFunctionTreeItem | undefined): Promise<void> {
     let functionJsonPath: string;

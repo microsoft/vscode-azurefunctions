@@ -7,10 +7,10 @@ import { AzureWizard } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../../../../localize';
 import { getLocalSettingsFile } from '../../localSettings/getLocalSettingsFile';
-import { ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
+import { type ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
 import { AzureWebJobsStorageExecuteStep } from './AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from './AzureWebJobsStoragePromptStep';
-import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export async function setAzureWebJobsStorage(context: Omit<ISetConnectionSettingContext, 'projectPath'>): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select your local settings file.');

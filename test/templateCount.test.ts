@@ -5,7 +5,7 @@
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { CentralTemplateProvider, FuncVersion, FunctionTemplateBase, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
+import { FuncVersion, ProjectLanguage, TemplateFilter, TemplateSource, type CentralTemplateProvider, type FunctionTemplateBase } from '../extension.bundle';
 import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion, skipStagingTemplateSource } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 

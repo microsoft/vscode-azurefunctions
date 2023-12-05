@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey, ballerinaTomlFileName } from '../../constants';
-import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
+import { ProjectLanguage, ballerinaTomlFileName, buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { hasNodeJsDependency, tryGetPackageJson } from '../../utils/nodeJsUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
@@ -42,7 +42,7 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
         if (await isFSharpProject(context, projectPath)) {
             detectedLangs.push(ProjectLanguage.FSharp);
         }
-        
+
         if (await isBallerinaProject(projectPath)) {
             detectedLangs.push(ProjectLanguage.Ballerina);
         }

@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { ConnectionKey, ConnectionKeyValues, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
+import { type IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, type ConnectionKeyValues } from '../../../../constants';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getStorageConnectionString } from '../getLocalConnectionSetting';
-import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 230;

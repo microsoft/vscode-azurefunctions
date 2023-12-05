@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { StringDictionary } from '@azure/arm-appservice';
-import type { ParsedSite, SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type StringDictionary } from '@azure/arm-appservice';
+import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, ProjectLanguage, azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { ConnectionKey, DurableBackend, azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ConnectionKeyValues, type DurableBackendValues, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
-import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params

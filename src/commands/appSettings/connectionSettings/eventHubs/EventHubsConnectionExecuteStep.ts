@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionKeyValues, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault } from '../../../../constants';
+import { type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault, type ConnectionKeyValues } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
-import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
+import { type IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 240;

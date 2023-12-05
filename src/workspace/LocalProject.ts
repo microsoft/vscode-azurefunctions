@@ -3,17 +3,17 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
-import { Task, tasks } from "vscode";
-import { FuncVersion } from "../FuncVersion";
+import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { tasks, type Task } from "vscode";
+import { type FuncVersion } from "../FuncVersion";
 import { hostFileName, localSettingsFileName } from "../constants";
-import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
-import { ILocalSettingsJson, MismatchBehavior, getLocalSettingsJson, setLocalAppSetting } from "../funcConfig/local.settings";
+import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
+import { MismatchBehavior, getLocalSettingsJson, setLocalAppSetting, type ILocalSettingsJson } from "../funcConfig/local.settings";
 import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncPortMap } from "../funcCoreTools/funcHostTask";
-import { ApplicationSettings, FuncHostRequest } from "../tree/IProjectTreeItem";
+import { type ApplicationSettings, type FuncHostRequest } from "../tree/IProjectTreeItem";
 import { ProjectSource } from "../tree/projectContextValues";
 import { requestUtils } from "../utils/requestUtils";
-import { LocalProjectInternal, LocalProjectOptionsInternal } from "./listLocalProjects";
+import { type LocalProjectInternal, type LocalProjectOptionsInternal } from "./listLocalProjects";
 import path = require("path");
 
 export class LocalProject implements LocalProjectInternal {

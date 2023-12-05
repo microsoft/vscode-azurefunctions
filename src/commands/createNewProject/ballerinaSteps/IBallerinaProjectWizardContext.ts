@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { BallerinaBackend } from '../../../constants';
-import { IProjectWizardContext } from "../IProjectWizardContext";
+import { type BallerinaBackend } from '../../../constants';
+import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export interface IBallerinaProjectWizardContext extends IProjectWizardContext {
     balBackend?: BallerinaBackend;

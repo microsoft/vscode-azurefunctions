@@ -5,15 +5,15 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { buildGradleFileName, func, hostStartCommand, hostStartTaskName, javaBuildTool, JavaBuildTool, pomXmlFileName, ProjectLanguage } from '../../../constants';
+import { window, type DebugConfiguration, type TaskDefinition } from 'vscode';
+import { JavaBuildTool, buildGradleFileName, func, hostStartCommand, hostStartTaskName, javaBuildTool, pomXmlFileName, type ProjectLanguage } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
 import { mavenUtils } from '../../../utils/mavenUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
+import { type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
 const javaPackageTaskLabel: string = convertToFunctionsTaskLabel('package');

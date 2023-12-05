@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
+import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { verifyExtensionsConfig } from '../utils/verifyExtensionBundle';
 import { getWorkspaceSetting, updateGlobalSetting } from './settings';

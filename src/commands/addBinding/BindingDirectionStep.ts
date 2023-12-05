@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { IBindingWizardContext } from './IBindingWizardContext';
+import { type IBindingWizardContext } from './IBindingWizardContext';
 
 export class BindingDirectionStep extends AzureWizardPromptStep<IBindingWizardContext> {
     public hideStepCount: boolean = true;

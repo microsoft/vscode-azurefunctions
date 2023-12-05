@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { JavaBuildTool } from "../../../constants";
 import { previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
-import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
+import { type IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 export class JavaBuildToolStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
     public static async setDefaultBuildTool(context: IJavaProjectWizardContext): Promise<void> {

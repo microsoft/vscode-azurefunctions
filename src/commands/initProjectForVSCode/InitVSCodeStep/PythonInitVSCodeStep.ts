@@ -6,15 +6,15 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
-import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { ProjectLanguage, extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, hostStartTaskName, pythonVenvSetting } from "../../../constants";
+import { type DebugConfiguration, type TaskDefinition } from 'vscode';
+import { extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, hostStartTaskName, pythonVenvSetting, type ProjectLanguage } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
-import { IPythonVenvWizardContext } from '../../createNewProject/pythonSteps/IPythonVenvWizardContext';
+import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
+import { type IPythonVenvWizardContext } from '../../createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {

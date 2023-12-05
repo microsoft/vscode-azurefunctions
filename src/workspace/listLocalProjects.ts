@@ -3,17 +3,17 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, callWithTelemetryAndErrorHandling } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { FuncVersion, tryParseFuncVersion } from "../FuncVersion";
+import { tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { tryGetFunctionProjectRoot } from "../commands/createNewProject/verifyIsProject";
 import { getFunctionAppName, getJavaDebugSubpath } from "../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep";
-import { JavaBuildTool, ProjectLanguage, funcVersionSetting, javaBuildTool, projectLanguageModelSetting, projectLanguageSetting } from "../constants";
+import { ProjectLanguage, funcVersionSetting, javaBuildTool, projectLanguageModelSetting, projectLanguageSetting, type JavaBuildTool } from "../constants";
 import { localize } from "../localize";
-import { IProjectTreeItem } from "../tree/IProjectTreeItem";
+import { type IProjectTreeItem } from "../tree/IProjectTreeItem";
 import { dotnetUtils } from "../utils/dotnetUtils";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
-import { ListLocalProjectsResult } from "../vscode-azurefunctions.api";
+import { type ListLocalProjectsResult } from "../vscode-azurefunctions.api";
 import { LocalProject } from "./LocalProject";
 import path = require("path");
 

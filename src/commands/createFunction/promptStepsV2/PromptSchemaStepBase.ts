@@ -5,8 +5,8 @@
 
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 
 export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> extends AzureWizardPromptStep<T> {
 

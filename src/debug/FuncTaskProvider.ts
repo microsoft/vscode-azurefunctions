@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as process from 'process';
-import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDefinition, TaskProvider, TaskScope, workspace, WorkspaceFolder } from 'vscode';
+import { ShellExecution, Task, TaskScope, workspace, type CancellationToken, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
-import { BallerinaDebugProvider } from './BallerinaDebugProvider';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
-import { JavaDebugProvider } from './JavaDebugProvider';
-import { NodeDebugProvider } from './NodeDebugProvider';
-import { PowerShellDebugProvider } from './PowerShellDebugProvider';
-import { PythonDebugProvider } from './PythonDebugProvider';
+import { type BallerinaDebugProvider } from './BallerinaDebugProvider';
+import { type FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { type JavaDebugProvider } from './JavaDebugProvider';
+import { type NodeDebugProvider } from './NodeDebugProvider';
+import { type PowerShellDebugProvider } from './PowerShellDebugProvider';
+import { type PythonDebugProvider } from './PythonDebugProvider';
 
 export class FuncTaskProvider implements TaskProvider {
     private readonly _nodeDebugProvider: NodeDebugProvider;

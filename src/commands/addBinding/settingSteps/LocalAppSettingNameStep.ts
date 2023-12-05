@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BindingSettingValue } from '../../../funcConfig/function';
+import { type BindingSettingValue } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IBindingWizardContext } from '../IBindingWizardContext';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 
 export class LocalAppSettingNameStep extends BindingSettingStepBase {

@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { getContainingWorkspace, selectWorkspaceFolder } from '../../utils/workspace';
-import { IProjectWizardContext } from './IProjectWizardContext';
+import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;

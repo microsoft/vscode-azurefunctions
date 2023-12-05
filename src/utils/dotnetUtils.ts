@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage } from '../constants';
 import { FuncVersion } from '../FuncVersion';
+import { ProjectLanguage } from '../constants';
 import { localize } from "../localize";
-import { cliFeedUtils } from './cliFeedUtils';
+import { type cliFeedUtils } from './cliFeedUtils';
 import { telemetryUtils } from './telemetryUtils';
 import { findFiles } from './workspace';
 

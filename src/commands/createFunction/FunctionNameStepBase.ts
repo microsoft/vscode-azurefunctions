@@ -6,9 +6,9 @@
 import { AzExtFsExtra, AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../../localize';
-import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {

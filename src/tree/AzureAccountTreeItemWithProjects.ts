@@ -4,21 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { GenericTreeItem, callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, workspace } from 'vscode';
 import { funcVersionSetting, hostFileName, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { listLocalProjects, LocalProjectInternal } from '../workspace/listLocalProjects';
-import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
+import { listLocalProjects, type LocalProjectInternal } from '../workspace/listLocalProjects';
+import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 import { InitLocalProjectTreeItem } from './localProject/InitLocalProjectTreeItem';
 import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
 import { LocalProjectTreeItemBase } from './localProject/LocalProjectTreeItemBase';
+import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
-import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     private _projectDisposables: Disposable[] = [];

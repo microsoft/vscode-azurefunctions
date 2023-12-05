@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceClient } from '@azure/core-client';
+import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
-import { AzExtPipelineResponse, createGenericClient } from '@microsoft/vscode-azext-azureutils';
-import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
+import { createGenericClient, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
+import { openUrl, parseError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
 import { localize } from '../../../localize';
 import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
-import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { backupStacks } from './backupStacks';
-import { AppStackMinorVersion } from './models/AppStackModel';
-import { FunctionAppRuntimes, FunctionAppStack } from './models/FunctionAppStackModel';
+import { type AppStackMinorVersion } from './models/AppStackModel';
+import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
 
 export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
     const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);

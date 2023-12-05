@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { pythonVenvSetting, requirementsFileName } from "../constants";

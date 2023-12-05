@@ -6,11 +6,11 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { requirementsFileName } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 // Starting after this version, the func cli does not require a virtual environment and comes pre-packaged with the below dependencies

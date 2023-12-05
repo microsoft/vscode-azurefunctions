@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
+import { type SlotTreeItem } from '../tree/SlotTreeItem';
 import { SlotsTreeItem } from '../tree/SlotsTreeItem';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
-import { ISiteCreatedOptions } from './createFunctionApp/showSiteCreated';
+import { type ISiteCreatedOptions } from './createFunctionApp/showSiteCreated';
 
 export async function createSlot(context: IActionContext, node?: SlotsTreeItem): Promise<string> {
     if (!node) {

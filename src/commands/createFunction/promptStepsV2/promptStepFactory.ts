@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { ResourceType } from "../../../templates/IBindingTemplate";
-import { ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { BooleanInputStep } from "./BooleanInputStep";
 import { EnumInputStep } from "./EnumInputStep";
 import { ExistingFileStep } from "./ExistingFileStep";

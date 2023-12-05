@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
-import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
+import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     this.timeout(30 * 1000);

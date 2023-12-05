@@ -4,20 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
-import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import fetch from 'cross-fetch';
 import { window } from 'vscode';
-import { FuncVersion } from '../FuncVersion';
+import { type FuncVersion } from '../FuncVersion';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
-import { FuncHostRequest } from '../tree/IProjectTreeItem';
+import { type FuncHostRequest } from '../tree/IProjectTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
-import { IFunction } from '../workspace/LocalFunction';
+import { type IFunction } from '../workspace/LocalFunction';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase | IFunction): Promise<void> {
     context.telemetry.eventVersion = 2;

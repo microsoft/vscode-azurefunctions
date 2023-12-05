@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient, Eventhub } from '@azure/arm-eventhub';
+import { type EventHubManagementClient, type Eventhub } from '@azure/arm-eventhub';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullValueAndProp, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { EventHubCreateStep } from './EventHubCreateStep';
-import { IEventHubWizardContext } from './IEventHubWizardContext';
+import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
     public async prompt(context: IEventHubWizardContext): Promise<void> {

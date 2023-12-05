@@ -6,9 +6,9 @@
 'use strict';
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
-import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
+import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { registerServiceConnectorExtensionVariables } from '@microsoft/vscode-azext-serviceconnector';
-import { IActionContext, apiUtils, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
@@ -34,7 +34,7 @@ import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
+import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
 

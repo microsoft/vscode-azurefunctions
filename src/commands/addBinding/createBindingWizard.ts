@@ -8,7 +8,7 @@ import { localize } from "../../localize";
 import { BindingCreateStep } from "./BindingCreateStep";
 import { BindingDirectionStep } from "./BindingDirectionStep";
 import { BindingListStep } from "./BindingListStep";
-import { IBindingWizardContext } from "./IBindingWizardContext";
+import { type IBindingWizardContext } from "./IBindingWizardContext";
 
 export function createBindingWizard(wizardContext: IBindingWizardContext): AzureWizard<IBindingWizardContext> {
     return new AzureWizard(wizardContext, {

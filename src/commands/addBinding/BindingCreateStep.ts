@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
-import { Progress, Uri, window, workspace } from "vscode";
-import { IFunctionBinding, IFunctionJson } from "../../funcConfig/function";
-import { IBindingTemplate } from "../../templates/IBindingTemplate";
+import { Uri, window, workspace, type Progress } from "vscode";
+import { type IFunctionBinding, type IFunctionJson } from "../../funcConfig/function";
+import { type IBindingTemplate } from "../../templates/IBindingTemplate";
 import { confirmEditJsonFile } from '../../utils/fs';
 import { nonNullProp } from "../../utils/nonNull";
 import { verifyExtensionBundle } from "../../utils/verifyExtensionBundle";
 import { getBindingSetting } from "../createFunction/IFunctionWizardContext";
-import { IBindingWizardContext } from "./IBindingWizardContext";
+import { type IBindingWizardContext } from "./IBindingWizardContext";
 
 export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardContext> {
     public priority: number = 220;

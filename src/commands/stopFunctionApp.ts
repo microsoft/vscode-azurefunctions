@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function stopFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<SlotTreeItem> {
     if (!node) {

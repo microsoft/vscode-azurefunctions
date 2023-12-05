@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceClient } from '@azure/core-client';
+import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
-import { createTestActionContext, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { createTestActionContext, runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, FuncVersion, getRandomHexString, nonNullProp } from '../../extension.bundle';
-import { addParallelSuite, ParallelTest, runInSeries } from '../addParallelSuite';
+import { FuncVersion, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
+import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 

@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { workerRuntimeVersionKey } from '../../../constants';
-import { IHostJsonV2 } from '../../../funcConfig/host';
+import { type IHostJsonV2 } from '../../../funcConfig/host';
 import { hasMinFuncCliVersion } from '../../../funcCoreTools/hasMinFuncCliVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { requestUtils } from '../../../utils/requestUtils';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 const profileps1FileName: string = 'profile.ps1';

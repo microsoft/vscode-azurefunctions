@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Site } from '@azure/arm-appservice';
+import { type Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
 import { runWithInputs, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString, ProjectLanguage, registerOnActionStartHandler } from '../../extension.bundle';
+import { DialogResponses, ProjectLanguage, createFunctionAppAdvanced, deleteFunctionApp, getRandomHexString, registerOnActionStartHandler } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';

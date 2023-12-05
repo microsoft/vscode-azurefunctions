@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName, localEventHubsEmulatorConnectionRegExp } from "../../../../constants";
-import { IHostJsonV2, INetheriteTaskJson } from "../../../../funcConfig/host";
+import { type IHostJsonV2, type INetheriteTaskJson } from "../../../../funcConfig/host";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { NetheriteConfigureHostStep } from "../../../createFunction/durableSteps/netherite/NetheriteConfigureHostStep";
 import { NetheriteEventHubNameStep } from "../../../createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
-import { IConnectionPromptOptions } from "../IConnectionPromptOptions";
-import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
+import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
+import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 import { EventHubsConnectionExecuteStep } from "./EventHubsConnectionExecuteStep";
 import { EventHubsConnectionPromptStep } from "./EventHubsConnectionPromptStep";
-import { IEventHubsConnectionWizardContext } from "./IEventHubsConnectionWizardContext";
+import { type IEventHubsConnectionWizardContext } from "./IEventHubsConnectionWizardContext";
 
 // Supports validation on both 'debug' and 'deploy'
 export async function validateEventHubsConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {

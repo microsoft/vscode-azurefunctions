@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { window, workspace, WorkspaceFolder } from 'vscode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectTemplateKeySetting } from '../../constants';
+import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { window, workspace, type WorkspaceFolder } from 'vscode';
+import { latestGAVersion, type FuncVersion } from '../../FuncVersion';
+import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
-import { FuncVersion, latestGAVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
-import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
+import { type IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { verifyProjectPath } from '../createNewProject/verifyIsProject';
-import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
+import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
 export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;

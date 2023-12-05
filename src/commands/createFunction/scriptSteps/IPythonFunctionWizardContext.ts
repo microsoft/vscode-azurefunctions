@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export enum FunctionLocation {
     MainScript,

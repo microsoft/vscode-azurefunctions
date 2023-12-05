@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, WorkspaceFolder } from 'vscode';
+import { type DebugConfiguration, type WorkspaceFolder } from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';

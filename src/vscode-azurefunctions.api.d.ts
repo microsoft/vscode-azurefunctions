@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, IActionContext } from "@microsoft/vscode-azext-utils";
-import * as vscode from 'vscode';
-import { JobType } from "./templates/script/parseScriptTemplatesV2";
+import { type AzureWizardExecuteStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import type * as vscode from 'vscode';
+import { type JobType } from "./templates/script/parseScriptTemplatesV2";
 
 export interface ILocalFunction {
     name: string;

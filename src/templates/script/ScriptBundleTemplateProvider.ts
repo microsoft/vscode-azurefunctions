@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { hostFileName } from '../../constants';
-import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
+import { parseHostJson, type IBundleMetadata } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
-import { IBindingTemplate } from '../IBindingTemplate';
-import { IFunctionTemplate } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { type IBindingTemplate } from '../IBindingTemplate';
+import { type IFunctionTemplate } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { ScriptTemplateProvider } from './ScriptTemplateProvider';
 import { parseScriptTemplates } from './parseScriptTemplates';

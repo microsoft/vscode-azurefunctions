@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
-import { WorkspaceFolder } from 'vscode';
-import { FuncVersion } from '../../FuncVersion';
-import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
+import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type WorkspaceFolder } from 'vscode';
+import { type FuncVersion } from '../../FuncVersion';
+import { projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
+import { type LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
 import { durableUtils } from '../../utils/durableUtils';
 import { getContainingWorkspace, getRootWorkspaceFolder } from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import * as api from '../../vscode-azurefunctions.api';
+import type * as api from '../../vscode-azurefunctions.api';
 import { createNewProjectInternal } from '../createNewProject/createNewProject';
 import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead

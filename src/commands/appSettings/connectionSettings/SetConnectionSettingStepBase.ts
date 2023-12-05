@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
-import { CodeAction, ConnectionKeyValues } from "../../../constants";
+import { CodeAction, type ConnectionKeyValues } from "../../../constants";
 import { MismatchBehavior, setLocalAppSetting } from "../../../funcConfig/local.settings";
-import { ISetConnectionSettingContext } from "./ISetConnectionSettingContext";
+import { type ISetConnectionSettingContext } from "./ISetConnectionSettingContext";
 
 export abstract class SetConnectionSettingStepBase<T extends ISetConnectionSettingContext> extends AzureWizardExecuteStep<T> {
     public abstract readonly debugDeploySetting: ConnectionKeyValues;

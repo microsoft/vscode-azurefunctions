@@ -4,18 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type IAzureQuickPickItem, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
-import { BindingSettingValue } from '../../../funcConfig/function';
-import { ILocalSettingsJson, getLocalSettingsJson } from '../../../funcConfig/local.settings';
+import { type BindingSettingValue } from '../../../funcConfig/function';
+import { getLocalSettingsJson, type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
-import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
+import { type IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
-import { IBindingWizardContext } from '../IBindingWizardContext';
-import { IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { viewOutput } from '../../constants-nls';
 import { ext } from '../../extensionVariables';

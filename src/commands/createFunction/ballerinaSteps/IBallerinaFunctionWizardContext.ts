@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IFunctionTemplate } from '../../../templates/IFunctionTemplate';
+import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export interface IBallerinaFunctionWizardContext extends IFunctionWizardContext {
     functionTemplate?: IBallerinaFunctionTemplate;

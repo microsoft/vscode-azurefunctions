@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { nonNullProp, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { QuickPickInputStep } from "./QuickPickInputStep";
 
 export class EnumInputStep<T extends FunctionV2WizardContext> extends QuickPickInputStep<T> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';

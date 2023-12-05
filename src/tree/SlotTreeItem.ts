@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentsTreeItem, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import { FuncVersion } from '../FuncVersion';
-import { IParsedHostJson } from '../funcConfig/host';
+import { type DeploymentsTreeItem, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
+import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type FuncVersion } from '../FuncVersion';
+import { type IParsedHostJson } from '../funcConfig/host';
 import { treeUtils } from '../utils/treeUtils';
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
+import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from './IProjectTreeItem';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { ProjectSource } from './projectContextValues';
-import { RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
+import { type RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
 
 export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem | AzExtParentTreeItem): treeItem is SlotTreeItem {
     return !!(treeItem as SlotTreeItem).site;

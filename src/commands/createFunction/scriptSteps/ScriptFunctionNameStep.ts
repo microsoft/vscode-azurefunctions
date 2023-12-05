@@ -6,10 +6,10 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from "../../../localize";
-import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { type IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export class ScriptFunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IScriptFunctionWizardContext): Promise<string | undefined> {

@@ -3,12 +3,12 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { JobType, ParsedJob } from '../../templates/script/parseScriptTemplatesV2';
+import { JobType, type ParsedJob } from '../../templates/script/parseScriptTemplatesV2';
 import { assertTemplateIsV2 } from '../../utils/templateVersionUtils';
 import { isFunctionProject } from '../createNewProject/verifyIsProject';
-import { FunctionV2WizardContext, IFunctionWizardContext } from './IFunctionWizardContext';
+import { type FunctionV2WizardContext, type IFunctionWizardContext } from './IFunctionWizardContext';
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
 import { promptStepFactory } from './promptStepsV2/promptStepFactory';
 

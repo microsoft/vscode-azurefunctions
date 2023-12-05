@@ -4,9 +4,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { FuncVersion, getMajorVersion } from "../FuncVersion";
+import { getMajorVersion, type FuncVersion } from "../FuncVersion";
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 
 export async function hasMinFuncCliVersion(context: IActionContext, minVersion: string, projectVersion: FuncVersion): Promise<boolean> {

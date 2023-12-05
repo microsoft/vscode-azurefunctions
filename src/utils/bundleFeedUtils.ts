@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import { ext, TemplateSource } from '../extensionVariables';
-import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
+import { type IBundleMetadata, type IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
-import { IBindingTemplate } from '../templates/IBindingTemplate';
-import { FunctionTemplateBase, IFunctionTemplate } from '../templates/IFunctionTemplate';
-import { TemplateSchemaVersion } from '../templates/TemplateProviderBase';
+import { type IBindingTemplate } from '../templates/IBindingTemplate';
+import { type FunctionTemplateBase, type IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { type TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { feedUtils } from './feedUtils';
 import { nugetUtils } from './nugetUtils';
 

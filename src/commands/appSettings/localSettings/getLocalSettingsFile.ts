@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { WorkspaceFolder } from "vscode";
+import { type WorkspaceFolder } from "vscode";
 import { localSettingsFileName } from '../../../constants';
 import { getRootWorkspaceFolder, selectWorkspaceFile } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';

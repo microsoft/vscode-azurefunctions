@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import { BindingSettingValue } from "../../../funcConfig/function";
-import { IBindingSetting } from "../../../templates/IBindingTemplate";
+import { type BindingSettingValue } from "../../../funcConfig/function";
+import { type IBindingSetting } from "../../../templates/IBindingTemplate";
 import { getBindingSetting, setBindingSetting } from "../../createFunction/IFunctionWizardContext";
-import { IBindingWizardContext } from "../IBindingWizardContext";
+import { type IBindingWizardContext } from "../IBindingWizardContext";
 
 export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IBindingWizardContext> {
     protected readonly _setting: IBindingSetting;

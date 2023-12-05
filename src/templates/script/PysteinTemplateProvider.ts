@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
-import { IBundleMetadata } from '../../funcConfig/host';
+import { type IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
 import { verifyTemplateIsV2 } from '../../utils/templateVersionUtils';
-import { IBindingTemplate } from '../IBindingTemplate';
-import { FunctionTemplateBase } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { type IBindingTemplate } from '../IBindingTemplate';
+import { type FunctionTemplateBase } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { ScriptBundleTemplateProvider } from './ScriptBundleTemplateProvider';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { RawTemplateV2, parseScriptTemplates } from './parseScriptTemplatesV2';
+import { parseScriptTemplates, type RawTemplateV2 } from './parseScriptTemplatesV2';
 
 
 export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {

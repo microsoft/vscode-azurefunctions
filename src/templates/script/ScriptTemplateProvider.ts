@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as path from 'path';
 import { FuncVersion } from '../../FuncVersion';
@@ -12,9 +12,9 @@ import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { getRandomHexString } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
-import { IBindingTemplate } from '../IBindingTemplate';
-import { IFunctionTemplate } from '../IFunctionTemplate';
-import { ITemplates } from '../ITemplates';
+import { type IBindingTemplate } from '../IBindingTemplate';
+import { type IFunctionTemplate } from '../IFunctionTemplate';
+import { type ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { english, getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';

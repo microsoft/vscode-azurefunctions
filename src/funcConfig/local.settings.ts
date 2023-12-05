@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { ConnectionKeyValues, localSettingsFileName } from '../constants';
+import type * as vscode from 'vscode';
+import { localSettingsFileName, type ConnectionKeyValues } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 

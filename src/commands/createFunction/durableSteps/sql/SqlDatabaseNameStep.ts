@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Database, SqlManagementClient } from '@azure/arm-sql';
+import { type Database, type SqlManagementClient } from '@azure/arm-sql';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullProp, nonNullValue, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private databases: Database[] = [];

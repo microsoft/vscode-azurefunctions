@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { nonNullProp, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 
 export async function openDeploymentInPortal(_context: IActionContext, node: AzExtTreeItem): Promise<void> {
     await uiOpenInPortal(node, `${nonNullProp(node, 'parent').parent?.id}/Deployments/${nonNullProp(node, 'id')}`);

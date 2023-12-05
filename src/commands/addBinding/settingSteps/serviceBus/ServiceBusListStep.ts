@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceBusManagementClient } from '@azure/arm-servicebus';
+import { type ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { promptForResource } from '../../../../utils/azure';
 import { createServiceBusClient } from '../../../../utils/azureClients';
-import { IServiceBusWizardContext } from './IServiceBusWizardContext';
+import { type IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusListStep extends AzureWizardPromptStep<IServiceBusWizardContext> {
     public async prompt(context: IServiceBusWizardContext): Promise<void> {

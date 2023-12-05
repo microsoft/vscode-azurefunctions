@@ -9,7 +9,7 @@ import { FuncVersion, ProjectLanguage, funcVersionSetting, projectLanguageSettin
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
-import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
+import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
 
 class BallerinaFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Ballerina;

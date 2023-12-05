@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApplicationInsightsComponent, ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
-import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
+import { type ApplicationInsightsComponent, type ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
+import { type SiteLogsConfig, type StringDictionary } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
-import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { SlotTreeItem, isSlotTreeItem } from '../../tree/SlotTreeItem';
-import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
+import { isSlotTreeItem, type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
