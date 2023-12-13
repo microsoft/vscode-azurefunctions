@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzExtOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
-import { AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
-import { ExtensionContext } from "vscode";
+import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
+import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
+import { type ExtensionContext } from "vscode";
 import { func } from "./constants";
-import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
-import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
+import { type CentralTemplateProvider } from "./templates/CentralTemplateProvider";
+import { type AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
 
 /**
  * Used for extensionVariables that can also be set per-action

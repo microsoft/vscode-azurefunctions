@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { PackageManager } from '../constants';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
+import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullProp } from '../utils/nonNull';
 import { openUrl } from '../utils/openUrl';

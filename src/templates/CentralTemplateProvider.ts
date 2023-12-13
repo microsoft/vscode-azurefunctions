@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
+import { parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { Disposable, workspace, type ConfigurationChangeEvent } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage, TemplateFilter, projectTemplateKeySetting } from '../constants';
 import { TemplateSource, ext } from '../extensionVariables';
@@ -14,10 +14,10 @@ import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { IBindingTemplate } from './IBindingTemplate';
-import { FunctionTemplateBase, IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
-import { ITemplates } from './ITemplates';
-import { TemplateProviderBase } from './TemplateProviderBase';
+import { type IBindingTemplate } from './IBindingTemplate';
+import { TemplateCategory, type FunctionTemplateBase, type IFunctionTemplate } from './IFunctionTemplate';
+import { type ITemplates } from './ITemplates';
+import { type TemplateProviderBase } from './TemplateProviderBase';
 import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
 import { getBallerinaVerifiedTemplateIds } from './ballerina/getBallerinaVerifiedTemplateIds';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -29,7 +29,7 @@ import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
-import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
+import { type IScriptFunctionTemplate } from './script/parseScriptTemplates';
 
 type CachedProviders = { providers: TemplateProviderBase[]; templatesTask?: Promise<ITemplates> }
 

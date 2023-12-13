@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
+import { DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage, funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting, type ProjectLanguage } from '../constants';
 import { localize } from '../localize';
-import { TemplateSchemaVersion } from '../templates/TemplateProviderBase';
+import { type TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
 import { getTemplateVersionFromLanguageAndModel } from '../utils/templateVersionUtils';
 import { getWorkspaceSetting } from './settings';

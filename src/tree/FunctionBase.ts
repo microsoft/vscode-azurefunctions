@@ -3,13 +3,13 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from "@azure/arm-appservice";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as url from "url";
-import { HttpAuthLevel, ParsedFunctionJson } from "../funcConfig/function";
-import { IParsedHostJson } from "../funcConfig/host";
-import { IFunction } from "../workspace/LocalFunction";
-import { FuncHostRequest, IProjectTreeItem } from "./IProjectTreeItem";
+import { HttpAuthLevel, type ParsedFunctionJson } from "../funcConfig/function";
+import { type IParsedHostJson } from "../funcConfig/host";
+import { type IFunction } from "../workspace/LocalFunction";
+import { type FuncHostRequest, type IProjectTreeItem } from "./IProjectTreeItem";
 
 export abstract class FunctionBase implements IFunction {
     constructor(

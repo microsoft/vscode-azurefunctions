@@ -3,23 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile } from "@microsoft/vscode-azext-azureappservice";
+import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
+import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { ServiceConnectorGroupTreeItem } from "@microsoft/vscode-azext-serviceconnector";
-import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, TreeItemIconPath, nonNullValue } from "@microsoft/vscode-azext-utils";
-import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
-import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
+import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
-import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
+import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
-import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
-import { SlotTreeItem } from "./SlotTreeItem";
+import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
+import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";

@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProgressLocation, Uri, window } from "vscode";
-import { packageJsonFileName, ProjectLanguage } from "../../../constants";
+import { ProgressLocation, window, type Uri } from "vscode";
+import { ProjectLanguage, packageJsonFileName } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 import { confirmEditJsonFile } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
-import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
-import { IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';
-import { IFunctionWizardContext } from "../IFunctionWizardContext";
+import { type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
+import { type IFunctionWizardContext } from "../IFunctionWizardContext";
+import { type IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';
 
 export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
     public priority: number = 220;

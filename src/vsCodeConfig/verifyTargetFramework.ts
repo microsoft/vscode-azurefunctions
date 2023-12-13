@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
-import { deploySubpathSetting, ProjectLanguage } from '../constants';
+import { DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import type * as vscode from 'vscode';
+import { deploySubpathSetting, type ProjectLanguage } from '../constants';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
-import { getTasks, ITask, updateTasks } from './tasks';
+import { getTasks, updateTasks, type ITask } from './tasks';
 
 export async function verifyTargetFramework(projectLanguage: ProjectLanguage, folder: vscode.WorkspaceFolder, projectPath: string, context: IActionContext): Promise<void> {
     const settingKey: string = 'showTargetFrameworkWarning';

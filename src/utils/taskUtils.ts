@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Task, tasks as codeTasks, WorkspaceFolder } from "vscode";
+import { tasks as codeTasks, type Task, type WorkspaceFolder } from "vscode";
 import { isPathEqual } from "./fs";
 
 export namespace taskUtils {

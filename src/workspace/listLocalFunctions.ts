@@ -3,16 +3,16 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from "@azure/arm-appservice";
-import { AzExtFsExtra, IActionContext, callWithTelemetryAndErrorHandling, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { ProjectNotRunningError, getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
-import { ILocalFunction, LocalFunction } from "./LocalFunction";
-import { LocalProjectInternal } from "./listLocalProjects";
+import { LocalFunction, type ILocalFunction } from "./LocalFunction";
+import { type LocalProjectInternal } from "./listLocalProjects";
 import path = require("path");
 
 interface InvalidLocalFunction {

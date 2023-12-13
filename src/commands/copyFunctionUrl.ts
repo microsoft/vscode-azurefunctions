@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
+import { type FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
 export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {

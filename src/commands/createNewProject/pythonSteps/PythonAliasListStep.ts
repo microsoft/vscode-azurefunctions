@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { getGlobalSetting } from "../../../vsCodeConfig/settings";
 import { EnterPythonAliasStep } from "./EnterPythonAliasStep";
-import { IPythonVenvWizardContext } from "./IPythonVenvWizardContext";
+import { type IPythonVenvWizardContext } from "./IPythonVenvWizardContext";
 import { getPythonVersion, getSupportedPythonVersions, isSupportedPythonVersion } from './pythonVersion';
 
 export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizardContext> {

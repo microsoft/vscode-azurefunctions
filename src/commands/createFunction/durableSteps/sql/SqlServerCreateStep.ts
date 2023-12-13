@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Server, SqlManagementClient } from '@azure/arm-sql';
-import { AzExtLocation, LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { type Server, type SqlManagementClient } from '@azure/arm-sql';
+import { LocationListStep, type AzExtLocation } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, nonNullProp, nonNullValue, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerCreateStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 205;

@@ -6,11 +6,11 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
+import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, type TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
-import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
+import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharp;

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, ISubscriptionContext, nonNullValue } from "@microsoft/vscode-azext-utils";
-import { IEventHubsConnectionWizardContext } from "../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
+import { AzureWizard, nonNullValue, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { type IEventHubsConnectionWizardContext } from "../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
 import { EventHubsNamespaceAuthRuleCreateStep } from "./EventHubsNamespaceAuthRuleCreateStep";
 import { EventHubsNamespaceAuthRuleNameStep } from "./EventHubsNamespaceAuthRuleNameStep";
 

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { BindingSettingValue } from "../../../funcConfig/function";
+import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { type BindingSettingValue } from "../../../funcConfig/function";
 import { envUtils } from "../../../utils/envUtils";
-import { IBindingWizardContext } from "../IBindingWizardContext";
+import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class BooleanPromptStep extends BindingSettingStepBase {

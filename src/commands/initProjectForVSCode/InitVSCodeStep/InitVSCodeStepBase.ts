@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
-import { FuncVersion } from '../../../FuncVersion';
-import { ProjectLanguage, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
+import { type FuncVersion } from '../../../FuncVersion';
+import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
-import { IExtensionsJson } from '../../../vsCodeConfig/extensions';
-import { ILaunchJson, getDebugConfigs, getLaunchVersion, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';
+import { type IExtensionsJson } from '../../../vsCodeConfig/extensions';
+import { getDebugConfigs, getLaunchVersion, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion, type ILaunchJson } from '../../../vsCodeConfig/launch';
 import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
-import { ITask, ITasksJson, getTasks, getTasksVersion, tasksVersion, updateTasks, updateTasksVersion } from '../../../vsCodeConfig/tasks';
-import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
+import { getTasks, getTasksVersion, tasksVersion, updateTasks, updateTasksVersion, type ITask, type ITasksJson } from '../../../vsCodeConfig/tasks';
+import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
 export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 20;

@@ -6,10 +6,10 @@
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionSubpathSetting } from '../../../constants';
-import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { type IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {

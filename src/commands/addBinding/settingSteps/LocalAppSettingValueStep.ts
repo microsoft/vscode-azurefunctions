@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../localize';
-import { IBindingWizardContext } from '../IBindingWizardContext';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
 
 export class LocalAppSettingValueStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _key: string;

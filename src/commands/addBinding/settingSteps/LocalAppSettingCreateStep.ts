@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { localSettingsFileName } from '../../../constants';
 import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
-import { IBindingSetting } from '../../../templates/IBindingTemplate';
+import { type IBindingSetting } from '../../../templates/IBindingTemplate';
 import { nonNullProp, nonNullValue } from '../../../utils/nonNull';
 import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
-import { IBindingWizardContext } from '../IBindingWizardContext';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
 
 export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IBindingWizardContext> {
     public priority: number = 210;

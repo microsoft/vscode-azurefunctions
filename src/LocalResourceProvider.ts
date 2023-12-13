@@ -2,13 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
-import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
+import { type AzExtParentTreeItem, type AzExtTreeItem } from "@microsoft/vscode-azext-utils";
+import { type WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { InitLocalProjectTreeItem } from "./tree/localProject/InitLocalProjectTreeItem";
 import { InvalidLocalProjectTreeItem } from "./tree/localProject/InvalidLocalProjectTreeItem";
 import { LocalProjectTreeItem } from "./tree/localProject/LocalProjectTreeItem";
-import { LocalProjectInternal, listLocalProjects } from "./workspace/listLocalProjects";
+import { listLocalProjects, type LocalProjectInternal } from "./workspace/listLocalProjects";
 
 export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider {
 

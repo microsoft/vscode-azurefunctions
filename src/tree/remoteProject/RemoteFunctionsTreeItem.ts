@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { type FunctionEnvelope } from '@azure/arm-appservice';
+import { nonNullProp, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
-import { SlotTreeItem } from '../SlotTreeItem';
+import { type SlotTreeItem } from '../SlotTreeItem';
 import { RemoteFunction } from './RemoteFunction';
 import { RemoteFunctionTreeItem, getFunctionNameFromId } from './RemoteFunctionTreeItem';
 

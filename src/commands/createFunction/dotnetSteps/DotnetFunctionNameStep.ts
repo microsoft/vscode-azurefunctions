@@ -6,11 +6,11 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from "../../../localize";
-import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { IDotnetFunctionWizardContext, getFileExtension } from './IDotnetFunctionWizardContext';
+import { getFileExtension, type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionNameStep extends FunctionNameStepBase<IDotnetFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IDotnetFunctionWizardContext): Promise<string | undefined> {

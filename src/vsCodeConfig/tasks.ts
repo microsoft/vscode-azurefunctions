@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TaskDefinition, workspace, WorkspaceConfiguration, WorkspaceFolder } from "vscode";
+import { workspace, type TaskDefinition, type WorkspaceConfiguration, type WorkspaceFolder } from "vscode";
 
 const tasksKey: string = 'tasks';
 const versionKey: string = 'version';

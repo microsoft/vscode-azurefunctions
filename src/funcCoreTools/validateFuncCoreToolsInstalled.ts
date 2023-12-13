@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as os from "os";
-import { env, MessageItem } from 'vscode';
-import { funcVersionSetting, PackageManager } from '../constants';
+import { env, type MessageItem } from 'vscode';
+import { funcVersionSetting, type PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
+import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { generateLinuxErrorMessages, ILinuxErrorMessages } from './generateLinuxErrorMessages';
+import { generateLinuxErrorMessages, type ILinuxErrorMessages } from './generateLinuxErrorMessages';
 import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';

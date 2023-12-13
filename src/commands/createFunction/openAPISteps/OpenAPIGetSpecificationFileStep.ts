@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import { OpenDialogOptions, Uri, workspace } from "vscode";
-import { IFunctionWizardContext } from "../IFunctionWizardContext";
+import { Uri, workspace, type OpenDialogOptions } from "vscode";
+import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 
 export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public async prompt(context: IFunctionWizardContext): Promise<void> {

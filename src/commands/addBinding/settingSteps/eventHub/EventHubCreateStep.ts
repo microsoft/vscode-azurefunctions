@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
+import { type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { getRandomHexString } from '../../../../utils/fs';
-import { IEventHubWizardContext } from './IEventHubWizardContext';
+import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardContext> {
     // EventHubsNamespaceCreateStep has a priority number of 190, so has to be after that

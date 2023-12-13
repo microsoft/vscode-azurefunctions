@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { ILocalFunction } from '../../workspace/LocalFunction';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type ILocalFunction } from '../../workspace/LocalFunction';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
-import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
+import { type LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 
 export class LocalFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: LocalFunctionsTreeItem;

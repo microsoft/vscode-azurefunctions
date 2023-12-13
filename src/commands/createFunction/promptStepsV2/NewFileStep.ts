@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, type AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
 import { Uri } from "vscode";
 import { Utils } from 'vscode-uri';
 import { localize } from "../../../localize";
 import { JobType } from "../../../templates/script/parseScriptTemplatesV2";
-import { FunctionV2WizardContext } from "../IFunctionWizardContext";
+import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { StringInputStep } from "./StringInputStep";
 
 export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputStep<T> {

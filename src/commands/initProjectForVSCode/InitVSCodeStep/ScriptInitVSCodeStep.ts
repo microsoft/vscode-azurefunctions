@@ -6,12 +6,12 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
-import { TaskDefinition } from 'vscode';
-import { extensionsCsprojFileName, extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
+import { type TaskDefinition } from 'vscode';
+import { extensionsCsprojFileName, extInstallTaskName, func, hostStartCommand, hostStartTaskName, type ProjectLanguage } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../../FuncVersion';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
-import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
+import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
 /**

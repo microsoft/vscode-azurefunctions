@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, type AzExtParentTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { IFunction } from '../workspace/LocalFunction';
-import { FunctionBase } from './FunctionBase';
-import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
+import { type IFunction } from '../workspace/LocalFunction';
+import { type FunctionBase } from './FunctionBase';
+import { type FunctionsTreeItemBase } from './FunctionsTreeItemBase';
+import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectResource, getProjectContextValue } from './projectContextValues';
 
 

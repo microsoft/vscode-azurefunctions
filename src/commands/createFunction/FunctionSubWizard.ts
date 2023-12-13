@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
-import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { isNodeV4Plus } from '../../utils/programmingModelUtils';
 import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
 import { BallerinaFunctionCreateStep } from './ballerinaSteps/BallerinaFunctionCreateStep';
 import { BallerinaFunctionNameStep } from './ballerinaSteps/BallerinaFunctionNameStep';

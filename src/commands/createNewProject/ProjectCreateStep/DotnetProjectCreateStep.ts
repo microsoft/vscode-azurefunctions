@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ConnectionKey, gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
+import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
+import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
-import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class DotnetProjectCreateStep extends ProjectCreateStepBase {

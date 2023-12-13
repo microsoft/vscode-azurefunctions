@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep, parseError } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { IPythonVenvWizardContext } from "./IPythonVenvWizardContext";
+import { type IPythonVenvWizardContext } from "./IPythonVenvWizardContext";
 import { getPythonVersion, getSupportedPythonVersions, isSupportedPythonVersion } from './pythonVersion';
 
 export class EnterPythonAliasStep extends AzureWizardPromptStep<IPythonVenvWizardContext> {

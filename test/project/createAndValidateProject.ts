@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { type TestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
 import { ProjectLanguage, createNewProjectInternal, getRandomHexString, hiddenStacksSetting } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
-import * as api from '../../src/vscode-azurefunctions.api';
+import type * as api from '../../src/vscode-azurefunctions.api';
 import { testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
-import { IValidateProjectOptions, validateProject } from './validateProject';
+import { validateProject, type IValidateProjectOptions } from './validateProject';
 
 export interface ICreateProjectTestOptions extends IValidateProjectOptions {
     isHiddenLanguage?: boolean;

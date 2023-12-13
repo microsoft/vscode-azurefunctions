@@ -7,11 +7,11 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionSubpathSetting } from '../../../constants';
 import { localize } from "../../../localize";
-import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { type IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeV4FunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {

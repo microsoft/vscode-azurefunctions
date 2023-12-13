@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
-import { MessageItem, window, WorkspaceFolder } from 'vscode';
+import { window, type MessageItem, type WorkspaceFolder } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
+import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
 import { nonNullValue } from '../../utils/nonNull';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';

@@ -5,12 +5,12 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, ProjectLanguage } from "../../../constants";
+import { type DebugConfiguration, type TaskDefinition } from "vscode";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
+import { type IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');

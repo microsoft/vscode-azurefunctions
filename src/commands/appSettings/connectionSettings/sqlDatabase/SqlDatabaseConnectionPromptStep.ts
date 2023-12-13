@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { MessageItem } from 'vscode';
+import { AzureWizardPromptStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
 import { ConnectionType } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { SqlServerListStep } from '../../../createFunction/durableSteps/sql/SqlServerListStep';
-import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
-import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
+import { type IConnectionPromptOptions } from '../IConnectionPromptOptions';
+import { type ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 import { SqlDatabaseConnectionCustomPromptStep } from './SqlDatabaseConnectionCustomPromptStep';
 
 export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {

@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { type AzureWizardExecuteStep, type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { JavaBuildTool } from "../../../constants";
-import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
-import { IJavaProjectWizardContext } from "../../createNewProject/javaSteps/IJavaProjectWizardContext";
+import { type IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
+import { type IJavaProjectWizardContext } from "../../createNewProject/javaSteps/IJavaProjectWizardContext";
 import { JavaBuildToolStep } from "../../createNewProject/javaSteps/JavaBuildToolStep";
-import { isGradleProject, isMavenProject } from "../detectProjectLanguage";
 import { JavaInitVSCodeStep } from "../InitVSCodeStep/JavaInitVSCodeStep";
+import { isGradleProject, isMavenProject } from "../detectProjectLanguage";
 
 export async function addJavaInitVSCodeSteps(
     context: IJavaProjectWizardContext,

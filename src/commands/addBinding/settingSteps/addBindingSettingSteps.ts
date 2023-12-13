@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import { IBindingSetting, ResourceType, ValueType } from "../../../templates/IBindingTemplate";
-import { IBindingWizardContext } from "../IBindingWizardContext";
+import { type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { ResourceType, ValueType, type IBindingSetting } from "../../../templates/IBindingTemplate";
+import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingNameStep } from "./BindingNameStep";
 import { BooleanPromptStep } from "./BooleanPromptStep";
 import { EnumPromptStep } from "./EnumPromptStep";

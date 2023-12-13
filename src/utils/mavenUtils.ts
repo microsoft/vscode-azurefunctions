@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext, IAzExtOutputChannel, TelemetryProperties } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, DialogResponses, type IActionContext, type IAzExtOutputChannel, type TelemetryProperties } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';

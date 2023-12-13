@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import { InputBoxOptions } from "vscode";
+import { type InputBoxOptions } from "vscode";
 import { localize } from "../../../localize";
-import { IJavaProjectWizardContext, validateMavenIdentifier } from "./IJavaProjectWizardContext";
+import { validateMavenIdentifier, type IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 export class JavaGroupIdStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
     public async prompt(context: IJavaProjectWizardContext): Promise<void> {

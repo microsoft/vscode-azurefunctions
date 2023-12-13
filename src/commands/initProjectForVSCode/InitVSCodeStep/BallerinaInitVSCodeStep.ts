@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { ProjectLanguage, func, hostStartCommand, hostStartTaskName } from '../../../constants';
+import { type DebugConfiguration, type TaskDefinition } from 'vscode';
+import { func, hostStartCommand, hostStartTaskName, type ProjectLanguage } from '../../../constants';
 import { ballerinaDebugConfig } from '../../../debug/BallerinaDebugProvider';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IBallerinaProjectWizardContext } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
+import { type IBallerinaProjectWizardContext } from '../../createNewProject/ballerinaSteps/IBallerinaProjectWizardContext';
 import { isBallerinaProject } from '../detectProjectLanguage';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 

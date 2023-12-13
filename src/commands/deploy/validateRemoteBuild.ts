@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDeployContext, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type IDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { deploySubpathSetting, packTaskName, preDeployTaskSetting, ProjectLanguage, remoteBuildSetting } from '../../constants';
+import type * as vscode from 'vscode';
+import { ProjectLanguage, deploySubpathSetting, packTaskName, preDeployTaskSetting, remoteBuildSetting } from '../../constants';
 import { localize } from '../../localize';
 import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';

@@ -1,6 +1,6 @@
-import type { StringDictionary } from "@azure/arm-appservice";
-import type { SiteClient } from "@microsoft/vscode-azext-azureappservice";
-import { ConnectionKey, DurableBackend, DurableBackendValues } from "../../constants";
+import { type StringDictionary } from "@azure/arm-appservice";
+import { type SiteClient } from "@microsoft/vscode-azext-azureappservice";
+import { ConnectionKey, DurableBackend, type DurableBackendValues } from "../../constants";
 import { getEventHubName } from "../appSettings/connectionSettings/eventHubs/validateEventHubsConnection";
 
 export interface IShouldValidateConnection {

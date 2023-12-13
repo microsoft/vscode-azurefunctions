@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { nonNullProp } from '../../../utils/nonNull';
-import { getJavaFunctionFilePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
+import { getJavaFunctionFilePath, type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { getBindingSetting, IFunctionWizardContext } from '../IFunctionWizardContext';
-import { IJavaFunctionTemplate, IJavaFunctionWizardContext } from './IJavaFunctionWizardContext';
+import { getBindingSetting, type IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IJavaFunctionTemplate, type IJavaFunctionWizardContext } from './IJavaFunctionWizardContext';
 
 export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
 

@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion } from '../FuncVersion';
-import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
-import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
+import { type IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
+import { type IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
 import { ProjectLanguage, extInstallCommand, extensionsCsprojFileName, hostFileName, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
-import { IHostJsonV2 } from '../funcConfig/host';
+import { type IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
-import { IBindingTemplate } from '../templates/IBindingTemplate';
-import { FunctionTemplateBase } from '../templates/IFunctionTemplate';
+import { type IBindingTemplate } from '../templates/IBindingTemplate';
+import { type FunctionTemplateBase } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
 

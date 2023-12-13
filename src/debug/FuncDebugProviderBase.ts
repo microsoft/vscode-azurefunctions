@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, WorkspaceFolder } from 'vscode';
+import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type CancellationToken, type DebugConfiguration, type DebugConfigurationProvider, type WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskNameRegExp } from '../constants';
-import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
+import { preDebugValidate, type IPreDebugValidateResult } from './validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     public abstract workerArgKey: string;

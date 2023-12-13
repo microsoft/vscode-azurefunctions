@@ -5,13 +5,13 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { buildGradleFileName, JavaBuildTool, settingsGradleFileName } from '../../../constants';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { gradleUtils } from '../../../utils/gradleUtils';
 import { javaUtils } from '../../../utils/javaUtils';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
+import { type IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { java8 } from '../javaSteps/JavaVersionStep';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 

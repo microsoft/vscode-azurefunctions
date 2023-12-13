@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ResourceGroup } from "@azure/arm-resources";
-import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
-import { IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
-import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
+import { type ResourceGroup } from "@azure/arm-resources";
+import { type EventHubsConnectionTypeValues, type StorageConnectionTypeValues } from "../../../../constants";
+import { type IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
+import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
 export interface IEventHubsConnectionWizardContext extends IEventHubWizardContext, ISetConnectionSettingContext {
     resourceGroup?: ResourceGroup;

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration, WorkspaceFolder } from "vscode";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { ConfigurationTarget, Uri, workspace, type WorkspaceConfiguration, type WorkspaceFolder } from "vscode";
 import { ProjectLanguage } from '../constants';
 import { ext } from "../extensionVariables";
 import { dotnetUtils } from "../utils/dotnetUtils";

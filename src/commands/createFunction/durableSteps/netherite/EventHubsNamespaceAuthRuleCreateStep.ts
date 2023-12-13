@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationRule, EventHubManagementClient, KnownAccessRights } from '@azure/arm-eventhub';
+import { KnownAccessRights, type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { AzureWizardExecuteStep, nonNullProp, nonNullValue, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { type IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceAuthRuleCreateStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 250;

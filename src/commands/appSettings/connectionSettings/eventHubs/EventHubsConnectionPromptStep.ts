@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { MessageItem } from 'vscode';
+import { AzureWizardPromptStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
 import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { localize } from '../../../../localize';
 import { EventHubsNamespaceListStep } from '../../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
-import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
+import { type IConnectionPromptOptions } from '../IConnectionPromptOptions';
+import { type IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(private readonly options?: IConnectionPromptOptions) {

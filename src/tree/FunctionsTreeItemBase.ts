@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
 import { localize } from '../localize';
-import { IProjectTreeItem } from './IProjectTreeItem';
+import { type IProjectTreeItem } from './IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from './projectContextValues';
 
 export abstract class FunctionsTreeItemBase extends AzExtParentTreeItem {

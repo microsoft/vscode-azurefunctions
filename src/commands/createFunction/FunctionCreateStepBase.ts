@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Progress, Uri, window, workspace } from 'vscode';
+import { Uri, window, workspace, type Progress } from 'vscode';
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { IHostJsonV2 } from '../../funcConfig/host';
+import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
-import { FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
     projectPath: string;

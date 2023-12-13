@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ActionType, ProjectLanguage } from '../../constants';
-import { ResourceType } from '../IBindingTemplate';
-import { FunctionV2Template } from '../IFunctionTemplate';
+import { type ActionType, type ProjectLanguage } from '../../constants';
+import { type ResourceType } from '../IBindingTemplate';
+import { type FunctionV2Template } from '../IFunctionTemplate';
 import { TemplateSchemaVersion } from '../TemplateProviderBase';
 
 /**

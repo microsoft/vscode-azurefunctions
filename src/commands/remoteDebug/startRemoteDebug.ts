@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfig } from '@azure/arm-appservice';
+import { type SiteConfig } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { getRemoteDebugLanguage } from './getRemoteDebugLanguage';
 
 export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItem): Promise<void> {

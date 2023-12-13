@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { User } from '@azure/arm-appservice';
-import { ParsedSite, pingFunctionApp } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type User } from '@azure/arm-appservice';
+import { pingFunctionApp, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { EventEmitter } from 'events';
-import { Server, Socket, createServer } from 'net';
+import { createServer, type Server, type Socket } from 'net';
 import * as websocket from 'websocket';
 import { ext } from '../../extensionVariables';
 

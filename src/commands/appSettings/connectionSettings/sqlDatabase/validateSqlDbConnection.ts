@@ -7,10 +7,10 @@ import { AzureWizard } from "@microsoft/vscode-azext-utils";
 import { CodeAction, ConnectionKey } from "../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { SqlDatabaseListStep } from "../../../createFunction/durableSteps/sql/SqlDatabaseListStep";
-import { IEventHubsConnectionWizardContext } from "../eventHubs/IEventHubsConnectionWizardContext";
-import { IConnectionPromptOptions } from "../IConnectionPromptOptions";
-import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
-import { ISqlDatabaseConnectionWizardContext } from "./ISqlDatabaseConnectionWizardContext";
+import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
+import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
+import { type IEventHubsConnectionWizardContext } from "../eventHubs/IEventHubsConnectionWizardContext";
+import { type ISqlDatabaseConnectionWizardContext } from "./ISqlDatabaseConnectionWizardContext";
 import { SqlDatabaseConnectionExecuteStep } from "./SqlDatabaseConnectionExecuteStep";
 import { SqlDatabaseConnectionPromptStep } from "./SqlDatabaseConnectionPromptStep";
 

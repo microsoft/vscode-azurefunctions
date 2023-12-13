@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { EventHubManagementClient } from '@azure/arm-eventhub';
-import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type EventHubManagementClient } from '@azure/arm-eventhub';
+import { AzureWizardPromptStep, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { type IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private client: EventHubManagementClient;

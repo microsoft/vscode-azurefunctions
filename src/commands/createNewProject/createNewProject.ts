@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ProjectLanguage, funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
+import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import * as api from '../../vscode-azurefunctions.api';
-import { IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
+import type * as api from '../../vscode-azurefunctions.api';
+import { type IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
 import { FolderListStep } from './FolderListStep';
 import { NewProjectLanguageStep } from './NewProjectLanguageStep';
 import { OpenBehaviorStep } from './OpenBehaviorStep';

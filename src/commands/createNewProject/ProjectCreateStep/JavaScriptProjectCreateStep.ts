@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { functionSubpathSetting, packageJsonFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
@@ -13,7 +13,7 @@ import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export const azureFunctionsDependency: string = '@azure/functions';

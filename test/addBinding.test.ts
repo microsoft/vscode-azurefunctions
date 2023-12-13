@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { Uri } from 'vscode';
-import { IFunctionBinding, IFunctionJson, ProjectLanguage, addBinding, createNewProjectInternal, ext, getRandomHexString } from '../extension.bundle';
+import { ProjectLanguage, addBinding, createNewProjectInternal, ext, getRandomHexString, type IFunctionBinding, type IFunctionJson } from '../extension.bundle';
 import { cleanTestWorkspace, getTestWorkspaceFolder } from './global.test';
 
 suite('Add Binding', () => {

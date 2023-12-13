@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { Progress } from 'vscode';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type Progress } from 'vscode';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
-import { IProjectWizardContext } from '../IProjectWizardContext';
+import { type IProjectWizardContext } from '../IProjectWizardContext';
 
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;

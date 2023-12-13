@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AccessKeys, SBAuthorizationRule, SBNamespace, ServiceBusManagementClient } from '@azure/arm-servicebus';
+import { type AccessKeys, type SBAuthorizationRule, type SBNamespace, type ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { localize } from '../../../../localize';
 import { createServiceBusClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { IBindingWizardContext } from '../../IBindingWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
-import { IServiceBusWizardContext } from './IServiceBusWizardContext';
+import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
+import { type IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IBindingWizardContext> {
     public async getConnection(context: IServiceBusWizardContext): Promise<IConnection> {

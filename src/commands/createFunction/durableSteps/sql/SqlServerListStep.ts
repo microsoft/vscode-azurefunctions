@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Server, SqlManagementClient } from '@azure/arm-sql';
+import { type Server, type SqlManagementClient } from '@azure/arm-sql';
 import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, ConfirmPreviousInputStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, ConfirmPreviousInputStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IAzureQuickPickOptions, type ISubscriptionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { SqlServerCreateStep } from './SqlServerCreateStep';
 import { SqlServerNameStep } from './SqlServerNameStep';
 import { SqlServerPasswordAuthStep } from './SqlServerPasswordAuthStep';

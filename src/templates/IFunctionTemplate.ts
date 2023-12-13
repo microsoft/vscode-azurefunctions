@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectLanguage } from '../constants';
-import { IBindingSetting } from './IBindingTemplate';
-import { TemplateSchemaVersion } from './TemplateProviderBase';
-import { ParsedJob, RawTemplateV2 } from './script/parseScriptTemplatesV2';
+import { type ProjectLanguage } from '../constants';
+import { type IBindingSetting } from './IBindingTemplate';
+import { type TemplateSchemaVersion } from './TemplateProviderBase';
+import { type ParsedJob, type RawTemplateV2 } from './script/parseScriptTemplatesV2';
 
 export enum TemplateCategory {
     Core = '$temp_category_core'

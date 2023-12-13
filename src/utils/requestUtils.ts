@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceClient } from "@azure/core-client";
+import { type ServiceClient } from "@azure/core-client";
 import { createPipelineRequest } from "@azure/core-rest-pipeline";
-import { AzExtPipelineResponse, AzExtRequestPrepareOptions, createGenericClient, sendRequestWithTimeout } from '@microsoft/vscode-azext-azureutils';
-import { AzExtFsExtra, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { URLSearchParams } from "url";

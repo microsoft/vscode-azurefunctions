@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { MessageItem } from 'vscode';
-import { ConnectionType, EventHubsConnectionTypeValues, SqlDbConnectionTypeValues } from '../../../../constants';
+import { AzureWizardPromptStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
+import { ConnectionType, type EventHubsConnectionTypeValues, type SqlDbConnectionTypeValues } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
-import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
-import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IConnectionPromptOptions } from '../IConnectionPromptOptions';
+import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(private readonly options?: IConnectionPromptOptions) {

@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { JavaBuildTool, javaBuildTool, pomXmlFileName } from '../../constants';
 import { localize } from '../../localize';
 import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { ITemplates } from '../ITemplates';
+import { type ITemplates } from '../ITemplates';
 import { TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
 import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
 import { english } from '../script/getScriptResourcesLanguage';

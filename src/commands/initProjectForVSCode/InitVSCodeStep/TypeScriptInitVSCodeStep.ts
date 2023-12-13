@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { TaskDefinition } from 'vscode';
-import { ProjectLanguage, extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName } from '../../../constants';
+import { type TaskDefinition } from 'vscode';
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
-import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
+import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
 
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
@@ -34,7 +34,7 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
 
     public getTasks(language: ProjectLanguage): TaskDefinition[] {
         const installDependsOn = this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel;
-        const tasks: TaskDefinition[] =  [
+        const tasks: TaskDefinition[] = [
             {
                 type: func,
                 label: hostStartTaskName,

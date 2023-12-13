@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Disposable, TaskScope, WorkspaceFolder } from 'vscode';
+import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
+import { type FuncVersion } from '../../FuncVersion';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
-import { functionJsonFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
-import { IParsedHostJson } from '../../funcConfig/host';
+import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
+import { type IParsedHostJson } from '../../funcConfig/host';
 import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
-import { FuncVersion } from '../../FuncVersion';
-import { LocalProjectInternal } from '../../workspace/listLocalProjects';
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from '../IProjectTreeItem';
-import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
-import { createRefreshFileWatcher } from './createRefreshFileWatcher';
+import { type LocalProjectInternal } from '../../workspace/listLocalProjects';
+import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from '../IProjectTreeItem';
+import { ProjectResource, ProjectSource, isLocalProjectCV, matchesAnyPart } from '../projectContextValues';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
+import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 
 
 export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {

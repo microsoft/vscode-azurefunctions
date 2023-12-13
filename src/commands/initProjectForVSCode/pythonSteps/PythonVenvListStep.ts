@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
+import { type IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
 
 export class PythonVenvListStep extends AzureWizardPromptStep<IPythonVenvWizardContext> {
     public hideStepCount: boolean = true;

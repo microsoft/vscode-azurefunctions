@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { commands, Uri, workspace, WorkspaceFolder } from 'vscode';
-import { IProjectWizardContext } from './IProjectWizardContext';
+import { commands, Uri, workspace, type WorkspaceFolder } from 'vscode';
+import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 250;

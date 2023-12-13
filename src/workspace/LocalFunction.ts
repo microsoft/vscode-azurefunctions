@@ -3,11 +3,11 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from "@azure/arm-appservice";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { ParsedFunctionJson } from "../funcConfig/function";
+import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { type ParsedFunctionJson } from "../funcConfig/function";
 import { FunctionBase } from "../tree/FunctionBase";
-import { FuncHostRequest, IProjectTreeItem } from "../tree/IProjectTreeItem";
+import { type FuncHostRequest, type IProjectTreeItem } from "../tree/IProjectTreeItem";
 
 export interface IFunction {
     project: IProjectTreeItem;

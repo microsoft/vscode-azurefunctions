@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, GenericTreeItem, IActionContext, InvalidTreeItem } from '@microsoft/vscode-azext-utils';
+import { GenericTreeItem, InvalidTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
 import { functionJsonFileName } from '../../constants';
@@ -13,7 +13,7 @@ import { findFiles } from '../../utils/workspace';
 import { listLocalFunctions } from '../../workspace/listLocalFunctions';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
-import { LocalProjectTreeItem } from './LocalProjectTreeItem';
+import { type LocalProjectTreeItem } from './LocalProjectTreeItem';
 
 export class ProjectNotRunningError extends Error {
 }

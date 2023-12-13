@@ -5,12 +5,12 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { localize } from "../../../localize";
-import { FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
+import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
-import { IJavaProjectWizardContext, getJavaClassName, getJavaFunctionFilePath, getJavaPackagePath } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
+import { getJavaClassName, getJavaFunctionFilePath, getJavaPackagePath, type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class JavaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
     protected async getUniqueFunctionName(context: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string | undefined> {

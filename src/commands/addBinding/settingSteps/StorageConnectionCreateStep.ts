@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { type IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { getStorageConnectionString } from '../../appSettings/connectionSettings/getLocalConnectionSetting';
-import { IBindingWizardContext } from '../IBindingWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
+import { type IBindingWizardContext } from '../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, type IConnection } from './AzureConnectionCreateStepBase';
 
 export class StorageConnectionCreateStep extends AzureConnectionCreateStepBase<IStorageAccountWizardContext & IBindingWizardContext> {
     public async getConnection(context: IStorageAccountWizardContext & Partial<IBindingWizardContext>): Promise<IConnection> {

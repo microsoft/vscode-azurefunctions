@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, DialogResponses, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as crypto from "crypto";
 import * as path from 'path';
-import { FileType, MessageItem } from "vscode";
+import { FileType, type MessageItem } from "vscode";
 import { localize } from "../localize";
 
 export async function copyFolder(context: IActionContext, fromPath: string, toPath: string): Promise<void> {
