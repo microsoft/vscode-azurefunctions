@@ -7,7 +7,7 @@ import { AccessKeys, AuthorizationRule, EventHubManagementClient, KnownAccessRig
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from "@azure/arm-storage";
 import { IStorageAccountWizardContext, getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { ISubscriptionContext, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
-import { localSettingsFileName } from "../../../constants";
+import { ConnectionKey, localSettingsFileName, localStorageEmulatorConnectionString } from "../../../constants";
 import { defaultDescription } from "../../../constants-nls";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
@@ -21,11 +21,17 @@ export interface IResourceResult {
     connectionString: string;
 }
 
-export async function getStorageConnectionString(context: IStorageAccountWizardContext): Promise<IResourceResult> {
+export async function getStorageConnectionString(context: IStorageAccountWizardContext & { useStorageEmulator?: boolean }): Promise<IResourceResult> {
+    if (context.useStorageEmulator) {
+        return {
+            name: ConnectionKey.Storage,
+            connectionString: localStorageEmulatorConnectionString
+        }
+    }
+
     const client: StorageManagementClient = await createStorageClient(context);
     const storageAccount: StorageAccount = nonNullProp(context, 'storageAccount');
     const name: string = nonNullProp(storageAccount, 'name');
-
     const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));
     const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
     const key: string = nonNullProp(nonNullValue(nonNullProp(result, 'keys')[0], 'keys[0]'), 'value');

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localSettingsFileName } from '../../../constants';
@@ -12,15 +11,15 @@ import { BindingSettingValue } from '../../../funcConfig/function';
 import { ILocalSettingsJson, getLocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
-import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
-import { IBindingWizardContext } from '../IBindingWizardContext';
 import { IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
+import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
+import { IBindingWizardContext } from '../IBindingWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
 import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
-import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
+import { StorageTypePromptStep } from './StorageTypePromptStep';
 import { CosmosDBConnectionCreateStep } from './cosmosDB/CosmosDBConnectionCreateStep';
 import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
 import { EventHubAuthRuleListStep } from './eventHub/EventHubAuthRuleListStep';
@@ -33,10 +32,11 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
-        const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
+        const existingSettings: [string, string][] = settings.Values ? Object.entries(settings.Values) : [];
+
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
-        picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));
-        const placeHolder: string = localize('selectAppSetting', 'Select setting from "{0}"', localSettingsFileName);
+        picks = picks.concat(existingSettings.map((s: [string, string]) => { return { data: s[0], label: s[0], description: s[1] }; }));
+        const placeHolder: string = localize('selectAppSetting', 'Select the app setting with your {1} from "{0}"', localSettingsFileName, this._setting.label);
         return (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
@@ -50,11 +50,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
                     azureExecuteSteps.push(new CosmosDBConnectionCreateStep(this._setting));
                     break;
                 case ResourceType.Storage:
-                    azurePromptSteps.push(new StorageAccountListStep(
-                        { kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
-                        { kind: [StorageAccountKind.BlobStorage], learnMoreLink: 'https://aka.ms/T5o0nf' }
-                    ));
-                    azureExecuteSteps.push(new StorageConnectionCreateStep(this._setting));
+                    azurePromptSteps.push(new StorageTypePromptStep(this._setting));
                     break;
                 case ResourceType.ServiceBus:
                     azurePromptSteps.push(new ServiceBusListStep());
