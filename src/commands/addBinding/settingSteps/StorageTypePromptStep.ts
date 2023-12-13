@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionActionContext, IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type ISubscriptionActionContext, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { IBindingSetting } from "../../../templates/IBindingTemplate";
-import { IEventHubsConnectionWizardContext } from "../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
-import { IBindingWizardContext } from "../IBindingWizardContext";
+import { type IBindingSetting } from "../../../templates/IBindingTemplate";
+import { type IEventHubsConnectionWizardContext } from "../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
+import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { StorageConnectionCreateStep } from "./StorageConnectionCreateStep";
 
 export class StorageTypePromptStep extends AzureWizardPromptStep<IBindingWizardContext> {
