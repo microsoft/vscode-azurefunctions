@@ -36,7 +36,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
 
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
         picks = picks.concat(existingSettings.map((s: [string, string]) => { return { data: s[0], label: s[0], description: s[1] }; }));
-        const placeHolder: string = localize('selectAppSetting', 'Select the app setting with your {1} from "{0}"', localSettingsFileName, this._setting.label);
+        const placeHolder: string = localize('selectAppSetting', 'Select the app setting with your {1} string from "{0}"', localSettingsFileName, this._setting.label);
         return (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
