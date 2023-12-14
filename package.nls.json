@@ -71,6 +71,7 @@
     "azureFunctions.requestTimeout": "The timeout (in seconds) to be used when making requests, for example getting the latest templates.",
     "azureFunctions.restartFunctionApp": "Restart",
     "azureFunctions.scmDoBuildDuringDeployment": "Set to true to build your project on the server. Currently only applicable for Linux Function Apps.",
+    "azureFunctions.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
     "azureFunctions.show64BitWarning": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
     "azureFunctions.showCoreToolsWarning": "Show a warning if your installed version of Azure Functions Core Tools is out-of-date.",
     "azureFunctions.showDeployConfirmation": "Ask for confirmation before deploying to a Function App in Azure (deploying will overwrite any previous deployment and cannot be undone).",

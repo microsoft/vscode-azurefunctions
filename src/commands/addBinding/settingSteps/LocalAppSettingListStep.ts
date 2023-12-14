@@ -28,16 +28,30 @@ import { EventHubListStep } from './eventHub/EventHubListStep';
 import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectionCreateStep';
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 
+
+const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show hidden values'), data: 'hiddenValues' }
+const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' }
 export class LocalAppSettingListStep extends BindingSettingStepBase {
+    private _showHiddenValues: boolean = false;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
         const existingSettings: [string, string][] = settings.Values ? Object.entries(settings.Values) : [];
 
-        let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
-        picks = picks.concat(existingSettings.map((s: [string, string]) => { return { data: s[0], label: s[0], description: s[1] }; }));
+        let result: string | undefined;
         const placeHolder: string = localize('selectAppSetting', 'Select the app setting with your {1} string from "{0}"', localSettingsFileName, this._setting.label);
-        return (await context.ui.showQuickPick(picks, { placeHolder })).data;
+        do {
+            let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
+            picks = picks.concat(existingSettings.map((s: [string, string]) => { return { data: s[0], label: s[0], description: this._showHiddenValues ? s[1] : '******' }; }));
+            picks.push(this._showHiddenValues ? hideHiddenValuesItem : showHiddenValuesItem);
+            result = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+            if (result === 'hiddenValues') {
+                this._showHiddenValues = !this._showHiddenValues;
+                picks.pop();
+            } else {
+                return result;
+            }
+        } while (true);
     }
 
     public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
