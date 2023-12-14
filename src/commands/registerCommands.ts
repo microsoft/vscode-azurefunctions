@@ -15,6 +15,7 @@ import { deleteServiceConnector } from '../serviceConnector/deleteServiceConnect
 import { validateServiceConnector } from '../serviceConnector/validateServiceConnector';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
+import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSettings';
@@ -92,6 +93,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.pickProcess', pickFuncProcess);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', redeployDeployment);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.restartFunctionApp', restartFunctionApp);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.startFunctionApp', startFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.startJavaRemoteDebug', remoteDebugJavaFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.startRemoteDebug', startRemoteDebug);
