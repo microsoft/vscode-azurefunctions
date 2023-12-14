@@ -33,10 +33,7 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         progress.report({ message: localize('retrieving', 'Retrieving connection string...') });
 
         const result: IConnection = await this.getConnection(context);
-        let appSettingKey: string = context.useStorageEmulator ?
-            // if using the storage emulator, don't append the resource type to the app setting key
-            result.name :
-            `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
+        let appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
         appSettingKey = appSettingKey.replace(/[^a-z0-9_\.]/gi, ''); // remove invalid chars
         setBindingSetting(context, this._setting, appSettingKey);
         await setLocalAppSetting(context, context.projectPath, appSettingKey, result.connectionString);
