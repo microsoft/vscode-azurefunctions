@@ -277,6 +277,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.setAzureWebJobsStorage",
+                "title": "%azureFunctions.setAzureWebJobsStorage%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.startFunctionApp",
                 "title": "%azureFunctions.startFunctionApp%",
                 "category": "Azure Functions"
