@@ -5,6 +5,7 @@
 
 import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { type BindingSettingValue } from "../../../funcConfig/function";
+import { type IBindingSetting } from "../../../templates/IBindingTemplate";
 import { envUtils } from "../../../utils/envUtils";
 import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
@@ -18,6 +19,6 @@ export class BooleanPromptStep extends BindingSettingStepBase {
             picks = picks.reverse();
         }
 
-        return (await context.ui.showQuickPick(picks, { placeHolder: this._setting.description || this._setting.label })).data;
+        return (await context.ui.showQuickPick(picks, { placeHolder: (this._setting as IBindingSetting).description || this._setting.label })).data;
     }
 }

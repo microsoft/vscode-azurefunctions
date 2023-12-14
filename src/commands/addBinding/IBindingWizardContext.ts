@@ -17,5 +17,4 @@ export interface IBindingWizardContext extends IFunctionWizardContext {
     bindingTemplate?: IBindingTemplate;
     binding?: IFunctionBinding;
     bindingName?: string;
-    useStorageEmulator?: boolean;
 }
