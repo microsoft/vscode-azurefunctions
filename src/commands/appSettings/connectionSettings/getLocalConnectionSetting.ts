@@ -6,7 +6,7 @@
 import { KnownAccessRights, type AccessKeys, type AuthorizationRule, type EventHubManagementClient } from "@azure/arm-eventhub";
 import { type StorageAccount, type StorageAccountListKeysResult, type StorageManagementClient } from "@azure/arm-storage";
 import { getResourceGroupFromId, uiUtils, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
-import { nonNullProp, nonNullValue, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { nonNullProp, nonNullValue, randomUtils, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { localSettingsFileName, localStorageEmulatorConnectionString } from "../../../constants";
 import { defaultDescription } from "../../../constants-nls";
 import { ext } from "../../../extensionVariables";
@@ -24,7 +24,7 @@ export interface IResourceResult {
 export async function getStorageConnectionString(context: IStorageAccountWizardContext & { useStorageEmulator?: boolean }): Promise<IResourceResult> {
     if (context.useStorageEmulator) {
         return {
-            name: 'AZURITE',
+            name: randomUtils.getRandomHexString(6),
             connectionString: localStorageEmulatorConnectionString
         }
     }
