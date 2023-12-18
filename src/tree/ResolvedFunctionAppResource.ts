@@ -3,23 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile } from "@microsoft/vscode-azext-azureappservice";
+import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
+import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { ServiceConnectorGroupTreeItem } from "@microsoft/vscode-azext-serviceconnector";
-import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, TreeItemIconPath, nonNullValue } from "@microsoft/vscode-azext-utils";
-import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
-import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
+import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
-import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
+import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
-import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
-import { SlotTreeItem } from "./SlotTreeItem";
+import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
+import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
@@ -125,7 +125,8 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 
     private get _state(): string | undefined {
-        return this.site.rawSite.state;
+        // state can be null if it is a containerized function app
+        return this.site.rawSite.state ? this.site.rawSite.state : undefined;
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -216,15 +217,18 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const client = await this.site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
-        const sourceControl: SiteSourceControl = await client.getSourceControl();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
+        if (!(siteConfig.linuxFxVersion?.includes('DOCKER'))) {
+            const sourceControl: SiteSourceControl = await client.getSourceControl(); //don't think this is needed for a container function app
 
-        this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
-            site: this.site,
-            siteConfig,
-            sourceControl,
-            contextValuesToAdd: ['azFunc']
-        });
+            this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
+                site: this.site,
+                siteConfig,
+                sourceControl,
+                contextValuesToAdd: ['azFunc']
+            });
+        }
+
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
             contextValuesToAdd: ['azFunc']
         });
@@ -243,7 +247,11 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._serviceConnectorNode];
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this._serviceConnectorNode];
+        if (this.deploymentsNode) {
+            children.push(this.deploymentsNode);
+        }
+
         if (!this.site.isSlot) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);

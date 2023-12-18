@@ -3,15 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
-import { WorkspaceFolder } from 'vscode';
+import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, type INewStorageAccountDefaults, type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizard, parseError, type AzExtTreeItem, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
+import { type WorkspaceFolder } from 'vscode';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
-import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { ContainerizedFunctionAppCreateStep } from '../commands/createFunctionApp/containerImage/ContainerizedFunctionAppCreateStep';
+import { DeployWorkspaceProjectStep } from '../commands/createFunctionApp/containerImage/DeployWorkspaceProjectStep';
+import { detectDockerfile } from '../commands/createFunctionApp/containerImage/detectDockerfile';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
@@ -22,13 +25,16 @@ import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { type DeployWorkspaceProjectResults } from '../vscode-azurecontainerapps.api';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
-export interface ICreateFunctionAppContext extends ICreateChildImplContext {
-    newResourceGroupName?: string;
+export interface ICreateFunctionAppContext extends ICreateChildImplContext, IResourceGroupWizardContext {
     workspaceFolder?: WorkspaceFolder;
+    dockerfilePath?: string;
+    rootPath?: string;
+    deployWorkspaceResult?: DeployWorkspaceProjectResults;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -97,54 +103,23 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep());
-        promptSteps.push(new FunctionAppStackStep());
 
-        const storageAccountCreateOptions: INewStorageAccountDefaults = {
-            kind: StorageAccountKind.Storage,
-            performance: StorageAccountPerformance.Standard,
-            replication: StorageAccountReplication.LRS
-        };
+        promptSteps.push(new SiteNameStep());
+
+        await detectDockerfile(context);
+
+        if (context.dockerfilePath) {
+            await createContainerizedFunctionAppChild(wizardContext, promptSteps, executeSteps);
+        } else {
+            await createFunctionAppChild(wizardContext, promptSteps, executeSteps);
+        }
 
         if (version === FuncVersion.v1) { // v1 doesn't support linux
             wizardContext.newSiteOS = WebsiteOS.windows;
         }
 
-        if (!context.advancedCreation) {
-            LocationListStep.addStep(wizardContext, promptSteps);
-            wizardContext.useConsumptionPlan = true;
-            wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
-            executeSteps.push(new ResourceGroupCreateStep());
-            executeSteps.push(new AppServicePlanCreateStep());
-            executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
-            executeSteps.push(new LogAnalyticsCreateStep());
-            executeSteps.push(new AppInsightsCreateStep());
-        } else {
-            promptSteps.push(new ResourceGroupListStep());
-            CustomLocationListStep.addStep(wizardContext, promptSteps);
-            promptSteps.push(new FunctionAppHostingPlanStep());
-            promptSteps.push(new StorageAccountListStep(
-                storageAccountCreateOptions,
-                {
-                    // The account type must support blobs, queues, and tables.
-                    // See: https://aka.ms/Cfqnrc
-                    kind: [
-                        // Blob-only accounts don't support queues and tables
-                        StorageAccountKind.BlobStorage
-                    ],
-                    performance: [
-                        // Premium performance accounts don't support queues and tables
-                        StorageAccountPerformance.Premium
-                    ],
-                    learnMoreLink: 'https://aka.ms/Cfqnrc'
-                }
-            ));
-            promptSteps.push(new AppInsightsListStep());
-        }
-
         const storageProvider = 'Microsoft.Storage';
         LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
-        executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
@@ -152,12 +127,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         // if the providers aren't registered yet, await it here because it is required by this point
         await registerProvidersTask;
-        if (!context.advancedCreation) {
+        if (!wizardContext.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
                 throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
             }
-            wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
+            wizardContext.newResourceGroupName = wizardContext.newResourceGroupName || newName;
             setConsumptionPlanProperties(wizardContext);
             wizardContext.newStorageAccountName = newName;
             wizardContext.newAppInsightsName = newName;
@@ -194,4 +169,77 @@ async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promis
     }
 
     return version;
+}
+
+async function createFunctionAppChild(wizardContext: IFunctionAppWizardContext, promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[]) {
+    promptSteps.push(new FunctionAppStackStep());
+
+    const storageAccountCreateOptions: INewStorageAccountDefaults = {
+        kind: StorageAccountKind.Storage,
+        performance: StorageAccountPerformance.Standard,
+        replication: StorageAccountReplication.LRS
+    };
+
+    if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
+        wizardContext.newSiteOS = WebsiteOS.windows;
+    }
+
+    if (!wizardContext.advancedCreation) {
+        LocationListStep.addStep(wizardContext, promptSteps);
+        wizardContext.useConsumptionPlan = true;
+        wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
+        executeSteps.push(new ResourceGroupCreateStep());
+        executeSteps.push(new AppServicePlanCreateStep());
+        executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+        executeSteps.push(new LogAnalyticsCreateStep());
+        executeSteps.push(new AppInsightsCreateStep());
+    } else {
+        promptSteps.push(new ResourceGroupListStep());
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
+        promptSteps.push(new FunctionAppHostingPlanStep());
+        promptSteps.push(new StorageAccountListStep(
+            storageAccountCreateOptions,
+            {
+                // The account type must support blobs, queues, and tables.
+                // See: https://aka.ms/Cfqnrc
+                kind: [
+                    // Blob-only accounts don't support queues and tables
+                    StorageAccountKind.BlobStorage
+                ],
+                performance: [
+                    // Premium performance accounts don't support queues and tables
+                    StorageAccountPerformance.Premium
+                ],
+                learnMoreLink: 'https://aka.ms/Cfqnrc'
+            }
+        ));
+        promptSteps.push(new AppInsightsListStep());
+    }
+
+    executeSteps.push(new FunctionAppCreateStep());
+}
+
+async function createContainerizedFunctionAppChild(wizardContext: IFunctionAppWizardContext, promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[]) {
+
+    //this is where the two differ do need to create a storage account, log analytics and app insights though
+    const storageAccountCreateOptions: INewStorageAccountDefaults = {
+        kind: StorageAccountKind.Storage,
+        performance: StorageAccountPerformance.Standard,
+        replication: StorageAccountReplication.LRS
+    };
+
+    LocationListStep.addStep(wizardContext, promptSteps);
+
+    //wizardContext.site?.managedEnvironmentId
+    //"managedEnvironmentId": "/subscriptions/d5d553b3-46db-4635-9d42-b8b6f6e5de45/resourceGroups/meganscontainer_group/providers/Microsoft.App/managedEnvironments/managedEnvironment-meganscontainerg-a018",
+    //need to set the linuxFxversion
+    //"linuxFxVersion": "DOCKER|mcr.microsoft.com/azure-functions/dotnet7-quickstart-demo:1.0",
+
+    executeSteps.push(new ResourceGroupCreateStep());
+    executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+    executeSteps.push(new AppInsightsCreateStep());
+    executeSteps.push(new DeployWorkspaceProjectStep());
+    executeSteps.push(new ContainerizedFunctionAppCreateStep()); //this may be not needed/ different
+
+    return null;
 }

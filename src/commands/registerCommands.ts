@@ -28,6 +28,7 @@ import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
 import { createNewProjectFromCommand } from './createNewProject/createNewProject';
+import { createNewProjectWithDockerfile } from './createNewProject/generateDockerfile/createNewProjectWithDockerfile';
 import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
 import { deleteFunctionApp } from './deleteFunctionApp';
@@ -75,6 +76,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createNewProjectWithDockerfile', createNewProjectWithDockerfile);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunctionApp', deleteFunctionApp);
