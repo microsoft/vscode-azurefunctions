@@ -182,6 +182,12 @@
                 "enablement": "!virtualWorkspace"
             },
             {
+                "command": "azureFunctions.createNewProjectWithDockerfile",
+                "title": "%azureFunctions.createNewProjectWithDockerfile%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.createSlot",
                 "title": "%azureFunctions.createSlot%",
                 "category": "Azure Functions"
@@ -380,6 +386,10 @@
                 {
                     "command": "azureFunctions.createNewProject",
                     "group": "1_projects@2"
+                },
+                {
+                    "command": "azureFunctions.createNewProjectWithDockerfile",
+                    "group": "1_projects@3"
                 },
                 {
                     "command": "azureFunctions.deploy",
