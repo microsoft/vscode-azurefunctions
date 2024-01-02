@@ -10,7 +10,7 @@ import { type IDockerfileProjectContext } from "./IDockerfileProjectContext";
 export class DockerfileProjectLanguageStep extends AzureWizardPromptStep<IDockerfileProjectContext> {
     public async prompt(context: IDockerfileProjectContext): Promise<void> {
         const language: IAzureQuickPickItem<string>[] = [
-            { label: ProjectLanguage.JavaScript, data: 'node' },
+            { label: ProjectLanguage.JavaScript, data: 'javascript' },
             { label: ProjectLanguage.TypeScript, data: 'typescript' },
             { label: ProjectLanguage.Python, data: 'python' },
             { label: ProjectLanguage.CSharp, data: 'csharp' },
