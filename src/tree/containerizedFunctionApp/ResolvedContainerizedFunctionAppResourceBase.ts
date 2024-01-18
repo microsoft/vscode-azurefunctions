@@ -16,6 +16,7 @@ import { parseHostJson, type IParsedHostJson } from "../../funcConfig/host";
 import { envUtils } from "../../utils/envUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { type ApplicationSettings, type FuncHostRequest } from "../IProjectTreeItem";
+import { ProjectSource } from "../projectContextValues";
 import { ContainerAppSettingsClientProvider } from "./AppSettingsClient";
 import { type ContainerTreeItem } from "./ContainerTreeItem";
 import { FunctionsTreeItem } from "./FunctionsTreeItem";
@@ -31,6 +32,8 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
 
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
+
+    public readonly source: ProjectSource = ProjectSource.Remote;
 
     public constructor(site: Site) {
         this.site = site;
