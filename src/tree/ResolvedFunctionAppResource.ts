@@ -218,16 +218,14 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         const client = await this.site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
-        if (!(siteConfig.linuxFxVersion?.includes('DOCKER'))) {
-            const sourceControl: SiteSourceControl = await client.getSourceControl(); //don't think this is needed for a container function app
+        const sourceControl: SiteSourceControl = await client.getSourceControl();
 
-            this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
-                site: this.site,
-                siteConfig,
-                sourceControl,
-                contextValuesToAdd: ['azFunc']
-            });
-        }
+        this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
+            site: this.site,
+            siteConfig,
+            sourceControl,
+            contextValuesToAdd: ['azFunc']
+        });
 
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
             contextValuesToAdd: ['azFunc']

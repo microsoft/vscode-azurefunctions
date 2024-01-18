@@ -28,6 +28,8 @@ import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSetting
 import { type DeployWorkspaceProjectResults } from '../vscode-azurecontainerapps.api';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
+import { ContainerTreeItem } from './containerizedFunctionApp/ContainerTreeItem';
+import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext, IResourceGroupWizardContext {
@@ -84,7 +86,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem | ContainerTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
@@ -140,6 +142,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
+
+        if (context.dockerfilePath) {
+            const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
+            return new ContainerTreeItem(subscription, resolved);
+        }
 
         const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
         await ext.rgApi.tree.refresh(context);
@@ -220,8 +227,6 @@ async function createFunctionAppChild(wizardContext: IFunctionAppWizardContext, 
 }
 
 async function createContainerizedFunctionAppChild(wizardContext: IFunctionAppWizardContext, promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[]) {
-
-    //this is where the two differ do need to create a storage account, log analytics and app insights though
     const storageAccountCreateOptions: INewStorageAccountDefaults = {
         kind: StorageAccountKind.Storage,
         performance: StorageAccountPerformance.Standard,
@@ -230,16 +235,11 @@ async function createContainerizedFunctionAppChild(wizardContext: IFunctionAppWi
 
     LocationListStep.addStep(wizardContext, promptSteps);
 
-    //wizardContext.site?.managedEnvironmentId
-    //"managedEnvironmentId": "/subscriptions/d5d553b3-46db-4635-9d42-b8b6f6e5de45/resourceGroups/meganscontainer_group/providers/Microsoft.App/managedEnvironments/managedEnvironment-meganscontainerg-a018",
-    //need to set the linuxFxversion
-    //"linuxFxVersion": "DOCKER|mcr.microsoft.com/azure-functions/dotnet7-quickstart-demo:1.0",
-
     executeSteps.push(new ResourceGroupCreateStep());
     executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
     executeSteps.push(new AppInsightsCreateStep());
     executeSteps.push(new DeployWorkspaceProjectStep());
-    executeSteps.push(new ContainerizedFunctionAppCreateStep()); //this may be not needed/ different
+    executeSteps.push(new ContainerizedFunctionAppCreateStep());
 
     return null;
 }
