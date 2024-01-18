@@ -24,11 +24,14 @@ import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
+import { ContainerTreeItem } from './containerizedFunctionApp/ContainerTreeItem';
+import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
+    dockerfilePath?: string;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -78,7 +81,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem | ContainerTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
@@ -165,6 +168,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
+
+        if (context.dockerfilePath) {
+            const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
+            return new ContainerTreeItem(subscription, resolved);
+        }
 
         const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
         await ext.rgApi.tree.refresh(context);
