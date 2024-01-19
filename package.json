@@ -539,12 +539,12 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;(?!.*container)/i",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;(?!.*container)/i",
                     "group": "3@2"
                 },
                 {

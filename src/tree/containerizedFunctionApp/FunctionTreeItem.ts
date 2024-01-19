@@ -34,6 +34,10 @@ export class FunctionTreeItem extends FunctionTreeItemBase {
         }
     }
 
+    public get contextValue(): string {
+        return super.contextValue + 'container';
+    }
+
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this.function.name);
         const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this.function.name);

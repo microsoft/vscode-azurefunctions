@@ -7,6 +7,7 @@ import { openReadOnlyJson, type IActionContext } from '@microsoft/vscode-azext-u
 import { Uri, window } from 'vscode';
 import { localize } from '../localize';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { FunctionTreeItem } from '../tree/containerizedFunctionApp/FunctionTreeItem';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 
 export async function viewProperties(context: IActionContext, node: SlotTreeItem | LocalFunctionTreeItem): Promise<void> {
@@ -15,6 +16,8 @@ export async function viewProperties(context: IActionContext, node: SlotTreeItem
             throw new Error(localize('viewPropsNotSupported', 'View function properties is not supported for this project type.'));
         }
         await window.showTextDocument(Uri.file(node.functionJsonPath));
+    } else if (node instanceof FunctionTreeItem) {
+        //do nothing
     } else {
         const siteNode: SlotTreeItem = node;
         await node.runWithTemporaryDescription(context, localize('retrievingProps', 'Retrieving properties...'), async () => {
