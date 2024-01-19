@@ -10,36 +10,6 @@ import {
 import { localize } from "../localize";
 import { feedUtils } from "../utils/feedUtils";
 
-// TODO: Expand to include all types?
-type EventGridSource =
-  | "Microsoft.Storage"
-  | "Microsoft.EventHub"
-  | "Microsoft.ServiceBus"
-  | "Microsoft.ContainerRegistry"
-  | "Microsoft.ApiManagement"
-  | "Microsoft.Resources"
-  | "Microsoft.HealthcareApis";
-
-const supportedEventGridSources: EventGridSource[] = [
-  "Microsoft.Storage",
-  "Microsoft.EventHub",
-  "Microsoft.ServiceBus",
-  "Microsoft.ContainerRegistry",
-  "Microsoft.ApiManagement",
-  "Microsoft.Resources",
-  "Microsoft.HealthcareApis",
-];
-
-const supportedEventGridSourceLabels: Map<EventGridSource, string> = new Map([
-  ["Microsoft.Storage", "Blob Storage"],
-  ["Microsoft.EventHub", "Event Hubs"],
-  ["Microsoft.ServiceBus", "Service Bus"],
-  ["Microsoft.ContainerRegistry", "Container Registry"],
-  ["Microsoft.ApiManagement", "API Management"],
-  ["Microsoft.Resources", "Resources"],
-  ["Microsoft.HealthcareApis", "Health Data Services"],
-]);
-
 export async function getEventGridFunctionInput(
   context: IActionContext
   //node: FunctionTreeItemBase | IFunction
@@ -64,23 +34,6 @@ export async function getEventGridFunctionInput(
       })
     ).data ?? "Microsoft.Storage";
   console.log(`Event source is: ${eventSource}`);
-
-  type FileMetadata = {
-    name: string;
-    path: string;
-    sha: string;
-    size: number;
-    url: string;
-    html_url: string;
-    git_url: string;
-    download_url: string;
-    type: string;
-    _links: {
-      self: string;
-      git: string;
-      html: string;
-    };
-  };
 
   const baseUrl = `https://api.github.com/repos/Azure/azure-rest-api-specs/contents/specification/eventgrid/data-plane`;
   const filesUrl = `${baseUrl}/${eventSource}/stable/2018-01-01/examples/cloud-events-schema/`;
@@ -125,7 +78,11 @@ export async function getEventGridFunctionInput(
     `selectedFileContents is ${JSON.stringify(selectedFileContents)}`
   );
 
-  const value: string = JSON.stringify(selectedFileContents, undefined, 2);
+  const value: string = await promptForCustomizableFields(
+    context,
+    selectedFileContents
+  );
+
   const inputPrompt: string = localize(
     "enterRequestBody",
     "Enter request body"
@@ -146,3 +103,91 @@ export async function getEventGridFunctionInput(
 
   return functionInput;
 }
+
+async function promptForCustomizableFields(
+  context: IActionContext,
+  fileContents: {}
+): Promise<string> {
+  await replaceCustomizableFields(context, fileContents);
+  return JSON.stringify(fileContents, undefined, 2);
+}
+
+async function replaceCustomizableFields(
+  context: IActionContext,
+  obj: {}
+): Promise<void> {
+  for (const key in obj) {
+    if (typeof obj[key] === "string") {
+      const regex = /{([^}]+)}/g;
+      const matches = (obj[key] as string).match(regex);
+
+      if (!matches) {
+        continue;
+      }
+      for (const match of matches) {
+        const fieldName = match.slice(1, -1);
+        const userInput = await promptUser(context, fieldName);
+        obj[key] = (obj[key] as string).replace(match, userInput);
+      }
+    } else if (typeof obj[key] === "object") {
+      await replaceCustomizableFields(context, obj[key] as {});
+    }
+  }
+}
+
+async function promptUser(
+  context: IActionContext,
+  fieldName: string
+): Promise<string> {
+  return await context.ui.showInputBox({
+    prompt: `Enter value for "${fieldName}"`,
+    stepName: `requestField${fieldName}`,
+  });
+}
+
+// TODO: Expand to include all types?
+type EventGridSource =
+  | "Microsoft.Storage"
+  | "Microsoft.EventHub"
+  | "Microsoft.ServiceBus"
+  | "Microsoft.ContainerRegistry"
+  | "Microsoft.ApiManagement"
+  | "Microsoft.Resources"
+  | "Microsoft.HealthcareApis";
+
+const supportedEventGridSources: EventGridSource[] = [
+  "Microsoft.Storage",
+  "Microsoft.EventHub",
+  "Microsoft.ServiceBus",
+  "Microsoft.ContainerRegistry",
+  "Microsoft.ApiManagement",
+  "Microsoft.Resources",
+  "Microsoft.HealthcareApis",
+];
+
+const supportedEventGridSourceLabels: Map<EventGridSource, string> = new Map([
+  ["Microsoft.Storage", "Blob Storage"],
+  ["Microsoft.EventHub", "Event Hubs"],
+  ["Microsoft.ServiceBus", "Service Bus"],
+  ["Microsoft.ContainerRegistry", "Container Registry"],
+  ["Microsoft.ApiManagement", "API Management"],
+  ["Microsoft.Resources", "Resources"],
+  ["Microsoft.HealthcareApis", "Health Data Services"],
+]);
+
+type FileMetadata = {
+  name: string;
+  path: string;
+  sha: string;
+  size: number;
+  url: string;
+  html_url: string;
+  git_url: string;
+  download_url: string;
+  type: string;
+  _links: {
+    self: string;
+    git: string;
+    html: string;
+  };
+};
