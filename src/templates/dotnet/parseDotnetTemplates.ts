@@ -52,6 +52,7 @@ function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
 
     return {
         name: rawSetting.Name,
+        assignTo: rawSetting.Name,
         resourceType: undefined, // Dotnet templates do not give us resourceType information
         valueType,
         defaultValue: rawSetting.DefaultValue,

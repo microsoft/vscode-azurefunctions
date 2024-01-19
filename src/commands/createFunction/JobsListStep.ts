@@ -35,8 +35,8 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
 
             const executeSteps: AzureWizardExecuteStep<FunctionV2WizardContext>[] = [];
             context.job.parsedActions.map((pa, index) => {
-                // add index to increment the priority number
-                executeSteps.push(actionStepFactory(pa, index));
+                // add index to increment the priority number; start at 500 so other execute steps can be injected
+                executeSteps.push(actionStepFactory(pa, index + 500));
             });
 
             return { promptSteps, executeSteps };

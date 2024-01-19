@@ -136,6 +136,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
 
     return {
         name: getVariableValue(resources, variables, rawSetting.name),
+        assignTo: getVariableValue(resources, variables, rawSetting.name),
         resourceType: rawSetting.resource,
         valueType: rawSetting.value,
         description: getDescription(),
@@ -227,6 +228,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
                         if (functionSpecificDefaultValue) {
                             // overwrite common default value with the function-specific default value
                             setting.defaultValue = functionSpecificDefaultValue;
+                            setting.assignTo = setting.name;
                         }
                         userPromptedSettings.push(setting);
                     }

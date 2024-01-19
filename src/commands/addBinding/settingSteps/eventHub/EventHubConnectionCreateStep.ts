@@ -7,11 +7,11 @@ import { type AccessKeys, type EventHubManagementClient } from '@azure/arm-event
 import { nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { type IFunctionWizardContext } from '../../../createFunction/IFunctionWizardContext';
 import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
 import { type IEventHubWizardContext } from './IEventHubWizardContext';
 
-export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<IEventHubWizardContext & IBindingWizardContext> {
+export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<IEventHubWizardContext & IFunctionWizardContext> {
     public async getConnection(context: IEventHubWizardContext): Promise<IConnection> {
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
         const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');

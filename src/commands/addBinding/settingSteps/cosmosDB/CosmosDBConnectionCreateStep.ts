@@ -7,11 +7,11 @@ import { type CosmosDBManagementClient, type DatabaseAccountGetResults, type Dat
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { createCosmosDBClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { type IFunctionWizardContext } from '../../../createFunction/IFunctionWizardContext';
 import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
 import { type ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
-export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IBindingWizardContext & ICosmosDBWizardContext> {
+export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IFunctionWizardContext & ICosmosDBWizardContext> {
     public async getConnection(context: ICosmosDBWizardContext): Promise<IConnection> {
         const databaseAccount: DatabaseAccountGetResults = nonNullProp(context, 'databaseAccount');
         const name: string = nonNullProp(databaseAccount, 'name');
