@@ -9,12 +9,13 @@ import { type IBindingSetting } from "../../../templates/IBindingTemplate";
 import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
-// not used by v2 schema so assume IBindingSetting
 export class StringPromptStep extends BindingSettingStepBase {
+    // not used by v2 schema so assume IBindingSetting
+    protected readonly _setting: IBindingSetting;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         return await context.ui.showInputBox({
             placeHolder: this._setting.label,
-            prompt: (this._setting as IBindingSetting).description || localize('stringSettingPrompt', 'Provide a \'{0}\'', this._setting.label),
+            prompt: this._setting.description || localize('stringSettingPrompt', 'Provide a \'{0}\'', this._setting.label),
             validateInput: async (s): Promise<string | undefined> => await this.validateInput(context, s),
             value: await this.getDefaultValue(context)
         });

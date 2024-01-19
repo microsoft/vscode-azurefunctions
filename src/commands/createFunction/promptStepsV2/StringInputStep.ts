@@ -19,7 +19,9 @@ export class StringInputStep<T extends FunctionV2WizardContext> extends PromptSc
             title: this.input.label,
             prompt: this.input.help,
             value: this.input.defaultValue,
-            validateInput: value => { return this.validateInput(value, this.input); }
+            validateInput: value => {
+                return this.validateInput(value, this.input);
+            }
         };
 
         return await context.ui.showInputBox(options);

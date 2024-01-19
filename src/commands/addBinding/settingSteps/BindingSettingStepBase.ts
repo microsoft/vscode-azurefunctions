@@ -23,7 +23,7 @@ export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IFunc
     public abstract promptCore(context: IFunctionWizardContext): Promise<BindingSettingValue>;
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {
-        setBindingSetting(context, this._setting as IBindingSetting, await this.promptCore(context));
+        setBindingSetting(context, this._setting, await this.promptCore(context));
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {

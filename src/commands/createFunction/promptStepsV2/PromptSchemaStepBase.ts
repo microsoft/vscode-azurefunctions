@@ -29,7 +29,6 @@ export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> ex
         for (const validator of validators) {
             if (value) {
                 if (!new RegExp(validator.expression).test(value)) {
-                    // TODO: get the errorText properly
                     return validator.errorText;
                 }
             }
