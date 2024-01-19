@@ -10,7 +10,7 @@ import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class StringPromptStep extends BindingSettingStepBase {
-    // not used by v2 schema so assume IBindingSetting
+    // not used by v2 schema so enforce  IBindingSetting
     protected readonly _setting: IBindingSetting;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         return await context.ui.showInputBox({
@@ -28,6 +28,6 @@ export class StringPromptStep extends BindingSettingStepBase {
 
     // eslint-disable-next-line @typescript-eslint/require-await
     public async validateInput(_wizardContext: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
-        return (this._setting as IBindingSetting).validateSetting(val);
+        return this._setting.validateSetting(val);
     }
 }
