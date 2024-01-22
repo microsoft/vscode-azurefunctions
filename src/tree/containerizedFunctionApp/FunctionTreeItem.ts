@@ -48,4 +48,7 @@ export class FunctionTreeItem extends FunctionTreeItemBase {
         });
     }
 
+    public get contextValue(): string {
+        return super.contextValue + 'container';
+    }
 }

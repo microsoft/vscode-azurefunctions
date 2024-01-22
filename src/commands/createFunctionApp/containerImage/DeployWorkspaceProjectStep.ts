@@ -4,22 +4,32 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
-import * as vscode from 'vscode';
-import { type DeployWorkspaceProjectApiOptionsContract } from "../../../vscode-azurecontainerapps.api";
+import { type Progress } from "vscode";
+import { ext } from "../../../extensionVariables";
+import { getAzureContainerAppsApi } from "../../../getExtensionApi";
+import { localize } from "../../../localize";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 
 export class DeployWorkspaceProjectStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 137;
 
-    public async execute(context: IFunctionAppWizardContext): Promise<void> {
-        const commandOptions: DeployWorkspaceProjectApiOptionsContract = {
+    public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+        const message: string = localize('creatingCAResources', 'Creating container resources this may take a few minutes...');
+        ext.outputChannel.appendLog(message);
+        progress.report({ message });
+
+        const containerAppsApi = await getAzureContainerAppsApi(context);
+
+
+        context.deployWorkspaceResult = await containerAppsApi.deployWorkspaceProject({
             resourceGroupId: context.resourceGroup?.id,
-            dockerfilePath: context.dockerfilePath,
             rootPath: context.rootPath,
-            skipContainerAppCreation: true,
+            dockerfilePath: context.dockerfilePath,
+            suppressConfirmation: true,
+            suppressContainerAppCreation: true,
+            ignoreExistingDeploySettings: true,
             shouldSaveDeploySettings: false
-        }
-        context.deployWorkspaceResult = await vscode.commands.executeCommand('containerApps.deployWorkspaceProjectApi', commandOptions)
+        })
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {

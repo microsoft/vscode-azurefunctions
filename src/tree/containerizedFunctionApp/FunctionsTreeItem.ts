@@ -22,6 +22,7 @@ export class FunctionsTreeItem extends FunctionsTreeItemBase {
 
     constructor(public readonly parent: ContainerTreeItem, public readonly site: Site) {
         super(parent);
+        this.isReadOnly = true;
     }
 
     public static async createFunctionsTreeItem(context: IActionContext, parent: ContainerTreeItem): Promise<FunctionsTreeItem> {

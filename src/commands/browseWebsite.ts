@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
+import { type SlotTreeItem } from '../tree/SlotTreeItem';
 import { openUrl } from '../utils/openUrl';
 
 export async function browseWebsite(context: IActionContext, node?: SlotTreeItem): Promise<void> {
@@ -16,5 +16,10 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
         });
     }
 
-    await openUrl(node.site.defaultHostUrl);
+    try {
+        await openUrl(node.site.defaultHostUrl);
+    } catch {
+        //containerized function apps don't have a default host url
+        await openUrl(`https://${node.site.defaultHostName}`)
+    }
 }

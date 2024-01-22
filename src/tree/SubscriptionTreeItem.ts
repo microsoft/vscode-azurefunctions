@@ -145,6 +145,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         if (context.dockerfilePath) {
             const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
+            await ext.rgApi.tree.refresh(context);
             return new ContainerTreeItem(subscription, resolved);
         }
 

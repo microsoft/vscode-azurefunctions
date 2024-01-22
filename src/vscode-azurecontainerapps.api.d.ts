@@ -1,12 +1,16 @@
 /*---------------------------------------------------------------------------------------------
-*  Copyright (c) Microsoft Corporation. All rights reserved.
-*  Licensed under the MIT License. See License.md in the project root for license information.
-*--------------------------------------------------------------------------------------------*/
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from "@microsoft/vscode-azext-utils";
+export interface AzureContainerAppsExtensionApi {
+    apiVersion: string;
+    deployWorkspaceProject(options: DeployWorkspaceProjectOptionsContract): Promise<DeployWorkspaceProjectResults>;
+}
 
-export interface DeployWorkspaceProjectApiOptionsContract {
+export interface DeployWorkspaceProjectOptionsContract {
     // Existing resources
+    subscriptionId?: string;
     resourceGroupId?: string;
 
     // Workspace deployment paths (absolute fs path)
@@ -15,7 +19,9 @@ export interface DeployWorkspaceProjectApiOptionsContract {
     dockerfilePath?: string;
 
     // Options
-    skipContainerAppCreation?: boolean;
+    suppressConfirmation?: boolean;  // Suppress any [resource] confirmation prompts
+    suppressContainerAppCreation?: boolean;
+    ignoreExistingDeploySettings?: boolean;
     shouldSaveDeploySettings?: boolean;
 }
 
@@ -23,12 +29,12 @@ export interface DeployWorkspaceProjectResults {
     resourceGroupId?: string;
     logAnalyticsWorkspaceId?: string;
     managedEnvironmentId?: string;
-    registryId?: string;
     containerAppId?: string;
-    imageName?: string;
-    loginServer?: string;
-    username?: string;
-    password?: string;
-}
 
-export declare function deployWorkspaceProjectApi(context: IActionContext, deployWorkspaceProjectOptions: DeployWorkspaceProjectApiOptionsContract): Promise<DeployWorkspaceProjectResults>;
+    // ACR
+    registryId?: string;
+    registryLoginServer?: string;
+    registryUsername?: string;
+    registryPassword?: string;
+    imageName?: string;
+}

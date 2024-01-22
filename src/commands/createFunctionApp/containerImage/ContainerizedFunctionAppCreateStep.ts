@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
-import { ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { type AppResource } from "@microsoft/vscode-azext-utils/hostapi";
@@ -15,7 +14,7 @@ import { localize } from "../../../localize";
 import { createWebSiteClient } from "../../../utils/azureClients";
 import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
-import { showSiteCreated } from "../showSiteCreated";
+import { showSiteCreatedUnParsed } from "../showSiteCreated";
 
 export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
@@ -31,9 +30,8 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
         context.site = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context));
         context.activityResult = context.site as AppResource;
 
-        const site = new ParsedSite(context.site, context);
 
-        showSiteCreated(site, context)
+        showSiteCreatedUnParsed(context.site, context)
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
@@ -48,7 +46,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
             location: nonNullProp(location, 'name'),
             managedEnvironmentId: context.deployWorkspaceResult?.managedEnvironmentId,
             siteConfig: {
-                linuxFxVersion: `Docker|${context.deployWorkspaceResult?.loginServer}/${context.deployWorkspaceResult?.imageName}`, //not sure if mcr.microsoft.com is correct
+                linuxFxVersion: `Docker|${context.deployWorkspaceResult?.registryLoginServer}/${context.deployWorkspaceResult?.imageName}`,
                 appSettings: [
                     {
                         name: 'AzureWebJobsStorage',
@@ -56,19 +54,23 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                     },
                     {
                         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',
-                        value: context.appInsightsComponent?.instrumentationKey
+                        value: `InstrumentationKey=${context.appInsightsComponent?.instrumentationKey}`
+                    },
+                    {
+                        name: 'FUNCTIONS_EXTENSION_VERSION',
+                        value: context.telemetry.properties.projectRuntime
                     },
                     {
                         name: 'DOCKER_REGISTRY_SERVER_URL',
-                        value: context.deployWorkspaceResult?.loginServer
+                        value: context.deployWorkspaceResult?.registryLoginServer
                     },
                     {
                         name: 'DOCKER_REGISTRY_SERVER_USERNAME',
-                        value: context.deployWorkspaceResult?.username
+                        value: context.deployWorkspaceResult?.registryUsername
                     },
                     {
                         name: 'DOCKER_REGISTRY_SERVER_PASSWORD',
-                        value: context.deployWorkspaceResult?.password
+                        value: context.deployWorkspaceResult?.registryPassword
                     }
                 ]
             }

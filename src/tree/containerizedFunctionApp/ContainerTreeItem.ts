@@ -7,14 +7,14 @@ import { type Site } from "@azure/arm-appservice";
 import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type FuncVersion } from "../../FuncVersion";
 import { type IParsedHostJson } from "../../funcConfig/host";
-import { type ApplicationSettings, type FuncHostRequest } from "../IProjectTreeItem";
+import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from "../IProjectTreeItem";
 import { ProjectSource } from "../projectContextValues";
 import { type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResourceBase";
 
-export class ContainerTreeItem extends AzExtParentTreeItem {
+export class ContainerTreeItem extends AzExtParentTreeItem implements IProjectTreeItem {
     public resolved: ResolvedContainerizedFunctionAppResource;
     public readonly contextValue: string;
-    public site: Site
+    public site: Site;
 
     public readonly source: ProjectSource = ProjectSource.Remote;
 
