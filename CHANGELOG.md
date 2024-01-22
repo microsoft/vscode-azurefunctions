@@ -3,7 +3,7 @@
 ## 1.13.2 - 2024-01-XX
 
 ## Added
-* Fix Windows files feature by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3813s/pull/3871
+* Fix Windows files feature by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3813
 * Add workspace functions to extension API by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3881
 * Fix the gitignore issue when deploying and remove globby by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3889
 * Automatically enable full monitoring for Java Elastic Premium by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3887
