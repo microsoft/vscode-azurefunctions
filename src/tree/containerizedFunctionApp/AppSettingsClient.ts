@@ -4,10 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type StringDictionary, type WebSiteManagementClient } from "@azure/arm-appservice";
-import { nonNullProp, parseError, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-
-import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { type AppSettingsClientProvider, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
+import { nonNullProp, parseError, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { createWebSiteClient } from "../../utils/azureClients";
 import { type ContainerTreeItem } from "./ContainerTreeItem";
 
 export class ContainerAppSettingsClientProvider implements AppSettingsClientProvider {

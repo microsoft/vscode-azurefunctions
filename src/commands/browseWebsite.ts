@@ -16,5 +16,10 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
         });
     }
 
-    await openUrl(node.site.defaultHostUrl);
+    try {
+        await openUrl(node.site.defaultHostUrl);
+    } catch {
+        // containerized function apps don't have a default host url
+        await openUrl(`https://${node.site.defaultHostName}`)
+    }
 }

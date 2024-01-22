@@ -6,13 +6,15 @@
 import { type Site, type StringDictionary } from "@azure/arm-appservice";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { DialogResponses, nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import { ProgressLocation, window } from "vscode";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../../FuncVersion";
 import { runFromPackageKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../../funcConfig/host";
+import { localize } from "../../localize";
 import { envUtils } from "../../utils/envUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { type ApplicationSettings, type FuncHostRequest } from "../IProjectTreeItem";
@@ -25,6 +27,7 @@ import { ImageTreeItem } from "./ImageTreeItem";
 export class ResolvedContainerizedFunctionAppResource implements ResolvedAppResourceBase {
     public site: Site;
     public maskedValuesToAdd: string[] = [];
+    public contextValuesToAdd?: string[] | undefined;
 
     public appSettingsTreeItem: AppSettingsTreeItem;
     private _functionsTreeItem: FunctionsTreeItem;
@@ -37,6 +40,7 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
 
     public constructor(site: Site) {
         this.site = site;
+        this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
     }
 
     public static async createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): Promise<ResolvedContainerizedFunctionAppResource> {
@@ -145,6 +149,21 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
         }
         appSettings.properties[key] = value;
         await client.updateApplicationSettings(appSettings);
+    }
+
+    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function app "{0}"?', this.site.name);
+        const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
+        const deleting: string = localize('DeletingFunctionApp', 'Deleting function app "{0}"...', this.site.name);
+        const deleteSucceeded: string = localize('DeleteFunctionAppSucceeded', 'Successfully deleted function app "{0}".', this.site.name);
+        await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmDelete' }, DialogResponses.deleteResponse);
+        await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
+            ext.outputChannel.appendLog(deleting);
+            const client = await createWebSiteClient([context, proxyTree.subscription]);
+            await client.webApps.delete(nonNullValueAndProp(this.site, 'resourceGroup'), nonNullValueAndProp(this.site, 'name'));
+            void window.showInformationMessage(deleteSucceeded);
+            ext.outputChannel.appendLog(deleteSucceeded);
+        });
     }
 }
 

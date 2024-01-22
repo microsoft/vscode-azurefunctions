@@ -14,7 +14,7 @@ import { type ResolvedContainerizedFunctionAppResource } from "./ResolvedContain
 export class ContainerTreeItem extends AzExtParentTreeItem implements IProjectTreeItem {
     public resolved: ResolvedContainerizedFunctionAppResource;
     public readonly contextValue: string;
-    public site: Site
+    public site: Site;
 
     public readonly source: ProjectSource = ProjectSource.Remote;
 
