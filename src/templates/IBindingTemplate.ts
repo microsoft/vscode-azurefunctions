@@ -31,7 +31,7 @@ export interface IBindingSetting {
     name: string;
     validateSetting(value: string | undefined): string | undefined;
     // used by the new V2 schema as token to replace in content
-    assignTo?: string;
+    assignTo: string;
 }
 
 export enum ResourceType {

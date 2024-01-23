@@ -6,25 +6,27 @@
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { type BindingSettingValue } from "../../../funcConfig/function";
 import { type IBindingSetting } from "../../../templates/IBindingTemplate";
-import { getBindingSetting, setBindingSetting } from "../../createFunction/IFunctionWizardContext";
-import { type IBindingWizardContext } from "../IBindingWizardContext";
+import { type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
+import { getBindingSetting, setBindingSetting, type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 
-export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IBindingWizardContext> {
-    protected readonly _setting: IBindingSetting;
+export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IFunctionWizardContext> {
+    protected readonly _setting: IBindingSetting | ParsedInput;
+    protected readonly _resourceType: string;
 
-    constructor(setting: IBindingSetting) {
+    constructor(setting: IBindingSetting | ParsedInput) {
         super();
         this._setting = setting;
         this.id = setting.name;
+        this._resourceType = (setting as IBindingSetting).resourceType ?? (setting as ParsedInput).resource ?? '';
     }
 
-    public abstract promptCore(context: IBindingWizardContext): Promise<BindingSettingValue>;
+    public abstract promptCore(context: IFunctionWizardContext): Promise<BindingSettingValue>;
 
-    public async prompt(context: IBindingWizardContext): Promise<void> {
+    public async prompt(context: IFunctionWizardContext): Promise<void> {
         setBindingSetting(context, this._setting, await this.promptCore(context));
     }
 
-    public shouldPrompt(context: IBindingWizardContext): boolean {
+    public shouldPrompt(context: IFunctionWizardContext): boolean {
         return !getBindingSetting(context, this._setting);
     }
 }

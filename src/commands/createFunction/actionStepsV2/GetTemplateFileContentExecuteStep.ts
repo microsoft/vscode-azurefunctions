@@ -25,7 +25,7 @@ export class GetTemplateFileContentExecuteStep<T extends FunctionV2WizardContext
         // all tokens saved on the context are prefixed with '$('
         const assignToTokens = Object.keys(context).filter(k => k.startsWith('$('));
         for (const token of assignToTokens) {
-            source = source.replace(new RegExp(this.escapeRegExp(token), 'g'), context[token] as string);
+            source = source.replace(new RegExp(this.escapeRegExp(token), 'gi'), context[token] as string);
         }
 
         const assignTo = nonNullProp(this.action, 'assignTo');

@@ -7,19 +7,20 @@ import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, 
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type ISubscriptionActionContext, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { type IBindingSetting } from "../../../templates/IBindingTemplate";
+import { type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
 import { type IEventHubsConnectionWizardContext } from "../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
-import { type IBindingWizardContext } from "../IBindingWizardContext";
+import { type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 import { StorageConnectionCreateStep } from "./StorageConnectionCreateStep";
 
-export class StorageTypePromptStep extends AzureWizardPromptStep<IBindingWizardContext> {
-    private readonly _setting: IBindingSetting;
+export class StorageTypePromptStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+    private readonly _setting: IBindingSetting | ParsedInput;
 
-    constructor(setting: IBindingSetting) {
+    constructor(setting: IBindingSetting | ParsedInput) {
         super();
         this._setting = setting;
     }
 
-    public async prompt(context: IBindingWizardContext): Promise<void> {
+    public async prompt(context: IFunctionWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<boolean>[] = [
             { label: localize('useAzurite', 'Use Azurite emulator for local storage'), data: true },
             { label: localize('useAzureStorage', 'Use Azure Storage for remote storage'), data: false }
@@ -29,13 +30,13 @@ export class StorageTypePromptStep extends AzureWizardPromptStep<IBindingWizardC
         return;
     }
 
-    public shouldPrompt(context: IBindingWizardContext): boolean {
+    public shouldPrompt(context: IFunctionWizardContext): boolean {
         return context.useStorageEmulator === undefined;
     }
 
-    public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
-        const promptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
-        const executeSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+    public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+        const promptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+        const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
 
         if (!context.useStorageEmulator) {
             promptSteps.push(new StorageAccountListStep(
