@@ -29,6 +29,8 @@ export interface IProjectWizardContext extends IActionContext {
     openApiSpecificationFile?: Uri[];
 
     targetFramework?: string | string[];
+
+    dockerfile?: boolean;
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';
