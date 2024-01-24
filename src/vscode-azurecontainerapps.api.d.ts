@@ -5,7 +5,6 @@
 
 export interface AzureContainerAppsExtensionApi {
     apiVersion: string;
-
     deployWorkspaceProject(options: DeployWorkspaceProjectOptionsContract): Promise<DeployWorkspaceProjectResults>;
 }
 
