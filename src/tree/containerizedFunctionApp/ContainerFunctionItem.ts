@@ -9,14 +9,14 @@ import { nonNullProp, nonNullValueAndProp, parseError, type IActionContext } fro
 import { HttpAuthLevel, type ParsedFunctionJson } from "../../funcConfig/function";
 import { FunctionBase } from "../FunctionBase";
 import { type IProjectTreeItem } from "../IProjectTreeItem";
-import { type FunctionsTreeItem } from "./FunctionsTreeItem";
+import { type ContainerFunctionsTreeItem } from "./ContainerFunctionsTreeItem";
 
-export class FunctionItem extends FunctionBase {
+export class ContainerFunctionItem extends FunctionBase {
     constructor(
         public readonly project: IProjectTreeItem,
         public readonly name: string,
         public readonly config: ParsedFunctionJson,
-        public readonly parent: FunctionsTreeItem,
+        public readonly parent: ContainerFunctionsTreeItem,
         private readonly site: Site,
     ) {
         super(project, name, config);

@@ -10,19 +10,19 @@ import { ProgressLocation, window } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { FunctionTreeItemBase } from "../FunctionTreeItemBase";
-import { type FunctionItem } from "./FunctionItem";
-import { type FunctionsTreeItem } from "./FunctionsTreeItem";
+import { type ContainerFunctionItem } from "./ContainerFunctionItem";
+import { type ContainerFunctionsTreeItem } from "./ContainerFunctionsTreeItem";
 
-export class FunctionTreeItem extends FunctionTreeItemBase {
-    public readonly parent: FunctionsTreeItem;
+export class ContainerFunctionTreeItem extends FunctionTreeItemBase {
+    public readonly parent: ContainerFunctionsTreeItem;
 
-    public constructor(parent: FunctionsTreeItem, func: FunctionItem) {
+    public constructor(parent: ContainerFunctionsTreeItem, func: ContainerFunctionItem) {
         super(parent, func);
         this.commandId = 'azureFunctions.viewProperties';
     }
 
-    public static async create(context: IActionContext, parent: FunctionsTreeItem, func: FunctionItem): Promise<FunctionTreeItem> {
-        const ti: FunctionTreeItem = new FunctionTreeItem(parent, func);
+    public static async create(context: IActionContext, parent: ContainerFunctionsTreeItem, func: ContainerFunctionItem): Promise<ContainerFunctionTreeItem> {
+        const ti: ContainerFunctionTreeItem = new ContainerFunctionTreeItem(parent, func);
         await ti.initAsync(context);
         return ti;
     }

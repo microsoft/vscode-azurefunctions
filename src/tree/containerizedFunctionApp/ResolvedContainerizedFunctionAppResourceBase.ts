@@ -5,33 +5,35 @@
 
 import { type Site, type StringDictionary } from "@azure/arm-appservice";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
-import { AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
+import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { DialogResponses, nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { ProgressLocation, window } from "vscode";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../../FuncVersion";
-import { runFromPackageKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../../funcConfig/host";
 import { localize } from "../../localize";
-import { envUtils } from "../../utils/envUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { type ApplicationSettings, type FuncHostRequest } from "../IProjectTreeItem";
-import { ProjectSource } from "../projectContextValues";
+import { ResolvedFunctionAppBase } from "../ResolvedFunctionAppBase";
+import { matchContextValue } from "../ResolvedFunctionAppResource";
+import { ProjectResource, ProjectSource, matchesAnyPart } from "../projectContextValues";
 import { ContainerAppSettingsClientProvider } from "./AppSettingsClient";
+import { ContainerFunctionsTreeItem } from "./ContainerFunctionsTreeItem";
 import { type ContainerTreeItem } from "./ContainerTreeItem";
-import { FunctionsTreeItem } from "./FunctionsTreeItem";
 import { ImageTreeItem } from "./ImageTreeItem";
 
-export class ResolvedContainerizedFunctionAppResource implements ResolvedAppResourceBase {
+export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: Site;
     public maskedValuesToAdd: string[] = [];
     public contextValuesToAdd?: string[] | undefined;
+    public static containerContextValue: string = 'azFuncContainer';
 
     public appSettingsTreeItem: AppSettingsTreeItem;
-    private _functionsTreeItem: FunctionsTreeItem;
+    private _functionsTreeItem: ContainerFunctionsTreeItem;
     private _imageTreeItem: ImageTreeItem;
+    private _containerTreeItem: ContainerTreeItem;
 
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
@@ -39,8 +41,19 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
     public readonly source: ProjectSource = ProjectSource.Remote;
 
     public constructor(site: Site) {
-        this.site = site;
+        super(site);
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
+
+        const valuesToMask = [
+            this.site.name, this.site.defaultHostName, this.site.resourceGroup,
+            this.site.repositorySiteName, ...(this.site.hostNames || []), ...(this.site.enabledHostNames || [])
+        ];
+
+        for (const v of valuesToMask) {
+            if (v) {
+                this.maskedValuesToAdd.push(v);
+            }
+        }
     }
 
     public static async createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): Promise<ResolvedContainerizedFunctionAppResource> {
@@ -58,10 +71,6 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
         return nonNullProp(this.site, 'name');
     }
 
-    public get id(): string {
-        return nonNullProp(this.site, 'id');
-    }
-
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('azFuncProductionSlot');
     }
@@ -73,14 +82,10 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
         }
     }
 
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
 
-        this._functionsTreeItem = new FunctionsTreeItem(proxyTree, this.site);
+        this._functionsTreeItem = new ContainerFunctionsTreeItem(proxyTree, this.site);
         this._imageTreeItem = new ImageTreeItem(proxyTree, this.site, this.maskedValuesToAdd);
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, new ContainerAppSettingsClientProvider(proxyTree, proxyTree.subscription), ext.prefix, {
             contextValuesToAdd: ['azFunc']
@@ -91,12 +96,8 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
         return children;
     }
 
-    public async isReadOnly(context: IActionContext): Promise<boolean> {
-        const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
-        const client = await (new ContainerAppSettingsClientProvider(proxyTree, proxyTree.subscription).createClient(context));
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-
-        return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+    public async isReadOnly(): Promise<boolean> {
+        return true
     }
 
     public async getHostRequest(): Promise<FuncHostRequest> {
@@ -165,5 +166,23 @@ export class ResolvedContainerizedFunctionAppResource implements ResolvedAppReso
             ext.outputChannel.appendLog(deleteSucceeded);
         });
     }
-}
 
+    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
+        for (const expectedContextValue of expectedContextValues) {
+            const appSettingsContextValues = [AppSettingsTreeItem.contextValue, AppSettingTreeItem.contextValue];
+            if (matchContextValue(expectedContextValue, appSettingsContextValues)) {
+                return this.appSettingsTreeItem;
+            }
+
+            if (matchContextValue(expectedContextValue, [ResolvedContainerizedFunctionAppResource.containerContextValue])) {
+                return this._containerTreeItem;
+            }
+
+            if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
+                return this._functionsTreeItem;
+            }
+        }
+
+        return undefined
+    }
+}

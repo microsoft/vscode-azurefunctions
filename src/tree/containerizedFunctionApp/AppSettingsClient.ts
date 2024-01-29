@@ -53,6 +53,7 @@ export class ContainerAppSettingsClient implements IAppSettingsClient {
                 throw error;
             }
         } finally {
+            // Make sure to return the latest app settings
             response = await this.listApplicationSettings();
         }
 

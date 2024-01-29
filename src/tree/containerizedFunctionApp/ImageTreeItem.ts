@@ -2,11 +2,11 @@
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
+
 import { type Site } from "@azure/arm-appservice";
 import { AzExtParentTreeItem, GenericTreeItem, createContextValue, nonNullValue, type AzExtTreeItem, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { ThemeIcon } from "vscode";
 import { localize } from "../../localize";
-
 
 export class ImageTreeItem extends AzExtParentTreeItem {
     constructor(parent: AzExtParentTreeItem, public readonly site: Site, private readonly contextValuesToAdd: string[]) {
@@ -22,13 +22,13 @@ export class ImageTreeItem extends AzExtParentTreeItem {
             new GenericTreeItem(this, {
                 label: localize('registry', 'Registry'),
                 description: loginServer,
-                contextValue: 'registry',
+                contextValue: localize('registry', 'registry'),
                 iconPath: new ThemeIcon('dash')
             }),
             new GenericTreeItem(this, {
-                label: localize('imageandTag', 'Image and Tag'),
+                label: localize('name', 'Name'),
                 description: imageAndTag,
-                contextValue: 'imageandTag',
+                contextValue: localize('name', 'name'),
                 iconPath: new ThemeIcon('dash')
             })
         ]

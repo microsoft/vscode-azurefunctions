@@ -169,15 +169,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
 
+        let node: SlotTreeItem | ContainerTreeItem;
+
         if (context.dockerfilePath) {
             const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
-            await ext.rgApi.tree.refresh(context);
-            return new ContainerTreeItem(subscription, resolved);
+            node = new ContainerTreeItem(subscription, resolved);
+        } else {
+            const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
+            node = new SlotTreeItem(subscription, resolved);
         }
 
-        const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
         await ext.rgApi.tree.refresh(context);
-        return new SlotTreeItem(subscription, resolved);
+        return node;
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

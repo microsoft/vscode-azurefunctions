@@ -5,12 +5,10 @@
 
 import { type DeploymentsTreeItem, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { type AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
-import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { type FuncVersion } from '../FuncVersion';
-import { type IParsedHostJson } from '../funcConfig/host';
+import { type AzExtParentTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { treeUtils } from '../utils/treeUtils';
-import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from './IProjectTreeItem';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
+import { SlotContainerTreeItemBase } from './SlotContainerTreeItemBase';
 import { ProjectSource } from './projectContextValues';
 import { type RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
 
@@ -18,7 +16,7 @@ export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem |
     return !!(treeItem as SlotTreeItem).site;
 }
 
-export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeItem {
+export class SlotTreeItem extends SlotContainerTreeItemBase {
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
@@ -30,7 +28,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     public resolved: ResolvedFunctionAppResource;
 
     public constructor(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource) {
-        super(parent);
+        super(parent, resolvedFunctionAppResource);
         this.resolved = resolvedFunctionAppResource;
         // this is for the slotContextValue because it never gets resolved by the Resources extension
         const slotContextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
@@ -39,29 +37,16 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
         this.site = this.resolved.site;
         this.iconPath = treeUtils.getIconPath(slotContextValue);
     }
-
-    public get label(): string {
-        return this.resolved.label;
-    }
-
     public get logStreamLabel(): string {
         return this.resolved.logStreamLabel;
-    }
-
-    public get id(): string {
-        return this.resolved.id;
-    }
-
-    public async getHostRequest(): Promise<FuncHostRequest> {
-        return await this.resolved.getHostRequest();
     }
 
     public get description(): string | undefined {
         return this.resolved.description;
     }
 
-    public hasMoreChildrenImpl(): boolean {
-        return this.resolved.hasMoreChildrenImpl();
+    public get defaultHostUrl(): string {
+        return this.site.defaultHostUrl;
     }
 
     /**
@@ -71,33 +56,8 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
         return await this.resolved.refreshImpl(context);
     }
 
-    public async getVersion(context: IActionContext): Promise<FuncVersion> {
-        return await this.resolved.getVersion(context);
-    }
-
-    public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
-        return await this.resolved.getHostJson(context);
-    }
-
-    public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
-        return await this.resolved.getApplicationSettings(context);
-    }
-
-    public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
-        return await this.resolved.setApplicationSetting(context, key, value);
-    }
-
     public async getIsConsumption(context: IActionContext): Promise<boolean> {
         return await this.resolved.getIsConsumption(context);
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        return await this.resolved.loadMoreChildrenImpl.call(this, _clearCache, context) as AzExtTreeItem[];
-    }
-
-    // eslint-disable-next-line @typescript-eslint/require-await
-    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        return await this.resolved.pickTreeItemImpl(expectedContextValues);
     }
 
     public compareChildrenImpl(): number {

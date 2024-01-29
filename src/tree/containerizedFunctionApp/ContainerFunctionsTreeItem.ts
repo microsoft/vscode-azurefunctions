@@ -12,11 +12,11 @@ import { ParsedFunctionJson } from "../../funcConfig/function";
 import { localize } from "../../localize";
 import { FunctionsTreeItemBase } from "../FunctionsTreeItemBase";
 import { getFunctionNameFromId } from "../remoteProject/RemoteFunctionTreeItem";
+import { ContainerFunctionItem } from "./ContainerFunctionItem";
+import { ContainerFunctionTreeItem } from "./ContainerFunctionTreeItem";
 import { type ContainerTreeItem } from "./ContainerTreeItem";
-import { FunctionItem } from "./FunctionItem";
-import { FunctionTreeItem } from "./FunctionTreeItem";
 
-export class FunctionsTreeItem extends FunctionsTreeItemBase {
+export class ContainerFunctionsTreeItem extends FunctionsTreeItemBase {
     public isReadOnly: boolean = true;
     private _nextLink: string | undefined;
 
@@ -24,19 +24,8 @@ export class FunctionsTreeItem extends FunctionsTreeItemBase {
         super(parent);
     }
 
-    public static async createFunctionsTreeItem(context: IActionContext, parent: ContainerTreeItem): Promise<FunctionsTreeItem> {
-        const ti: FunctionsTreeItem = new FunctionsTreeItem(parent, parent.site);
-        // initialize
-        await ti.refreshImpl(context);
-        return ti;
-    }
-
     public hasMoreChildrenImpl(): boolean {
         return !!this._nextLink;
-    }
-
-    public async refreshImpl(context: IActionContext): Promise<void> {
-        this.isReadOnly = await this.parent.isReadOnly(context);
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
@@ -76,10 +65,10 @@ export class FunctionsTreeItem extends FunctionsTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
-            async (fe: FunctionEnvelope) => await FunctionTreeItem.create(
+            async (fe: FunctionEnvelope) => await ContainerFunctionTreeItem.create(
                 context,
                 this,
-                new FunctionItem(
+                new ContainerFunctionItem(
                     this.parent,
                     getFunctionNameFromId(nonNullProp(fe, 'id')),
                     new ParsedFunctionJson(fe.config),
@@ -101,4 +90,3 @@ function isWarmupFunction(func: FunctionEnvelope): boolean {
         return false;
     }
 }
-

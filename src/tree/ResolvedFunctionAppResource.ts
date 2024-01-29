@@ -19,6 +19,7 @@ import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
+import { ResolvedFunctionAppBase } from "./ResolvedFunctionAppBase";
 import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
@@ -28,7 +29,7 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBas
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
 
-export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
+export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: ParsedSite;
     public data: Site;
 
@@ -63,7 +64,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     commandArgs?: unknown[] | undefined;
 
     public constructor(subscription: ISubscriptionContext, site: Site) {
-        this.site = new ParsedSite(site, subscription);
+        super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
         this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
@@ -96,10 +97,6 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         return this.site.slotName ?? this.site.fullName;
     }
 
-    public get id(): string {
-        return this.site.id;
-    }
-
     public get logStreamLabel(): string {
         return this.site.fullName;
     }
@@ -126,10 +123,6 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
 
     private get _state(): string | undefined {
         return this.site.rawSite.state;
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
     }
 
     /**
@@ -329,7 +322,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 }
 
-function matchContextValue(expectedContextValue: RegExp | string, matches: (string | RegExp)[]): boolean {
+export function matchContextValue(expectedContextValue: RegExp | string, matches: (string | RegExp)[]): boolean {
     if (expectedContextValue instanceof RegExp) {
         return matches.some((match) => {
             if (match instanceof RegExp) {
