@@ -5,14 +5,13 @@
 
 import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { functionFilter } from '../constants';
-import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { pickFunctionApp } from '../utils/pickFunctionApp';
 
 export async function stopFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<SlotTreeItem> {
     if (!node) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, { filter: functionFilter });
+        node = await pickFunctionApp(context);
     }
 
     const client: SiteClient = await node.site.createClient(context);

@@ -5,15 +5,12 @@
 
 import { editScmType } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { functionFilter } from '../constants';
-import { ext } from '../extensionVariables';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { pickFunctionApp } from '../utils/pickFunctionApp';
 
 export async function configureDeploymentSource(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter
-        });
+        node = await pickFunctionApp(context);
     }
 
     const updatedScmType: string | undefined = await editScmType(context, node.site, node.subscription);
