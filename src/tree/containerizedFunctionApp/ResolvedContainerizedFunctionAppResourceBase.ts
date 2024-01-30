@@ -15,7 +15,7 @@ import { ext } from "../../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../../funcConfig/host";
 import { localize } from "../../localize";
 import { treeUtils } from "../../utils/treeUtils";
-import { type ApplicationSettings, type FuncHostRequest } from "../IProjectTreeItem";
+import { type ApplicationSettings } from "../IProjectTreeItem";
 import { ResolvedFunctionAppBase } from "../ResolvedFunctionAppBase";
 import { matchContextValue } from "../ResolvedFunctionAppResource";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "../projectContextValues";
@@ -43,8 +43,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public readonly source: ProjectSource = ProjectSource.Remote;
 
     public constructor(site: Site) {
-        super(site);
-        this.site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
+        super(Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false }));
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 
         const valuesToMask = [
@@ -101,10 +100,6 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public async isReadOnly(): Promise<boolean> {
         return true
-    }
-
-    public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') }
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {

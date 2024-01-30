@@ -45,10 +45,6 @@ export class SlotTreeItem extends SlotContainerTreeItemBase {
         return this.resolved.description;
     }
 
-    public get defaultHostUrl(): string {
-        return this.site.defaultHostUrl;
-    }
-
     /**
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
