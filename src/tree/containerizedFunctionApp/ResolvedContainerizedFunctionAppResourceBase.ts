@@ -24,8 +24,10 @@ import { ContainerFunctionsTreeItem } from "./ContainerFunctionsTreeItem";
 import { type ContainerTreeItem } from "./ContainerTreeItem";
 import { ImageTreeItem } from "./ImageTreeItem";
 
+export type ContainerSite = Site & { defaultHostUrl?: string; fullName?: string; isSlot?: boolean };
+
 export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
-    public site: Site;
+    public site: ContainerSite;
     public maskedValuesToAdd: string[] = [];
     public contextValuesToAdd?: string[] | undefined;
     public static containerContextValue: string = 'azFuncContainer';
@@ -42,6 +44,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public constructor(site: Site) {
         super(site);
+        this.site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 
         const valuesToMask = [
@@ -101,7 +104,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: `https://${nonNullValueAndProp(this.site, 'defaultHostName')}` }
+        return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') }
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {

@@ -3,16 +3,15 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type Site } from "@azure/arm-appservice";
 import { type AzExtParentTreeItem } from "@microsoft/vscode-azext-utils";
 import { SlotContainerTreeItemBase } from "../SlotContainerTreeItemBase";
 import { ProjectSource } from "../projectContextValues";
-import { type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResourceBase";
+import { type ContainerSite, type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResourceBase";
 
 export class ContainerTreeItem extends SlotContainerTreeItemBase {
     public resolved: ResolvedContainerizedFunctionAppResource;
     public readonly contextValue: string;
-    public site: Site;
+    public site: ContainerSite;
 
     public readonly source: ProjectSource = ProjectSource.Remote;
 
@@ -24,7 +23,7 @@ export class ContainerTreeItem extends SlotContainerTreeItemBase {
     }
 
     public get defaultHostUrl(): string {
-        return `https://${this.site.defaultHostName}`;
+        return this.site.defaultHostUrl;
     }
 
     public async isReadOnly(): Promise<boolean> {
