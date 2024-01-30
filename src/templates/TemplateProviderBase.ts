@@ -7,6 +7,7 @@ import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils
 import * as path from 'path';
 import { Disposable, env } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
+import { type IProjectWizardContext } from '../commands/createNewProject/IProjectWizardContext';
 import { type ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -170,7 +171,12 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * A key used to identify the templates for the current type of project
      */
-    public async getProjKey(context: IActionContext): Promise<string> {
+    public async getProjKey(context: IActionContext & Partial<IProjectWizardContext>): Promise<string> {
+        // if user has already selected template, rely on project wizard rather than project settings
+        if (context.projectTemplateKey) {
+            return context.projectTemplateKey
+        }
+
         if (!this.refreshProjKey) {
             throw new NotImplementedError('refreshProjKey', this);
         }
