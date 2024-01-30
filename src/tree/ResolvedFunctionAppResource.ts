@@ -18,7 +18,7 @@ import { localize } from "../localize";
 import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
-import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
+import { type ApplicationSettings } from "./IProjectTreeItem";
 import { ResolvedFunctionAppBase } from "./ResolvedFunctionAppBase";
 import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
@@ -99,10 +99,6 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
 
     public get logStreamLabel(): string {
         return this.site.fullName;
-    }
-
-    public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: this.site.defaultHostUrl };
     }
 
     public get description(): string | undefined {

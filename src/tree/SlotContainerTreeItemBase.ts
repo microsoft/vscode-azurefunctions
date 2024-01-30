@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, nonNullValueAndProp, type AzExtTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type FuncVersion } from "../FuncVersion";
 import { type IParsedHostJson } from "../funcConfig/host";
 import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from "./IProjectTreeItem";
@@ -35,6 +35,10 @@ export class SlotContainerTreeItemBase extends AzExtParentTreeItem implements IP
 
     public async getHostRequest(): Promise<FuncHostRequest> {
         return await this.resolved.getHostRequest();
+    }
+
+    public get defaultHostUrl(): string {
+        return nonNullValueAndProp(this.resolved.site, 'defaultHostUrl');
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {

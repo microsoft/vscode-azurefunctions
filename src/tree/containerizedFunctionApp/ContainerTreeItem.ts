@@ -22,10 +22,6 @@ export class ContainerTreeItem extends SlotContainerTreeItemBase {
         this.site = this.resolved.site;
     }
 
-    public get defaultHostUrl(): string {
-        return this.site.defaultHostUrl;
-    }
-
     public async isReadOnly(): Promise<boolean> {
         return await this.resolved.isReadOnly();
     }

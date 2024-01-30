@@ -3,14 +3,15 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type Site } from "@azure/arm-appservice";
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
-import { nonNullProp } from "@microsoft/vscode-azext-utils";
+import { nonNullProp, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { type FuncHostRequest } from "./IProjectTreeItem";
+import { type ContainerSite } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase";
 
 export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase {
-    public site: Site | ParsedSite;
-    public constructor(site: Site | ParsedSite) {
+    public site: ContainerSite | ParsedSite;
+    public constructor(site: ContainerSite | ParsedSite) {
         this.site = site;
     }
 
@@ -20,5 +21,9 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
 
     public hasMoreChildrenImpl(): boolean {
         return false;
+    }
+
+    public async getHostRequest(): Promise<FuncHostRequest> {
+        return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') }
     }
 }

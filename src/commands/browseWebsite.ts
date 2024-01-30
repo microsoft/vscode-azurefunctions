@@ -17,14 +17,5 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
         });
     }
 
-<<<<<<< Updated upstream
-    try {
-        await openUrl(node.site.defaultHostUrl);
-    } catch {
-        // containerized function apps don't have a default host url
-        await openUrl(`https://${node.site.defaultHostName}`)
-    }
-=======
     await openUrl(nonNullValueAndProp(node.site, 'defaultHostUrl'));
->>>>>>> Stashed changes
 }
