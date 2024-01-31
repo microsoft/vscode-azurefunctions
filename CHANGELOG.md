@@ -1,31 +1,28 @@
 # Change Log
 
-## 1.13.2 - 2024-01-XX
+## 1.13.2 - 2024-01-31
 
 ## Added
-* Fix Windows files feature by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3813
-* Add workspace functions to extension API by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3881
-* Fix the gitignore issue when deploying and remove globby by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3889
-* Automatically enable full monitoring for Java Elastic Premium by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3887
-* Add EventGrid Cloud Event templates for .NET to verified list by @hossam-nasr in https://github.com/microsoft/vscode-azurefunctions/pull/3916
-* Improve local settings when creating templates by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3924
-* Improve local settings for V2 schema templates by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3927
+* [[3881]](https://github.com/microsoft/vscode-azurefunctions/pull/3881) Add workspace functions to extension API
+* [[3887]](https://github.com/microsoft/vscode-azurefunctions/pull/3887) Automatically enable full monitoring for Java Elastic Premium
+* [[3916]](https://github.com/microsoft/vscode-azurefunctions/pull/3916) Add EventGrid Cloud Event templates for .NET to verified list
+* [[3924]](https://github.com/microsoft/vscode-azurefunctions/pull/3924), [[3297]](https://github.com/microsoft/vscode-azurefunctions/pull/3927) Improve creating new local app setting experience during new function template creation
 
-### Removed
-* Remove Azure Account from extension dependencies by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3902
+## Fixed
+* [[3813]](https://github.com/microsoft/vscode-azurefunctions/pull/3813) Fix Windows files not appearing under the Files node
+* [[3889]](https://github.com/microsoft/vscode-azurefunctions/pull/3889) Fix .gitignore being ignored during deployment
 
-### Changed
-* Revert hardcoded template version by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3888
-* Update backup templates by @hossam-nasr in https://github.com/microsoft/vscode-azurefunctions/pull/3905
+## Removed
+* [[3902]](https://github.com/microsoft/vscode-azurefunctions/pull/3902) Remove Azure Account from extension dependencies
 
+## Changed
+* [[3888]](https://github.com/microsoft/vscode-azurefunctions/pull/3888) Revert hardcoded template version of '[3.*, 4.0.0)'
+* [[3905]](https://github.com/microsoft/vscode-azurefunctions/pull/3905) Update all backup templates
 
-### Engineering
-* Use Node 18.15 by @alexweininger in https://github.com/microsoft/vscode-azurefunctions/pull/3831
-* Remove all .NET 5 tests since its EOL by @nturinski in https://github.com/microsoft/vscode-azurefunctions/pull/3832
-* Update `eslint-config` to enforce import types by @motm32 in https://github.com/microsoft/vscode-azurefunctions/pull/3918
-
-### Dependencies
-* Bump axios and vscode-tas-client by @dependabot in https://github.com/microsoft/vscode-azurefunctions/pull/3892
+## Engineering
+* [[3831]](https://github.com/microsoft/vscode-azurefunctions/pull/3831) Use Node 18.15
+* [[3832]](https://github.com/microsoft/vscode-azurefunctions/pull/3832) Remove all .NET 5 (EOL) tests
+* [[3918]](https://github.com/microsoft/vscode-azurefunctions/pull/3918) Update `eslint-config` to enforce import types
 
 **Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.12.4...v1.13.2
 
