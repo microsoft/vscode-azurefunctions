@@ -12,6 +12,9 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersio
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { ContainerizedFunctionAppCreateStep } from '../commands/createFunctionApp/containerImage/ContainerizedFunctionAppCreateStep';
+import { DeployWorkspaceProjectStep } from '../commands/createFunctionApp/containerImage/DeployWorkspaceProjectStep';
+import { detectDockerfile } from '../commands/createFunctionApp/containerImage/detectDockerfile';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
@@ -22,6 +25,7 @@ import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { type DeployWorkspaceProjectResults } from '../vscode-azurecontainerapps.api';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
 import { ContainerTreeItem } from './containerizedFunctionApp/ContainerTreeItem';
@@ -32,6 +36,8 @@ export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
     dockerfilePath?: string;
+    rootPath?: string;
+    deployWorkspaceResult?: DeployWorkspaceProjectResults;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -100,54 +106,19 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+
         promptSteps.push(new SiteNameStep());
-        promptSteps.push(new FunctionAppStackStep());
 
-        const storageAccountCreateOptions: INewStorageAccountDefaults = {
-            kind: StorageAccountKind.Storage,
-            performance: StorageAccountPerformance.Standard,
-            replication: StorageAccountReplication.LRS
-        };
+        await detectDockerfile(context);
 
-        if (version === FuncVersion.v1) { // v1 doesn't support linux
-            wizardContext.newSiteOS = WebsiteOS.windows;
-        }
-
-        if (!context.advancedCreation) {
-            LocationListStep.addStep(wizardContext, promptSteps);
-            wizardContext.useConsumptionPlan = true;
-            wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
-            executeSteps.push(new ResourceGroupCreateStep());
-            executeSteps.push(new AppServicePlanCreateStep());
-            executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
-            executeSteps.push(new LogAnalyticsCreateStep());
-            executeSteps.push(new AppInsightsCreateStep());
+        if (context.dockerfilePath) {
+            await createContainerizedFunctionAppChild(wizardContext, promptSteps, executeSteps);
         } else {
-            promptSteps.push(new ResourceGroupListStep());
-            CustomLocationListStep.addStep(wizardContext, promptSteps);
-            promptSteps.push(new FunctionAppHostingPlanStep());
-            promptSteps.push(new StorageAccountListStep(
-                storageAccountCreateOptions,
-                {
-                    // The account type must support blobs, queues, and tables.
-                    // See: https://aka.ms/Cfqnrc
-                    kind: [
-                        // Blob-only accounts don't support queues and tables
-                        StorageAccountKind.BlobStorage
-                    ],
-                    performance: [
-                        // Premium performance accounts don't support queues and tables
-                        StorageAccountPerformance.Premium
-                    ],
-                    learnMoreLink: 'https://aka.ms/Cfqnrc'
-                }
-            ));
-            promptSteps.push(new AppInsightsListStep());
+            await createFunctionAppChild(wizardContext, promptSteps, executeSteps);
         }
 
         const storageProvider = 'Microsoft.Storage';
         LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
-        executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
@@ -206,4 +177,70 @@ async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promis
     }
 
     return version;
+}
+
+async function createFunctionAppChild(wizardContext: IFunctionAppWizardContext, promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[]) {
+    promptSteps.push(new FunctionAppStackStep());
+
+    const storageAccountCreateOptions: INewStorageAccountDefaults = {
+        kind: StorageAccountKind.Storage,
+        performance: StorageAccountPerformance.Standard,
+        replication: StorageAccountReplication.LRS
+    };
+
+    if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
+        wizardContext.newSiteOS = WebsiteOS.windows;
+    }
+
+    if (!wizardContext.advancedCreation) {
+        LocationListStep.addStep(wizardContext, promptSteps);
+        wizardContext.useConsumptionPlan = true;
+        wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
+        executeSteps.push(new ResourceGroupCreateStep());
+        executeSteps.push(new AppServicePlanCreateStep());
+        executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+        executeSteps.push(new LogAnalyticsCreateStep());
+        executeSteps.push(new AppInsightsCreateStep());
+    } else {
+        promptSteps.push(new ResourceGroupListStep());
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
+        promptSteps.push(new FunctionAppHostingPlanStep());
+        promptSteps.push(new StorageAccountListStep(
+            storageAccountCreateOptions,
+            {
+                // The account type must support blobs, queues, and tables.
+                // See: https://aka.ms/Cfqnrc
+                kind: [
+                    // Blob-only accounts don't support queues and tables
+                    StorageAccountKind.BlobStorage
+                ],
+                performance: [
+                    // Premium performance accounts don't support queues and tables
+                    StorageAccountPerformance.Premium
+                ],
+                learnMoreLink: 'https://aka.ms/Cfqnrc'
+            }
+        ));
+        promptSteps.push(new AppInsightsListStep());
+    }
+
+    executeSteps.push(new FunctionAppCreateStep());
+}
+
+async function createContainerizedFunctionAppChild(wizardContext: IFunctionAppWizardContext, promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[]) {
+    const storageAccountCreateOptions: INewStorageAccountDefaults = {
+        kind: StorageAccountKind.Storage,
+        performance: StorageAccountPerformance.Standard,
+        replication: StorageAccountReplication.LRS
+    };
+
+    LocationListStep.addStep(wizardContext, promptSteps);
+
+    executeSteps.push(new ResourceGroupCreateStep());
+    executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+    executeSteps.push(new AppInsightsCreateStep());
+    executeSteps.push(new DeployWorkspaceProjectStep());
+    executeSteps.push(new ContainerizedFunctionAppCreateStep());
+
+    return null;
 }
