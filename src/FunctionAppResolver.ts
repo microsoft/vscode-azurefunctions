@@ -24,8 +24,11 @@ export class FunctionAppResolver implements AppResourceResolver {
             const site = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
 
             if (nonNullValueAndProp(site, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
-                return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site));
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
+                const fullSite = await client.webApps.get(site?.resourceGroup!, site?.name!)
+                return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
+
             return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site));
         });
     }
