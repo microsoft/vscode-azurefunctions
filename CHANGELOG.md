@@ -11,7 +11,7 @@
 ### Changed
 
 ### Engineering
-* [[3968]](https://github.com/microsoft/vscode-azurefunctions/pull/3968) Consume downstream changes [appservice/#1677](https://github.com/microsoft/vscode-azuretools/pull/1677), [azure/#1676](https://github.com/microsoft/vscode-azuretools/pull/1676), that prevent [auth/#1669](https://github.com/microsoft/vscode-azuretools/pull/1669) from breaking kudu calls.
+* [[3968]](https://github.com/microsoft/vscode-azurefunctions/pull/3968) Consume downstream changes [appservice/#1677](https://github.com/microsoft/vscode-azuretools/pull/1677), [azure/#1676](https://github.com/microsoft/vscode-azuretools/pull/1676), that prevent [auth/#1669](https://github.com/microsoft/vscode-azuretools/pull/1669) from breaking kudu calls in sovereign clouds.
 
 ## 1.13.2 - 2024-01-31
 
