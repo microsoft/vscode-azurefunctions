@@ -1,5 +1,18 @@
 # Change Log
 
+## Unreleased
+
+## Added
+
+## Fixed
+
+## Removed
+
+## Changed
+
+## Engineering
+* Consume downstream changes [appservice/#1677](https://github.com/microsoft/vscode-azuretools/pull/1677), [azure/#1676](https://github.com/microsoft/vscode-azuretools/pull/1676), that prevent [auth/#1669](https://github.com/microsoft/vscode-azuretools/pull/1669) from breaking kudu calls.
+
 ## 1.13.2 - 2024-01-31
 
 ## Added
