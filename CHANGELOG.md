@@ -2,37 +2,37 @@
 
 ## Unreleased
 
-## Added
+### Added
 
-## Fixed
+### Fixed
 
-## Removed
+### Removed
 
-## Changed
+### Changed
 
-## Engineering
+### Engineering
 * [[3968]](https://github.com/microsoft/vscode-azurefunctions/pull/3968) Consume downstream changes [appservice/#1677](https://github.com/microsoft/vscode-azuretools/pull/1677), [azure/#1676](https://github.com/microsoft/vscode-azuretools/pull/1676), that prevent [auth/#1669](https://github.com/microsoft/vscode-azuretools/pull/1669) from breaking kudu calls.
 
 ## 1.13.2 - 2024-01-31
 
-## Added
+### Added
 * [[3881]](https://github.com/microsoft/vscode-azurefunctions/pull/3881) Add workspace functions to extension API
 * [[3887]](https://github.com/microsoft/vscode-azurefunctions/pull/3887) Automatically enable full monitoring for Java Elastic Premium
 * [[3916]](https://github.com/microsoft/vscode-azurefunctions/pull/3916) Add EventGrid Cloud Event templates for .NET to verified list
 * [[3924]](https://github.com/microsoft/vscode-azurefunctions/pull/3924), [[3297]](https://github.com/microsoft/vscode-azurefunctions/pull/3927) Improve creating new local app setting experience during new function template creation
 
-## Fixed
+### Fixed
 * [[3813]](https://github.com/microsoft/vscode-azurefunctions/pull/3813) Fix Windows files not appearing under the Files node
 * [[3889]](https://github.com/microsoft/vscode-azurefunctions/pull/3889) Fix .gitignore being ignored during deployment
 
-## Removed
+### Removed
 * [[3902]](https://github.com/microsoft/vscode-azurefunctions/pull/3902) Remove Azure Account from extension dependencies
 
-## Changed
+### Changed
 * [[3888]](https://github.com/microsoft/vscode-azurefunctions/pull/3888) Revert hardcoded template version of '[3.*, 4.0.0)'
 * [[3905]](https://github.com/microsoft/vscode-azurefunctions/pull/3905) Update all backup templates
 
-## Engineering
+### Engineering
 * [[3831]](https://github.com/microsoft/vscode-azurefunctions/pull/3831) Use Node 18.15
 * [[3832]](https://github.com/microsoft/vscode-azurefunctions/pull/3832) Remove all .NET 5 (EOL) tests
 * [[3918]](https://github.com/microsoft/vscode-azurefunctions/pull/3918) Update `eslint-config` to enforce import types
