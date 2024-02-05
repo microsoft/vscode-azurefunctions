@@ -32,6 +32,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         this.isReadOnly = await this.parent.isReadOnly(context);
+        await this.loadAllChildren(context);
     }
 
     public hasMoreChildrenImpl(): boolean {
