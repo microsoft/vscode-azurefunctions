@@ -26,12 +26,16 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
     public static async createFunctionsTreeItem(context: IActionContext, parent: SlotTreeItem): Promise<RemoteFunctionsTreeItem> {
         const ti: RemoteFunctionsTreeItem = new RemoteFunctionsTreeItem(parent);
         // initialize
-        await ti.refreshImpl(context);
+        await ti.initAsync(context);
         return ti;
     }
 
-    public async refreshImpl(context: IActionContext): Promise<void> {
+    public async initAsync(context: IActionContext): Promise<void> {
         this.isReadOnly = await this.parent.isReadOnly(context);
+    }
+
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        await this.initAsync(context);
         await this.loadAllChildren(context);
     }
 
