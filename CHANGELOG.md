@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.13.3 - 2024-02-05
+
+## Fixed
+* [[3967]](https://github.com/microsoft/vscode-azurefunctions/issues/3967) Fixes functions not deploying for Linux Consumption apps
+* [[3969]](https://github.com/microsoft/vscode-azurefunctions/issues/3969) Fixes deploy subpath setting being ignored
+
 ## 1.13.2 - 2024-01-31
 
 ## Added
@@ -24,7 +30,7 @@
 * [[3832]](https://github.com/microsoft/vscode-azurefunctions/pull/3832) Remove all .NET 5 (EOL) tests
 * [[3918]](https://github.com/microsoft/vscode-azurefunctions/pull/3918) Update `eslint-config` to enforce import types
 
-**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.12.4...v1.13.2
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.13.1...v1.13.2
 
 ## 1.13.1 - 2023-09-26
 
