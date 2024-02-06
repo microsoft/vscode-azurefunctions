@@ -14,7 +14,7 @@ export class DeployWorkspaceProjectStep extends AzureWizardExecuteStep<IFunction
     public priority: number = 137;
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const message: string = localize('creatingCAResources', 'Creating container resources this may take a few minutes...');
+        const message: string = localize('creatingCAResources', 'Creating container resources; this may take a few minutes...');
         ext.outputChannel.appendLog(message);
         progress.report({ message });
 
