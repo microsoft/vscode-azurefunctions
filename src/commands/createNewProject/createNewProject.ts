@@ -3,13 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import type * as api from '../../vscode-azurefunctions.api';
@@ -56,7 +57,10 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const optionalExecuteStep = options.executeStep;
 
     if (optionalExecuteStep instanceof CreateDockerfileProjectStep) {
-        wizardContext.dockerfile = true;
+        const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run this command.');
+        if (!await validateFuncCoreToolsInstalled(context, message)) {
+            throw new UserCancelledError('validateFuncCoreToolsInstalled');
+        }
     }
 
     if (options.folderPath) {

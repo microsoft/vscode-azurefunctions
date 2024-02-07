@@ -4,9 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ext } from "@microsoft/vscode-azext-serviceconnector";
-import { AzureWizardExecuteStep, UserCancelledError, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
-import { validateFuncCoreToolsInstalled } from "../../../funcCoreTools/validateFuncCoreToolsInstalled";
-import { localize } from "../../../localize";
+import { AzureWizardExecuteStep, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { cpUtils } from "../../../utils/cpUtils";
 import { type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 
@@ -14,11 +12,6 @@ export class CreateDockerfileProjectStep extends AzureWizardExecuteStep<IFunctio
     public priority: number = 100;
 
     public async execute(context: IFunctionWizardContext): Promise<void> {
-        const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run this command.');
-        if (!await validateFuncCoreToolsInstalled(context, message, context.workspacePath)) {
-            throw new UserCancelledError('validateFuncCoreToolsInstalled');
-        }
-
         let language = nonNullValueAndProp(context, 'language').toLowerCase();
         if (language === 'c#') {
             language = 'csharp';
