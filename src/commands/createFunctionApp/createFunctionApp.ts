@@ -20,7 +20,7 @@ function isSubscription(item?: AzExtParentTreeItem): boolean {
     }
 }
 
-export async function createFunctionApp(context: IActionContext & Partial<ICreateFunctionAppContext>, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string> {
+export async function createFunctionApp(context: IActionContext & Partial<ICreateFunctionAppContext>, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string | undefined> {
     const newResourceGroupName = Array.isArray(nodesOrNewResourceGroupName) ? undefined : nodesOrNewResourceGroupName;
     let node: AzExtParentTreeItem | undefined;
     if (typeof subscription === 'string') {
@@ -37,11 +37,11 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     context.newResourceGroupName = newResourceGroupName;
     (<ISiteCreatedOptions>context).showCreatedNotification = true;
 
-    const funcAppNode: SlotTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
+    const funcAppNode: SlotTreeItem | undefined = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
 
-    return funcAppNode.fullId;
+    return funcAppNode?.fullId;
 }
 
-export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string> {
+export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string | undefined> {
     return await createFunctionApp({ ...context, advancedCreation: true }, subscription, nodesOrNewResourceGroupName);
 }

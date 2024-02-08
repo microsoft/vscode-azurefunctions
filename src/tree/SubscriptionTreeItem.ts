@@ -29,6 +29,7 @@ import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
+    skipExecute?: boolean;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -78,7 +79,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem | undefined> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
@@ -97,7 +98,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep());
+        promptSteps.push(new SiteNameStep({ parameterDisplayTitle: "Function App Name", parameterDisplayDescription: "The name of the new function app." }));
         promptSteps.push(new FunctionAppStackStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
@@ -147,7 +148,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
-        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
+
+        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, {
+            promptSteps,
+            executeSteps,
+            title,
+            showLoadingPrompt: context.skipExecute !== true,
+            skipExecute: context.skipExecute === true
+        });
 
         await wizard.prompt();
         // if the providers aren't registered yet, await it here because it is required by this point
