@@ -6,7 +6,7 @@
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { createGenericClient, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { openUrl, parseError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
@@ -18,9 +18,9 @@ import { backupStacks } from './backupStacks';
 import { type AppStackMinorVersion } from './models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
 
-export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
+export async function getStackPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
     const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
-    const picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = [];
+    const picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = [];
     let hasEndOfLife = false;
     let stackHasPicks: boolean;
 
@@ -77,7 +77,8 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                     label: minorVersion.displayText,
                     description,
                     group: stack.displayText,
-                    data: { stack, majorVersion, minorVersion }
+                    data: { stack, majorVersion, minorVersion },
+                    agentMetadata: {}
                 });
                 stackHasPicks = true;
             }
@@ -87,7 +88,8 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
             picks.push({
                 label: noRuntimeStacksAvailableLabel,
                 group: stack.displayText,
-                data: undefined
+                data: undefined,
+                agentMetadata: { notApplicableToAgentPick: true }
             });
         }
     }
@@ -102,12 +104,13 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
             getPriority(p1.data.minorVersion.stackSettings) - getPriority(p2.data.minorVersion.stackSettings); // otherwise sort based on priority
     });
     if (hasEndOfLife) {
-        (picks as IAzureQuickPickItem<FullFunctionAppStack | undefined>[]).push({
+        picks.push({
             label: localize('endOfLife', `$(extensions-warning-message) Some stacks have an end of support deadline coming up. Learn more...`),
             onPicked: async () => {
                 await openUrl(funcVersionLink);
             },
-            data: undefined
+            data: undefined,
+            agentMetadata: { notApplicableToAgentPick: true }
         });
     }
     return picks;

@@ -42,6 +42,6 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     return funcAppNode.fullId;
 }
 
-export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string> {
+export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string | undefined> {
     return await createFunctionApp({ ...context, advancedCreation: true }, subscription, nodesOrNewResourceGroupName);
 }
