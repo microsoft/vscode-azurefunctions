@@ -5,10 +5,13 @@
 
 import { type BindingSettingValue } from "../../../funcConfig/function";
 import { localize } from "../../../localize";
+import { type IBindingSetting } from "../../../templates/IBindingTemplate";
 import { type IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class StringPromptStep extends BindingSettingStepBase {
+    // not used by v2 schema so enforce  IBindingSetting
+    protected readonly _setting: IBindingSetting;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         return await context.ui.showInputBox({
             placeHolder: this._setting.label,

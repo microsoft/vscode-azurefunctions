@@ -8,23 +8,24 @@ import { type Progress } from 'vscode';
 import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { type IBindingSetting } from '../../../templates/IBindingTemplate';
-import { nonNullProp } from '../../../utils/nonNull';
-import { setBindingSetting } from '../../createFunction/IFunctionWizardContext';
-import { type IBindingWizardContext } from '../IBindingWizardContext';
+import { type ParsedInput } from '../../../templates/script/parseScriptTemplatesV2';
+import { setBindingSetting, type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 
 export interface IConnection {
     name: string;
     connectionString: string;
 }
 
-export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
 
-    private readonly _setting: IBindingSetting;
+    private readonly _setting: IBindingSetting | ParsedInput;
+    private readonly _resourceType: string;
 
-    constructor(setting: IBindingSetting) {
+    constructor(setting: IBindingSetting | ParsedInput) {
         super();
         this._setting = setting;
+        this._resourceType = (setting as IBindingSetting).resourceType ?? (setting as ParsedInput).resource ?? '';
     }
 
     public abstract getConnection(context: T): Promise<IConnection>;
@@ -33,7 +34,7 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         progress.report({ message: localize('retrieving', 'Retrieving connection string...') });
 
         const result: IConnection = await this.getConnection(context);
-        let appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
+        let appSettingKey: string = `${result.name}_${this._resourceType.toUpperCase()}`;
         appSettingKey = appSettingKey.replace(/[^a-z0-9_\.]/gi, ''); // remove invalid chars
         setBindingSetting(context, this._setting, appSettingKey);
         await setLocalAppSetting(context, context.projectPath, appSettingKey, result.connectionString);

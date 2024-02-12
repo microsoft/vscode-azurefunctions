@@ -1,5 +1,37 @@
 # Change Log
 
+## 1.13.3 - 2024-02-05
+
+### Fixed
+* [[3967]](https://github.com/microsoft/vscode-azurefunctions/issues/3967) Fixes functions not deploying for Linux Consumption apps
+* [[3969]](https://github.com/microsoft/vscode-azurefunctions/issues/3969) Fixes deploy subpath setting being ignored
+
+## 1.13.2 - 2024-01-31
+
+### Added
+* [[3881]](https://github.com/microsoft/vscode-azurefunctions/pull/3881) Add workspace functions to extension API
+* [[3887]](https://github.com/microsoft/vscode-azurefunctions/pull/3887) Automatically enable full monitoring for Java Elastic Premium
+* [[3916]](https://github.com/microsoft/vscode-azurefunctions/pull/3916) Add EventGrid Cloud Event templates for .NET to verified list
+* [[3924]](https://github.com/microsoft/vscode-azurefunctions/pull/3924), [[3297]](https://github.com/microsoft/vscode-azurefunctions/pull/3927) Improve creating new local app setting experience during new function template creation
+
+### Fixed
+* [[3813]](https://github.com/microsoft/vscode-azurefunctions/pull/3813) Fix Windows files not appearing under the Files node
+* [[3889]](https://github.com/microsoft/vscode-azurefunctions/pull/3889) Fix .gitignore being ignored during deployment
+
+### Removed
+* [[3902]](https://github.com/microsoft/vscode-azurefunctions/pull/3902) Remove Azure Account from extension dependencies
+
+### Changed
+* [[3888]](https://github.com/microsoft/vscode-azurefunctions/pull/3888) Revert hardcoded template version of '[3.*, 4.0.0)'
+* [[3905]](https://github.com/microsoft/vscode-azurefunctions/pull/3905) Update all backup templates
+
+### Engineering
+* [[3831]](https://github.com/microsoft/vscode-azurefunctions/pull/3831) Use Node 18.15
+* [[3832]](https://github.com/microsoft/vscode-azurefunctions/pull/3832) Remove all .NET 5 (EOL) tests
+* [[3918]](https://github.com/microsoft/vscode-azurefunctions/pull/3918) Update `eslint-config` to enforce import types
+
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.13.1...v1.13.2
+
 ## 1.13.1 - 2023-09-26
 
 ### Added

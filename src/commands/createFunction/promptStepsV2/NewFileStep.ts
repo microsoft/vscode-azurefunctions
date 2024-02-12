@@ -36,7 +36,7 @@ export class NewFileStep<T extends FunctionV2WizardContext> extends StringInputS
     }
 
     protected async validateInputCore(context: FunctionV2WizardContext, input: string | undefined): Promise<string | undefined> {
-        const error = super.validateInput(input);
+        const error = super.validateInput(input, this.input);
         if (error) {
             return error;
         }

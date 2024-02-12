@@ -12,9 +12,8 @@ import { getLocalSettingsJson, type ILocalSettingsJson } from '../../../funcConf
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
 import { type IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
-import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
+import { getBindingSetting, type FunctionV2WizardContext, type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { type IBindingWizardContext } from '../IBindingWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
@@ -33,7 +32,7 @@ const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show 
 const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' }
 export class LocalAppSettingListStep extends BindingSettingStepBase {
     private _showHiddenValues: boolean = false;
-    public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
+    public async promptCore(context: IFunctionWizardContext): Promise<BindingSettingValue> {
         const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
         const existingSettings: [string, string][] = settings.Values ? Object.entries(settings.Values) : [];
@@ -43,7 +42,10 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
         do {
             let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
             picks = picks.concat(existingSettings.map((s: [string, string]) => { return { data: s[0], label: s[0], description: this._showHiddenValues ? s[1] : '******' }; }));
-            picks.push(this._showHiddenValues ? hideHiddenValuesItem : showHiddenValuesItem);
+            if (picks.length > 1) {
+                // don't add hidden values item if there are no existing settings
+                picks.push(this._showHiddenValues ? hideHiddenValuesItem : showHiddenValuesItem);
+            }
             result = (await context.ui.showQuickPick(picks, { placeHolder })).data;
             if (result === 'hiddenValues') {
                 this._showHiddenValues = !this._showHiddenValues;
@@ -54,11 +56,11 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
         } while (true);
     }
 
-    public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
+    public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext & FunctionV2WizardContext> | undefined> {
         if (!getBindingSetting(context, this._setting)) {
-            const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
-            const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
-            switch (this._setting.resourceType) {
+            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+            switch (this._resourceType) {
                 case ResourceType.DocumentDB:
                     azurePromptSteps.push(new CosmosDBListStep());
                     azureExecuteSteps.push(new CosmosDBConnectionCreateStep(this._setting));

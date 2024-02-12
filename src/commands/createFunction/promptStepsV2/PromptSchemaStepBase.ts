@@ -20,15 +20,15 @@ export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> ex
 
     protected abstract promptAction(context: T): Promise<unknown>;
 
-    protected validateInput(input: string | undefined): string | undefined {
-        if (!input && this.input.required) {
+    protected validateInput(value: string | undefined, parsedInput: ParsedInput): string | undefined {
+        if (!value && parsedInput.required) {
             return localize('promptV2StepEmpty', 'The input cannot be empty.');
         }
 
-        const validators = this.input.validators || [];
+        const validators = parsedInput.validators || [];
         for (const validator of validators) {
-            if (input) {
-                if (new RegExp(validator.expression).test(input)) {
+            if (value) {
+                if (!new RegExp(validator.expression).test(value)) {
                     return validator.errorText;
                 }
             }
