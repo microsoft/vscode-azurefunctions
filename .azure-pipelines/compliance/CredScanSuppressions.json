@@ -2,12 +2,20 @@
     "tool": "Credential Scanner",
     "suppressions": [
         {
-            "folder": "node_modules\\",
-            "_justification": "No need to scan external node modules."
+            "hash": "hyUQad0BbWEvyeHXVCMsYvGIRuQBIpJOaWLtDacGhZI=",
+            "_justification": "This is a false positive"
         },
         {
-            "folder": "resources\\backupTemplates\\",
-            "_justification": "No need to scan backup templates."
+            "hash": "LHAa+3RRy0CJ+V2y9g8jHCBcn6KglfpSovPRZAjea0I=",
+            "_justification": "This is a false positive"
+        },
+        {
+            "hash": "MLu73wzE/Z2ueMqbNMnRman8BgXOcNKO2nO50WY4C8U=",
+            "_justification": "This is a false positive"
+        },
+        {
+            "hash": "f5OEvErpkTa9NH7vzpAEBelEWfIeyYOZFoMHOc9yKWc=",
+            "_justification": "This is a false positive"
         }
     ]
 }
