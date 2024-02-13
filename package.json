@@ -1180,9 +1180,9 @@
     ],
     "agentMetadata": {
         "version": "1.0",
-        "getCommandsCommandId": "azureFunctions.getCommands",
-        "runWizardCommandWithoutExecutionCommandId": "azureFunctions.runWizardCommandWithoutExecution",
-        "runWizardCommandWithInputsCommandId": "azureFunctions.runWizardCommandWithInputs",
-        "getAgentBenchmarkConfigsCommandId": "azureFunctions.getAgentBenchmarkConfigs"
+        "getCommandsCommandId": "azureFunctions.agent.getCommands",
+        "runWizardCommandWithoutExecutionCommandId": "azureFunctions.agent.runWizardCommandWithoutExecution",
+        "runWizardCommandWithInputsCommandId": "azureFunctions.agent.runWizardCommandWithInputs",
+        "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs"
     }
 }

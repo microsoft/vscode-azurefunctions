@@ -56,10 +56,10 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
 
-    commands.registerCommand('azureFunctions.getCommands', getCommands);
-    commands.registerCommand('azureFunctions.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
-    commands.registerCommand('azureFunctions.runWizardCommandWithInputs', runWizardCommandWithInputs);
-    commands.registerCommand('azureFunctions.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
+    commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
+    commands.registerCommand('azureFunctions.agent.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
