@@ -98,7 +98,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep({ parameterDisplayTitle: "Function App Name", parameterDisplayDescription: "The name of the new function app." }));
+        promptSteps.push(new SiteNameStep("functionApp"));
         promptSteps.push(new FunctionAppStackStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
