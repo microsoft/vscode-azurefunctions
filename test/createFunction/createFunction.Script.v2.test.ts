@@ -191,7 +191,7 @@ function addSuite(tester: FunctionTesterBase): void {
         }
     ];
 
-    if (test instanceof TypeScriptFunctionTester) {
+    if (tester instanceof TypeScriptFunctionTester) {
         testCases.splice(1, 1); // Remove the Azure CosmosDB trigger test for TypeScript
         // Tracking: https://github.com/Azure/azure-functions-templates/pull/1401;
         // https://github.com/Azure/azure-functions-templates/issues/1391
