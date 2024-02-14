@@ -39,7 +39,10 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 13 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 16 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 15 },
+            /* TypeScript should have 16, but missing CosmosDB trigger
+            Tracking: https://github.com/Azure/azure-functions-templates/pull/1401;
+            https://github.com/Azure/azure-functions-templates/issues/1391 */
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 14 },
