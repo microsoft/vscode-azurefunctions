@@ -7,6 +7,7 @@ import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
 import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
 import { registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapTreeNodeCommandCallback, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands } from "vscode";
+import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -54,6 +55,12 @@ import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
+
+    commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
+    commands.registerCommand('azureFunctions.agent.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
+
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
