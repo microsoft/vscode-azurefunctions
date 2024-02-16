@@ -18,7 +18,7 @@ import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath?: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will have to be installed manually.');
