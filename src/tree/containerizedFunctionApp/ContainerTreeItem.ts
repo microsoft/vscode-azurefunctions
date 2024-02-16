@@ -6,7 +6,7 @@
 import { type AzExtParentTreeItem } from "@microsoft/vscode-azext-utils";
 import { SlotContainerTreeItemBase } from "../SlotContainerTreeItemBase";
 import { ProjectSource } from "../projectContextValues";
-import { type ContainerSite, type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResourceBase";
+import { type ContainerSite, type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResource";
 
 export class ContainerTreeItem extends SlotContainerTreeItemBase {
     public resolved: ResolvedContainerizedFunctionAppResource;

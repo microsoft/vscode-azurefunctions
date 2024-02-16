@@ -9,7 +9,6 @@ import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext
 import { ServiceConnectorGroupTreeItem } from "@microsoft/vscode-azext-serviceconnector";
 import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
@@ -89,10 +88,6 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         return resource;
     }
 
-    public get name(): string {
-        return this.label;
-    }
-
     public get label(): string {
         return this.site.slotName ?? this.site.fullName;
     }
@@ -108,13 +103,6 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public get iconPath(): TreeItemIconPath {
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
         return treeUtils.getIconPath(proxyTree.contextValue);
-    }
-
-    public get viewProperties(): ViewPropertiesModel {
-        return {
-            data: this.site,
-            label: this.name,
-        }
     }
 
     private get _state(): string | undefined {

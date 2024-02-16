@@ -8,7 +8,7 @@ import { type FuncVersion } from "../FuncVersion";
 import { type IParsedHostJson } from "../funcConfig/host";
 import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from "./IProjectTreeItem";
 import { type ResolvedFunctionAppResource } from "./ResolvedFunctionAppResource";
-import { type ResolvedContainerizedFunctionAppResource } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase";
+import { type ResolvedContainerizedFunctionAppResource } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { ProjectSource } from "./projectContextValues";
 
 export class SlotContainerTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {

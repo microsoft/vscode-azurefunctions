@@ -47,7 +47,7 @@ export class ImageTreeItem extends AzExtParentTreeItem {
     }
 
     public get description(): string | undefined {
-        return 'Read-only'
+        return localize('readonly', 'Read-only');
     }
 
     public get iconPath(): TreeItemIconPath {

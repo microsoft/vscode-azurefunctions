@@ -25,7 +25,7 @@ import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSetting
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
 import { ContainerTreeItem } from './containerizedFunctionApp/ContainerTreeItem';
-import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase';
+import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctionApp/ResolvedContainerizedFunctionAppResource';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {

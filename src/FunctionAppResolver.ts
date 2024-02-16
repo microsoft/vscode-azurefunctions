@@ -3,7 +3,7 @@ import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, nonNullValueAndProp, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
-import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase";
+import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createWebSiteClient } from "./utils/azureClients";
 
 export class FunctionAppResolver implements AppResourceResolver {
@@ -24,8 +24,7 @@ export class FunctionAppResolver implements AppResourceResolver {
             const site = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
 
             if (nonNullValueAndProp(site, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-non-null-asserted-optional-chain
-                const fullSite = await client.webApps.get(site?.resourceGroup!, site?.name!)
+                const fullSite = await client.webApps.get(nonNullValueAndProp(site, 'resourceGroup'), nonNullValueAndProp(site, 'name'));
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
 

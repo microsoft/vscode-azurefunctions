@@ -8,7 +8,6 @@ import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { DialogResponses, nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { ProgressLocation, window } from "vscode";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../../FuncVersion";
 import { ext } from "../../extensionVariables";
@@ -65,37 +64,12 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         return resource;
     }
 
-    public get name(): string {
-        return this.label;
-    }
-
     public get label(): string {
         return nonNullProp(this.site, 'name');
     }
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('azFuncProductionSlot');
-    }
-
-    public get viewProperties(): ViewPropertiesModel {
-        return {
-            data: this.site,
-            label: this.name,
-        }
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
-
-        this._functionsTreeItem = new ContainerFunctionsTreeItem(proxyTree, this.site);
-        this._imageTreeItem = new ImageTreeItem(proxyTree, this.site, this.maskedValuesToAdd);
-        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, new ContainerAppSettingsClientProvider(proxyTree, proxyTree.subscription), ext.prefix, {
-            contextValuesToAdd: ['azFunc']
-        });
-
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this._imageTreeItem, this.appSettingsTreeItem]
-
-        return children;
     }
 
     public async isReadOnly(): Promise<boolean> {
@@ -148,6 +122,20 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         }
         appSettings.properties[key] = value;
         await client.updateApplicationSettings(appSettings);
+    }
+
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
+        const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
+
+        this._functionsTreeItem = new ContainerFunctionsTreeItem(proxyTree, this.site);
+        this._imageTreeItem = new ImageTreeItem(proxyTree, this.site, this.maskedValuesToAdd);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, new ContainerAppSettingsClientProvider(proxyTree, proxyTree.subscription), ext.prefix, {
+            contextValuesToAdd: ['azFunc']
+        });
+
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this._imageTreeItem, this.appSettingsTreeItem]
+
+        return children;
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
