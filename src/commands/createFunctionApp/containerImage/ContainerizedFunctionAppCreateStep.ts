@@ -45,7 +45,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
 
     private async getNewSite(context: IFunctionAppWizardContext): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
-        const site: Site = {
+        return {
             name: context.newSiteName,
             kind: 'functionapp',
             location: nonNullProp(location, 'name'),
@@ -80,6 +80,5 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                 ]
             }
         }
-        return site;
     }
 }
