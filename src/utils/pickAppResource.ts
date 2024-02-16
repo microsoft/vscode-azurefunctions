@@ -9,7 +9,7 @@ import { functionFilter } from "../constants";
 import { ext } from "../extensionVariables";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
 
-export async function pickContainerOrFunctionApp(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<SlotTreeItem> {
+export async function pickAppResource(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<SlotTreeItem> {
     return await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
         filter: functionFilter, ...options
     });

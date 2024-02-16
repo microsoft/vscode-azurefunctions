@@ -5,11 +5,11 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
-import { pickContainerOrFunctionApp } from '../utils/pickContainerOrFunctionApp';
+import { pickAppResource } from '../utils/pickAppResource';
 
 export async function deleteFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await pickContainerOrFunctionApp({ ...context, suppressCreatePick: true });
+        node = await pickAppResource({ ...context, suppressCreatePick: true });
     }
 
     await node.deleteTreeItem(context);
