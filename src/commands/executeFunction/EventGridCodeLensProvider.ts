@@ -1,4 +1,8 @@
-import { CodeLens, CodeLensProvider, Range } from 'vscode';
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+import { CodeLens, Range, type CodeLensProvider } from 'vscode';
 import { localize } from '../../localize';
 
 export class EventGridCodeLensProvider implements CodeLensProvider {

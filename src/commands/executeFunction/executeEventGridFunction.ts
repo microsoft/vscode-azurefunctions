@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { localize } from '../../localize';
-import { FunctionTreeItemBase } from '../../tree/FunctionTreeItemBase';
+import { type FunctionTreeItemBase } from '../../tree/FunctionTreeItemBase';
 import { feedUtils } from '../../utils/feedUtils';
-import { IFunction } from '../../workspace/LocalFunction';
-import { EventGridSource, supportedEventGridSourceLabels, supportedEventGridSources } from './eventGridSources';
+import { type IFunction } from '../../workspace/LocalFunction';
+import { supportedEventGridSourceLabels, supportedEventGridSources, type EventGridSource } from './eventGridSources';
 import { executeFunctionWithInput } from './executeFunction';
 
 type FileMetadata = {
