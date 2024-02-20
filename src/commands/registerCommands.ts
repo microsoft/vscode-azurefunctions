@@ -13,7 +13,6 @@ import {
     type AzExtTreeItem,
     type IActionContext,
 } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
 import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
@@ -47,7 +46,8 @@ import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
 import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/EventGridCodeLensProvider';
-import { executeFunction, executeFunctionWithInput } from './executeFunction/executeFunction';
+import { executeFunction } from './executeFunction/executeFunction';
+import { sendEventGridRequest } from './executeFunction/sendEventGridRequest';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -150,26 +150,5 @@ export function registerCommands(): void {
     });
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
-    registerCommand('azureFunctions.eventGrid.sendMockRequest', async (context: IActionContext) => {
-        if (!ext.isExecutingFunction || !ext.currentExecutingFunctionNode) {
-            throw new Error(
-                'No function is currently being executed. This command is intended to be run while an EventGrid function is being executed. Please make to execute your EventGrid function.',
-            );
-        }
-        const activeEditor = vscode.window.activeTextEditor;
-        if (!activeEditor) {
-            throw new Error('No active text editor found.');
-        }
-        const document = activeEditor.document;
-        await document.save();
-        const requestContent: string = document.getText();
-
-        console.log(`Executing command...`);
-        console.log(`context is ${context}`);
-        console.log(`Request content is: ${requestContent}`);
-
-        await executeFunctionWithInput(context, requestContent, ext.currentExecutingFunctionNode);
-
-        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-    });
+    registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 }
