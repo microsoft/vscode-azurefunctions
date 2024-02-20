@@ -371,7 +371,7 @@
                 "title": "%azureFunctions.eventGrid.sendMockRequest%",
                 "category": "Azure Functions",
                 "icon": "$(notebook-execute)"
-              }
+            }
         ],
         "submenus": [
             {
@@ -726,6 +726,13 @@
                     "command": "azureFunctions.addBinding",
                     "when": "resourceFilename==function.json",
                     "group": "zzz_binding@1"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "azureFunctions.eventGrid.sendMockRequest",
+                    "when": "resourceFilename=~/.*.eventgrid.json$/",
+                    "group": "navigation@1"
                 }
             ]
         },

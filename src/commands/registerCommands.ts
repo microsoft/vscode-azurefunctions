@@ -46,7 +46,8 @@ import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
 import { editAppSetting } from './editAppSetting';
-import { executeFunction } from './executeFunction/executeFunction';
+import { EventGridCodeLensProvider } from './executeFunction/EventGridCodeLensProvider';
+import { executeFunction, executeFunctionWithInput } from './executeFunction/executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -147,9 +148,6 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => {
         ext.outputChannel.show();
     });
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createServiceConnector', createServiceConnector);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteServiceConnector', deleteServiceConnector);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.validateServiceConnector', validateServiceConnector);
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', async (context: IActionContext) => {

@@ -4,9 +4,39 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, type INewStorageAccountDefaults } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, parseError, type AzExtTreeItem, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
+import {
+    AppInsightsCreateStep,
+    AppInsightsListStep,
+    AppKind,
+    AppServicePlanCreateStep,
+    CustomLocationListStep,
+    LogAnalyticsCreateStep,
+    SiteNameStep,
+    WebsiteOS,
+    type IAppServiceWizardContext,
+} from '@microsoft/vscode-azext-azureappservice';
+import {
+    LocationListStep,
+    ResourceGroupCreateStep,
+    ResourceGroupListStep,
+    StorageAccountCreateStep,
+    StorageAccountKind,
+    StorageAccountListStep,
+    StorageAccountPerformance,
+    StorageAccountReplication,
+    SubscriptionTreeItemBase,
+    uiUtils,
+    type INewStorageAccountDefaults,
+} from '@microsoft/vscode-azext-azureutils';
+import {
+    AzureWizard,
+    parseError,
+    type AzExtTreeItem,
+    type AzureWizardExecuteStep,
+    type AzureWizardPromptStep,
+    type IActionContext,
+    type ICreateChildImplContext,
+} from '@microsoft/vscode-azext-utils';
 import { type WorkspaceFolder } from 'vscode';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
@@ -16,7 +46,7 @@ import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/Funct
 import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
-import { localize } from "../localize";
+import { localize } from '../localize';
 import { createActivityContext } from '../utils/activityUtils';
 import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
@@ -75,14 +105,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             },
             (site: Site) => {
                 return site.name;
-            }
+            },
         );
     }
 
     public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
-        const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+        const language: string | undefined = context.workspaceFolder
+            ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder)
+            : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
         // Ensure all the providers are registered before
@@ -93,21 +125,22 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             resourceGroupDeferLocationStep: true,
             version,
             language,
-            ...(await createActivityContext())
+            ...(await createActivityContext()),
         });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep("functionApp"));
+        promptSteps.push(new SiteNameStep());
         promptSteps.push(new FunctionAppStackStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
             performance: StorageAccountPerformance.Standard,
-            replication: StorageAccountReplication.LRS
+            replication: StorageAccountReplication.LRS,
         };
 
-        if (version === FuncVersion.v1) { // v1 doesn't support linux
+        if (version === FuncVersion.v1) {
+            // v1 doesn't support linux
             wizardContext.newSiteOS = WebsiteOS.windows;
         }
 
@@ -124,22 +157,21 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             promptSteps.push(new ResourceGroupListStep());
             CustomLocationListStep.addStep(wizardContext, promptSteps);
             promptSteps.push(new FunctionAppHostingPlanStep());
-            promptSteps.push(new StorageAccountListStep(
-                storageAccountCreateOptions,
-                {
+            promptSteps.push(
+                new StorageAccountListStep(storageAccountCreateOptions, {
                     // The account type must support blobs, queues, and tables.
                     // See: https://aka.ms/Cfqnrc
                     kind: [
                         // Blob-only accounts don't support queues and tables
-                        StorageAccountKind.BlobStorage
+                        StorageAccountKind.BlobStorage,
                     ],
                     performance: [
                         // Premium performance accounts don't support queues and tables
-                        StorageAccountPerformance.Premium
+                        StorageAccountPerformance.Premium,
                     ],
-                    learnMoreLink: 'https://aka.ms/Cfqnrc'
-                }
-            ));
+                    learnMoreLink: 'https://aka.ms/Cfqnrc',
+                }),
+            );
             promptSteps.push(new AppInsightsListStep());
         }
 
@@ -154,7 +186,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps,
             title,
             showLoadingPrompt: context.skipExecute !== true,
-            skipExecute: context.skipExecute === true
+            skipExecute: context.skipExecute === true,
         });
 
         await wizard.prompt();
@@ -163,7 +195,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
-                throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
+                throw new Error(
+                    localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'),
+                );
             }
             wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
             setConsumptionPlanProperties(wizardContext);
@@ -171,7 +205,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.newAppInsightsName = newName;
         }
 
-        wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
+        wizardContext.activityTitle = localize(
+            'functionAppCreateActivityTitle',
+            'Create Function App "{0}"',
+            nonNullProp(wizardContext, 'newSiteName'),
+        );
         await wizard.execute();
 
         const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
@@ -185,7 +223,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 }
 
 async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promise<FuncVersion> {
-    const settingValue: string | undefined = context.workspaceFolder ? getWorkspaceSetting(funcVersionSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(funcVersionSetting);
+    const settingValue: string | undefined = context.workspaceFolder
+        ? getWorkspaceSetting(funcVersionSetting, context.workspaceFolder)
+        : getWorkspaceSettingFromAnyFolder(funcVersionSetting);
     // Try to get VS Code setting for version (aka if they have a project open)
     let version: FuncVersion | undefined = tryParseFuncVersion(settingValue);
     context.telemetry.properties.runtimeSource = 'VSCodeSetting';
