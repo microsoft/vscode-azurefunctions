@@ -6,12 +6,12 @@
 import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import { type ExtensionContext } from 'vscode';
-import { EventGridCodeLensProvider } from './commands/executeFunction/EventGridCodeLensProvider';
+import { type EventGridCodeLensProvider } from './commands/executeFunction/EventGridCodeLensProvider';
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
-import { FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
-import { IFunction } from './workspace/LocalFunction';
+import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
+import { type IFunction } from './workspace/LocalFunction';
 
 /**
  * Used for extensionVariables that can also be set per-action
