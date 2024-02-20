@@ -5,8 +5,16 @@
 
 import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
 import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
-import { registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapTreeNodeCommandCallback, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { commands } from "vscode";
+import {
+    registerCommand,
+    registerCommandWithTreeNodeUnwrapping,
+    unwrapTreeNodeCommandCallback,
+    type AzExtParentTreeItem,
+    type AzExtTreeItem,
+    type IActionContext,
+} from '@microsoft/vscode-azext-utils';
+import * as vscode from 'vscode';
+import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
@@ -38,7 +46,7 @@ import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
 import { editAppSetting } from './editAppSetting';
-import { executeFunction } from './executeFunction';
+import { executeFunction } from './executeFunction/executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -56,16 +64,22 @@ import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
-
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
     commands.registerCommand('azureFunctions.agent.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.appSettings.add',
+        async (context: IActionContext, node?: AzExtParentTreeItem) =>
+            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node));
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.appSettings.delete',
+        async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.edit', editAppSetting);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.encrypt', encryptLocalSettings);
@@ -80,11 +94,21 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createNewProjectWithDockerfile', async (context: IActionContext) => await createNewProjectInternal(context, { executeStep: new CreateDockerfileProjectStep(), languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i }));
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.createNewProjectWithDockerfile',
+        async (context: IActionContext) =>
+            await createNewProjectInternal(context, {
+                executeStep: new CreateDockerfileProjectStep(),
+                languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i,
+            }),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunctionApp', deleteFunctionApp);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node));
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.deleteSlot',
+        async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
@@ -95,7 +119,9 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openFile', openFile);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openInPortal', openDeploymentInPortal);
-    registerCommand('azureFunctions.openWalkthrough', () => commands.executeCommand('workbench.action.openWalkthrough', 'ms-azuretools.vscode-azurefunctions#functionsStart'));
+    registerCommand('azureFunctions.openWalkthrough', () =>
+        commands.executeCommand('workbench.action.openWalkthrough', 'ms-azuretools.vscode-azurefunctions#functionsStart'),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.pickProcess', pickFuncProcess);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', redeployDeployment);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.restartFunctionApp', restartFunctionApp);
@@ -107,10 +133,45 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.stopFunctionApp', stopFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.stopStreamingLogs', stopStreamingLogs);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.swapSlot', swapSlot);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.toggleAppSettingVisibility', async (context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(context); }, 250);
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.toggleAppSettingVisibility',
+        async (context: IActionContext, node: AppSettingTreeItem) => {
+            await node.toggleValueVisibility(context);
+        },
+        250,
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
     registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapTreeNodeCommandCallback(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => {
+        ext.outputChannel.show();
+    });
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createServiceConnector', createServiceConnector);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteServiceConnector', deleteServiceConnector);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.validateServiceConnector', validateServiceConnector);
+    ext.eventGridProvider = new EventGridCodeLensProvider();
+    ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
+    registerCommand('azureFunctions.eventGrid.sendMockRequest', async (context: IActionContext) => {
+        if (!ext.isExecutingFunction || !ext.currentExecutingFunctionNode) {
+            throw new Error(
+                'No function is currently being executed. This command is intended to be run while an EventGrid function is being executed. Please make to execute your EventGrid function.',
+            );
+        }
+        const activeEditor = vscode.window.activeTextEditor;
+        if (!activeEditor) {
+            throw new Error('No active text editor found.');
+        }
+        const document = activeEditor.document;
+        await document.save();
+        const requestContent: string = document.getText();
+
+        console.log(`Executing command...`);
+        console.log(`context is ${context}`);
+        console.log(`Request content is: ${requestContent}`);
+
+        await executeFunctionWithInput(context, requestContent, ext.currentExecutingFunctionNode);
+
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    });
 }
