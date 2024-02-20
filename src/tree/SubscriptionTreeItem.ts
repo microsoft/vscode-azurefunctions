@@ -130,7 +130,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep());
+        promptSteps.push(new SiteNameStep('functionApp'));
         promptSteps.push(new FunctionAppStackStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
