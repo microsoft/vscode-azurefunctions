@@ -115,6 +115,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
+        await detectDockerfile(context);
+
         if (!wizardContext.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
@@ -148,9 +150,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ));
             promptSteps.push(new AppInsightsListStep());
         }
-
-
-        await detectDockerfile(context);
 
         if (context.dockerfilePath) {
             const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
