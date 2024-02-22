@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ext } from "@microsoft/vscode-azext-serviceconnector";
 import { AzureWizardExecuteStep, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
+import { ext } from "../../../extensionVariables";
 import { cpUtils } from "../../../utils/cpUtils";
 import { type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 
