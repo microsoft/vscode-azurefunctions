@@ -20,6 +20,7 @@ import { LocalProjectTreeItemBase } from './localProject/LocalProjectTreeItemBas
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
+// TODO: Remove this file. Only the long running tests rely on it (which we need to redo)
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     private _projectDisposables: Disposable[] = [];
 

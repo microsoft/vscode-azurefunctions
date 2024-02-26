@@ -175,10 +175,6 @@
                 "command": "azureFunctions.createNewProject",
                 "title": "%azureFunctions.createNewProject%",
                 "category": "Azure Functions",
-                "icon": {
-                    "light": "resources/light/CreateNewProject.svg",
-                    "dark": "resources/dark/CreateNewProject.svg"
-                },
                 "enablement": "!virtualWorkspace"
             },
             {
@@ -369,10 +365,6 @@
                     "group": "1_projects@1"
                 },
                 {
-                    "command": "azureFunctions.createNewProject",
-                    "group": "1_projects@2"
-                },
-                {
                     "command": "azureFunctions.createNewProjectWithDockerfile",
                     "group": "1_projects@3"
                 },
@@ -397,6 +389,16 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.*ReadWrite;Functions;/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.*ReadWrite;Functions;/i",
+                    "group": "1@1"
+                },
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
@@ -1078,7 +1080,7 @@
                         "id": "create",
                         "title": "%azureFunctions.walkthrough.functionsStart.create.title%",
                         "completionEvents": [
-                            "onCommand:azureFunctions.createNewProject"
+                            "onCommand:azureFunctions.createFunction"
                         ],
                         "description": "%azureFunctions.walkthrough.functionsStart.create.description%",
                         "media": {
