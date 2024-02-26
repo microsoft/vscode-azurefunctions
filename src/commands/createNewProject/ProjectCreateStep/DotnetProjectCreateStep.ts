@@ -33,6 +33,8 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const projectName: string = path.basename(context.projectPath);
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
 
+        // For containerized function apps we need to call func init before intialization as we want the .csproj file to be overwritten with the correct version
+        // currentely the version created by func init is behind the template version
         if (context.containerizedProject) {
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", "dotnet-isolated", "--docker");
         } else {
