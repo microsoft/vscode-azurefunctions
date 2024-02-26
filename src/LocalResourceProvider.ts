@@ -41,15 +41,15 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
             children.push(new InvalidLocalProjectTreeItem(parent, invalidProject.projectPath, invalidProject.error, invalidProject.workspaceFolder));
         }
 
-        if (!hasLocalProject && children.length > 0 && children[0] instanceof GenericTreeItem) {
+        if (!hasLocalProject && children.length === 0) {
             const ti: GenericTreeItem = new GenericTreeItem(parent, {
-                label: localize('createFunctionLocally', 'Create function locally...'),
-                commandId: 'azureFunctions.createFunction',
-                contextValue: 'createFunction',
+                label: localize('createFunctionLocally', 'Create New Project...'),
+                commandId: 'azureFunctions.createNewProject',
+                contextValue: 'createNewProject',
                 iconPath: treeUtils.getThemedIconPath('CreateNewProject')
             });
             ti.commandArgs = [];
-            children.unshift(ti);
+            children.push(ti);
         }
 
         return children;

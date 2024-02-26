@@ -87,6 +87,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deployProject', deployProductionSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);

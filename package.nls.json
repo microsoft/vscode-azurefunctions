@@ -24,6 +24,7 @@
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
     "azureFunctions.deleteSlot": "Delete Slot...",
+    "azureFunctions.deployProject": "Deploy function to Azure...",
     "azureFunctions.deploy": "Deploy to Function App...",
     "azureFunctions.deploySlot": "Deploy to Slot...",
     "azureFunctions.deploySubpath": "The default subpath of a workspace folder to use when deploying. If set, you will not be prompted for the folder path when deploying.",

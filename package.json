@@ -204,6 +204,13 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.deployProject",
+                "title": "%azureFunctions.deployProject%",
+                "category": "Azure Functions",
+                "icon": "$(cloud-upload)",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
@@ -369,7 +376,7 @@
                     "group": "1_projects@3"
                 },
                 {
-                    "command": "azureFunctions.deploy",
+                    "command": "azureFunctions.deployProject",
                     "group": "2_deploy@1"
                 },
                 {
