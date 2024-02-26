@@ -7,6 +7,7 @@ import { AzExtFsExtra, DialogResponses, type IActionContext } from '@microsoft/v
 import * as path from 'path';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
@@ -31,7 +32,12 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
 
         const projectName: string = path.basename(context.projectPath);
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
-        await this.confirmOverwriteExisting(context, projName);
+
+        if (context.containerizedProject) {
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", "dotnet-isolated", "--docker");
+        } else {
+            await this.confirmOverwriteExisting(context, projName);
+        }
 
         const majorVersion: string = getMajorVersion(version);
         const workerRuntime = nonNullProp(context, 'workerRuntime');
