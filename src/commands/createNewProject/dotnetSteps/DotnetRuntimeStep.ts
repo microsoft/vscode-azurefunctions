@@ -53,9 +53,6 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
         const runtimes = await getRuntimes(context);
         const picks: IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[] = [];
         for (const runtime of runtimes) {
-            if (context.containerizedProject && runtime.displayInfo.description === 'LTS') {
-                continue;
-            }
             picks.push({
                 label: runtime.displayInfo.displayName,
                 description: runtime.displayInfo.description,
