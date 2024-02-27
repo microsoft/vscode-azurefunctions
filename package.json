@@ -372,20 +372,8 @@
                     "group": "1_projects@1"
                 },
                 {
-                    "command": "azureFunctions.createNewProjectWithDockerfile",
-                    "group": "1_projects@3"
-                },
-                {
                     "command": "azureFunctions.deployProject",
                     "group": "2_deploy@1"
-                },
-                {
-                    "command": "azureFunctions.createFunctionApp",
-                    "group": "3_create@1"
-                },
-                {
-                    "command": "azureFunctions.createFunctionAppAdvanced",
-                    "group": "3_create@2"
                 }
             ],
             "view/title": [
