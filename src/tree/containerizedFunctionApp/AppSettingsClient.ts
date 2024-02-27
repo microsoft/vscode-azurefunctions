@@ -35,6 +35,7 @@ export class ContainerAppSettingsClient implements IAppSettingsClient {
         this._resourceGroup = nonNullProp(site, 'resourceGroup');
         this.isLinux = true;
         this._siteName = nonNullProp(site, 'name');
+        this.fullName = this._siteName;
     }
 
     public async listApplicationSettings(): Promise<StringDictionary> {
