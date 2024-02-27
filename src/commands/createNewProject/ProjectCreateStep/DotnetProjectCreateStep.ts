@@ -37,10 +37,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         // For containerized function apps we need to call func init before intialization as we want the .csproj file to be overwritten with the correct version
         // currentely the version created by func init is behind the template version
         if (context.containerizedProject) {
-            let runtime = 'dotnet-isolated';
-            if (workerRuntime.displayInfo.description === 'LTS') {
-                runtime = 'dotnet'
-            }
+            const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, "--docker");
         } else {
             await this.confirmOverwriteExisting(context, projName);
