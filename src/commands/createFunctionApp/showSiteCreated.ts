@@ -9,7 +9,7 @@ import { window } from 'vscode';
 import { viewOutput } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type ContainerSite } from '../../tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResourceBase';
+import { type ContainerSite } from '../../tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource';
 
 export interface ISiteCreatedOptions extends IActionContext {
     showCreatedNotification?: boolean;
