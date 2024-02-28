@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.13.4 - 2024-02-27
+### Fixed
+* [[3978]](https://github.com/microsoft/vscode-azurefunctions/issues/3978) Fixes filtering based on `files.exclude` setting when deploying with no `.funcignore`
+
 ## 1.13.3 - 2024-02-05
 
 ### Fixed
