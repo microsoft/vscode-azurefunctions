@@ -7,6 +7,7 @@ import { AzExtFsExtra, DialogResponses, type IActionContext } from '@microsoft/v
 import * as path from 'path';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
@@ -31,10 +32,18 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
 
         const projectName: string = path.basename(context.projectPath);
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
-        await this.confirmOverwriteExisting(context, projName);
+
+        const workerRuntime = nonNullProp(context, 'workerRuntime');
+        // For containerized function apps we need to call func init before intialization as we want the .csproj file to be overwritten with the correct version
+        // currentely the version created by func init is behind the template version
+        if (context.containerizedProject) {
+            const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, "--docker");
+        } else {
+            await this.confirmOverwriteExisting(context, projName);
+        }
 
         const majorVersion: string = getMajorVersion(version);
-        const workerRuntime = nonNullProp(context, 'workerRuntime');
         let identity: string = workerRuntime.projectTemplateId.csharp;
         if (language === ProjectLanguage.FSharp) {
             identity = identity.replace('CSharp', 'FSharp'); // they don't have FSharp in the feed yet

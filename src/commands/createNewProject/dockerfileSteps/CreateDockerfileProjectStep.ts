@@ -12,12 +12,11 @@ export class CreateDockerfileProjectStep extends AzureWizardExecuteStep<IFunctio
     public priority: number = 100;
 
     public async execute(context: IFunctionWizardContext): Promise<void> {
-        let language = nonNullValueAndProp(context, 'language').toLowerCase();
-        if (language === 'c#') {
-            language = 'csharp';
+        const language = nonNullValueAndProp(context, 'language').toLowerCase();
+        // If the language is C# this command needs to be called earlier as the versioning in the .csproj file is different from the one in the template
+        if (language !== 'c#') {
+            await cpUtils.executeCommand(ext.outputChannel, nonNullValueAndProp(context, 'projectPath'), "func", "init", "--worker-runtime", language, "--docker");
         }
-
-        await cpUtils.executeCommand(ext.outputChannel, nonNullValueAndProp(context, 'projectPath'), "func", "init", "--worker-runtime", language, "--docker");
     }
 
     public shouldExecute(): boolean {

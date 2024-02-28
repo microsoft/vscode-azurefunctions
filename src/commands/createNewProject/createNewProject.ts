@@ -61,6 +61,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
         if (!await validateFuncCoreToolsInstalled(context, message)) {
             throw new UserCancelledError('validateFuncCoreToolsInstalled');
         }
+        wizardContext.containerizedProject = true;
     }
 
     if (options.folderPath) {
