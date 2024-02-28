@@ -414,7 +414,7 @@
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFuncProductionSlot/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFuncProductionSlot(?!.*container)/",
                     "group": "2@1"
                 },
                 {
@@ -424,22 +424,22 @@
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "3@3"
                 },
                 {
@@ -459,17 +459,17 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "4@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
                     "group": "4@2"
                 },
                 {
                     "command": "azureFunctions.startRemoteDebug",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot/ && config.azureFunctions.enableRemoteDebugging == true",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!.*container)/ && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
                 },
                 {
@@ -534,12 +534,12 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;(?!.*container)/i",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /Remote;.*;Function;(?!.*container)/i",
                     "group": "3@2"
                 },
                 {
@@ -1155,7 +1155,7 @@
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",
-        "@azure/arm-appservice": "^13.0.3",
+        "@azure/arm-appservice": "^14.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
         "@azure/arm-servicebus": "^5.0.0",
