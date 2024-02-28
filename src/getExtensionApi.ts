@@ -29,9 +29,10 @@ export async function getAzureContainerAppsApi(context: IActionContext, installM
         return acaExtension.getApi<acaApi.AzureContainerAppsExtensionApi>('^0.0.1');
     }
 
-    await context.ui.showWarningMessage(installMessage ?? localize('acaInstall', 'You must have the "Azure Container Apps" extension installed to perform this operation.'), { title: localize('install', 'Install'), stepName: 'installContainerApps' });
-    const commandToRun: string = 'extension.open';
-    void commands.executeCommand(commandToRun, acaExtensionId);
+    await context.ui.showWarningMessage(installMessage ??
+        localize('acaInstall', 'You must have the "Azure Container Apps" extension installed to perform this operation.'), { title: 'Install', stepName: 'installContainerApps' });
+
+    void commands.executeCommand('extension.open', acaExtensionId);
 
     // We still need to throw an error even if the user installs
     throw new UserCancelledError('postInstallContainerApps');

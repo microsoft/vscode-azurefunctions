@@ -8,11 +8,11 @@ import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureut
 import { localize } from '../../../../localize';
 import { createServiceBusClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
-import { type IBindingWizardContext } from '../../IBindingWizardContext';
+import { type IFunctionWizardContext } from '../../../createFunction/IFunctionWizardContext';
 import { AzureConnectionCreateStepBase, type IConnection } from '../AzureConnectionCreateStepBase';
 import { type IServiceBusWizardContext } from './IServiceBusWizardContext';
 
-export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IBindingWizardContext> {
+export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IFunctionWizardContext> {
     public async getConnection(context: IServiceBusWizardContext): Promise<IConnection> {
         const sbNamespace: SBNamespace = nonNullProp(context, 'sbNamespace');
         const id: string = nonNullProp(sbNamespace, 'id');

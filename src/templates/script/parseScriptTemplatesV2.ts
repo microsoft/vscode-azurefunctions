@@ -5,9 +5,11 @@
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { type ActionType, type ProjectLanguage } from '../../constants';
+import { localize } from '../../localize';
 import { type ResourceType } from '../IBindingTemplate';
 import { type FunctionV2Template } from '../IFunctionTemplate';
 import { TemplateSchemaVersion } from '../TemplateProviderBase';
+import { getResourceValue } from './parseScriptTemplates';
 
 /**
  * Describes script template resources to be used for parsing
@@ -72,11 +74,7 @@ interface RawUserPrompt {
     name: string;
     label: string;
     help?: string;
-    validators?: {
-        // string representation of a regex
-        expression: string;
-        errorText: string;
-    }[];
+    validators?: UserPromptValidator[];
     value: 'string' | 'enum' | 'boolean';
     enum?: {
         value: string;
@@ -85,6 +83,11 @@ interface RawUserPrompt {
     resource?: ResourceType,
     placeHolder?: string;
 }
+
+type UserPromptValidator = {
+    expression: string;
+    errorText: string;
+};
 
 export interface ParsedInput extends RawUserPrompt, RawInput {
 
@@ -139,9 +142,18 @@ export function parseUserPrompts(rawUserPrompts: object[], resources: Resources)
             // all of the properties in the rawResources are in the format of "param_name" but the keys in the rawUserPrompt are in the format of "param-name"
             const paramName = userPrompt[key] as unknown;
             if (typeof paramName === 'string' && paramName.startsWith('$')) {
-                const resourceKey = paramName.substring(1);
-                // TODO: handle localization
-                userPrompt[key] = resources['en'][resourceKey];
+                userPrompt[key] = getResourceValue(resources, paramName, true) || paramName;
+            } else if (key === 'validators' && Array.isArray(rawUserPrompt[key])) {
+                const validators: UserPromptValidator[] = rawUserPrompt[key] as UserPromptValidator[];
+                for (const validator of validators) {
+                    // there are a few edge cases with tokens where the format is [variables('param_name')] instead of $param_name
+                    const matches: RegExpMatchArray | null = validator.errorText.match(/\[variables\(\'(.*)\'\)\]/);
+                    // but in the resources key is $variables_paramName
+                    validator.errorText = getResourceValue(resources, matches ? '$variables_' + matches[1] : validator.errorText, true)
+                        || localize('validatorError', 'Invalid input');
+                }
+
+                userPrompt[key] = validators;
             }
         }
 
@@ -149,4 +161,3 @@ export function parseUserPrompts(rawUserPrompts: object[], resources: Resources)
     }
     return userPrompts;
 }
-

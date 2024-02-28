@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { type ExecuteActivityContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
+import { type ExecuteActivityContext, type IAzureAgentInput, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { type FuncVersion } from '../../FuncVersion';
 import { type DurableBackendValues } from '../../constants';
 import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
@@ -29,4 +29,6 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+
+    ui: IAzureAgentInput;
 }
