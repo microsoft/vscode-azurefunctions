@@ -59,6 +59,7 @@ export namespace ext {
     export let rgApi: AzureHostExtensionApi;
     export let eventGridProvider: EventGridCodeLensProvider;
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
+    export const fileToFunctionNodeMap: Map<string, FunctionTreeItemBase | IFunction> = new Map();
     export let isExecutingFunction: boolean | undefined;
 }
 

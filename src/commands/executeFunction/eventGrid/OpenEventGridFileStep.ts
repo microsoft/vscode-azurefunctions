@@ -1,9 +1,10 @@
-import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
+import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from "path";
 import * as vscode from 'vscode';
 import { type Progress } from "vscode";
+import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
 import { type ExecuteEventGridFunctionContext } from "./ExecuteEventGridFunctionContext";
@@ -29,10 +30,11 @@ export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGr
         await vscode.window.showTextDocument(document, {
             preview: false,
         });
+        ext.fileToFunctionNodeMap.set(document.fileName, nonNullProp(ext, 'currentExecutingFunctionNode'));
         context.fileOpened = true;
 
         // Request will be sent when the user clicks on the button or on the codelens link
-        const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Send Request' button to send the request.");
+        const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Save and Send Request' button to send the request.");
         void vscode.window.showInformationMessage(doneMsg);
 
         // Set a listener to delete the temp file after it's closed
@@ -40,6 +42,7 @@ export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGr
             const disposable = vscode.workspace.onDidCloseTextDocument(async (closedDocument) => {
                 if (closedDocument.fileName === document.fileName) {
                     try {
+                        ext.fileToFunctionNodeMap.delete(document.fileName);
                         await fs.unlink(tempFilePath);
                         resolve();
                     } catch (error) {
