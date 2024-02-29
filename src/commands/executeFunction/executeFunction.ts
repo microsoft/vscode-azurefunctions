@@ -33,46 +33,50 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         );
     }
 
-    ext.isExecutingFunction = true;
-    ext.currentExecutingFunctionNode = node;
+    try {
+        ext.isExecutingFunction = true;
+        ext.currentExecutingFunctionNode = node;
 
-    const func = node instanceof FunctionTreeItemBase ? node.function : node;
+        const func = node instanceof FunctionTreeItemBase ? node.function : node;
 
-    const triggerBindingType: string | undefined = node.triggerBindingType;
-    context.telemetry.properties.triggerBindingType = triggerBindingType;
+        const triggerBindingType: string | undefined = node.triggerBindingType;
+        context.telemetry.properties.triggerBindingType = triggerBindingType;
 
-    let functionInput: string | {} = '';
-    if (triggerBindingType === 'eventGridTrigger') {
-        return await executeEventGridFunction(context, node);
-    } else if (!func.isTimerTrigger) {
-        const prompt: string = localize('enterRequestBody', 'Enter request body');
-        let value: string | undefined;
-        if (triggerBindingType) {
-            const version: FuncVersion = await node.project.getVersion(context);
-            const templateProvider = ext.templateProvider.get(context);
-            value = await templateProvider.tryGetSampleData(context, version, triggerBindingType);
-            if (value) {
-                // Clean up the whitespace to make it more friendly for a one-line input box
-                value = value.replace(/[\r\n\t]/g, ' ');
-                value = value.replace(/ +/g, ' ');
+        let functionInput: string | {} = '';
+        if (triggerBindingType === 'eventGridTrigger') {
+            return await executeEventGridFunction(context, node);
+        } else if (!func.isTimerTrigger) {
+            const prompt: string = localize('enterRequestBody', 'Enter request body');
+            let value: string | undefined;
+            if (triggerBindingType) {
+                const version: FuncVersion = await node.project.getVersion(context);
+                const templateProvider = ext.templateProvider.get(context);
+                value = await templateProvider.tryGetSampleData(context, version, triggerBindingType);
+                if (value) {
+                    // Clean up the whitespace to make it more friendly for a one-line input box
+                    value = value.replace(/[\r\n\t]/g, ' ');
+                    value = value.replace(/ +/g, ' ');
+                }
+            }
+
+            const data: string = await context.ui.showInputBox({
+                prompt,
+                value,
+                stepName: 'requestBody',
+            });
+            try {
+                functionInput = <{}>JSON.parse(data);
+            } catch {
+                functionInput = data;
             }
         }
 
-        const data: string = await context.ui.showInputBox({
-            prompt,
-            value,
-            stepName: 'requestBody',
-        });
-        try {
-            functionInput = <{}>JSON.parse(data);
-        } catch {
-            functionInput = data;
-        }
-    }
+        await executeFunctionWithInput(context, functionInput, node);
 
-    await executeFunctionWithInput(context, functionInput, node);
-    ext.isExecutingFunction = false;
-    ext.currentExecutingFunctionNode = undefined;
+    } finally {
+        ext.isExecutingFunction = false;
+        ext.currentExecutingFunctionNode = undefined;
+    }
 }
 
 export async function executeFunctionWithInput(context: IActionContext, functionInput: string | {}, node: FunctionTreeItemBase | IFunction) {
