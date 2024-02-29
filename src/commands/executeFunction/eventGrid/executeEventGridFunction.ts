@@ -8,12 +8,12 @@ import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { localize } from '../../localize';
-import { type FunctionTreeItemBase } from '../../tree/FunctionTreeItemBase';
-import { feedUtils } from '../../utils/feedUtils';
-import { type IFunction } from '../../workspace/LocalFunction';
+import { localize } from '../../../localize';
+import { type FunctionTreeItemBase } from '../../../tree/FunctionTreeItemBase';
+import { feedUtils } from '../../../utils/feedUtils';
+import { type IFunction } from '../../../workspace/LocalFunction';
+import { executeFunctionWithInput } from '../executeFunction';
 import { supportedEventGridSourceLabels, supportedEventGridSources, type EventGridSource } from './eventGridSources';
-import { executeFunctionWithInput } from './executeFunction';
 
 type FileMetadata = {
     name: string;

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { CodeLens, Range, type CodeLensProvider } from 'vscode';
-import { localize } from '../../localize';
+import { localize } from '../../../localize';
 
 export class EventGridCodeLensProvider implements CodeLensProvider {
     public provideCodeLenses(): CodeLens[] {

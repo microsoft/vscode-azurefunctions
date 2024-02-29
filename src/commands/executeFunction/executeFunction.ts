@@ -18,7 +18,7 @@ import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionT
 import { nonNullValue } from '../../utils/nonNull';
 import { requestUtils } from '../../utils/requestUtils';
 import { type IFunction } from '../../workspace/LocalFunction';
-import { executeEventGridFunction } from './executeEventGridFunction';
+import { executeEventGridFunction } from './eventGrid/executeEventGridFunction';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase | IFunction): Promise<void> {
     context.telemetry.eventVersion = 2;

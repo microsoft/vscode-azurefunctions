@@ -5,17 +5,17 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ext } from '../../extensionVariables';
-import { localize } from '../../localize';
-import { executeFunctionWithInput } from './executeFunction';
+import { ext } from '../../../extensionVariables';
+import { localize } from '../../../localize';
+import { executeFunctionWithInput } from '../executeFunction';
 
 export async function sendEventGridRequest(context: IActionContext) {
     if (!ext.isExecutingFunction || !ext.currentExecutingFunctionNode) {
         const errorMsg = localize(
             'noFunctionBeingExecuted',
             'No function is currently being executed. ' +
-                'This command is intended to be run while an EventGrid function is being executed. ' +
-                'Please make to execute your EventGrid function.',
+            'This command is intended to be run while an EventGrid function is being executed. ' +
+            'Please make to execute your EventGrid function.',
         );
         throw new Error(errorMsg);
     }
