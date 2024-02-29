@@ -33,7 +33,7 @@ export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGr
         context.fileOpened = true;
 
         // Request will be sent when the user clicks on the button or on the codelens link
-        const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Save and Send Request' button to send the request.");
+        const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Save and execute' button to send the request.");
         void vscode.window.showInformationMessage(doneMsg);
 
         // Set a listener to delete the temp file after it's closed

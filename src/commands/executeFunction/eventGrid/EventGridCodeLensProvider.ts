@@ -12,7 +12,7 @@ export class EventGridCodeLensProvider implements CodeLensProvider {
         const lastLineLens = new CodeLens(new Range(lastLine.range.start, lastLine.range.end));
 
         const command = {
-            title: localize('saveSendRequest', 'Save and send request'),
+            title: localize('saveSendRequest', 'Save and execute'),
             command: 'azureFunctions.eventGrid.sendMockRequest',
         };
         firstLineLens.command = lastLineLens.command = command;
