@@ -3,7 +3,10 @@ import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
 import { type ExecuteEventGridFunctionContext } from "./ExecuteEventGridFunctionContext";
 
-const sampleFilesUrl = 'aka.ms/eventGridCloudEventSampleFiles';
+const sampleFilesUrl =
+    'https://api.github.com/repos/Azure/azure-rest-api-specs/contents/specification/eventgrid/data-plane/' +
+    '{eventSource}' +
+    '/stable/2018-01-01/examples/cloud-events-schema/';
 
 type FileMetadata = {
     name: string;
