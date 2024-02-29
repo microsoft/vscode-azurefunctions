@@ -1,5 +1,4 @@
-import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
-import * as fs from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as os from 'os';
 import * as path from "path";
 import * as vscode from 'vscode';
@@ -43,7 +42,7 @@ export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGr
                 if (closedDocument.fileName === document.fileName) {
                     try {
                         ext.fileToFunctionNodeMap.delete(document.fileName);
-                        await fs.unlink(tempFilePath);
+                        await AzExtFsExtra.deleteResource(tempFilePath);
                         resolve();
                     } catch (error) {
                         reject(error);
@@ -66,19 +65,19 @@ async function createTempSampleFile(eventSource: string, fileName: string, conte
     const sampleFileName = fileName.replace(/\.json$/, '.eventgrid.json');
     const filePath: string = path.join(samplesDirPath, sampleFileName);
 
-    await fs.writeFile(filePath, JSON.stringify(contents, undefined, 2));
+    await AzExtFsExtra.writeJSON(filePath, contents);
 
     return filePath;
 }
 
 async function createSamplesDirIfNotExists(eventSource: string): Promise<string> {
-    const baseDir: string = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || path.join(os.tmpdir(), 'vscode', 'azureFunctions');
+    const baseDir: string = path.join(os.tmpdir(), 'vscode', 'azureFunctions');
 
     // Create the path to the directory
-    const dirPath = path.join(baseDir, '.vscode', 'eventGridSamples', eventSource);
+    const dirPath = path.join(baseDir, 'eventGridSamples', eventSource);
     // Create the directory if it doesn't already exist
-    if (!(await fs.pathExists(dirPath))) {
-        await fs.mkdirp(dirPath);
+    if (!(await AzExtFsExtra.pathExists(dirPath))) {
+        await AzExtFsExtra.ensureDir(dirPath);
     }
     // Return the path to the directory
     return dirPath;
