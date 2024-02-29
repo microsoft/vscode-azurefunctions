@@ -8,7 +8,7 @@ import { localize } from '../../../localize';
 export class EventGridCodeLensProvider implements CodeLensProvider {
     public provideCodeLenses(document: TextDocument): CodeLens[] {
         const firstLineLens = new CodeLens(new Range(0, 0, 0, 0));
-        const lastLine = document.lineAt(document.lineCount);
+        const lastLine = document.lineAt(document.lineCount - 1);
         const lastLineLens = new CodeLens(new Range(lastLine.range.start, lastLine.range.end));
 
         const command = {
