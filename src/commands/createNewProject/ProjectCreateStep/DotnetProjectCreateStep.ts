@@ -38,6 +38,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         // currentely the version created by func init is behind the template version
         if (context.containerizedProject) {
             const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
+            // targetFramework is only supported for dotnet-isolated projects
             const targetFramework = runtime === 'dotnet' ? '' : "--target-framework " + nonNullValueAndProp(context.workerRuntime, 'targetFramework');
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, targetFramework, "--docker");
         } else {
