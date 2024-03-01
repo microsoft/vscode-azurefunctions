@@ -579,7 +579,7 @@
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettingItem.*azFunc/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettingItem.*azFunc(?!.*container)/",
                     "group": "1@4"
                 },
                 {
