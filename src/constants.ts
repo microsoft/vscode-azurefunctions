@@ -97,6 +97,7 @@ export enum CodeAction {
 
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
+    StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     SQL = 'SQLDB_Connection'
 }
