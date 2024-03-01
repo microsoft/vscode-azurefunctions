@@ -7,11 +7,11 @@ import { type SiteConfigResource, type StringDictionary, type User } from '@azur
 import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, findFreePort, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { openUrl } from '../../utils/openUrl';
+import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { DebugProxy } from './DebugProxy';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
@@ -19,9 +19,7 @@ const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:tra
 
 export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter
-        });
+        node = await pickFunctionApp(context);
     }
     const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await findFreePort();
