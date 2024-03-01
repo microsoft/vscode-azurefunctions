@@ -130,7 +130,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         this._functionsTreeItem = new ContainerFunctionsTreeItem(proxyTree, this.site);
         this._imageTreeItem = new ImageTreeItem(proxyTree, this.site, this.maskedValuesToAdd);
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, new ContainerAppSettingsClientProvider(proxyTree, proxyTree.subscription), ext.prefix, {
-            contextValuesToAdd: ['azFunc']
+            contextValuesToAdd: ['azFunc', 'container'],
         });
 
         const children: AzExtTreeItem[] = [this._functionsTreeItem, this._imageTreeItem, this.appSettingsTreeItem]
