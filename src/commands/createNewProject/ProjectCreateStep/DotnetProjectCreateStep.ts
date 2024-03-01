@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, DialogResponses, nonNullValueAndProp, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
@@ -38,7 +38,8 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         // currentely the version created by func init is behind the template version
         if (context.containerizedProject) {
             const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, "--docker");
+            const targetFramework = runtime === 'dotnet' ? '' : "--target-framework " + nonNullValueAndProp(context.workerRuntime, 'targetFramework');
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, targetFramework, "--docker");
         } else {
             await this.confirmOverwriteExisting(context, projName);
         }
