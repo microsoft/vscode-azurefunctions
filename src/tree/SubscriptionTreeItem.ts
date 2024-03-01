@@ -12,6 +12,9 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersio
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { ContainerizedFunctionAppCreateStep } from '../commands/createFunctionApp/containerImage/ContainerizedFunctionAppCreateStep';
+import { DeployWorkspaceProjectStep } from '../commands/createFunctionApp/containerImage/DeployWorkspaceProjectStep';
+import { detectDockerfile } from '../commands/createFunctionApp/containerImage/detectDockerfile';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
@@ -22,13 +25,20 @@ import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { type DeployWorkspaceProjectResults } from '../vscode-azurecontainerapps.api';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
+import { ContainerTreeItem } from './containerizedFunctionApp/ContainerTreeItem';
+import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctionApp/ResolvedContainerizedFunctionAppResource';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
+    dockerfilePath?: string;
+    rootPath?: string;
+    deployWorkspaceResult?: DeployWorkspaceProjectResults;
+    skipExecute?: boolean;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -78,7 +88,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem | ContainerTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
@@ -97,8 +107,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
-        promptSteps.push(new SiteNameStep());
-        promptSteps.push(new FunctionAppStackStep());
+
+        promptSteps.push(new SiteNameStep("functionApp"));
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
@@ -106,19 +116,19 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
-        if (version === FuncVersion.v1) { // v1 doesn't support linux
-            wizardContext.newSiteOS = WebsiteOS.windows;
-        }
+        await detectDockerfile(context);
 
-        if (!context.advancedCreation) {
+        if (!wizardContext.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
-            wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
+            wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
             executeSteps.push(new ResourceGroupCreateStep());
-            executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
-            executeSteps.push(new LogAnalyticsCreateStep());
             executeSteps.push(new AppInsightsCreateStep());
+            if (!context.dockerfilePath) {
+                executeSteps.push(new AppServicePlanCreateStep());
+                executeSteps.push(new LogAnalyticsCreateStep());
+            }
         } else {
             promptSteps.push(new ResourceGroupListStep());
             CustomLocationListStep.addStep(wizardContext, promptSteps);
@@ -142,12 +152,28 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             promptSteps.push(new AppInsightsListStep());
         }
 
+        if (context.dockerfilePath) {
+            const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
+            promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
+            executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
+        } else {
+            const functionAppWizard = await createFunctionAppWizard(wizardContext);
+            promptSteps.push(...functionAppWizard.promptSteps);
+            executeSteps.push(...functionAppWizard.executeSteps);
+        }
+
         const storageProvider = 'Microsoft.Storage';
         LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
-        executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
-        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
+
+        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, {
+            promptSteps,
+            executeSteps,
+            title,
+            showLoadingPrompt: context.skipExecute !== true,
+            skipExecute: context.skipExecute === true
+        });
 
         await wizard.prompt();
         // if the providers aren't registered yet, await it here because it is required by this point
@@ -166,9 +192,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
 
-        const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
+        let node: SlotTreeItem | ContainerTreeItem;
+
+        if (context.dockerfilePath) {
+            const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
+            node = new ContainerTreeItem(subscription, resolved);
+        } else {
+            const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
+            node = new SlotTreeItem(subscription, resolved);
+        }
+
         await ext.rgApi.tree.refresh(context);
-        return new SlotTreeItem(subscription, resolved);
+        return node;
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {
@@ -194,4 +229,29 @@ async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promis
     }
 
     return version;
+}
+
+async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
+    const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+
+    promptSteps.push(new FunctionAppStackStep());
+
+    if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
+        wizardContext.newSiteOS = WebsiteOS.windows;
+    }
+
+    executeSteps.push(new FunctionAppCreateStep());
+
+    return { promptSteps, executeSteps };
+}
+
+async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
+    const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+
+    executeSteps.push(new DeployWorkspaceProjectStep());
+    executeSteps.push(new ContainerizedFunctionAppCreateStep());
+
+    return { promptSteps, executeSteps };
 }

@@ -6,10 +6,8 @@
 import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
 import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { ServiceConnectorGroupTreeItem } from "@microsoft/vscode-azext-serviceconnector";
 import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
@@ -18,7 +16,8 @@ import { localize } from "../localize";
 import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
-import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
+import { type ApplicationSettings } from "./IProjectTreeItem";
+import { ResolvedFunctionAppBase } from "./ResolvedFunctionAppBase";
 import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
@@ -28,7 +27,7 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBas
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
 
-export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
+export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: ParsedSite;
     public data: Site;
 
@@ -48,7 +47,6 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _logFilesTreeItem: LogFilesTreeItem;
     private _siteFilesTreeItem: SiteFilesTreeItem;
-    private _serviceConnectorNode!: ServiceConnectorGroupTreeItem;
 
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
@@ -63,7 +61,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     commandArgs?: unknown[] | undefined;
 
     public constructor(subscription: ISubscriptionContext, site: Site) {
-        this.site = new ParsedSite(site, subscription);
+        super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
         this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
@@ -88,24 +86,12 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         return resource;
     }
 
-    public get name(): string {
-        return this.label;
-    }
-
     public get label(): string {
         return this.site.slotName ?? this.site.fullName;
     }
 
-    public get id(): string {
-        return this.site.id;
-    }
-
     public get logStreamLabel(): string {
         return this.site.fullName;
-    }
-
-    public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: this.site.defaultHostUrl };
     }
 
     public get description(): string | undefined {
@@ -117,19 +103,8 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         return treeUtils.getIconPath(proxyTree.contextValue);
     }
 
-    public get viewProperties(): ViewPropertiesModel {
-        return {
-            data: this.site,
-            label: this.name,
-        }
-    }
-
     private get _state(): string | undefined {
         return this.site.rawSite.state;
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
     }
 
     /**
@@ -237,13 +212,12 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             site: this.site,
             contextValuesToAdd: ['azFunc']
         });
-        this._serviceConnectorNode = new ServiceConnectorGroupTreeItem(proxyTree, this.site.id, ['azFunc']);
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._serviceConnectorNode];
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
         if (!this.site.isSlot) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
@@ -329,7 +303,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 }
 
-function matchContextValue(expectedContextValue: RegExp | string, matches: (string | RegExp)[]): boolean {
+export function matchContextValue(expectedContextValue: RegExp | string, matches: (string | RegExp)[]): boolean {
     if (expectedContextValue instanceof RegExp) {
         return matches.some((match) => {
             if (match instanceof RegExp) {

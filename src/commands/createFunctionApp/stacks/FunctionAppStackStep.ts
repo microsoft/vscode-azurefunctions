@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, openUrl, type AgentQuickPickItem, type AgentQuickPickOptions, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -18,7 +18,16 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
 
         let result: FullFunctionAppStack | undefined;
         while (true) {
-            result = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder, enableGrouping: true })).data;
+            const options: AgentQuickPickOptions = {
+                placeHolder,
+                enableGrouping: true,
+                agentMetadata: {
+                    parameterDisplayTitle: 'Runtime Stack',
+                    parameterDisplayDescription: 'The runtime stack to use for the function app.'
+                }
+            };
+            const picks = this.getPicks(context);
+            result = (await context.ui.showQuickPick(picks, options)).data;
             if (!result) {
                 context.version = await promptForFuncVersion(context);
             } else {
@@ -53,8 +62,8 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return { promptSteps };
     }
 
-    private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
-        let picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = await getStackPicks(context);
+    private async getPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+        let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context);
         if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
             // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []
             picks = [];
@@ -72,7 +81,8 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 data: undefined,
                 onPicked: async () => {
                     await openUrl('https://aka.ms/function-runtime-host-warning');
-                }
+                },
+                agentMetadata: { notApplicableToAgentPick: true }
             })
         }
 
@@ -80,7 +90,8 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
             label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
             description: localize('currentFuncVersion', 'Current: {0}', context.version) + (isEol ? ' $(warning)' : ''),
             data: undefined,
-            suppressPersistence: true
+            suppressPersistence: true,
+            agentMetadata: { notApplicableToAgentPick: true }
         });
 
         return picks;

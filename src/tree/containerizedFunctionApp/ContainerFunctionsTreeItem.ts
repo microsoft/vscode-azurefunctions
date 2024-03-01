@@ -1,42 +1,27 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.md in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
 
-import { type FunctionEnvelope } from '@azure/arm-appservice';
-import { nonNullProp, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type FunctionEnvelope, type Site } from "@azure/arm-appservice";
+import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
+import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as retry from 'p-retry';
-import { ParsedFunctionJson } from '../../funcConfig/function';
-import { localize } from '../../localize';
-import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
-import { type SlotTreeItem } from '../SlotTreeItem';
-import { RemoteFunction } from './RemoteFunction';
-import { RemoteFunctionTreeItem, getFunctionNameFromId } from './RemoteFunctionTreeItem';
+import { ParsedFunctionJson } from "../../funcConfig/function";
+import { localize } from "../../localize";
+import { FunctionsTreeItemBase } from "../FunctionsTreeItemBase";
+import { getFunctionNameFromId } from "../remoteProject/RemoteFunctionTreeItem";
+import { ContainerFunctionItem } from "./ContainerFunctionItem";
+import { ContainerFunctionTreeItem } from "./ContainerFunctionTreeItem";
+import { type ContainerTreeItem } from "./ContainerTreeItem";
 
-export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
-    public readonly parent: SlotTreeItem;
-    public isReadOnly: boolean;
-
+export class ContainerFunctionsTreeItem extends FunctionsTreeItemBase {
+    public isReadOnly: boolean = true;
     private _nextLink: string | undefined;
 
-    private constructor(parent: SlotTreeItem) {
+    constructor(public readonly parent: ContainerTreeItem, public readonly site: Site) {
         super(parent);
-    }
-
-    public static async createFunctionsTreeItem(context: IActionContext, parent: SlotTreeItem): Promise<RemoteFunctionsTreeItem> {
-        const ti: RemoteFunctionsTreeItem = new RemoteFunctionsTreeItem(parent);
-        // initialize
-        await ti.initAsync(context);
-        return ti;
-    }
-
-    public async initAsync(context: IActionContext): Promise<void> {
-        this.isReadOnly = await this.parent.isReadOnly(context);
-    }
-
-    public async refreshImpl(context: IActionContext): Promise<void> {
-        await this.initAsync(context);
-        await this.loadAllChildren(context);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -47,19 +32,17 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         if (clearCache) {
             this._nextLink = undefined;
         }
-
         /*
             Related to issue: https://github.com/microsoft/vscode-azurefunctions/issues/3179
             Sometimes receive a 'BadGateway' error on initial fetch, but consecutive re-fetching usually fixes the issue.
             Under these circumstances, we will attempt to do the call 3 times during warmup before throwing the error.
         */
         const retries = 3;
-        const client = await this.parent.site.createClient(context);
-
+        const client = await createWebSiteClient([context, this.parent.subscription]);
         const funcs = await retry<FunctionEnvelope[]>(
             async (attempt: number) => {
                 // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-                const response = await client.listFunctions();
+                const response = (await uiUtils.listAllIterator(client.webApps.listFunctions(nonNullValueAndProp(this.site, 'resourceGroup'), nonNullValueAndProp(this.site, 'name'))));
                 const failedToList = localize('failedToList', 'Failed to list functions.');
 
                 // https://github.com/Azure/azure-functions-host/issues/3502
@@ -82,15 +65,15 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
-            async (fe: FunctionEnvelope) => await RemoteFunctionTreeItem.create(
+            async (fe: FunctionEnvelope) => await ContainerFunctionTreeItem.create(
                 context,
                 this,
-                new RemoteFunction(
+                new ContainerFunctionItem(
                     this.parent,
                     getFunctionNameFromId(nonNullProp(fe, 'id')),
                     new ParsedFunctionJson(fe.config),
-                    this.parent.site,
-                    fe,
+                    this,
+                    this.parent.site
                 )
             ),
             (fe: FunctionEnvelope) => {

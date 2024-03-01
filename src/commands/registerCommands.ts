@@ -7,12 +7,10 @@ import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
 import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
 import { registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapTreeNodeCommandCallback, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands } from "vscode";
+import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
-import { createServiceConnector } from '../serviceConnector/createServiceConnector';
-import { deleteServiceConnector } from '../serviceConnector/deleteServiceConnector';
-import { validateServiceConnector } from '../serviceConnector/validateServiceConnector';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
@@ -27,7 +25,8 @@ import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
-import { createNewProjectFromCommand } from './createNewProject/createNewProject';
+import { createNewProjectFromCommand, createNewProjectInternal } from './createNewProject/createNewProject';
+import { CreateDockerfileProjectStep } from './createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
 import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
 import { deleteFunctionApp } from './deleteFunctionApp';
@@ -57,6 +56,12 @@ import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
+
+    commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
+    commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
+    commands.registerCommand('azureFunctions.agent.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
+
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
@@ -75,6 +80,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createNewProjectWithDockerfile', async (context: IActionContext) => await createNewProjectInternal(context, { executeStep: new CreateDockerfileProjectStep(), languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i }));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunctionApp', deleteFunctionApp);
@@ -107,7 +113,4 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapTreeNodeCommandCallback(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createServiceConnector', createServiceConnector);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteServiceConnector', deleteServiceConnector);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.validateServiceConnector', validateServiceConnector);
 }
