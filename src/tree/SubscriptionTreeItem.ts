@@ -108,8 +108,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
-        promptSteps.push(new SiteNameStep("functionApp"));
-
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
             performance: StorageAccountPerformance.Standard,
@@ -117,6 +115,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         };
 
         await detectDockerfile(context);
+
+        if (context.dockerfilePath) {
+            promptSteps.push(new SiteNameStep("containerizedfunctionApp"));
+        } else {
+            promptSteps.push(new SiteNameStep("functionApp"));
+        }
 
         if (!wizardContext.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
