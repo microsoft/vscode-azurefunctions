@@ -32,5 +32,4 @@ export async function sendEventGridRequest(context: IActionContext) {
     }
 
     await executeFunctionWithInput(context, requestContent, node);
-    // await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
