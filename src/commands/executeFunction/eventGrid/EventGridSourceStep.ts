@@ -5,13 +5,13 @@
 
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { type ExecuteEventGridFunctionContext } from "./ExecuteEventGridFunctionContext";
+import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
 import { supportedEventGridSourceLabels, supportedEventGridSources, type EventGridSource } from "./eventGridSources";
 
-export class EventGridEventSourceStep extends AzureWizardPromptStep<ExecuteEventGridFunctionContext> {
+export class EventGridSourceStep extends AzureWizardPromptStep<EventGridExecuteFunctionContext> {
     public hideStepCount: boolean = false;
 
-    public async prompt(context: ExecuteEventGridFunctionContext): Promise<void> {
+    public async prompt(context: EventGridExecuteFunctionContext): Promise<void> {
         // Prompt for event source
         const eventGridSourcePicks: IAzureQuickPickItem<EventGridSource | undefined>[] = supportedEventGridSources.map((source: EventGridSource) => {
             return {
@@ -30,7 +30,7 @@ export class EventGridEventSourceStep extends AzureWizardPromptStep<ExecuteEvent
         context.eventSource = eventSource;
     }
 
-    public shouldPrompt(context: ExecuteEventGridFunctionContext): boolean {
+    public shouldPrompt(context: EventGridExecuteFunctionContext): boolean {
         return !context.eventSource;
     }
 }

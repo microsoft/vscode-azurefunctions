@@ -6,7 +6,7 @@
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
-import { type ExecuteEventGridFunctionContext } from "./ExecuteEventGridFunctionContext";
+import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
 
 const sampleFilesUrl =
     'https://api.github.com/repos/Azure/azure-rest-api-specs/contents/specification/eventgrid/data-plane/' +
@@ -30,10 +30,10 @@ type FileMetadata = {
     };
 };
 
-export class EventGridEventTypeStep extends AzureWizardPromptStep<ExecuteEventGridFunctionContext> {
+export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFunctionContext> {
     public hideStepCount: boolean = false;
 
-    public async prompt(context: ExecuteEventGridFunctionContext): Promise<void> {
+    public async prompt(context: EventGridExecuteFunctionContext): Promise<void> {
         if (!context.eventSource) {
             throw new Error('Event source is required');
         }
@@ -66,7 +66,7 @@ export class EventGridEventTypeStep extends AzureWizardPromptStep<ExecuteEventGr
 
     }
 
-    public shouldPrompt(context: ExecuteEventGridFunctionContext): boolean {
+    public shouldPrompt(context: EventGridExecuteFunctionContext): boolean {
         return !context.selectedFileName;
     }
 }

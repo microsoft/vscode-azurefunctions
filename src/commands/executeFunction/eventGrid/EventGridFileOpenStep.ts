@@ -11,25 +11,25 @@ import { type Progress } from "vscode";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
-import { type ExecuteEventGridFunctionContext } from "./ExecuteEventGridFunctionContext";
+import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
 
-export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGridFunctionContext> {
+export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecuteFunctionContext> {
     public priority: number;
 
-    public async execute(context: ExecuteEventGridFunctionContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
-        if (!context.eventSource || !context.selectedFileName || !context.selectedFileUrl) {
-            throw new Error('Internal error: event source or event type is missing');
-        }
+    public async execute(context: EventGridExecuteFunctionContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        const eventSource = nonNullProp(context, 'eventSource');
+        const selectedFileName = nonNullProp(context, 'selectedFileName');
+        const selectedFileUrl = nonNullProp(context, 'selectedFileUrl');
 
         // Get selected contents of sample request
         const downloadingMsg: string = localize('downloadingSample', 'Downloading sample request...');
         progress.report({ message: downloadingMsg });
-        context.selectedFileContent = await feedUtils.getJsonFeed(context, context.selectedFileUrl);
+        const selectedFileContent = await feedUtils.getJsonFeed(context, selectedFileUrl);
 
         // Create a temp file with the sample request & open in new window
         const openingFileMsg: string = localize('openingFile', 'Opening file...');
         progress.report({ message: openingFileMsg });
-        const tempFilePath: string = await createTempSampleFile(context.eventSource, context.selectedFileName, context.selectedFileContent);
+        const tempFilePath: string = await createTempSampleFile(eventSource, selectedFileName, selectedFileContent);
         const document: vscode.TextDocument = await vscode.workspace.openTextDocument(tempFilePath);
         await vscode.window.showTextDocument(document, {
             preview: false,
@@ -59,14 +59,14 @@ export class OpenEventGridFileStep extends AzureWizardExecuteStep<ExecuteEventGr
         });
     }
 
-    public shouldExecute(context: ExecuteEventGridFunctionContext): boolean {
+    public shouldExecute(context: EventGridExecuteFunctionContext): boolean {
         return !context.fileOpened
     }
 
 }
 
 async function createTempSampleFile(eventSource: string, fileName: string, contents: {}): Promise<string> {
-    const samplesDirPath = await createSamplesDirIfNotExists(eventSource);
+    const samplesDirPath = await getSamplesDirPath(eventSource);
     const sampleFileName = fileName.replace(/\.json$/, '.eventgrid.json');
     const filePath: string = path.join(samplesDirPath, sampleFileName);
 
@@ -75,15 +75,15 @@ async function createTempSampleFile(eventSource: string, fileName: string, conte
     return filePath;
 }
 
-async function createSamplesDirIfNotExists(eventSource: string): Promise<string> {
-    const baseDir: string = path.join(os.tmpdir(), 'vscode', 'azureFunctions');
+async function getSamplesDirPath(eventSource: string): Promise<string> {
+    const baseDir: string = path.join(os.tmpdir(), 'vscode', 'azureFunctions', 'eventGridSamples');
 
     // Create the path to the directory
-    const dirPath = path.join(baseDir, 'eventGridSamples', eventSource);
+    const dirPath = path.join(baseDir, eventSource);
+
     // Create the directory if it doesn't already exist
-    if (!(await AzExtFsExtra.pathExists(dirPath))) {
-        await AzExtFsExtra.ensureDir(dirPath);
-    }
+    await AzExtFsExtra.ensureDir(dirPath);
+
     // Return the path to the directory
     return dirPath;
 }

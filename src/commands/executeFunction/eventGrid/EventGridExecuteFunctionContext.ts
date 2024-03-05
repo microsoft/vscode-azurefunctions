@@ -7,11 +7,10 @@ import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type EventGridSource } from "./eventGridSources";
 
 
-export interface ExecuteEventGridFunctionContext extends IActionContext {
+export interface EventGridExecuteFunctionContext extends IActionContext {
     eventSource?: EventGridSource;
     selectedFileName?: string;
     selectedFileUrl?: string;
-    selectedFileContent?: {};
     fileOpened?: boolean;
 }
 
