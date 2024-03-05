@@ -117,7 +117,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await detectDockerfile(context);
 
         if (context.dockerfilePath) {
-            promptSteps.push(new SiteNameStep("containerizedfunctionApp"));
+            promptSteps.push(new SiteNameStep("containerizedFunctionApp"));
         } else {
             promptSteps.push(new SiteNameStep("functionApp"));
         }
