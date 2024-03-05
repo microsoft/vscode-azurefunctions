@@ -38,8 +38,13 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
         context.fileOpened = true;
 
         // Request will be sent when the user clicks on the button or on the codelens link
-        const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Save and execute' button to send the request.");
-        void vscode.window.showInformationMessage(doneMsg);
+        // Show the message only once per session
+        if (!ext.context.globalState.get('didShowEventGridFileOpenMsg')) {
+            const doneMsg = localize('modifyFile', "You can modify the file and then click the 'Save and execute' button to send the request.");
+            void vscode.window.showInformationMessage(doneMsg);
+            await ext.context.globalState.update('didShowEventGridFileOpenMsg', true);
+        }
+
 
         // Set a listener to delete the temp file after it's closed
         void new Promise<void>((resolve, reject) => {
