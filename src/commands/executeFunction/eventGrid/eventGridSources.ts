@@ -3,6 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/**
+ * Sources here were obtained as the names of sources found on
+ * the EventGrid samples in the azure-rest-api-specs repository:
+ * https://github.com/Azure/azure-rest-api-specs/tree/master/specification/eventgrid/data-plane
+ */
+
 export type EventGridSource =
     | 'Microsoft.ApiManagement'
     | 'Microsoft.AppConfiguration'
