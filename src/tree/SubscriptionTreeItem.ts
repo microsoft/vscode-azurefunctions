@@ -142,9 +142,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         } else {
             promptSteps.push(new ResourceGroupListStep());
             CustomLocationListStep.addStep(wizardContext, promptSteps);
-            if (!context.dockerfilePath) {
-                promptSteps.push(new FunctionAppHostingPlanStep());
-            }
+            promptSteps.push(new FunctionAppHostingPlanStep());
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
                 {
