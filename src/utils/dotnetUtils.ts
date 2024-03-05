@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import { workspace } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { localize } from "../localize";
@@ -80,6 +81,17 @@ export namespace dotnetUtils {
         const regExp: RegExp = new RegExp(`<${prop}>(.*)<\\/${prop}>`);
         const matches: RegExpMatchArray | null = (await projFile.getContents()).match(regExp);
         if (!matches) {
+            // if we can't find the targetFramework in the csproj, there may be a `Directory.Build.props` file that sets it
+            const buildPropsFile: string = 'Directory.Build.props';
+            const buildPropsFiles = await workspace.findFiles(buildPropsFile, null);
+            if (buildPropsFiles.length > 0) {
+                const buildPropsContents = (await AzExtFsExtra.readFile(buildPropsFiles[0])).toString();
+                const buildPropsMatches = buildPropsContents.match(regExp);
+                if (buildPropsMatches) {
+                    return buildPropsMatches[1];
+                }
+            }
+
             throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFile.name));
         } else {
             return matches[1];
