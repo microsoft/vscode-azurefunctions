@@ -112,14 +112,14 @@ export function getAgentBenchmarkConfigs(): AgentBenchmarkConfig[] {
             ],
         },
         {
-            name: "Create Function App 5",
+            name: "Create Function App 6",
             prompt: "Hi, I would like you to create for me a very specific type of resource, that of course being an azure function app. Thank you!",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 6",
+            name: "Create Function App 7",
             prompt: "I want to be able to run code, but not pay for compute usage when my code isn't running, can you create a resource that helps me do that?",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
