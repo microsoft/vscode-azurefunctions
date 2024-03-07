@@ -67,6 +67,7 @@ testWorkspace
 test-results.xml
 dist
 stats.json
+typechatSchema.txt
 
 # debugging artifacts
 resources/backupTemplates/dotnet/**/cache/
