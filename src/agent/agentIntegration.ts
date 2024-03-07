@@ -5,10 +5,11 @@
 
 import { AzExtUserInputWithInputQueue, callWithTelemetryAndErrorHandling, type AgentBenchmarkConfig, type AzureUserInputQueue, type IAzureUserInput, type SimpleCommandConfig, type WizardCommandConfig } from '@microsoft/vscode-azext-utils';
 import { createFunctionApp } from '../commands/createFunctionApp/createFunctionApp';
+import type { CreateFunctionAppActionType, CreateFunctionProjectActionType, DeployFunctionAppActionType } from './typechatSchema';
 
-const createFunctionAppCommandName = "createFunctionApp";
-const createFunctionProjectCommandName = "createFunctionProject";
-const deployToFunctionAppCommandName = "deployToFunctionApp";
+const createFunctionAppCommandName: CreateFunctionAppActionType = "createFunctionApp";
+const createFunctionProjectCommandName: CreateFunctionProjectActionType = "createFunctionProject";
+const deployToFunctionAppCommandName: DeployFunctionAppActionType = "deployFunctionApp";
 
 export async function getCommands(): Promise<(WizardCommandConfig | SimpleCommandConfig)[]> {
     return [
@@ -17,7 +18,6 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             name: createFunctionAppCommandName,
             commandId: "azureFunctions.createFunctionApp",
             displayName: "Create Function App",
-            intentDescription: "This is best when users ask to create a Function App resource in Azure. They may refer to a Function App as 'Function App', 'function', 'function resource', 'function app resource', 'function app' etc. This command is not useful if the user is asking how to do something, or if something is possible.",
             requiresAzureLogin: true,
         },
         {
@@ -25,7 +25,6 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             name: createFunctionProjectCommandName,
             commandId: "azureFunctions.createNewProject",
             displayName: "Create Function Project",
-            intentDescription: "This is best when users ask to create a new function project in VS Code. They may also refer to creating a function project by asking to create a project based upon a function project template.",
             requiresAzureLogin: true,
         },
         {
@@ -33,7 +32,6 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             name: deployToFunctionAppCommandName,
             commandId: "azureFunctions.deploy",
             displayName: "Deploy to Function App",
-            intentDescription: "This is best when users ask to create a deploy their function project or their code to a function app. They may refer to a Function App as 'Function App', 'function', 'function resource', 'function app resource', 'function app' etc. This is not best if they ask to deploy to a slot.",
             requiresAzureLogin: true,
         },
     ];
