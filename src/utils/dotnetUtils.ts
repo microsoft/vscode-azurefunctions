@@ -85,7 +85,7 @@ export namespace dotnetUtils {
             const buildPropsFile: string = 'Directory.Build.props';
             const buildPropsFiles = await workspace.findFiles(buildPropsFile, null);
             if (buildPropsFiles.length > 0) {
-                const buildPropsContents = (await AzExtFsExtra.readFile(buildPropsFiles[0])).toString();
+                const buildPropsContents = await AzExtFsExtra.readFile(buildPropsFiles[0]);
                 const buildPropsMatches = buildPropsContents.match(regExp);
                 if (buildPropsMatches) {
                     return buildPropsMatches[1];
