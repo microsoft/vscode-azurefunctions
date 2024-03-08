@@ -60,17 +60,7 @@ export function registerCommands(): void {
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
     commands.registerCommand('azureFunctions.agent.getAgentBenchmarkConfigs', getAgentBenchmarkConfigs);
-    commands.registerCommand('azureFunctions.agent.getTypechatSchema', () => {
-        try {
-            const typechatSchemaText: string = require("../agent/typechatSchema.txt").default;
-            return {
-                mainExport: "AzureFunctionAction",
-                schemaText: typechatSchemaText
-            };
-        } catch (error) {
-            return undefined;
-        }
-    });
+
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);

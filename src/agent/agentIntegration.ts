@@ -5,11 +5,10 @@
 
 import { AzExtUserInputWithInputQueue, callWithTelemetryAndErrorHandling, type AgentBenchmarkConfig, type AzureUserInputQueue, type IAzureUserInput, type SimpleCommandConfig, type WizardCommandConfig } from '@microsoft/vscode-azext-utils';
 import { createFunctionApp } from '../commands/createFunctionApp/createFunctionApp';
-import type { CreateFunctionAppActionType, CreateFunctionProjectActionType, DeployFunctionAppActionType } from './typechatSchema';
 
-const createFunctionAppCommandName: CreateFunctionAppActionType = "createFunctionApp";
-const createFunctionProjectCommandName: CreateFunctionProjectActionType = "createFunctionProject";
-const deployToFunctionAppCommandName: DeployFunctionAppActionType = "deployFunctionApp";
+const createFunctionAppCommandName = "createFunctionApp";
+const createFunctionProjectCommandName = "createFunctionProject";
+const deployToFunctionAppCommandName = "deployFunctionApp";
 
 export async function getCommands(): Promise<(WizardCommandConfig | SimpleCommandConfig)[]> {
     return [
@@ -19,6 +18,24 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             commandId: "azureFunctions.createFunctionApp",
             displayName: "Create Function App",
             requiresAzureLogin: true,
+            intentDescription: "This is best when the user ask to create a Function App resource in Azure.",
+            parameters: {
+                functionAppInfo: {
+                    type: "object",
+                    isOptional: false,
+                    subParameters: {
+                        name: {
+                            type: "string",
+                            isOptional: true,
+                        },
+                        runTime: {
+                            type: "string-enum",
+                            isOptional: true,
+                            stringEnums: ["Node", "Python", "Java", ".Net", "PowerShell", "Custom"]
+                        }
+                    }
+                }
+            }
         },
         {
             type: "simple",
@@ -26,6 +43,24 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             commandId: "azureFunctions.createNewProject",
             displayName: "Create Function Project",
             requiresAzureLogin: true,
+            intentDescription: "A function project is a local project that can be deployed to an Azure Functions App. This is best when the user wants to start developing an Azure Functions App.",
+            parameters: {
+                projectInfo: {
+                    type: "object",
+                    isOptional: false,
+                    subParameters: {
+                        name: {
+                            type: "string",
+                            isOptional: true,
+                        },
+                        language: {
+                            type: "string-enum",
+                            isOptional: true,
+                            stringEnums: ["JavaScript", "Typescript", "C#", "Java", "Python", "Ballerina"]
+                        }
+                    }
+                }
+            }
         },
         {
             type: "simple",
@@ -33,6 +68,24 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
             commandId: "azureFunctions.deploy",
             displayName: "Deploy to Function App",
             requiresAzureLogin: true,
+            intentDescription: "This is best when the user has a function project and wants to deploy it to an Azure Function App.",
+            parameters: {
+                functionAppInfo: {
+                    type: "object",
+                    isOptional: false,
+                    subParameters: {
+                        name: {
+                            type: "string",
+                            isOptional: true,
+                        },
+                        slot: {
+                            type: "string-enum",
+                            isOptional: true,
+                            stringEnums: ["production", "other"]
+                        }
+                    }
+                }
+            }
         },
     ];
 }
