@@ -118,6 +118,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await detectDockerfile(context);
 
+        if (context.dockerfilePath) {
+            const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
+            promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
+            executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
+        } else {
+            const functionAppWizard = await createFunctionAppWizard(wizardContext);
+            promptSteps.push(...functionAppWizard.promptSteps);
+            executeSteps.push(...functionAppWizard.executeSteps);
+        }
+
         if (!wizardContext.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
@@ -152,15 +162,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             promptSteps.push(new AppInsightsListStep());
         }
 
-        if (context.dockerfilePath) {
-            const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
-            promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
-            executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
-        } else {
-            const functionAppWizard = await createFunctionAppWizard(wizardContext);
-            promptSteps.push(...functionAppWizard.promptSteps);
-            executeSteps.push(...functionAppWizard.executeSteps);
-        }
 
         const storageProvider = 'Microsoft.Storage';
         LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
