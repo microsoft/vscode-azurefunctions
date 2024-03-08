@@ -1195,7 +1195,6 @@
         "getCommandsCommandId": "azureFunctions.agent.getCommands",
         "runWizardCommandWithoutExecutionCommandId": "azureFunctions.agent.runWizardCommandWithoutExecution",
         "runWizardCommandWithInputsCommandId": "azureFunctions.agent.runWizardCommandWithInputs",
-        "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs",
-        "getTypechatSchemaCommandId": "azureFunctions.agent.getTypechatSchema"
+        "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs"
     }
 }

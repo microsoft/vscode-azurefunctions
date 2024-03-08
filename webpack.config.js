@@ -40,12 +40,6 @@ let config = dev.getDefaultWebpackConfig({
                 { from: './out/src/utils/getCoreNodeModule.js', to: 'node_modules' }
             ]
         })
-    ],
-    loaderRules: [
-        {
-            test: /\.txt$/,
-            use: 'raw-loader'
-        }
     ]
 });
 

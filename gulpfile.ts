@@ -78,21 +78,7 @@ async function cleanReadme() {
     await fse.writeFile(readmePath, data);
 }
 
-function copyTypechatSchema(callback) {
-    const typechatSchemaPath: string = path.join(__dirname, './src/agent/typechatSchema.ts');
-    fse.copyFileSync(typechatSchemaPath, path.join(path.dirname(typechatSchemaPath), "typechatSchema.txt"));
-    callback();
-}
-
-exports['webpack-dev'] = gulp.series(
-    prepareForWebpack,
-    copyTypechatSchema,
-    () => gulp_webpack('development')
-);
-exports['webpack-prod'] = gulp.series(
-    prepareForWebpack,
-    copyTypechatSchema,
-    () => gulp_webpack('production')
-);
+exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
+exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
 exports.preTest = gulp.series(getFuncLink, installFuncCli);
 exports.cleanReadme = cleanReadme;
