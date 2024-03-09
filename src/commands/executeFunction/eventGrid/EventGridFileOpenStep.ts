@@ -78,7 +78,9 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
                         reject(error);
                     } finally {
                         closedListenerDisposable.dispose();
-                        modifiedListenerDisposable.dispose();
+                        if (modifiedListenerDisposable) {
+                            modifiedListenerDisposable.dispose();
+                        }
                     }
                 }
             });
