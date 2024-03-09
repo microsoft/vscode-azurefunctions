@@ -19,15 +19,13 @@ export class EventGridSourceStep extends AzureWizardPromptStep<EventGridExecuteF
                 data: source,
             };
         });
-        const eventSource: EventGridSource =
+        context.eventSource =
             (
                 await context.ui.showQuickPick(eventGridSourcePicks, {
                     placeHolder: localize('selectEventSource', 'Select the event source'),
                     stepName: 'eventGridSource',
                 })
-            ).data ?? 'Microsoft.Storage';
-
-        context.eventSource = eventSource;
+            ).data;
     }
 
     public shouldPrompt(context: EventGridExecuteFunctionContext): boolean {

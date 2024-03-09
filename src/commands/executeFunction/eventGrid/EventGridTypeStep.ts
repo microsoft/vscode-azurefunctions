@@ -58,7 +58,7 @@ export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFun
                     placeHolder: localize('selectEventType', 'Select the event type'),
                     stepName: 'eventType',
                 })
-            ).data ?? 'blob_created.json';
+            ).data;
 
         context.selectedFileUrl = sampleFiles.find((fileMetadata) => fileMetadata.name === context.selectedFileName)?.download_url || sampleFiles[0].download_url;
 
