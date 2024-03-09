@@ -52,13 +52,16 @@ export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFun
                 .join(' '),
         }));
 
-        context.selectedFileName =
+        const selectedFileName =
             (
                 await context.ui.showQuickPick(eventTypePicks, {
                     placeHolder: localize('selectEventType', 'Select the event type'),
                     stepName: 'eventType',
                 })
             ).data;
+
+        context.telemetry.properties.eventGridSample = selectedFileName;
+        context.selectedFileName = selectedFileName;
 
         context.selectedFileUrl = sampleFiles.find((fileMetadata) => fileMetadata.name === context.selectedFileName)?.download_url || sampleFiles[0].download_url;
 

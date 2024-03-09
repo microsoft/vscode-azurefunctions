@@ -19,13 +19,16 @@ export class EventGridSourceStep extends AzureWizardPromptStep<EventGridExecuteF
                 data: source,
             };
         });
-        context.eventSource =
+        const eventSource =
             (
                 await context.ui.showQuickPick(eventGridSourcePicks, {
                     placeHolder: localize('selectEventSource', 'Select the event source'),
                     stepName: 'eventGridSource',
                 })
             ).data;
+
+        context.telemetry.properties.eventGridSource = eventSource;
+        context.eventSource = eventSource;
     }
 
     public shouldPrompt(context: EventGridExecuteFunctionContext): boolean {
