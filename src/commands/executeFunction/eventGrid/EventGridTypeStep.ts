@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
 import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
@@ -34,12 +34,10 @@ export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFun
     public hideStepCount: boolean = false;
 
     public async prompt(context: EventGridExecuteFunctionContext): Promise<void> {
-        if (!context.eventSource) {
-            throw new Error('Event source is required');
-        }
+        const eventSource = nonNullProp(context, 'eventSource');
 
         // Get sample files for event source
-        const samplesUrl = sampleFilesUrl.replace('{eventSource}', context.eventSource);
+        const samplesUrl = sampleFilesUrl.replace('{eventSource}', eventSource);
         const sampleFiles: FileMetadata[] = await feedUtils.getJsonFeed(context, samplesUrl);
         const fileNames: string[] = sampleFiles.map((fileMetadata) => fileMetadata.name);
 

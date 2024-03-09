@@ -45,7 +45,6 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
             await ext.context.workspaceState.update('didShowEventGridFileOpenMsg', true);
         }
 
-
         // Set a listener to delete the temp file after it's closed
         void new Promise<void>((resolve, reject) => {
             const disposable = vscode.workspace.onDidCloseTextDocument(async (closedDocument) => {
@@ -55,6 +54,7 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
                         await AzExtFsExtra.deleteResource(tempFilePath);
                         resolve();
                     } catch (error) {
+                        context.errorHandling.suppressDisplay = true;
                         reject(error);
                     } finally {
                         disposable.dispose();

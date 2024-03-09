@@ -6,7 +6,6 @@
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type EventGridSource } from "./eventGridSources";
 
-
 export interface EventGridExecuteFunctionContext extends IActionContext {
     eventSource?: EventGridSource;
     selectedFileName?: string;

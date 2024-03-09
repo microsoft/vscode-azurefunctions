@@ -26,7 +26,7 @@ export async function sendEventGridRequest(context: IActionContext) {
             'noFunctionBeingExecuted',
             'No function is currently being executed. ' +
             'This command is intended to be run while an EventGrid function is being executed. ' +
-            'Please make to execute your EventGrid function.',
+            'Please make sure to execute your EventGrid function.',
         );
         throw new Error(errorMsg);
     }
