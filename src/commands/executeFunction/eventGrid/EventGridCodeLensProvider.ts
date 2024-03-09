@@ -12,6 +12,7 @@ export class EventGridCodeLensProvider implements CodeLensProvider {
         firstLineLens.command = {
             title: localize('saveExecute', 'Save and execute'),
             command: 'azureFunctions.eventGrid.sendMockRequest',
+            arguments: ['codeLens']
         };
 
         return [firstLineLens];

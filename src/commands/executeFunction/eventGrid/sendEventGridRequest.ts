@@ -9,7 +9,9 @@ import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { executeFunctionWithInput } from '../executeFunction';
 
-export async function sendEventGridRequest(context: IActionContext) {
+export async function sendEventGridRequest(context: IActionContext, entryPoint: string) {
+    context.telemetry.properties.eventGridExecuteEntryPoint = entryPoint === 'codeLens' ? 'codeLens' : 'titleBarButton';
+
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
         const errorMsg = localize('noActiveTextEditor', 'No active text editor found.');

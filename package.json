@@ -697,6 +697,7 @@
             "editor/title": [
                 {
                     "command": "azureFunctions.eventGrid.sendMockRequest",
+                    "arguments": ["button"],
                     "when": "resourceFilename=~/.*.eventgrid.json$/",
                     "group": "navigation@1"
                 }
