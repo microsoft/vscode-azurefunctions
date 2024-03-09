@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as os from 'os';
 import * as path from "path";
 import * as vscode from 'vscode';
@@ -45,9 +45,29 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
             await ext.context.workspaceState.update('didShowEventGridFileOpenMsg', true);
         }
 
+        // Set a listener to track whether the file was modified before the request is sent
+        let modifiedListenerDisposable: vscode.Disposable;
+        void new Promise<void>((resolve, reject) => {
+            modifiedListenerDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
+                if (event.contentChanges.length > 0 && event.document.fileName === document.fileName) {
+                    try {
+                        await callWithTelemetryAndErrorHandling('eventGridSampleModified', async (actionContext: IActionContext) => {
+                            actionContext.telemetry.properties.eventGridSampleModified = 'true';
+                        });
+                        resolve();
+                    } catch (error) {
+                        context.errorHandling.suppressDisplay = true;
+                        reject(error);
+                    } finally {
+                        modifiedListenerDisposable.dispose();
+                    }
+                }
+            });
+        });
+
         // Set a listener to delete the temp file after it's closed
         void new Promise<void>((resolve, reject) => {
-            const disposable = vscode.workspace.onDidCloseTextDocument(async (closedDocument) => {
+            const closedListenerDisposable = vscode.workspace.onDidCloseTextDocument(async (closedDocument) => {
                 if (closedDocument.fileName === document.fileName) {
                     try {
                         ext.fileToFunctionNodeMap.delete(document.fileName);
@@ -57,11 +77,13 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
                         context.errorHandling.suppressDisplay = true;
                         reject(error);
                     } finally {
-                        disposable.dispose();
+                        closedListenerDisposable.dispose();
+                        modifiedListenerDisposable.dispose();
                     }
                 }
             });
         });
+
     }
 
     public shouldExecute(context: EventGridExecuteFunctionContext): boolean {
@@ -81,9 +103,8 @@ async function createTempSampleFile(eventSource: string, fileName: string, conte
 }
 
 async function getSamplesDirPath(eventSource: string): Promise<string> {
-    const baseDir: string = path.join(os.tmpdir(), 'vscode', 'azureFunctions', 'eventGridSamples');
-
     // Create the path to the directory
+    const baseDir: string = path.join(os.tmpdir(), 'vscode', 'azureFunctions', 'eventGridSamples');
     const dirPath = path.join(baseDir, eventSource);
 
     // Create the directory if it doesn't already exist
