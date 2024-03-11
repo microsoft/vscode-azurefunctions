@@ -6,13 +6,15 @@
 import { type Site, type StringDictionary } from "@azure/arm-appservice";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { DialogResponses, nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, DeleteConfirmationStep, nonNullProp, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { ProgressLocation, window } from "vscode";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../../FuncVersion";
+import { DeleteContainerizedFunctionappStep } from "../../commands/deleteContainerizedFunctionApp/DeleteContainerizedFunctionAppStep";
+import { type DeleteFunctionappWizardContext } from "../../commands/deleteContainerizedFunctionApp/DeleteFunctionAppWizardContext";
 import { ext } from "../../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../../funcConfig/host";
 import { localize } from "../../localize";
+import { createActivityContext } from "../../utils/activityUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { type ApplicationSettings } from "../IProjectTreeItem";
 import { ResolvedFunctionAppBase } from "../ResolvedFunctionAppBase";
@@ -139,18 +141,24 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function app "{0}"?', this.site.name);
-        const proxyTree: ContainerTreeItem = this as unknown as ContainerTreeItem;
-        const deleting: string = localize('DeletingFunctionApp', 'Deleting function app "{0}"...', this.site.name);
-        const deleteSucceeded: string = localize('DeleteFunctionAppSucceeded', 'Successfully deleted function app "{0}".', this.site.name);
-        await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmDelete' }, DialogResponses.deleteResponse);
-        await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
-            ext.outputChannel.appendLog(deleting);
-            const client = await createWebSiteClient([context, proxyTree.subscription]);
-            await client.webApps.delete(nonNullValueAndProp(this.site, 'resourceGroup'), nonNullValueAndProp(this.site, 'name'));
-            void window.showInformationMessage(deleteSucceeded);
-            ext.outputChannel.appendLog(deleteSucceeded);
+        const wizardContext: DeleteFunctionappWizardContext = Object.assign(context, {
+            site: this.site,
+            proxyTree: this as unknown as ContainerTreeItem,
+            ...(await createActivityContext())
         });
+
+        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function app "{0}"?', this.site.name);
+        const title: string = localize('DeleteFunctionApp', 'Delete function app');
+
+        const wizard = new AzureWizard(wizardContext, {
+            promptSteps: [new DeleteConfirmationStep(message)],
+            executeSteps: [new DeleteContainerizedFunctionappStep()],
+            title
+        });
+
+        await wizard.prompt();
+        await wizard.execute();
+
     }
 
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
