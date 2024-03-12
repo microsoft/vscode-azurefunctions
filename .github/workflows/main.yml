@@ -42,5 +42,6 @@ jobs:
           sudo installer -pkg ballerina.pkg -target /
           rm -f ballerina.pkg
           echo '##vso[task.prependpath]/Library/Ballerina/bin'
+
       # Use template from https://github.com/microsoft/vscode-azuretools/tree/main/.github/workflows
       uses: microsoft/vscode-azuretools/.github/workflows/jobs.yml@main
