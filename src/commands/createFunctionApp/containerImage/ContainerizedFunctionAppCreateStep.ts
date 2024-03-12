@@ -4,7 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
-import { LocationListStep } from "@microsoft/vscode-azext-azureutils";
+import { type ServiceClient } from "@azure/core-client";
+import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
+import { LocationListStep, createGenericClient } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { type AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { type Progress } from "vscode";
@@ -37,6 +39,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
         const containerSite = Object.assign(context.site, { defaultHostUrl: `https://${context.site.defaultHostName}`, fullName: context.site.name, isSlot: false });
 
         showSiteCreated(containerSite, context);
+        await pingContainerizedFunctionApp(context, client, context.site);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
@@ -81,4 +84,17 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
             }
         }
     }
+}
+
+async function pingContainerizedFunctionApp(context: IFunctionAppWizardContext, client: WebSiteManagementClient, site: Site): Promise<void> {
+    const genericClient: ServiceClient = await createGenericClient(context, undefined);
+    const headers = createHttpHeaders({
+        'x-functions-key': (await client.webApps.listHostKeys(nonNullProp(site, 'resourceGroup'), nonNullProp(site, 'name'))).masterKey || ''
+    });
+
+    await genericClient.sendRequest(createPipelineRequest({
+        method: 'POST',
+        url: `https://${site.defaultHostName}/admin/host/status`,
+        headers
+    }));
 }
