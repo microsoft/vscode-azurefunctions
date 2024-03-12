@@ -148,7 +148,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         });
 
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function app "{0}"?', this.site.name);
-        const title: string = localize('DeleteFunctionApp', 'Delete function app');
+        const title: string = localize('DeleteFunctionApp', 'Delete function app "{0}"...', this.site.name);
 
         const wizard = new AzureWizard(wizardContext, {
             promptSteps: [new DeleteConfirmationStep(message)],
@@ -158,7 +158,6 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
         await wizard.prompt();
         await wizard.execute();
-
     }
 
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
