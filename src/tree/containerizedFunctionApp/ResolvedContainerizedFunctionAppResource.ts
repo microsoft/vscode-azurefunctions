@@ -32,6 +32,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public maskedValuesToAdd: string[] = [];
     public contextValuesToAdd?: string[] | undefined;
     public static containerContextValue: string = 'azFuncContainer';
+    private _subscription: ISubscriptionContext;
 
     public appSettingsTreeItem: AppSettingsTreeItem;
     private _functionsTreeItem: ContainerFunctionsTreeItem;
@@ -43,8 +44,9 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public readonly source: ProjectSource = ProjectSource.Remote;
 
-    public constructor(site: Site) {
+    public constructor(subscription: ISubscriptionContext, site: Site) {
         super(Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false }));
+        this._subscription = subscription;
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 
         const valuesToMask = [
@@ -60,7 +62,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public static async createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): Promise<ResolvedContainerizedFunctionAppResource> {
-        const resource = new ResolvedContainerizedFunctionAppResource(site);
+        const resource = new ResolvedContainerizedFunctionAppResource(subscription, site);
         const client = await createWebSiteClient([context, subscription]);
         resource.site.siteConfig = await client.webApps.getConfiguration(nonNullProp(resource.site, 'resourceGroup'), nonNullProp(resource.site, 'name'));
         return resource;
@@ -143,8 +145,8 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const wizardContext: DeleteFunctionappWizardContext = Object.assign(context, {
             site: this.site,
-            proxyTree: this as unknown as ContainerTreeItem,
-            ...(await createActivityContext())
+            subscription: this._subscription,
+            ...(await createActivityContext()),
         });
 
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function app "{0}"?', this.site.name);

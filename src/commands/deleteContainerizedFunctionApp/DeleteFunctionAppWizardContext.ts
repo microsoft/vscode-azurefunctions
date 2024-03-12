@@ -4,10 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type Site } from "@azure/arm-appservice";
-import { type ExecuteActivityContext, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type ContainerTreeItem } from "../../tree/containerizedFunctionApp/ContainerTreeItem";
+import { type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 
 export interface DeleteFunctionappWizardContext extends IActionContext, ExecuteActivityContext {
     site: Site;
-    proxyTree: ContainerTreeItem;
+    subscription: ISubscriptionContext;
 }
