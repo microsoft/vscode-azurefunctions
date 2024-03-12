@@ -4,9 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type Site } from "@azure/arm-appservice";
-import { type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 
-export interface DeleteFunctionappWizardContext extends IActionContext, ExecuteActivityContext {
+export interface DeleteFunctionappWizardContext extends ISubscriptionActionContext, IActionContext, ExecuteActivityContext {
     site: Site;
-    subscription: ISubscriptionContext;
 }

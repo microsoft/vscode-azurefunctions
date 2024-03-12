@@ -145,7 +145,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const wizardContext: DeleteFunctionappWizardContext = Object.assign(context, {
             site: this.site,
-            subscription: this._subscription,
+            ...this._subscription,
             ...(await createActivityContext()),
         });
 

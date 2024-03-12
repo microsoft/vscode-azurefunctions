@@ -18,7 +18,7 @@ export class DeleteContainerizedFunctionappStep extends AzureWizardExecuteStep<D
         const deleteSucceeded: string = localize('DeleteFunctionAppSucceeded', 'Successfully deleted function app "{0}".', context.site.name);
 
         ext.outputChannel.appendLog(deleting);
-        const client = await createWebSiteClient([context, context.subscription]);
+        const client = await createWebSiteClient(context);
         await client.webApps.delete(nonNullValueAndProp(context.site, 'resourceGroup'), nonNullValueAndProp(context.site, 'name'));
         void window.showInformationMessage(deleteSucceeded);
         ext.outputChannel.appendLog(deleteSucceeded);
