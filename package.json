@@ -350,6 +350,12 @@
                 "command": "azureFunctions.viewProperties",
                 "title": "%azureFunctions.viewProperties%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.eventGrid.sendMockRequest",
+                "title": "%azureFunctions.eventGrid.sendMockRequest%",
+                "category": "Azure Functions",
+                "icon": "$(notebook-execute)"
             }
         ],
         "submenus": [
@@ -686,6 +692,14 @@
                     "command": "azureFunctions.addBinding",
                     "when": "resourceFilename==function.json",
                     "group": "zzz_binding@1"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "azureFunctions.eventGrid.sendMockRequest",
+                    "arguments": ["${file}"],
+                    "when": "resourceFilename=~/.*.eventgrid.json$/",
+                    "group": "navigation@1"
                 }
             ]
         },
