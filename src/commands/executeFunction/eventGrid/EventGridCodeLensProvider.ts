@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { CodeLens, Range, type CodeLensProvider } from 'vscode';
+import { EventGridExecuteFunctionEntryPoint } from '../../../constants';
 import { localize } from '../../../localize';
 
 export class EventGridCodeLensProvider implements CodeLensProvider {
@@ -12,7 +13,7 @@ export class EventGridCodeLensProvider implements CodeLensProvider {
         firstLineLens.command = {
             title: localize('saveExecute', 'Save and execute'),
             command: 'azureFunctions.eventGrid.sendMockRequest',
-            arguments: ['codeLens']
+            arguments: [EventGridExecuteFunctionEntryPoint.CodeLens]
         };
 
         return [firstLineLens];

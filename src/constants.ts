@@ -199,3 +199,8 @@ export enum ActionType {
     GetTemplateFileContent = "GetTemplateFileContent"
 }
 export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');
+
+export enum EventGridExecuteFunctionEntryPoint {
+    CodeLens = 'CodeLens',
+    TitleBarButton = 'TitleBarButton'
+}
