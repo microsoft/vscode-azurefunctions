@@ -97,6 +97,7 @@ export enum CodeAction {
 
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
+    StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     SQL = 'SQLDB_Connection'
 }
@@ -204,3 +205,6 @@ export enum EventGridExecuteFunctionEntryPoint {
     CodeLens = 'CodeLens',
     TitleBarButton = 'TitleBarButton'
 }
+
+// Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
+export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';

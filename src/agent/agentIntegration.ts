@@ -60,70 +60,146 @@ export async function runWizardCommandWithInputs(command: WizardCommandConfig, i
     }
 }
 
-export function getAgentBenchmarkConfigs(): AgentBenchmarkConfig[] {
-    return [
+function getNumericallyLabeledBenchmarkConfig(config: AgentBenchmarkConfig, numericalLabel: number): AgentBenchmarkConfig {
+    return {
+        ...config,
+        name: `${config.name} ${numericalLabel}`
+    };
+}
+
+function getLearnBenchmarkConfigs(): AgentBenchmarkConfig[] {
+    return ([
         {
-            name: "Learn 1 - How to run code on blob change",
+            name: "Learn - How to run code on blob change",
             prompt: "How can I use azure functions to run code whenever a blob is changed?",
             acceptableHandlerChains: [
                 ["functions", "learn"],
             ],
         },
         {
-            name: "Learn 2 - Functions vs WebApps",
+            name: "Learn - Functions vs WebApps",
             prompt: "How do I write a lambda in Azure?",
             acceptableHandlerChains: [
                 ["functions", "learn"],
             ],
-        },
+        }
+    ]).map((config, index) => getNumericallyLabeledBenchmarkConfig(config, index + 1));
+}
+
+function getCreateFunctionAppBenchmarkConfigs(): AgentBenchmarkConfig[] {
+    const createFunctionAppBenchmarkName = "Create Function App";
+    return ([
         {
-            name: "Create Function App 1",
+            name: createFunctionAppBenchmarkName,
             prompt: "I want to create a function app",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 2",
+            name: createFunctionAppBenchmarkName,
             prompt: "I want to create a func app",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 3",
+            name: createFunctionAppBenchmarkName,
             prompt: "I want to create a resource that lets me run serverless code",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 4",
+            name: createFunctionAppBenchmarkName,
             prompt: "create func app",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 5",
+            name: createFunctionAppBenchmarkName,
             prompt: "func app create",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 5",
+            name: createFunctionAppBenchmarkName,
             prompt: "Hi, I would like you to create for me a very specific type of resource, that of course being an azure function app. Thank you!",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         },
         {
-            name: "Create Function App 6",
+            name: createFunctionAppBenchmarkName,
             prompt: "I want to be able to run code, but not pay for compute usage when my code isn't running, can you create a resource that helps me do that?",
             acceptableHandlerChains: [
                 ["functions", createFunctionAppCommandName],
             ],
         }
+    ]).map((config, index) => getNumericallyLabeledBenchmarkConfig(config, index + 1));
+}
+
+function getCreateFunctionProjectBenchmarkConfigs(): AgentBenchmarkConfig[] {
+    const createFunctionProjectBenchmarkName = "Create Function Project";
+    return ([
+        {
+            name: createFunctionProjectBenchmarkName,
+            prompt: "Create a new function project",
+            acceptableHandlerChains: [
+                ["functions", createFunctionProjectCommandName],
+            ]
+        },
+        {
+            name: createFunctionProjectBenchmarkName,
+            prompt: "Create a function app locally without deploying it",
+            acceptableHandlerChains: [
+                ["functions", createFunctionProjectCommandName],
+            ]
+        },
+        {
+            name: createFunctionProjectBenchmarkName,
+            prompt: "Generate files for an example function app so I get started creating my own",
+            acceptableHandlerChains: [
+                ["functions", createFunctionProjectCommandName],
+            ]
+        }
+    ]).map((config, index) => getNumericallyLabeledBenchmarkConfig(config, index + 1));
+}
+
+function getDeployToFunctionAppBenchmarkConfigs(): AgentBenchmarkConfig[] {
+    const deployToFunctionAppBenchmarkName = "Deploy to Function App";
+    return ([
+        {
+            name: deployToFunctionAppBenchmarkName,
+            prompt: "Deploy my function app",
+            acceptableHandlerChains: [
+                ["functions", deployToFunctionAppCommandName]
+            ]
+        },
+        {
+            name: deployToFunctionAppBenchmarkName,
+            prompt: "Push my function app to Azure",
+            acceptableHandlerChains: [
+                ["functions", deployToFunctionAppCommandName]
+            ]
+        },
+        {
+            name: deployToFunctionAppBenchmarkName,
+            prompt: "I have finished developing a function project locally. What should I do to make it run on Azure?",
+            acceptableHandlerChains: [
+                ["functions", deployToFunctionAppCommandName]
+            ]
+        }
+    ]).map((config, index) => getNumericallyLabeledBenchmarkConfig(config, index + 1));
+}
+
+export function getAgentBenchmarkConfigs(): AgentBenchmarkConfig[] {
+    return [
+        ...getLearnBenchmarkConfigs(),
+        ...getCreateFunctionAppBenchmarkConfigs(),
+        ...getCreateFunctionProjectBenchmarkConfigs(),
+        ...getDeployToFunctionAppBenchmarkConfigs()
     ];
 }
