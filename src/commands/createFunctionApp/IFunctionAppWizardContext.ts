@@ -29,6 +29,8 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+}
 
+export interface IFunctionAppAgentWizardContext extends IFunctionAppWizardContext {
     ui: IAzureAgentInput;
 }
