@@ -25,6 +25,7 @@ export class ContainerAppSettingsClientProvider implements AppSettingsClientProv
 export class ContainerAppSettingsClient implements IAppSettingsClient {
     public fullName: string;
     public isLinux: boolean;
+    public isContainer: boolean;
 
     private _resourceGroup: string;
     private _siteName: string;
@@ -34,6 +35,7 @@ export class ContainerAppSettingsClient implements IAppSettingsClient {
         this._client = client;
         this._resourceGroup = nonNullProp(site, 'resourceGroup');
         this.isLinux = true;
+        this.isContainer = true;
         this._siteName = nonNullProp(site, 'name');
         this.fullName = this._siteName;
     }
