@@ -196,7 +196,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         let node: SlotTreeItem | ContainerTreeItem;
 
         if (context.dockerfilePath) {
-            const resolved = new ResolvedContainerizedFunctionAppResource(nonNullProp(wizardContext, 'site'))
+            const resolved = new ResolvedContainerizedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'))
             node = new ContainerTreeItem(subscription, resolved);
         } else {
             const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
