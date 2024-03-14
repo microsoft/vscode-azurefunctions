@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
-import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
-import { type ExtensionContext } from "vscode";
-import { func } from "./constants";
-import { type CentralTemplateProvider } from "./templates/CentralTemplateProvider";
-import { type AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
+import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
+import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
+import { type ExtensionContext } from 'vscode';
+import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
+import { func } from './constants';
+import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
+import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
+import { type IFunction } from './workspace/LocalFunction';
 
 /**
  * Used for extensionVariables that can also be set per-action
@@ -54,10 +57,14 @@ export namespace ext {
     export let experimentationService: IExperimentationServiceAdapter;
     export const templateProvider = new ActionVariable<CentralTemplateProvider>('_centralTemplateProvider');
     export let rgApi: AzureHostExtensionApi;
+    export let eventGridProvider: EventGridCodeLensProvider;
+    export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
+    export const fileToFunctionNodeMap: Map<string, FunctionTreeItemBase | IFunction> = new Map();
+    export let isExecutingFunction: boolean | undefined;
 }
 
 export enum TemplateSource {
     Backup = 'Backup',
     Latest = 'Latest',
-    Staging = 'Staging'
+    Staging = 'Staging',
 }

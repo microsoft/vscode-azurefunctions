@@ -7,6 +7,7 @@ import { type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureapps
 import { type ExecuteActivityContext, type IAzureAgentInput, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { type FuncVersion } from '../../FuncVersion';
 import { type DurableBackendValues } from '../../constants';
+import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { type AppStackMajorVersion, type AppStackMinorVersion } from './stacks/models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './stacks/models/FunctionAppStackModel';
 
@@ -16,7 +17,7 @@ export type FullFunctionAppStack = {
     minorVersion: AppStackMinorVersion<FunctionAppRuntimes>;
 };
 
-export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext, ExecuteActivityContext {
+export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext, ExecuteActivityContext, ICreateFunctionAppContext {
     version: FuncVersion;
     language: string | undefined;
     stackFilter?: string;
@@ -28,6 +29,8 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+}
 
+export interface IFunctionAppAgentWizardContext extends IFunctionAppWizardContext {
     ui: IAzureAgentInput;
 }

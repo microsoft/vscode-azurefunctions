@@ -5,6 +5,7 @@
 
 import { type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizard, nonNullProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { l10n } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { ResolvedFunctionAppResource } from "../../tree/ResolvedFunctionAppResource";
@@ -18,7 +19,7 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
     let node: SlotTreeItem | undefined;
 
     const promptSteps = [new SubscriptionListStep(), new FunctionAppListStep()];
-    const title: string = localize('functionAppSelectTitle', 'Select Function App');
+    const title: string = l10n.t('Select Function App');
     const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(context, {
         promptSteps,
         title
@@ -41,7 +42,7 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
     }
 
     if (!node) {
-        throw new Error('Could not find or create Function App node.');
+        throw new Error(l10n.t('Could not find function app "{0}".', context.site?.name ?? ''));
     }
 
     return node;

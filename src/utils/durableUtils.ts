@@ -193,7 +193,7 @@ export namespace durableUtils {
 
     async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
-            const packageVersion = context.languageModel === 4 ? 'preview' : '2';
+            const packageVersion = context.languageModel === 4 ? '3' : '2';
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${nodeDfPackage}@${packageVersion}`);
         } catch (error) {
             const pError: IParsedError = parseError(error);

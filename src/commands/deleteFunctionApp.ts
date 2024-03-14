@@ -4,15 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { functionFilter } from '../constants';
-import { ext } from '../extensionVariables';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { pickAppResource } from '../utils/pickAppResource';
 
 export async function deleteFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
-            filter: functionFilter,
-        });
+        node = await pickAppResource({ ...context, suppressCreatePick: true });
     }
 
     await node.deleteTreeItem(context);

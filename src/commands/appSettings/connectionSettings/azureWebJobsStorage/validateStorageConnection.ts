@@ -19,7 +19,8 @@ export async function validateStorageConnection(context: Omit<ISetConnectionSett
     }
 
     const currentStorageConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
-    if (currentStorageConnection) {
+    const currentStorageIdentityConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath);
+    if (currentStorageConnection || currentStorageIdentityConnection) {
         // Found a valid connection in debug mode.  Skip the wizard.
         return;
     }

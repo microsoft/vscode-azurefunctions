@@ -8,6 +8,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SubscriptionTreeItem, type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
+import { type ContainerTreeItem } from '../../tree/containerizedFunctionApp/ContainerTreeItem';
 import { type ISiteCreatedOptions } from './showSiteCreated';
 
 function isSubscription(item?: AzExtParentTreeItem): boolean {
@@ -37,7 +38,7 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     context.newResourceGroupName = newResourceGroupName;
     (<ISiteCreatedOptions>context).showCreatedNotification = true;
 
-    const funcAppNode: SlotTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
+    const funcAppNode: SlotTreeItem | ContainerTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
 
     return funcAppNode.fullId;
 }

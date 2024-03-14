@@ -7,14 +7,17 @@ import { openReadOnlyJson, type IActionContext } from '@microsoft/vscode-azext-u
 import { Uri, window } from 'vscode';
 import { localize } from '../localize';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { ContainerFunctionTreeItem } from '../tree/containerizedFunctionApp/ContainerFunctionTreeItem';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 
-export async function viewProperties(context: IActionContext, node: SlotTreeItem | LocalFunctionTreeItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node: SlotTreeItem | LocalFunctionTreeItem | ContainerFunctionTreeItem): Promise<void> {
     if (node instanceof LocalFunctionTreeItem) {
         if (!node.functionJsonPath) {
             throw new Error(localize('viewPropsNotSupported', 'View function properties is not supported for this project type.'));
         }
         await window.showTextDocument(Uri.file(node.functionJsonPath));
+    } else if (node instanceof ContainerFunctionTreeItem) {
+        await openReadOnlyJson(node, node.rawConfig);
     } else {
         const siteNode: SlotTreeItem = node;
         await node.runWithTemporaryDescription(context, localize('retrievingProps', 'Retrieving properties...'), async () => {

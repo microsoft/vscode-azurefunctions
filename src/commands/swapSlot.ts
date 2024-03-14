@@ -5,15 +5,13 @@
 
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { functionFilter } from '../constants';
-import { ext } from '../extensionVariables';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
+import { pickFunctionApp } from '../utils/pickFunctionApp';
 
 export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTreeItem): Promise<void> {
     if (!sourceSlotNode) {
-        sourceSlotNode = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
-            filter: functionFilter,
+        sourceSlotNode = await pickFunctionApp(context, {
             expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.pickSlotContextValue)
         });
     }

@@ -7,16 +7,13 @@ import { type SiteConfig } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { functionFilter } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { getRemoteDebugLanguage } from './getRemoteDebugLanguage';
 
 export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter
-        });
+        node = await pickFunctionApp(context);
     }
 
     const siteClient = await node.site.createClient(context);

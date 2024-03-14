@@ -9,21 +9,18 @@ import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { DialogResponses, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { functionFilter } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { isSlotTreeItem, type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { type RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
+import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { enableFileLogging } from './enableFileLogging';
 
 export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter
-        });
+        treeItem = await pickFunctionApp(context);
     }
 
     const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;

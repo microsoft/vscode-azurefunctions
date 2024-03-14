@@ -35,20 +35,22 @@ jobs:
   - template: common/lint.yml
   - template: common/test.yml
 
-trigger:
-  branches:
-    include:
-    - '*'
+trigger: none # disable pipeline
 
-pr:
-  branches:
-    include:
-    - '*'
+# trigger:
+#   branches:
+#     include:
+#     - '*'
 
-schedules:
-- cron: "30 7 * * *"
-  displayName: Nightly at 12:30 PT
-  always: true # Run even when there are no code changes
-  branches:
-    include:
-    - main
+# pr:
+#   branches:
+#     include:
+#     - '*'
+
+# schedules:
+# - cron: "30 7 * * *"
+#   displayName: Nightly at 12:30 PT
+#   always: true # Run even when there are no code changes
+#   branches:
+#     include:
+#     - main

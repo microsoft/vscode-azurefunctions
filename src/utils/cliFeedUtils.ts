@@ -49,7 +49,8 @@ export namespace cliFeedUtils {
         projectTemplates: string;
         projectTemplateId: {
             csharp: string;
-        }
+        },
+        capabilities: string;
     }
 
     export async function getLatestVersion(context: IActionContext, version: FuncVersion): Promise<string> {
