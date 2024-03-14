@@ -7,8 +7,10 @@ import { type Site } from "@azure/arm-appservice";
 import { parseAzureResourceGroupId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { projectLanguageSetting } from "../../constants";
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createWebSiteClient } from "../../utils/azureClients";
+import { getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from "../../vsCodeConfig/settings";
 import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { createCreateFunctionAppComponents } from "../createFunctionApp/createCreateFunctionAppComponents";
 import { type IFuncDeployContext } from "./deploy";
@@ -37,7 +39,10 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
 
     public async getSubWizard(context: IFuncDeployContext & Partial<IFunctionAppWizardContext> & Partial<ICreateFunctionAppContext>): Promise<AzureWizardPromptStep<IFuncDeployContext> | undefined> {
         if (!context.site) {
-            const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, context.subscription)
+            const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+            context.telemetry.properties.projectLanguage = language;
+
+            const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, context.subscription, language)
             return { promptSteps, executeSteps };
         }
 
