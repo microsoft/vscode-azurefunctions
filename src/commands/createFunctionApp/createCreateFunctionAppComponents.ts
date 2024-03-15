@@ -16,6 +16,9 @@ import { FunctionAppCreateStep } from "./FunctionAppCreateStep";
 import { FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
+import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
+import { DeployWorkspaceProjectStep } from "./containerImage/DeployWorkspaceProjectStep";
+import { detectDockerfile } from "./containerImage/detectDockerfile";
 import { FunctionAppStackStep } from "./stacks/FunctionAppStackStep";
 
 export async function createCreateFunctionAppComponents(context: ICreateFunctionAppContext,
@@ -25,6 +28,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[];
         executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[];
     }> {
+
     const version: FuncVersion = await getDefaultFuncVersion(context);
     context.telemetry.properties.projectRuntime = version;
 
@@ -47,6 +51,18 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         replication: StorageAccountReplication.LRS
     };
 
+    await detectDockerfile(context);
+
+    if (context.dockerfilePath) {
+        const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
+        promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
+        executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
+    } else {
+        const functionAppWizard = await createFunctionAppWizard(wizardContext);
+        promptSteps.push(...functionAppWizard.promptSteps);
+        executeSteps.push(...functionAppWizard.executeSteps);
+    }
+
     if (version === FuncVersion.v1) { // v1 doesn't support linux
         wizardContext.newSiteOS = WebsiteOS.windows;
     }
@@ -57,10 +73,12 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
-        executeSteps.push(new AppServicePlanCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
-        executeSteps.push(new LogAnalyticsCreateStep());
         executeSteps.push(new AppInsightsCreateStep());
+        if (!context.dockerfilePath) {
+            executeSteps.push(new AppServicePlanCreateStep());
+            executeSteps.push(new LogAnalyticsCreateStep());
+        }
     } else {
         promptSteps.push(new ResourceGroupListStep());
         CustomLocationListStep.addStep(wizardContext, promptSteps);
@@ -113,4 +131,29 @@ async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promis
     }
 
     return version;
+}
+
+async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
+    const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+
+    promptSteps.push(new FunctionAppStackStep());
+
+    if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
+        wizardContext.newSiteOS = WebsiteOS.windows;
+    }
+
+    executeSteps.push(new FunctionAppCreateStep());
+
+    return { promptSteps, executeSteps };
+}
+
+async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
+    const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+
+    executeSteps.push(new DeployWorkspaceProjectStep());
+    executeSteps.push(new ContainerizedFunctionAppCreateStep());
+
+    return { promptSteps, executeSteps };
 }
