@@ -15,7 +15,6 @@ import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAp
 import { createCreateFunctionAppComponents } from "../createFunctionApp/createCreateFunctionAppComponents";
 import { type IFuncDeployContext } from "./deploy";
 
-
 export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContext> {
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.site = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder: vscode.l10n.t("Select a function app") })).data;
