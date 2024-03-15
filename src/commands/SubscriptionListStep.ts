@@ -33,7 +33,6 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
     private async getPicks(_: IFuncDeployContext): Promise<IAzureQuickPickItem<AzureSubscription>[]> {
         return (await ext.rgApi.getSubscriptions(true)).map(s => {
             return { label: s.name, description: s.subscriptionId, data: s };
-        }
-        );
+        });
     }
 }
