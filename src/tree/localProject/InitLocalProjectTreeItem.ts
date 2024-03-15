@@ -27,7 +27,7 @@ export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         const ti: GenericTreeItem = new GenericTreeItem(this, {
             contextValue: 'initProject',
-            label: localize('initProject', 'Initialize Project for Use with VS Code...'),
+            label: localize('initProject', 'Initialize project for use with VS Code...'),
             commandId: 'azureFunctions.initProjectForVSCode',
             iconPath: new ThemeIcon('warning')
         });
