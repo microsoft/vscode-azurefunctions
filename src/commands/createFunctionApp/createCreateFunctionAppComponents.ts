@@ -63,10 +63,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         executeSteps.push(...functionAppWizard.executeSteps);
     }
 
-    if (version === FuncVersion.v1) { // v1 doesn't support linux
-        wizardContext.newSiteOS = WebsiteOS.windows;
-    }
-
     if (!context.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
         wizardContext.useConsumptionPlan = true;
