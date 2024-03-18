@@ -27,10 +27,13 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return context.useConsumptionPlan === undefined || context.dockerfilePath !== undefined;
+        return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
     }
 
     public async getSubWizard(_context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
+        if (_context.dockerfilePath) {
+            return undefined;
+        }
         return { promptSteps: [new AppServicePlanListStep()] };
     }
 }
