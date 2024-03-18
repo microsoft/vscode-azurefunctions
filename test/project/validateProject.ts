@@ -9,6 +9,8 @@ import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContainingWorkspace, type IExtensionsJson, type ILaunchJson, type ITasksJson } from '../../extension.bundle';
+// eslint-disable-next-line no-restricted-imports
+import { detectFunctionsDockerfile } from '../../src/commands/createFunctionApp/containerImage/detectDockerfile';
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
@@ -424,4 +426,31 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     const gitignoreContents: string = (await fse.readFile(path.join(projectPath, '.gitignore'))).toString();
     assert.equal(gitignoreContents.indexOf('.vscode'), -1, 'The ".vscode" folder is being ignored.');
+}
+
+export async function validateContainerizedProject(projectPath: string, options: IValidateProjectOptions): Promise<void> {
+    //
+    // Validate dockerfile is functions dockerfile
+    const expectedPaths: ExpectedPath[] = getCommonExpectedPaths(projectPath, options.workspaceFolder).filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
+    expectedPaths.push('Dockerfile');
+    if (expectedPaths.find(p => typeof p === 'string' && p.includes('Dockerfile'))) {
+        assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'Dockerfile')), 'Dockerfile does not exist.');
+        //
+
+        const dockerfileFound = await detectFunctionsDockerfile(path.join(projectPath, 'Dockerfile'));
+        assert.ok(dockerfileFound, 'Dockerfile does not contain the expected functions image.');
+    }
+
+    //validate csproj version matches dockerfile type
+    const dockerfileContents: string = (await fse.readFile(path.join(projectPath, 'Dockerfile'))).toString();
+    const dockerfileLines: string[] = dockerfileContents.split('\n');
+    const csprojContents: string = (await fse.readFile(path.join(projectPath, 'containerizedFunctionProject.csproj'))).toString();
+    const csprojLines: string[] = csprojContents.split('\n');
+    for (const line of dockerfileLines) {
+        if (line.includes('dotnet-isolated')) {
+            assert.ok(csprojLines.some(l => l.includes('Include=\"Microsoft.Azure.Functions.Worker\" Version=\"1.20.1\"')), '.csproj does not contain the expected Microsoft.Azure.Functions.Worker version.');
+        } else if (line.includes('dotnet:4')) {
+            assert.ok(csprojLines.some(l => l.includes('Include=\"Microsoft.NET.Sdk.Functions\" Version=\"4.2.0\"')), 'csproj does not contain the expected sdk package.');
+        }
+    }
 }
