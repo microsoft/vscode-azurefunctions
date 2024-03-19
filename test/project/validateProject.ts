@@ -436,8 +436,6 @@ export async function validateContainerizedProject(projectPath: string, options:
     expectedPaths.push('Dockerfile');
     if (expectedPaths.find(p => typeof p === 'string' && p.includes('Dockerfile'))) {
         assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'Dockerfile')), 'Dockerfile does not exist.');
-        //
-
         const dockerfileFound = await detectFunctionsDockerfile(path.join(projectPath, 'Dockerfile'));
         assert.ok(dockerfileFound, 'Dockerfile does not contain the expected functions image.');
     }
@@ -449,7 +447,6 @@ export async function validateContainerizedProject(projectPath: string, options:
     const csprojLines: string[] = csprojContents.split('\n');
     for (const line of dockerfileLines) {
         if (line.includes('dotnet-isolated')) {
-            //check azure functions worker version in csproj
             const azureFunctionsWorkerVersion = csprojLines.find(l => l.includes('Include=\"Microsoft.Azure.Functions.Worker\"'))?.match(/Version=\"(\d+\.\d+\.\d+)\"/)?.[1];
             assert.ok(azureFunctionsWorkerVersion, 'csproj does not contain a Microsoft.Azure.Functions.Worker version.');
             assert.ok(semver.satisfies(azureFunctionsWorkerVersion, '1.20.x'), 'csproj does not contain the expected Microsoft.Azure.Functions.Worker version.');
