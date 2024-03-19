@@ -8,6 +8,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
+import * as semver from 'semver';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContainingWorkspace, type IExtensionsJson, type ILaunchJson, type ITasksJson } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { detectFunctionsDockerfile } from '../../src/commands/createFunctionApp/containerImage/detectDockerfile';
@@ -448,8 +449,14 @@ export async function validateContainerizedProject(projectPath: string, options:
     const csprojLines: string[] = csprojContents.split('\n');
     for (const line of dockerfileLines) {
         if (line.includes('dotnet-isolated')) {
-            assert.ok(csprojLines.some(l => l.includes('Include=\"Microsoft.Azure.Functions.Worker\" Version=\"1.20.1\"')), '.csproj does not contain the expected Microsoft.Azure.Functions.Worker version.');
+            //check azure functions worker version in csproj
+            const azureFunctionsWorkerVersion = csprojLines.find(l => l.includes('Include=\"Microsoft.Azure.Functions.Worker\"'))?.match(/Version=\"(\d+\.\d+\.\d+)\"/)?.[1];
+            assert.ok(azureFunctionsWorkerVersion, 'csproj does not contain a Microsoft.Azure.Functions.Worker version.');
+            assert.ok(semver.satisfies(azureFunctionsWorkerVersion, '1.20.x'), 'csproj does not contain the expected Microsoft.Azure.Functions.Worker version.');
         } else if (line.includes('dotnet:4')) {
+            const netSdkFunctionsVersion = csprojLines.find(l => l.includes('Include=\"Microsoft.NET.Sdk.Functions\"'))?.match(/Version=\"(\d+\.\d+\.\d+)\"/)?.[1];
+            assert.ok(netSdkFunctionsVersion, 'csproj does not contain an sdk package.');
+            assert.ok(semver.satisfies(netSdkFunctionsVersion, '4.x.x'), 'csproj does not contain the expected sdk package.');
             assert.ok(csprojLines.some(l => l.includes('Include=\"Microsoft.NET.Sdk.Functions\" Version=\"4.2.0\"')), 'csproj does not contain the expected sdk package.');
         }
     }
