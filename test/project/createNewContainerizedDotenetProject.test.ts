@@ -9,7 +9,7 @@ import { getRotatingAuthLevel } from "../nightly/getRotatingValue";
 import { createAndValidateContainerizedProject } from "./createAndValidateProject";
 import { getCSharpValidateOptions } from "./validateProject";
 
-suite.only('Create New Dotnet Project', () => {
+suite('Create New Dotnet Project', () => {
     test('checkDockerfileDotnetIsolated', async () => {
         const functionName: string = 'func' + getRandomHexString();
         const input = [/7.*isolated/i, /http\s*trigger/i, functionName, 'Company.Function', getRotatingAuthLevel()]
