@@ -38,8 +38,8 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
 
         const containerSite = Object.assign(context.site, { defaultHostUrl: `https://${context.site.defaultHostName}`, fullName: context.site.name, isSlot: false });
 
-        showSiteCreated(containerSite, context);
         await pingContainerizedFunctionApp(context, client, context.site);
+        showSiteCreated(containerSite, context);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
