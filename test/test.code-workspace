@@ -29,6 +29,9 @@
         },
         {
             "path": "../testWorkspace/9"
+        },
+        {
+            "path": "../testWorkspace/containerizedFunctionProject"
         }
     ],
     "settings": {

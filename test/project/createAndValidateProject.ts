@@ -4,13 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type TestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage, createNewProjectInternal, getRandomHexString, hiddenStacksSetting } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
+import { CreateDockerfileProjectStep } from '../../src/commands/createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
+// eslint-disable-next-line no-restricted-imports
 import type * as api from '../../src/vscode-azurefunctions.api';
-import { testFolderPath } from '../global.test';
+import { getTestWorkspaceFolder, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
-import { validateProject, type IValidateProjectOptions } from './validateProject';
+import { validateContainerizedProject, validateProject, type IValidateProjectOptions } from './validateProject';
 
 export interface ICreateProjectTestOptions extends IValidateProjectOptions {
     isHiddenLanguage?: boolean;
@@ -49,4 +52,33 @@ export async function createAndValidateProject(context: TestActionContext, optio
     });
 
     await validateProject(projectPath, options);
+}
+
+export async function createAndValidateContainerizedProject(context: TestActionContext, options: ICreateProjectTestOptions): Promise<void> {
+    // Clone inputs here so we have a different array each time
+    const inputs: (string | TestInput | RegExp)[] = options.inputs ? [...options.inputs] : [];
+    const language: ProjectLanguage = options.language;
+    const projectPath: string = getTestWorkspaceFolder('containerizedFunctionProject');
+    //Empty folder for next test
+    await AzExtFsExtra.emptyDir(projectPath);
+
+    if (!options.isHiddenLanguage) {
+        inputs.unshift(options.displayLanguage || language);
+    }
+
+    inputs.unshift('containerizedFunctionProject');
+
+    await runWithFuncSetting(hiddenStacksSetting, true, async () => {
+        await context.ui.runWithInputs(inputs, async () => {
+            await createNewProjectInternal(context,
+                {
+                    executeStep: new CreateDockerfileProjectStep(),
+                    languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i,
+                    version: options.version,
+                    suppressOpenFolder: true
+                });
+        });
+    });
+
+    await validateContainerizedProject(projectPath, options);
 }
