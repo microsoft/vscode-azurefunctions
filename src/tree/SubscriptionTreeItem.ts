@@ -128,9 +128,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps.push(...functionAppWizard.executeSteps);
         }
 
-        promptSteps.push(new SiteNameStep("functionApp"));
-
-        promptSteps.push(new FunctionAppStackStep());
         if (!wizardContext.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
