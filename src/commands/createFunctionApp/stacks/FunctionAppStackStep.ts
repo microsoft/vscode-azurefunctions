@@ -5,7 +5,7 @@
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { AzureWizardPromptStep, openUrl, type AgentQuickPickItem, type AgentQuickPickOptions, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { noRuntimeStacksAvailableLabel } from '../../../constants';
+import { flexStacksQuickPicks, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -15,8 +15,10 @@ import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
+        const isFlex: boolean = context.newPlanSku?.tier === 'FlexConsumption';
 
-        let result: FullFunctionAppStack | undefined;
+        // TODO: Since we aren't able to get the stacks for flex, we're using a simple object to represent the stack but we should when available
+        let result: FullFunctionAppStack | { runtime: string, version: string } | undefined;
         while (true) {
             const options: AgentQuickPickOptions = {
                 placeHolder,
@@ -26,7 +28,9 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                     parameterDisplayDescription: 'The runtime stack to use for the function app.'
                 }
             };
-            const picks = this.getPicks(context);
+
+            const picks = isFlex ? flexStacksQuickPicks : await this.getPicks(context);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             result = (await context.ui.showQuickPick(picks, options)).data;
             if (!result) {
                 context.version = await promptForFuncVersion(context);
@@ -34,19 +38,23 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 break;
             }
         }
-        context.newSiteStack = result;
+        if (isFlex) {
+            context.newSiteStackFlex = result as { runtime: string, version: string };
+        } else {
+            context.newSiteStack = result as FullFunctionAppStack;
 
-        if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
-            context.newSiteOS = WebsiteOS.windows;
-        } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
-            context.newSiteOS = WebsiteOS.linux;
-        } else if (!context.advancedCreation) {
-            context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
+            if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
+                context.newSiteOS = WebsiteOS.windows;
+            } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
+                context.newSiteOS = WebsiteOS.linux;
+            } else if (!context.advancedCreation) {
+                context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
+            }
         }
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return !context.newSiteStack;
+        return !context.newSiteStack && !context.newSiteStackFlex;
     }
 
     public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext>> {
@@ -62,7 +70,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return { promptSteps };
     }
 
-    private async getPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+    private async getPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | { result: string, version: string } | undefined>>[]> {
         let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context);
         if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
             // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []

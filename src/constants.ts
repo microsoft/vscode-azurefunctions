@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { type AgentQuickPickItem, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -199,3 +199,84 @@ export enum ActionType {
     GetTemplateFileContent = "GetTemplateFileContent"
 }
 export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');
+// TODO: hardcoding the runtime versions for now, but we should get this from the API when available
+export const flexStacksQuickPicks: AgentQuickPickItem<IAzureQuickPickItem<{ runtime: string, version: string }>>[] = [
+    {
+        label: '.NET 8 Isolated',
+        data: {
+            runtime: 'dotnet-isolated',
+            version: '8.0'
+        },
+        group: '.NET',
+        agentMetadata: {}
+    },
+    {
+        label: 'Java 17',
+        data: {
+            runtime: 'java',
+            version: '17'
+        },
+        group: 'Java',
+        agentMetadata: {}
+    },
+    {
+        label: 'Java 11',
+        data: {
+            runtime: 'java',
+            version: '11'
+        },
+        group: 'Java',
+        agentMetadata: {}
+    },
+    {
+        label: "Node.js 20 LTS",
+        data: {
+            runtime: 'node',
+            version: '20'
+        },
+        group: 'Node.js',
+        agentMetadata: {}
+    },
+    {
+        label: 'Python 3.11',
+        data: {
+            runtime: 'python',
+            version: '3.11'
+        },
+        group: 'Python',
+        agentMetadata: {}
+    },
+    {
+        label: 'Python 3.10',
+        data: {
+            runtime: 'python',
+            version: '3.10'
+        },
+        group: 'Python',
+        agentMetadata: {}
+    },
+    {
+        label: 'PowerShell',
+        data: {
+            runtime: 'powershell',
+            version: '7.2'
+        },
+        group: 'PowerShell Core',
+        agentMetadata: {}
+    }
+];
+
+export const flexLocations: string[] = [
+    'Australia East',
+    'East Asia',
+    'East US',
+    'East US 2 EUAP',
+    'East US 2',
+    'North Europe',
+    'South Central US',
+    'Southeast Asia',
+    'Sweden Central',
+    'UK South',
+    'West US 2',
+    'West US 3',
+];

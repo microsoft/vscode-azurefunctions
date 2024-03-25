@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppServicePlanListStep, setLocationsTask, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { AppServicePlanListStep, WebsiteOS, setLocationsTask, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
@@ -14,6 +15,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
+            { label: localize('flexConsumption', 'Flex Consumption (Preview)'), data: [false, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y).)*$/i] }
         ];
@@ -22,6 +24,10 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         await setLocationsTask(context);
         if (context.useConsumptionPlan) {
             setConsumptionPlanProperties(context);
+        } else if (!context.useConsumptionPlan && !context.planSkuFamilyFilter) {
+            // if it's not consumption and has no filter, then it's flex consumption
+            setFlexConsumptionPlanProperties(context);
+            await LocationListStep.setLocation(context, 'North Central US (Stage)');
         }
     }
 
@@ -37,4 +43,11 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
 export function setConsumptionPlanProperties(context: IAppServiceWizardContext): void {
     context.newPlanName = `ASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
     context.newPlanSku = { name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 };
+}
+
+export function setFlexConsumptionPlanProperties(context: IAppServiceWizardContext): void {
+    context.newPlanName = `FLEXASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
+    context.newPlanSku = { name: 'FC1', tier: 'FlexConsumption', size: 'FC', family: 'FC' };
+    // flex consumption only supports linux
+    context.newSiteOS = WebsiteOS.linux;
 }
