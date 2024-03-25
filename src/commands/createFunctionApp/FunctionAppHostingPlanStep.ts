@@ -10,9 +10,10 @@ import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
-export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
-    public async prompt(context: IAppServiceWizardContext): Promise<void> {
+export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
+    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const enableFlexSetting = await getWorkspaceSetting('enableFlexConsumption');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
@@ -36,16 +37,19 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         }
     }
 
-    public shouldPrompt(context: IAppServiceWizardContext): boolean {
-        return context.useConsumptionPlan === undefined;
+    public shouldPrompt(context: IFunctionAppWizardContext): boolean {
+        return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
     }
 
-    public async getSubWizard(_context: IAppServiceWizardContext): Promise<IWizardOptions<IAppServiceWizardContext> | undefined> {
+    public async getSubWizard(_context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
+        if (_context.dockerfilePath) {
+            return undefined;
+        }
         return { promptSteps: [new AppServicePlanListStep()] };
     }
 }
 
-export function setConsumptionPlanProperties(context: IAppServiceWizardContext): void {
+export function setConsumptionPlanProperties(context: IFunctionAppWizardContext): void {
     context.newPlanName = `ASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
     context.newPlanSku = { name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 };
 }
