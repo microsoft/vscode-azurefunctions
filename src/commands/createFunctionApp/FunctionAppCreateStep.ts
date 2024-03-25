@@ -251,7 +251,11 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         if (result) {
             const client: WebSiteManagementClient = await createWebSiteClient(context);
             // the payload for the new API version "2023-12-01" is incompatiable with our current SiteClient so get the old payload
-            return await client.webApps.get(rgName, siteName);
+            try {
+                return await client.webApps.get(rgName, siteName);
+            } catch (_) {
+                // ignore error and fall thru to throw
+            }
         }
         throw new Error(localize('failedToCreateFlexFunctionApp', 'Failed to create flex function app "{0}".', siteName));
     }

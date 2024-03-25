@@ -99,6 +99,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep("functionApp"));
+        promptSteps.push(new FunctionAppHostingPlanStep());
         promptSteps.push(new FunctionAppStackStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
@@ -123,7 +124,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         } else {
             promptSteps.push(new ResourceGroupListStep());
             CustomLocationListStep.addStep(wizardContext, promptSteps);
-            promptSteps.push(new FunctionAppHostingPlanStep());
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
                 {

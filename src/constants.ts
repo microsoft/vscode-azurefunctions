@@ -270,7 +270,7 @@ export const flexLocations: string[] = [
     'Australia East',
     'East Asia',
     'East US',
-    'East US 2 EUAP',
+    'East US 2 EUAP',
     'East US 2',
     'North Europe',
     'South Central US',

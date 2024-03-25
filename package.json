@@ -1052,6 +1052,11 @@
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
+                    },
+                    "azureFunctions.enableFlexConsumption": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.enableFlexConsumption%",
+                        "default": false
                     }
                 }
             }
