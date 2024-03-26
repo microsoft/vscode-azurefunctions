@@ -5,7 +5,7 @@
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { AzureWizardPromptStep, openUrl, type AgentQuickPickItem, type AgentQuickPickOptions, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { flexStacksQuickPicks, noRuntimeStacksAvailableLabel } from '../../../constants';
+import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -29,8 +29,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 }
             };
 
-            const picks = isFlex ? flexStacksQuickPicks : await this.getPicks(context);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const picks = await this.getPicks(context, isFlex);
             result = (await context.ui.showQuickPick(picks, options)).data;
             if (!result) {
                 context.version = await promptForFuncVersion(context);
@@ -70,7 +69,75 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return { promptSteps };
     }
 
-    private async getPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | { result: string, version: string } | undefined>>[]> {
+    private async getPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | { runtime: string, version: string } | undefined>>[]> {
+        // TODO: hardcoding the runtime versions for now, but we should get this from the API when available
+        if (isFlex) {
+            return [
+                {
+                    label: '.NET 8 Isolated',
+                    data: {
+                        runtime: 'dotnet-isolated',
+                        version: '8.0'
+                    },
+                    group: '.NET',
+                    agentMetadata: {}
+                },
+                {
+                    label: 'Java 17',
+                    data: {
+                        runtime: 'java',
+                        version: '17'
+                    },
+                    group: 'Java',
+                    agentMetadata: {}
+                },
+                {
+                    label: 'Java 11',
+                    data: {
+                        runtime: 'java',
+                        version: '11'
+                    },
+                    group: 'Java',
+                    agentMetadata: {}
+                },
+                {
+                    label: "Node.js 20 LTS",
+                    data: {
+                        runtime: 'node',
+                        version: '20'
+                    },
+                    group: 'Node.js',
+                    agentMetadata: {}
+                },
+                {
+                    label: 'Python 3.11',
+                    data: {
+                        runtime: 'python',
+                        version: '3.11'
+                    },
+                    group: 'Python',
+                    agentMetadata: {}
+                },
+                {
+                    label: 'Python 3.10',
+                    data: {
+                        runtime: 'python',
+                        version: '3.10'
+                    },
+                    group: 'Python',
+                    agentMetadata: {}
+                },
+                {
+                    label: 'PowerShell',
+                    data: {
+                        runtime: 'powershell',
+                        version: '7.2'
+                    },
+                    group: 'PowerShell Core',
+                    agentMetadata: {}
+                }
+            ];
+        }
         let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context);
         if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
             // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []
