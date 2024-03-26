@@ -97,6 +97,7 @@ export enum CodeAction {
 
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
+    StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     SQL = 'SQLDB_Connection'
 }
@@ -199,7 +200,11 @@ export enum ActionType {
     GetTemplateFileContent = "GetTemplateFileContent"
 }
 export const noRuntimeStacksAvailableLabel = localize('noRuntimeStacksAvailable', 'No valid runtime stacks available');
-
+export enum EventGridExecuteFunctionEntryPoint {
+    CodeLens = 'CodeLens',
+    TitleBarButton = 'TitleBarButton'
+}
+// TODO: This will be the locations available for preview, but currently isn't ready as of 3/25/2024
 export const flexLocations: string[] = [
     'Australia East',
     'East Asia',
@@ -214,3 +219,6 @@ export const flexLocations: string[] = [
     'West US 2',
     'West US 3',
 ];
+
+// Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
+export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';

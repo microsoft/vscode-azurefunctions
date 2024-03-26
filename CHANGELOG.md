@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.14.0 - 2024-03-21
+
+### Added
+* [[3943]](https://github.com/microsoft/vscode-azurefunctions/pull/3943), [[3964]](https://github.com/microsoft/vscode-azurefunctions/pull/3964)   Support for creating containerized function apps
+* [[3929]](https://github.com/microsoft/vscode-azurefunctions/pull/3929) Support for creating containerized function projects
+
+### Changed
+* [[3984]](https://github.com/microsoft/vscode-azurefunctions/pull/3984) Improved "Execute Function" flow for EventGrid functions
+
 ## 1.13.3 - 2024-02-05
 
 ### Fixed
