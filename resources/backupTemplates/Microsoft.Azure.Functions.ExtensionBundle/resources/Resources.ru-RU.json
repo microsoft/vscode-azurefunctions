@@ -571,6 +571,7 @@
     "EdgeHubTrigger_description": "Функция, которая будет запускаться при каждой отправке сообщения в указанные входные данные",
     "CosmosDBTrigger_description": "Функция, которая будет запускаться при каждом изменении документов в коллекции документов",
     "EventGridTrigger_description": "Функция, которая будет запускаться при каждом получении нового события сеткой событий",
+    "EventGridCloudEventTrigger_description": "Функция, которая будет запускаться при каждом получении нового события сеткой событий, с использованием схемы и привязки CloudEvent.",
     "IoTHubTrigger_description": "Функция, которая будет запускаться каждый раз, когда Центр Интернета вещей получает новое событие от Центра Интернета вещей (Центра событий).",
     "ServiceBusQueueTrigger_description": "Функция, которая будет запускаться каждый раз при добавлении сообщения в указанную очередь служебной шины.",
     "ServiceBusTopicTrigger_description": "Функция, которая будет запускаться каждый раз при добавлении сообщения в указанный раздел служебной шины.",
@@ -643,7 +644,10 @@
     "blueprint_selected_filename_help": "Это имя файла, куда нужно добавить функцию для существующей схемы",
     "blueprint_selected_filename_label": "Выберите файл для сохранения функции схемы",
     "blueprint_fileName_errorText": "Недопустимое имя файла",
-    "app_filename_errorText": "Недопустимое имя файла"
+    "app_filename_errorText": "Недопустимое имя файла",
+    "DaprPublishOutputBinding_description": "Функция, которая опубликует сообщение в разделе для брокера сообщений с помощью Dapr.",
+    "DaprServiceInvocationTrigger_description": "Функция, которая будет вызвана другим приложением или функциями с помощью Dapr.",
+    "DaprTopicTrigger_description": "Функция, которая будет вызвана при получении сообщения по теме, на которую создана подписка, в брокере сообщений с помощью Dapr."
   },
   "en": {
     "eventHubOut_connection_help": "The name of the app setting containing your Event Hub connection string. The connection string must have Send permissions.",
@@ -1217,6 +1221,7 @@
     "EdgeHubTrigger_description": "A function that will be run whenever a message is sent to a specified input",
     "CosmosDBTrigger_description": "A function that will be run whenever documents change in a document collection",
     "EventGridTrigger_description": "A function that will be run whenever an event grid receives a new event",
+    "EventGridCloudEventTrigger_description": "A function that will be run whenever an event grid receives a new event, using the CloudEvent schema and binding.",
     "IoTHubTrigger_description": "A function that will be run whenever an IoT Hub receives a new event from IoT Hub (Event Hub)",
     "ServiceBusQueueTrigger_description": "A function that will be run whenever a message is added to a specified Service Bus queue",
     "ServiceBusTopicTrigger_description": "A function that will be run whenever a message is added to the specified Service Bus topic",
@@ -1289,6 +1294,9 @@
     "blueprint_selected_filename_help": "This is the name of the file where you want to add a function to the existing blueprint",
     "blueprint_selected_filename_label": "Select a file to save for your blueprint function",
     "blueprint_fileName_errorText": "Invalid fileName",
-    "app_filename_errorText": "Invalid fileName"
+    "app_filename_errorText": "Invalid fileName",
+    "DaprPublishOutputBinding_description": "A function that will publish message on a topic to message broker using Dapr.",
+    "DaprServiceInvocationTrigger_description": "A function that will be invoked by other app or functions using Dapr.",
+    "DaprTopicTrigger_description": "A function that will be invoked when a message is received on a subscribed topic in message broker using Dapr."
   }
 }

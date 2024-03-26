@@ -476,6 +476,31 @@
       ]
     },
     {
+      "type": "sqlTrigger",
+      "displayName": "$sql_trigger_displayName",
+      "direction": "trigger",
+      "enabledInTryMode": false,
+      "settings": [
+        {
+          "name": "table",
+          "value": "string",
+          "defaultValue": "[dbo].[table1]",
+          "required": true,
+          "label": "$sql_trigger_table_label",
+          "help": "$sql_trigger_table_help"
+        },
+        {
+          "name": "SqlConnectionString",
+          "value": "string",
+          "defaultValue": "",
+          "required": true,
+          "resource": "Sql",
+          "label": "$sql_trigger_connection_label",
+          "help": "$sql_trigger_connection_help"
+        }
+      ]
+    },
+    {
       "type": "sql",
       "displayName": "$sql_output_displayName",
       "direction": "out",

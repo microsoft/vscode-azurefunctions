@@ -8,7 +8,7 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -57,6 +57,7 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
         inputs: javaBaseInputs.concat(/Maven/i),
         description: JavaBuildTool.maven
     });
+    /* Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     const ballerinaBaseInputs: (TestInput | string | RegExp)[] = [/JVM/i];
 
     testCases.push({
@@ -64,6 +65,7 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
         inputs: ballerinaBaseInputs,
         description: 'ballerina'
     });
+    */
 }
 
 testCases.push({ ...getCustomValidateOptions(FuncVersion.v3) });
