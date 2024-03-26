@@ -76,7 +76,7 @@
                 "NODE_DEBUG": "",
                 "ENABLE_LONG_RUNNING_TESTS": "",
                 "FUNC_PATH": "func",
-                "AZFUNC_UPDATE_BACKUP_TEMPLATES": ""
+                "AZFUNC_UPDATE_BACKUP_TEMPLATES": "1"
             }
         },
         {
