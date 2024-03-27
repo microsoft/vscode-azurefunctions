@@ -110,15 +110,12 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: context.newSiteName,
                 serverFarmId: context.plan?.id,
                 clientAffinityEnabled: false,
-                siteConfig: await this.getNewSiteConfig(context),
-                reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+                siteConfig: await this.getNewSiteConfig(context)
             },
         };
 
         // TOOD: hardcode list of locations
         site.location = 'North Central US (Stage)';
-        // TODO: get container sizes from the stacks API and need to make a list step
-        site.properties.containerSize = 512;
         site.properties.sku = 'FlexConsumption';
         site.properties.functionAppConfig = {
             deployment: {
@@ -249,7 +246,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const client = await createGenericClient(context, context);
         const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
-        if (result) {
+        if (result && result.status >= 200 && result.status < 300) {
             const client: WebSiteManagementClient = await createWebSiteClient(context);
             // the payload for the new API version "2023-12-01" is incompatiable with our current SiteClient so get the old payload
             try {
@@ -258,7 +255,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 // ignore error and fall thru to throw
             }
         }
-        throw new Error(localize('failedToCreateFlexFunctionApp', 'Failed to create flex function app "{0}".', siteName));
+
+        throw new Error(parseError(result.parsedBody).message || localize('failedToCreateFlexFunctionApp', 'Failed to create flex function app "{0}".', siteName));
     }
 }
 
