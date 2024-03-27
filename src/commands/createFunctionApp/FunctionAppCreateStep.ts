@@ -114,8 +114,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             },
         };
 
-        // TOOD: hardcode list of locations
-        site.location = 'North Central US (Stage)';
         site.properties.sku = 'FlexConsumption';
         site.properties.functionAppConfig = {
             deployment: {

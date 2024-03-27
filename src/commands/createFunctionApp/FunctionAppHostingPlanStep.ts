@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppServicePlanListStep, WebsiteOS, setLocationsTask, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipeline';
+import { AppServicePlanListStep, setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
@@ -33,7 +34,6 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
         } else if (!context.useConsumptionPlan && !context.planSkuFamilyFilter) {
             // if it's not consumption and has no filter, then it's flex consumption
             setFlexConsumptionPlanProperties(context);
-            await LocationListStep.setLocation(context, 'North Central US (Stage)');
         }
     }
 
@@ -59,4 +59,24 @@ export function setFlexConsumptionPlanProperties(context: IAppServiceWizardConte
     context.newPlanSku = { name: 'FC1', tier: 'FlexConsumption', size: 'FC', family: 'FC' };
     // flex consumption only supports linux
     context.newSiteOS = WebsiteOS.linux;
+    LocationListStep.setLocationSubset(context, getFlexLocations(context), 'Microsoft.WebFlex');
+}
+
+async function getFlexLocations(context: IAppServiceWizardContext): Promise<string[]> {
+    const headers = createHttpHeaders({
+        'Content-Type': 'application/json',
+    });
+
+    const options: AzExtRequestPrepareOptions = {
+        url: `https://management.azure.com/subscriptions/${context.subscriptionId}/providers/Microsoft.Web/geoRegions?api-version=2023-01-01&sku=FlexConsumption`,
+        method: 'GET',
+        headers
+    };
+
+    const client = await createGenericClient(context, context);
+    const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
+    const locations = (result.parsedBody.value.map(loc => loc.name) as unknown as string[])
+    // TODO: hardcoding these locations for now because they are the only ones that work
+    locations.push(...['North Central US (Stage)', 'East US 2 EUAP']);
+    return locations;
 }
