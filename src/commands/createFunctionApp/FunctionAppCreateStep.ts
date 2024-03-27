@@ -180,6 +180,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const isElasticPremium: boolean = context.plan?.sku?.family?.toLowerCase() === 'ep';
         const isConsumption: boolean = context.plan?.sku?.family?.toLowerCase() === 'y';
+        // no stack means it's a flex app
+        const isFlex: boolean = !stack;
         if (isConsumption || isElasticPremium) {
             // WEBSITE_CONTENT* settings are added for consumption/premium plans, but not dedicated
             // https://github.com/microsoft/vscode-azurefunctions/issues/1702
@@ -191,8 +193,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: contentShareKey,
                 value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
-        } else if (!stack) {
-            // no stack means it's a flex app
+        } else if (isFlex) {
             appSettings.push({
                 name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
                 value: storageConnectionString
