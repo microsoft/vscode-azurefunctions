@@ -28,7 +28,6 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
-import { showFlexDeployConfirmation } from './showFlexDeployConfirmation';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -126,11 +125,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
         const deployCommandId = 'azureFunctions.deploy';
-        if (context.deployMethod === 'flexconsumption') {
-            await showFlexDeployConfirmation(context, node.site, deployCommandId);
-        } else {
-            await showDeployConfirmation(context, node.site, deployCommandId);
-        }
+        await showDeployConfirmation(context, node.site, deployCommandId);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
