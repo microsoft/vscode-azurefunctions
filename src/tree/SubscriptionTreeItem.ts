@@ -7,7 +7,7 @@ import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, type INewStorageAccountDefaults } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, parseError, type AzExtTreeItem, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
-import { workspace, type WorkspaceFolder } from 'vscode';
+import { type WorkspaceFolder } from 'vscode';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
@@ -114,9 +114,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
-        if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
-            await detectDockerfile(context);
-        }
+        await detectDockerfile(context);
 
         promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
