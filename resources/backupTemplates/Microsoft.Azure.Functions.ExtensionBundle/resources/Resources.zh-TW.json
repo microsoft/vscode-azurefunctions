@@ -571,6 +571,7 @@
     "EdgeHubTrigger_description": "每當訊息傳送至指定的輸入時，就會執行函式",
     "CosmosDBTrigger_description": "在文件集合中發生文件變更時，將會執行的函式",
     "EventGridTrigger_description": "事件格線接收到新事件時，將會執行的函式",
+    "EventGridCloudEventTrigger_description": "每當事件方格收到新事件時，會使用 CloudEvent 結構描述和繫結執行的函數。",
     "IoTHubTrigger_description": "IoT 中樞每次從 IoT 中樞 (事件中樞) 收到新事件時都會執行的函式",
     "ServiceBusQueueTrigger_description": "每次有訊息新增到指定服務匯流排佇列時都會執行的函式",
     "ServiceBusTopicTrigger_description": "每次有訊息新增到指定服務匯流排主題時都會執行的函式",
@@ -643,7 +644,10 @@
     "blueprint_selected_filename_help": "這是您想要將函式新增到現有藍圖的檔案名稱",
     "blueprint_selected_filename_label": "選取要為藍圖函數儲存的檔案",
     "blueprint_fileName_errorText": "無效的檔案名稱 ",
-    "app_filename_errorText": "無效的檔案名稱 "
+    "app_filename_errorText": "無效的檔案名稱 ",
+    "DaprPublishOutputBinding_description": "會使用 Dapr 將一個主題的訊息發佈到訊息代理程式的函式。",
+    "DaprServiceInvocationTrigger_description": "由其他應用程式或函式使用 Dapr 所叫用的函式。",
+    "DaprTopicTrigger_description": "使用 Dapr 在訊息代理程式中收到訂閱主題的訊息時，將會被叫用的函式。"
   },
   "en": {
     "eventHubOut_connection_help": "The name of the app setting containing your Event Hub connection string. The connection string must have Send permissions.",
@@ -1217,6 +1221,7 @@
     "EdgeHubTrigger_description": "A function that will be run whenever a message is sent to a specified input",
     "CosmosDBTrigger_description": "A function that will be run whenever documents change in a document collection",
     "EventGridTrigger_description": "A function that will be run whenever an event grid receives a new event",
+    "EventGridCloudEventTrigger_description": "A function that will be run whenever an event grid receives a new event, using the CloudEvent schema and binding.",
     "IoTHubTrigger_description": "A function that will be run whenever an IoT Hub receives a new event from IoT Hub (Event Hub)",
     "ServiceBusQueueTrigger_description": "A function that will be run whenever a message is added to a specified Service Bus queue",
     "ServiceBusTopicTrigger_description": "A function that will be run whenever a message is added to the specified Service Bus topic",
@@ -1289,6 +1294,9 @@
     "blueprint_selected_filename_help": "This is the name of the file where you want to add a function to the existing blueprint",
     "blueprint_selected_filename_label": "Select a file to save for your blueprint function",
     "blueprint_fileName_errorText": "Invalid fileName",
-    "app_filename_errorText": "Invalid fileName"
+    "app_filename_errorText": "Invalid fileName",
+    "DaprPublishOutputBinding_description": "A function that will publish message on a topic to message broker using Dapr.",
+    "DaprServiceInvocationTrigger_description": "A function that will be invoked by other app or functions using Dapr.",
+    "DaprTopicTrigger_description": "A function that will be invoked when a message is received on a subscribed topic in message broker using Dapr."
   }
 }

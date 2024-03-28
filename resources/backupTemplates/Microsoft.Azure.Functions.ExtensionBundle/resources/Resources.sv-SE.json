@@ -571,6 +571,7 @@
     "EdgeHubTrigger_description": "En funktion som kommer köras när ett meddelande skickas till i en angiven indata",
     "CosmosDBTrigger_description": "En funktion som ska köras när dokument ändras i en dokumentsamling",
     "EventGridTrigger_description": "En funktion som ska köras när en Event Grid tar emot en ny händelse",
+    "EventGridCloudEventTrigger_description": "En funktion som ska köras när en Event Grid tar emot en ny händelse, med CloudEvent-schema och bindning.",
     "IoTHubTrigger_description": "En funktion som körs när en IoT Hub får en ny händelse från IoT Hub (händelsehubb)",
     "ServiceBusQueueTrigger_description": "En funktion som körs när ett meddelande läggs till i en angiven Service Bus-kö",
     "ServiceBusTopicTrigger_description": "En funktion som körs när ett meddelande läggs till i det angivna Service Bus-ämnet",
@@ -643,7 +644,10 @@
     "blueprint_selected_filename_help": "Det här är namnet på den fil där du ska lägga till en funktion i den befintliga skissen",
     "blueprint_selected_filename_label": "Välj en fil att spara för skissfunktionen",
     "blueprint_fileName_errorText": "Ogiltigt filnamn",
-    "app_filename_errorText": "Ogiltigt filnamn"
+    "app_filename_errorText": "Ogiltigt filnamn",
+    "DaprPublishOutputBinding_description": "En funktion som publicerar meddelandet i ett ämne till meddelandekoordinatorn med hjälp av Dapr.",
+    "DaprServiceInvocationTrigger_description": "En funktion som anropas av en annan app eller funktion med hjälp av Dapr.",
+    "DaprTopicTrigger_description": "En funktion som anropas när ett meddelande tas emot via ett prenumererat ämne i meddelandekoordinatorn med hjälp av Dapr."
   },
   "en": {
     "eventHubOut_connection_help": "The name of the app setting containing your Event Hub connection string. The connection string must have Send permissions.",
@@ -1217,6 +1221,7 @@
     "EdgeHubTrigger_description": "A function that will be run whenever a message is sent to a specified input",
     "CosmosDBTrigger_description": "A function that will be run whenever documents change in a document collection",
     "EventGridTrigger_description": "A function that will be run whenever an event grid receives a new event",
+    "EventGridCloudEventTrigger_description": "A function that will be run whenever an event grid receives a new event, using the CloudEvent schema and binding.",
     "IoTHubTrigger_description": "A function that will be run whenever an IoT Hub receives a new event from IoT Hub (Event Hub)",
     "ServiceBusQueueTrigger_description": "A function that will be run whenever a message is added to a specified Service Bus queue",
     "ServiceBusTopicTrigger_description": "A function that will be run whenever a message is added to the specified Service Bus topic",
@@ -1289,6 +1294,9 @@
     "blueprint_selected_filename_help": "This is the name of the file where you want to add a function to the existing blueprint",
     "blueprint_selected_filename_label": "Select a file to save for your blueprint function",
     "blueprint_fileName_errorText": "Invalid fileName",
-    "app_filename_errorText": "Invalid fileName"
+    "app_filename_errorText": "Invalid fileName",
+    "DaprPublishOutputBinding_description": "A function that will publish message on a topic to message broker using Dapr.",
+    "DaprServiceInvocationTrigger_description": "A function that will be invoked by other app or functions using Dapr.",
+    "DaprTopicTrigger_description": "A function that will be invoked when a message is received on a subscribed topic in message broker using Dapr."
   }
 }

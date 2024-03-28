@@ -571,6 +571,7 @@
     "EdgeHubTrigger_description": "Belirtilen girişe bir ileti gönderildiğinde çalıştırılacak işlev",
     "CosmosDBTrigger_description": "Belge koleksiyonundaki belgeler her değiştirildiğinde çalıştırılacak bir işlev",
     "EventGridTrigger_description": "Bir olay kılavuzu her yeni olay aldığında çalıştırılacak bir işlev",
+    "EventGridCloudEventTrigger_description": "Bir olay kılavuzu CloudEvent şeması ve bağlaması kullanılarak yeni bir olay aldığı her durumda çalıştırılacak işlev.",
     "IoTHubTrigger_description": "Bir IoT Hub, IoT Hub'dan (Event Hub) her yeni olay aldığında çalıştırılacak bir işlev",
     "ServiceBusQueueTrigger_description": "Belirtilen Service Bus kuyruğuna bir ileti eklendiğinde çalıştırılacak bir işlev",
     "ServiceBusTopicTrigger_description": "Belirtilen Service Bus konu başlığına her ileti eklendiğinde çalıştırılacak bir işlev",
@@ -643,7 +644,10 @@
     "blueprint_selected_filename_help": "Bu, var olan şemaya işlev eklemek istediğiniz dosyanın adıdır",
     "blueprint_selected_filename_label": "Şema işleviniz için kaydetmek istediğiniz dosyayı seçin",
     "blueprint_fileName_errorText": "Geçersiz fileName",
-    "app_filename_errorText": "Geçersiz fileName"
+    "app_filename_errorText": "Geçersiz fileName",
+    "DaprPublishOutputBinding_description": "Bir konu hakkında Dapr kullanarak ileti aracısında ileti yayımlayacak işlev.",
+    "DaprServiceInvocationTrigger_description": "Dapr kullanılarak diğer bir uygulama veya işlev tarafından çağrılacak işlev.",
+    "DaprTopicTrigger_description": "İleti aracısında abone olunan bir konuda Dapr kullanılarak bir ileti alındığında çağrılacak işlev."
   },
   "en": {
     "eventHubOut_connection_help": "The name of the app setting containing your Event Hub connection string. The connection string must have Send permissions.",
@@ -1217,6 +1221,7 @@
     "EdgeHubTrigger_description": "A function that will be run whenever a message is sent to a specified input",
     "CosmosDBTrigger_description": "A function that will be run whenever documents change in a document collection",
     "EventGridTrigger_description": "A function that will be run whenever an event grid receives a new event",
+    "EventGridCloudEventTrigger_description": "A function that will be run whenever an event grid receives a new event, using the CloudEvent schema and binding.",
     "IoTHubTrigger_description": "A function that will be run whenever an IoT Hub receives a new event from IoT Hub (Event Hub)",
     "ServiceBusQueueTrigger_description": "A function that will be run whenever a message is added to a specified Service Bus queue",
     "ServiceBusTopicTrigger_description": "A function that will be run whenever a message is added to the specified Service Bus topic",
@@ -1289,6 +1294,9 @@
     "blueprint_selected_filename_help": "This is the name of the file where you want to add a function to the existing blueprint",
     "blueprint_selected_filename_label": "Select a file to save for your blueprint function",
     "blueprint_fileName_errorText": "Invalid fileName",
-    "app_filename_errorText": "Invalid fileName"
+    "app_filename_errorText": "Invalid fileName",
+    "DaprPublishOutputBinding_description": "A function that will publish message on a topic to message broker using Dapr.",
+    "DaprServiceInvocationTrigger_description": "A function that will be invoked by other app or functions using Dapr.",
+    "DaprTopicTrigger_description": "A function that will be invoked when a message is received on a subscribed topic in message broker using Dapr."
   }
 }
