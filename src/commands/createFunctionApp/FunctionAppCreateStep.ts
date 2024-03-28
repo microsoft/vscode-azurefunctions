@@ -150,17 +150,17 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             {
                 name: ConnectionKey.Storage,
                 value: storageConnectionString
-            },
-            {
-                name: extensionVersionKey,
-                value: '~' + getMajorVersion(context.version)
-            },
+            }
         ];
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
             newSiteConfig = stackSettings.siteConfigPropertiesDictionary;
             appSettings.concat(
+                {
+                    name: extensionVersionKey,
+                    value: '~' + getMajorVersion(context.version)
+                },
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 ...Object.entries(stackSettings.appSettingsDictionary).map(([name, value]) => { return { name, value }; }));
         }
