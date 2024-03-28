@@ -204,21 +204,6 @@ export enum EventGridExecuteFunctionEntryPoint {
     CodeLens = 'CodeLens',
     TitleBarButton = 'TitleBarButton'
 }
-// TODO: This will be the locations available for preview, but currently isn't ready as of 3/25/2024
-export const flexLocations: string[] = [
-    'Australia East',
-    'East Asia',
-    'East US',
-    'East US 2 EUAP',
-    'East US 2',
-    'North Europe',
-    'South Central US',
-    'Southeast Asia',
-    'Sweden Central',
-    'UK South',
-    'West US 2',
-    'West US 3',
-];
 
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
