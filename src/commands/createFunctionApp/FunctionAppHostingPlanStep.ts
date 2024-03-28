@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type Location } from '@azure/arm-resources-subscriptions';
 import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipeline';
 import { AppServicePlanListStep, setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
@@ -75,7 +76,7 @@ async function getFlexLocations(context: IAppServiceWizardContext): Promise<stri
 
     const client = await createGenericClient(context, context);
     const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
-    const locations = (result.parsedBody.value.map(loc => loc.name) as unknown as string[])
+    const locations = ((result.parsedBody as { value: Location[] }).value.map(loc => loc.name) as string[])
     // TODO: hardcoding these locations for now because they are the only ones that work
     locations.push(...['North Central US (Stage)', 'East US 2 EUAP']);
     return locations;
