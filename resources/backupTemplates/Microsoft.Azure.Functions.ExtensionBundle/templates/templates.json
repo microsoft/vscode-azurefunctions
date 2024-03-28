@@ -219,7 +219,7 @@
     "id": "CosmosDBTrigger-CSharp",
     "runtime": "2",
     "files": {
-      "run.csx": "#r \"Microsoft.Azure.DocumentDB.Core\"\r\nusing System;\r\nusing System.Collections.Generic;\r\nusing Microsoft.Azure.Documents;\r\n\r\npublic static void Run(IReadOnlyList<Document> input, ILogger log)\r\n{\r\n    if (input != null && input.Count > 0)\r\n    {\r\n        log.LogInformation(\"Documents modified \" + input.Count);\r\n        log.LogInformation(\"First document Id \" + input[0].Id);\r\n    }\r\n}\r\n"
+      "run.csx": "using System;\r\nusing System.Collections.Generic;\r\n\r\npublic static void Run(IReadOnlyList<ToDoItem> input, ILogger log)\r\n{\r\n    if (input != null && input.Count > 0)\r\n    {\r\n        log.LogInformation(\"Documents modified \" + input.Count);\r\n        log.LogInformation(\"First document Id \" + input[0].id);\r\n    }\r\n}\r\n\r\n// Customize the model with your own desired properties\r\npublic class ToDoItem\r\n{\r\n    public string id { get; set; }\r\n    public string Description { get; set; }\r\n}\r\n"
     },
     "function": {
       "bindings": [
@@ -241,6 +241,44 @@
       "description": "$CosmosDBTrigger_description",
       "name": "Azure Cosmos DB trigger",
       "language": "C#",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "cosmosDB",
+      "enabledInTryMode": false,
+      "userPrompt": [
+        "connection",
+        "databaseName",
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
+      ]
+    }
+  },
+  {
+    "id": "CosmosDBTrigger-Custom",
+    "runtime": "2",
+    "files": {},
+    "function": {
+      "bindings": [
+        {
+          "type": "cosmosDBTrigger",
+          "name": "documents",
+          "direction": "in",
+          "leaseContainerName": "leases",
+          "connection": "",
+          "databaseName": "",
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "CosmosTrigger",
+      "description": "$CosmosDBTrigger_description",
+      "name": "Azure Cosmos DB trigger",
+      "language": "Custom",
       "category": [
         "$temp_category_core",
         "$temp_category_dataProcessing"
@@ -383,6 +421,47 @@
       ],
       "filters": [
         "Python3"
+      ]
+    }
+  },
+  {
+    "id": "CosmosDBTrigger-TypeScript",
+    "runtime": "2",
+    "files": {
+      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst cosmosDBTrigger: AzureFunction = async function (context: Context, documents: any[]): Promise<void> {\r\n    if (!!documents && documents.length > 0) {\r\n        context.log('Document Id: ', documents[0].id);\r\n    }\r\n}\r\n\r\nexport default cosmosDBTrigger;\r\n",
+      "sample.dat": "[\r\n\t{\r\n\t\t\"id\": \"sample\"\r\n\t}\r\n]"
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "cosmosDBTrigger",
+          "name": "documents",
+          "direction": "in",
+          "leaseContainerName": "leases",
+          "connection": "",
+          "databaseName": "",
+          "containerName": "",
+          "createLeaseContainerIfNotExists": true
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "CosmosTrigger",
+      "description": "$CosmosDBTrigger_description",
+      "name": "Azure Cosmos DB trigger",
+      "language": "TypeScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "cosmosDB",
+      "enabledInTryMode": false,
+      "userPrompt": [
+        "connection",
+        "databaseName",
+        "containerName",
+        "leaseContainerName",
+        "createLeaseContainerIfNotExists"
       ]
     }
   },
@@ -1180,7 +1259,7 @@
       ]
     },
     "metadata": {
-      "defaultFunctionName": "DurableFunctionsOrchestratorJS",
+      "defaultFunctionName": "DurableFunctionsOrchestratorTS",
       "description": "$DurableFunctionsOrchestrator_description",
       "name": "Durable Functions orchestrator",
       "language": "TypeScript",
@@ -1189,6 +1268,36 @@
         "$temp_category_durableFunctions"
       ],
       "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "EventGridCloudEventTrigger-CSharp",
+    "runtime": "2",
+    "files": {
+      "run.csx": "#r \"Azure.Messaging\"\r\n\r\nusing Azure.Messaging;\r\n\r\npublic static void Run(CloudEvent cloudEvent, ILogger log)\r\n{\r\n    log.LogInformation(\"Event received {type} {subject}: {data}\", cloudEvent.Type, cloudEvent.Subject, cloudEvent.Data.ToString());\r\n}\r\n",
+      "sample.dat": "{\r\n    \"specversion\": \"1.0\",\r\n    \"type\": \"Microsoft.Storage.BlobCreated\",  \r\n    \"source\": \"/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Storage/storageAccounts/{storage-account}\",\r\n    \"id\": \"9aeb0fdf-c01e-0131-0922-9eb54906e209\",\r\n    \"time\": \"2019-11-18T15:13:39.4589254Z\",\r\n    \"subject\": \"blobServices/default/containers/{storage-container}/blobs/{new-file}\",\r\n    \"dataschema\": \"#\",\r\n    \"data\": {\r\n        \"api\": \"PutBlockList\",\r\n        \"clientRequestId\": \"4c5dd7fb-2c48-4a27-bb30-5361b5de920a\",\r\n        \"requestId\": \"9aeb0fdf-c01e-0131-0922-9eb549000000\",\r\n        \"eTag\": \"0x8D76C39E4407333\",\r\n        \"contentType\": \"image/png\",\r\n        \"contentLength\": 30699,\r\n        \"blobType\": \"BlockBlob\",\r\n        \"url\": \"https://gridtesting.blob.core.windows.net/testcontainer/{new-file}\",\r\n        \"sequencer\": \"000000000000000000000000000099240000000000c41c18\",\r\n        \"storageDiagnostics\": {\r\n            \"batchId\": \"681fe319-3006-00a8-0022-9e7cde000000\"\r\n        }\r\n    }\r\n}"
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "eventGridTrigger",
+          "name": "cloudEvent",
+          "direction": "in"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "EventGridCloudEventTrigger",
+      "description": "$EventGridCloudEventTrigger_description",
+      "name": "Azure Event Grid Cloud Event trigger",
+      "language": "C#",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "eventGrid",
       "enabledInTryMode": false,
       "userPrompt": []
     }
@@ -4354,6 +4463,172 @@
     }
   },
   {
+    "id": "SqlTrigger-CSharp",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Trigger Binding - C<span>#</span>\r\n\r\nThe `SQL Trigger Binding` monitors the user table for changes (i.e., row inserts, updates, and deletes) and invokes the function with updated rows.\r\n\r\n## How it works\r\n\r\n`SQL Trigger Binding` utilizes SQL change tracking functionality to monitor the user table for changes. As such, it is necessary to enable change tracking on the SQL database and the SQL table before using the trigger support.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqltrigger)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "changes",
+          "type": "sqlTrigger",
+          "direction": "in",
+          "tableName": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ],
+      "disabled": false
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlTriggerBinding",
+      "description": "$SqlTriggerBinding_description",
+      "name": "SQL Trigger",
+      "language": "C#",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlTrigger-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample SQL Trigger Binding\r\n * See https://aka.ms/sqltrigger for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Update \"tableName\" in function.json - this should be the table that is monitored for changes and triggers/invokes the function.\r\n *      2. Add an app setting named \"SqlConnectionString\" containing the connection string\r\n *          to use for the SQL connection\r\n *      3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n * @param context The Azure Function runtime context\r\n * @param changes The updated objects returned by the trigger binding\r\n */\r\nmodule.exports = async function (context, changes) {\r\n    context.log(`SQL Changes: ${JSON.stringify(changes)}`)\r\n}\r\n",
+      "readme.md": "# SQL Trigger Binding - JavaScript\r\n\r\nThe `SQL Trigger Binding` monitors the user table for changes (i.e., row inserts, updates, and deletes) and invokes the function with updated rows.\r\n\r\n## How it works\r\n\r\n`SQL Trigger Binding` utilizes SQL change tracking functionality to monitor the user table for changes. As such, it is necessary to enable change tracking on the SQL database and the SQL table before using the trigger support.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqltrigger)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "changes",
+          "type": "sqlTrigger",
+          "direction": "in",
+          "tableName": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ],
+      "disabled": false
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlTriggerBinding",
+      "description": "$SqlTriggerBinding_description",
+      "name": "SQL Trigger",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlTrigger-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Input Binding - PowerShell\r\n\r\nThe `SQL Trigger Binding` monitors the user table for changes (i.e., row inserts, updates, and deletes) and invokes the function with updated rows.\r\n\r\n## How it works\r\n\r\n`SQL Trigger Binding` utilizes SQL change tracking functionality to monitor the user table for changes. As such, it is necessary to enable change tracking on the SQL database and the SQL table before using the trigger support.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqltrigger).",
+      "run.ps1": "<#\r\nSample SQL Trigger Binding\r\nSee https://aka.ms/sqltrigger for more information about using this binding\r\nThese tasks should be completed prior to running:\r\n    1. Update \"tableName\" in function.json - this should be the table that is monitored for changes and triggers/invokes the function.\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n    3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n@param Request The HttpRequest that triggered this function\r\n@param items The array of objects returned by the SQL input binding\r\n#>\r\nusing namespace System.Net\r\n\r\n# Trigger and input binding data are passed in via the param block.\r\nparam($changes)\r\n\r\n# Write to the Azure Functions log stream.\r\nWrite-Host \"PowerShell function with SQL Trigger Binding processed a request.\"\r\n\r\n# The output is used to inspect the trigger binding parameter in test methods.\r\n# Use -Compress to remove new lines and spaces for testing purposes.\r\n$changesJson = $changes | ConvertTo-Json -Compress\r\nWrite-Host \"SQL Changes: $changesJson\""
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "changes",
+          "type": "sqlTrigger",
+          "direction": "in",
+          "tableName": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ],
+      "disabled": false
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlTriggerBinding",
+      "description": "$SqlTriggerBinding_description",
+      "name": "SQL Trigger",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "SqlTrigger-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# SQL Trigger Binding - Python\r\n\r\nThe `SQL Trigger Binding` monitors the user table for changes (i.e., row inserts, updates, and deletes) and invokes the function with updated rows.\r\n\r\n## How it works\r\n\r\n`SQL Trigger Binding` utilizes SQL change tracking functionality to monitor the user table for changes. As such, it is necessary to enable change tracking on the SQL database and the SQL table before using the trigger support.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqltrigger).",
+      "__init__.py": "import json\r\nimport logging\r\n\r\ndef main(changes) :\r\n    \"\"\"Sample SQL Trigger Binding\r\n\r\n    See https://aka.ms/sqltrigger for more information about using this binding\r\n\r\n    *IMPORTANT*\r\n        Local Development : You must have version >= 4.0.5030 of the Azure Function Core Tools installed.\r\n\r\n    These tasks should be completed prior to running :\r\n    1. Update \"tableName\" in function.json - this should be the table that is monitored for changes and triggers/invokes the function.\r\n    2. Add an app setting named \"SqlConnectionString\" containing the connection string to use for the SQL connection\r\n    3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n\r\n    Arguments:\r\n    changes: The list of updated objects returned by the SQL trigger binding\r\n    \"\"\"\r\n\r\n    logging.info(\"SQL Changes: %s\", json.loads(changes))\r\n"
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "changes",
+          "type": "sqlTrigger",
+          "direction": "in",
+          "tableName": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ],
+      "disabled": false
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlTriggerBinding",
+      "description": "$SqlTriggerBinding_description",
+      "name": "SQL Trigger",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "filters": [
+        "Python3"
+      ]
+    }
+  },
+  {
+    "id": "SqlTrigger-Typescript",
+    "runtime": "2",
+    "files": {
+      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\n/**\r\n * Sample SQL Trigger Binding\r\n * See https://aka.ms/sqltrigger for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Update \"tableName\" in function.json - this should be the table that is monitored for changes and triggers/invokes the function.\r\n *      2. Add an app setting named \"SqlConnectionString\" containing the connection string\r\n *          to use for the SQL connection\r\n *      3. Change the bundle name in host.json to \"Microsoft.Azure.Functions.ExtensionBundle.Preview\" and the version to \"[4.*, 5.0.0)\"\r\n * @param context The Azure Function runtime context\r\n * @param req The HttpRequest that triggered this function\r\n * @param items The array of objects returned by the SQL input binding\r\n */\r\nconst sqlTriggerBinding: AzureFunction = async function (context: Context, changes: any[]): Promise<void> {\r\n    context.log(`SQL Changes: ${JSON.stringify(changes)}`);\r\n};\r\n\r\nexport default sqlTriggerBinding;",
+      "readme.md": "# SQL Trigger Binding - Typescript\r\n\r\nThe `SQL Trigger Binding` monitors the user table for changes (i.e., row inserts, updates, and deletes) and invokes the function with updated rows.\r\n\r\n## How it works\r\n\r\n`SQL Trigger Binding` utilizes SQL change tracking functionality to monitor the user table for changes. As such, it is necessary to enable change tracking on the SQL database and the SQL table before using the trigger support.\r\n\r\nFor more information, see the official [docs](https://aka.ms/sqltrigger)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "changes",
+          "type": "sqlTrigger",
+          "direction": "in",
+          "tableName": "[dbo].[table1]",
+          "connectionStringSetting": "SqlConnectionString"
+        }
+      ],
+      "disabled": false
+    },
+    "metadata": {
+      "defaultFunctionName": "SqlTriggerBinding",
+      "description": "$SqlTriggerBinding_description",
+      "name": "SQL Trigger",
+      "language": "Typescript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
     "id": "TimerTrigger-CSharp",
     "runtime": "2",
     "files": {
@@ -4527,7 +4802,7 @@
     "id": "TimerTrigger-TypeScript",
     "runtime": "2",
     "files": {
-      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst timerTrigger: AzureFunction = async function (context: Context, myTimer: any): Promise<void> {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if (myTimer.isPastDue)\r\n    {\r\n        context.log('Timer function is running late!');\r\n    }\r\n    context.log('Timer trigger function ran!', timeStamp);   \r\n};\r\n\r\nexport default timerTrigger;\r\n",
+      "index.ts": "import { AzureFunction, Context, Timer } from \"@azure/functions\"\r\n\r\nconst timerTrigger: AzureFunction = async function (context: Context, myTimer: Timer): Promise<void> {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if (myTimer.isPastDue)\r\n    {\r\n        context.log('Timer function is running late!');\r\n    }\r\n    context.log('Timer trigger function ran!', timeStamp);   \r\n};\r\n\r\nexport default timerTrigger;\r\n",
       "readme.md": "# TimerTrigger - TypeScript\r\n\r\nThe `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.\r\n\r\n## How it works\r\n\r\nFor a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: \"When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year\".\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation"
     },
     "function": {
