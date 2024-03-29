@@ -20,7 +20,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
         context.rootPath = workspacePath;
 
         //check for host.json location
-        if (!(await isFunctionProject(workspacePath))) {
+        if (await isFunctionProject(workspacePath)) {
             const files = (await findFiles(context.workspaceFolder, `*/${hostFileName}`));
             if (files.length === 0) {
                 throw new Error(localize('noHostJson', 'No host.json file found in the current workspace.'));
