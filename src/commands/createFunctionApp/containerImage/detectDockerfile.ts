@@ -30,7 +30,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
 
         // check if host.json is in the same directory as the Dockerfile
         if ((await findFiles(dockerfilePath, hostFileName)).length > 0) {
-            context.dockerfilePath = (await findFiles(dockerfilePath, hostFileName))[0].fsPath;
+            context.dockerfilePath = (await findFiles(dockerfilePath, dockerfileGlobPattern))[0].fsPath;
         } else {
             context.dockerfilePath = undefined;
         }
