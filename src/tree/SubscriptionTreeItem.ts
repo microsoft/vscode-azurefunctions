@@ -235,7 +235,10 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
-    promptSteps.push(new FunctionAppHostingPlanStep());
+    if (wizardContext.advancedCreation) {
+        promptSteps.push(new FunctionAppHostingPlanStep());
+    }
+
     promptSteps.push(new FunctionAppStackStep());
 
     if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
