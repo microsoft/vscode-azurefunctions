@@ -16,21 +16,21 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     if (vscode.workspace.workspaceFolders) {
         context.workspaceFolder = vscode.workspace.workspaceFolders[0];
         const workspacePath = context.workspaceFolder.uri.fsPath;
-        let hostPath: string = workspacePath
+        let dockerfilePath: string = workspacePath
         context.rootPath = workspacePath;
 
-        //check for host.json location
+        //check for dockerfile location
         if (await isFunctionProject(workspacePath)) {
-            const files = (await findFiles(context.workspaceFolder, `*/${hostFileName}`));
+            const files = (await findFiles(context.workspaceFolder, `**/${dockerfileGlobPattern}`));
             if (files.length === 0) {
-                throw new Error(localize('noHostJson', 'No host.json file found in the current workspace.'));
+                return;
             }
-            hostPath = path.dirname(files[0].fsPath);
+            dockerfilePath = path.dirname(files[0].fsPath);
         }
 
-        // check if dockerfile exists in the same folder as the host.json
-        if ((await findFiles(hostPath, dockerfileGlobPattern)).length > 0) {
-            context.dockerfilePath = (await findFiles(hostPath, dockerfileGlobPattern))[0].fsPath;
+        // check if host.json is in the same directory as the Dockerfile
+        if ((await findFiles(dockerfilePath, hostFileName)).length > 0) {
+            context.dockerfilePath = (await findFiles(dockerfilePath, dockerfileGlobPattern))[0].fsPath;
         } else {
             context.dockerfilePath = undefined;
         }
