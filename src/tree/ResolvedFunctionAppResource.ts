@@ -60,11 +60,14 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
+    public constructor(subscription: ISubscriptionContext, site: Site, isFlex?: boolean) {
         super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
         this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
+        if (isFlex) {
+            this.contextValuesToAdd.push('azFuncFlex');
+        }
 
         const valuesToMask = [
             this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
@@ -80,8 +83,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site);
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site, isFlex?: boolean): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site, isFlex);
         void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
         return resource;
     }
