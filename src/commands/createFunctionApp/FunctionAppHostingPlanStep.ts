@@ -5,9 +5,9 @@
 
 import { type Location } from '@azure/arm-resources-subscriptions';
 import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipeline';
-import { AppServicePlanListStep, setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
@@ -21,7 +21,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
-            { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y).)*$/i] }
+            { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y|FC).)*$/i] }
         ];
 
         if (enableFlexSetting) {
@@ -42,12 +42,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
         return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
     }
 
-    public async getSubWizard(_context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
-        if (_context.dockerfilePath) {
-            return undefined;
-        }
-        return { promptSteps: [new AppServicePlanListStep()] };
-    }
+
 }
 
 export function setConsumptionPlanProperties(context: IFunctionAppWizardContext): void {
