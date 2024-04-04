@@ -3,7 +3,7 @@
 ## 1.14.1 - 2024-04-04
 
 ### Fixed
-* [[4061]](https://github.com/microsoft/vscode-azurefunctions/pull/4061), [[4062]](https://github.com/microsoft/vscode-azurefunctions/pull/4062) Fix creation a function app with no workspace open
+* [[4061]](https://github.com/microsoft/vscode-azurefunctions/pull/4061), [[4062]](https://github.com/microsoft/vscode-azurefunctions/pull/4062) Creating a function app with no workspace open
 
 ## 1.14.0 - 2024-03-21
 
