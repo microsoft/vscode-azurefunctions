@@ -8,11 +8,11 @@ import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource"
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createWebSiteClient } from "./utils/azureClients";
 
-// TODO: this is temporary until the new api-version is available in the SDK
-type Site2 = Site & { isFlex?: boolean };
+// TODO: this is temporary until the new SDK with api-version=2023-12-01 is available
+type Site20231201 = Site & { isFlex?: boolean };
 export class FunctionAppResolver implements AppResourceResolver {
     private siteCacheLastUpdated = 0;
-    private siteCache: Map<string, Site2> = new Map<string, Site2>();
+    private siteCache: Map<string, Site20231201> = new Map<string, Site20231201>();
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
