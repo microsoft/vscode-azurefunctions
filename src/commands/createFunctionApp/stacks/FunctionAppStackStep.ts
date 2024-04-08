@@ -77,7 +77,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                     label: '.NET 8 Isolated',
                     data: {
                         runtime: 'dotnet-isolated',
-                        version: '8'
+                        version: '8.0'
                     },
                     group: '.NET',
                     agentMetadata: {}
