@@ -1,14 +1,18 @@
 import { type Site } from "@azure/arm-appservice";
-import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
+import { createGenericClient, uiUtils, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, nonNullValueAndProp, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
+import { type FunctionAppConfig } from "./commands/createFunctionApp/FunctionAppCreateStep";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createWebSiteClient } from "./utils/azureClients";
 
+// TODO: this is temporary until the new SDK with api-version=2023-12-01 is available
+type Site20231201 = Site & { isFlex?: boolean };
 export class FunctionAppResolver implements AppResourceResolver {
     private siteCacheLastUpdated = 0;
-    private siteCache: Map<string, Site> = new Map<string, Site>();
+    private siteCache: Map<string, Site20231201> = new Map<string, Site20231201>();
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
@@ -17,7 +21,11 @@ export class FunctionAppResolver implements AppResourceResolver {
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
                 this.siteCache.clear();
                 const sites = await uiUtils.listAllIterator(client.webApps.list());
-                sites.forEach(site => this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), site));
+                const sites20231201 = await getSites20231201(context, subContext);
+                sites.forEach((site) => {
+                    const s = sites20231201.find(s => s.id?.toLowerCase() === site.id?.toLowerCase());
+                    this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), Object.assign(site, { isFlex: !!s?.properties?.functionAppConfig }));
+                });
                 this.siteCacheLastUpdated = Date.now();
             }
 
@@ -28,7 +36,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
 
-            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site));
+            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site), site?.isFlex);
         });
     }
 
@@ -37,5 +45,22 @@ export class FunctionAppResolver implements AppResourceResolver {
             && !!resource.kind?.includes('functionapp')
             && !resource.kind?.includes('workflowapp'); // exclude logic apps
     }
+}
+
+async function getSites20231201(context: IActionContext, subContext: ISubscriptionContext): Promise<(Site & { properties?: { functionAppConfig: FunctionAppConfig } })[]> {
+    const headers = createHttpHeaders({
+        'Content-Type': 'application/json',
+    });
+
+    // we need the new api-version to get the functionAppConfig
+    const options: AzExtRequestPrepareOptions = {
+        url: `https://management.azure.com/subscriptions/${subContext.subscriptionId}/providers/Microsoft.Web/sites?api-version=2023-12-01`,
+        method: 'GET',
+        headers
+    };
+
+    const client = await createGenericClient(context, subContext);
+    const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
+    return (result.parsedBody as { value: unknown }).value as (Site & { properties?: { functionAppConfig: FunctionAppConfig } })[];
 }
 

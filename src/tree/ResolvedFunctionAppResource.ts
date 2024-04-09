@@ -56,15 +56,25 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
 
+    private _isFlex: boolean;
+
     commandId?: string | undefined;
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
+    public constructor(subscription: ISubscriptionContext, site: Site, isFlex?: boolean) {
         super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
-        this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
+        this.contextValuesToAdd = [];
+        this._isFlex = !!isFlex;
+        if (this._isFlex) {
+            this.contextValuesToAdd.push('azFuncFlex');
+        } else if (this.site.isSlot) {
+            this.contextValuesToAdd.push(ResolvedFunctionAppResource.slotContextValue);
+        } else {
+            this.contextValuesToAdd.push(ResolvedFunctionAppResource.productionContextValue);
+        }
 
         const valuesToMask = [
             this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
@@ -80,8 +90,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site);
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site, isFlex?: boolean): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site, isFlex);
         void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
         return resource;
     }
@@ -218,7 +228,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
 
         const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
-        if (!this.site.isSlot) {
+        if (!this.site.isSlot && !this._isFlex) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
         }

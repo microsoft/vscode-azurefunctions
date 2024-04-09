@@ -415,12 +415,12 @@
                 },
                 {
                     "command": "azureFunctions.browseWebsite",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)/",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFuncProductionSlot(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(ProductionSlot|Flex)(?!.*container)/",
                     "group": "2@1"
                 },
                 {
@@ -435,17 +435,17 @@
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)(?!.*container)/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)(?!.*container)/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)(?!.*container)/",
                     "group": "3@3"
                 },
                 {
@@ -455,7 +455,7 @@
                 },
                 {
                     "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFuncProductionSlot/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(ProductionSlot|Flex)/",
                     "group": "3@5"
                 },
                 {
@@ -485,12 +485,12 @@
                 },
                 {
                     "command": "azureFunctions.viewProperties",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s).*slot/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s).*slot/",
                     "group": "6@1"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s).*slot/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s).*slot/",
                     "group": "6@2"
                 },
                 {
