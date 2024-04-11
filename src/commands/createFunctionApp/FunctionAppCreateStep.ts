@@ -289,7 +289,6 @@ async function tryCreateStorageContainer(site: Site & { properties: FlexFunction
             await blobClient.createContainer(containerName);
         }
     }
-
 }
 
 type FlexFunctionAppProperties = {
