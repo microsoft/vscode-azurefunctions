@@ -55,6 +55,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public static pickSlotContextValue: RegExp = new RegExp(/azFuncSlot(?!s)/);
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
+    public static flexContextValue: string = 'azFuncFlex';
 
     private _isFlex: boolean;
 
@@ -69,7 +70,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         this.contextValuesToAdd = [];
         this._isFlex = !!isFlex;
         if (this._isFlex) {
-            this.contextValuesToAdd.push('azFuncFlex');
+            this.contextValuesToAdd.push(ResolvedFunctionAppResource.flexContextValue);
         } else if (this.site.isSlot) {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.slotContextValue);
         } else {
