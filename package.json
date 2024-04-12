@@ -465,12 +465,12 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)(?!.*container)/",
                     "group": "4@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!s)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)(?!.*container)/",
                     "group": "4@2"
                 },
                 {

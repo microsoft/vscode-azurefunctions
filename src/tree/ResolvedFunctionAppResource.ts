@@ -105,6 +105,9 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get description(): string | undefined {
+        if (this._isFlex) {
+            return localize('flexFunctionApp', 'Flex (Preview)');
+        }
         return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
@@ -227,7 +230,12 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem];
+        // Deployment configuration not supported by flex consumption at the time
+        if (!this._isFlex) {
+            children.push(this.deploymentsNode);
+        }
+
         if (!this.site.isSlot && !this._isFlex) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
