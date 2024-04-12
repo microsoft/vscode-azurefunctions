@@ -5,6 +5,7 @@
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { createHttpHeaders, createPipelineRequest, type RequestBodyType } from '@azure/core-rest-pipeline';
+import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep, createGenericClient, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
@@ -245,6 +246,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const client = await createGenericClient(context, context);
         const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
         if (result && result.status >= 200 && result.status < 300) {
+            const site = result.parsedBody as Site & { properties: FlexFunctionAppProperties };
+            const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
+            await tryCreateStorageContainer(site, storageConnectionString);
             const client: WebSiteManagementClient = await createWebSiteClient(context);
             // the payload for the new API version "2023-12-01" is incompatiable with our current SiteClient so get the old payload
             try {
@@ -273,6 +277,18 @@ function getSiteKind(context: IAppServiceWizardContext): string {
         kind += ',kubernetes';
     }
     return kind;
+}
+
+// storage container is needed for flex deployment, but it is not created automatically
+async function tryCreateStorageContainer(site: Site & { properties: FlexFunctionAppProperties }, storageConnectionString: string): Promise<void> {
+    const blobClient = BlobServiceClient.fromConnectionString(storageConnectionString);
+    const containerName = site.properties?.functionAppConfig?.deployment.storage.value.split('/').pop();
+    if (containerName) {
+        const client = blobClient.getContainerClient(containerName);
+        if (!await client.exists()) {
+            await blobClient.createContainer(containerName);
+        }
+    }
 }
 
 type FlexFunctionAppProperties = {

@@ -61,7 +61,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (treeUtils.isAzExtTreeItem(arg1)) {
         if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
-            !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue)) {
+            !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue) &&
+            !arg1.contextValue.match(ResolvedFunctionAppResource.flexContextValue)) {
             // if the user uses the deploy button, it's possible for the local project node to be passed in, so we should reset it to undefined
             arg1 = undefined;
         }
