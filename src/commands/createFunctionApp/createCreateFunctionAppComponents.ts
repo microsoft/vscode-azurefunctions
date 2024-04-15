@@ -15,6 +15,7 @@ import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSetting
 import { FunctionAppCreateStep } from "./FunctionAppCreateStep";
 import { FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
+import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
 import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
 import { DeployWorkspaceProjectStep } from "./containerImage/DeployWorkspaceProjectStep";
 import { detectDockerfile } from "./containerImage/detectDockerfile";
@@ -66,6 +67,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         LocationListStep.addStep(wizardContext, promptSteps);
         wizardContext.useConsumptionPlan = true;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
+        promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
         executeSteps.push(new AppInsightsCreateStep());
