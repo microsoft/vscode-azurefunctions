@@ -4,13 +4,15 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type FunctionEnvelope } from "@azure/arm-appservice";
-import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { ProjectNotRunningError, getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
+import { nonNullValue } from "../utils/nonNull";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
 import { requestUtils } from "../utils/requestUtils";
+import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { LocalFunction, type ILocalFunction } from "./LocalFunction";
 import { type LocalProjectInternal } from "./listLocalProjects";
 import path = require("path");
@@ -62,22 +64,48 @@ export async function listLocalFunctions(project: LocalProjectInternal): Promise
     }))!;
 }
 
+const timeoutKey: string = 'requestTimeout';
+
+function getRequestTimeoutMS(): number {
+    // Shouldn't be null because the setting has a default value
+    return nonNullValue(getWorkspaceSetting<number>(timeoutKey), timeoutKey) * 1000;
+}
+
 /**
  * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
 */
 async function getFunctionsForHostedProject(context: IActionContext, project: LocalProjectInternal): Promise<ILocalFunction[]> {
     if (runningFuncTaskMap.has(project.options.folder)) {
         const hostRequest = await project.getHostRequest(context);
-        const functions = await requestUtils.sendRequestWithExtTimeout(context, {
-            url: `${hostRequest.url}/admin/functions`,
-            method: 'GET',
-            rejectUnauthorized: hostRequest.rejectUnauthorized
-        });
+        const timeout = getRequestTimeoutMS();
+        const startTime = Date.now();
+        let retry = true;
+        while (retry) {
+            retry = false;
+            try {
+                const functions = await requestUtils.sendRequestWithExtTimeout(context, {
+                    url: `${hostRequest.url}/admin/functions`,
+                    method: 'GET',
+                    rejectUnauthorized: hostRequest.rejectUnauthorized
+                });
 
-        return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
-            func = requestUtils.convertToAzureSdkObject(func);
-            return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func)
-        });
+                return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
+                    func = requestUtils.convertToAzureSdkObject(func);
+                    return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func)
+                });
+            } catch (error) {
+                const errorType = parseError(error).errorType;
+                // The functions host will not run immediately after starting debugging and will return ECONNREFUSED instead, so we want to retry for a period of time
+                if (errorType === 'ECONNREFUSED') {
+                    const currentTime = Date.now();
+                    if (currentTime - startTime < timeout) {
+                        retry = true;
+                    }
+                } else {
+                    throw error;
+                }
+            }
+        }
     } else {
         throw new ProjectNotRunningError();
     }
