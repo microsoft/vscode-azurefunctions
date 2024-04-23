@@ -79,33 +79,37 @@ async function getFunctionsForHostedProject(context: IActionContext, project: Lo
         const hostRequest = await project.getHostRequest(context);
         const timeout = getRequestTimeoutMS();
         const startTime = Date.now();
+        let functions;
         let retry = true;
         while (retry) {
             retry = false;
+
             try {
-                const functions = await requestUtils.sendRequestWithExtTimeout(context, {
+                functions = await requestUtils.sendRequestWithExtTimeout(context, {
                     url: `${hostRequest.url}/admin/functions`,
                     method: 'GET',
                     rejectUnauthorized: hostRequest.rejectUnauthorized
                 });
-
-                return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
-                    func = requestUtils.convertToAzureSdkObject(func);
-                    return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func)
-                });
             } catch (error) {
-                const errorType = parseError(error).errorType;
                 // The functions host will not run immediately after starting debugging and will return ECONNREFUSED instead, so we want to retry for a period of time
+                const errorType = parseError(error).errorType;
                 if (errorType === 'ECONNREFUSED') {
                     const currentTime = Date.now();
                     if (currentTime - startTime < timeout) {
                         retry = true;
+                    } else {
+                        throw error;
                     }
                 } else {
                     throw error;
                 }
             }
         }
+
+        return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
+            func = requestUtils.convertToAzureSdkObject(func);
+            return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func);
+        });
     } else {
         throw new ProjectNotRunningError();
     }
