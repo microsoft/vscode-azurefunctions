@@ -64,9 +64,9 @@ export async function listLocalFunctions(project: LocalProjectInternal): Promise
     }))!;
 }
 
-const timeoutKey: string = 'requestTimeout';
+const timeoutKey: string = 'hostStartTimeout';
 
-function getRequestTimeoutMS(): number {
+function getHostStartTimeoutMS(): number {
     // Shouldn't be null because the setting has a default value
     return nonNullValue(getWorkspaceSetting<number>(timeoutKey), timeoutKey) * 1000;
 }
@@ -77,7 +77,7 @@ function getRequestTimeoutMS(): number {
 async function getFunctionsForHostedProject(context: IActionContext, project: LocalProjectInternal): Promise<ILocalFunction[]> {
     if (runningFuncTaskMap.has(project.options.folder)) {
         const hostRequest = await project.getHostRequest(context);
-        const timeout = getRequestTimeoutMS();
+        const timeout = getHostStartTimeoutMS();
         const startTime = Date.now();
         let functions;
         let retry = true;
