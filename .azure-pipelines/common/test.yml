@@ -31,13 +31,6 @@ steps:
   displayName: Install Ballerina(Windows)
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 
-# This gives the AZFuncTest service connection access to this pipeline.
-- task: AzureKeyVault@1
-  displayName: 'Authorize AZFuncTest service connection'
-  inputs:
-    azureSubscription: 'AZFuncTest'
-    KeyVaultName: 'AzFuncExtTestDummyKV'
-
 - task: UsePythonVersion@0
   displayName: 'Use Python 3.7.x'
   inputs:

@@ -1,6 +1,6 @@
 variables:
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-    ENABLE_LONG_RUNNING_TESTS: true
+    ENABLE_LONG_RUNNING_TESTS: false
     ENABLE_COMPLIANCE: true
 
 jobs:

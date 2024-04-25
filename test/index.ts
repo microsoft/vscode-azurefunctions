@@ -30,6 +30,7 @@ export async function run(): Promise<void> {
     if (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES)) {
         files = ['updateBackupTemplates.js'];
     } else {
+        // TODO: THIS IS ONLY TO MAKE TESTING ON ADO EASIER; RETURN TO NORMAL AFTER TESTING
         files = await globby('nightly/**.test.js', { cwd: __dirname })
     }
 
