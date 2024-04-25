@@ -55,7 +55,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
             const { ClientAssertionCredential } = await import("@azure/identity");
             const credentials = new ClientAssertionCredential(domain, clientId, () => requestOidcToken(oidcRequestUrl, systemAccessToken));
             console.log('WE HAVE CREDENTIALS NOW???');
-            console.log(`credentials: ${credentials}`);
+            console.log(`credentials: ${JSON.stringify(credentials)}`);
         }
 
 
@@ -107,6 +107,7 @@ async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: strin
 
 
     if (response.status !== 200) {
+        console.log(`Failed to get OIDC token: ${response.status}`);
         throw new Error(`Failed to get OIDC token:\n
             Response status: ${response.status}\n
             Response body: ${body}\n
