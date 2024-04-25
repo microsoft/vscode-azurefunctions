@@ -151,6 +151,14 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'TestCompany.TestFunction',
                 '0 * * * */6 *'
             ]
+        },
+        {
+            functionName: 'SQL trigger',
+            inputs: [
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'SqlConnectionString'
+            ]
         }
     ];
 

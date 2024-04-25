@@ -188,6 +188,13 @@ function addSuite(tester: FunctionTesterBase): void {
             functionName: 'SendGrid',
             inputs: [],
             skip: tester.language === ProjectLanguage.Python
+        },
+        {
+            functionName: 'SQL trigger',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'SqlConnectionString'
+            ]
         }
     ];
 
