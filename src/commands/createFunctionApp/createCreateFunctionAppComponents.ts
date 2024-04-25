@@ -25,8 +25,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     subscription: ISubscriptionContext,
     language?: string | undefined): Promise<{
         wizardContext: IFunctionAppWizardContext;
-        promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[];
-        executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[];
+        promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[];
+        executeSteps: AzureWizardExecuteStep<IFunctionAppWizardContext>[];
     }> {
 
     const version: FuncVersion = await getDefaultFuncVersion(context);
@@ -40,8 +40,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         ...(await createActivityContext())
     });
 
-    const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
-    const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
+    const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IFunctionAppWizardContext>[] = [];
 
     const storageAccountCreateOptions: INewStorageAccountDefaults = {
         kind: StorageAccountKind.Storage,
@@ -77,7 +77,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         }
     } else {
         promptSteps.push(new ResourceGroupListStep());
-        CustomLocationListStep.addStep(wizardContext, promptSteps);
         promptSteps.push(new StorageAccountListStep(
             storageAccountCreateOptions,
             {
@@ -135,6 +134,8 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
 
     if (wizardContext.advancedCreation) {
         promptSteps.push(new FunctionAppHostingPlanStep());
+        // location is required to get flex runtimes, so prompt before stack step
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
     }
 
     promptSteps.push(new FunctionAppStackStep());

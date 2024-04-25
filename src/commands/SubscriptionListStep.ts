@@ -7,7 +7,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, createSubscriptionContext, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { l10n } from "vscode";
 import { ext } from "../extensionVariables";
@@ -17,8 +17,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
     private _picks: IAzureQuickPickItem<AzureSubscription>[] = [];
     private _oneSubscription: boolean = false;
     public async prompt(context: IFuncDeployContext): Promise<void> {
-        const subscription = (await context.ui.showQuickPick(this._picks, { placeHolder: l10n.t("Select a subscription") })).data;
-        context = Object.assign(context, createSubscriptionContext(subscription));
+        context.subscription = (await context.ui.showQuickPick(this._picks, { placeHolder: l10n.t("Select a subscription") })).data;
     }
 
     public shouldPrompt(_: IFuncDeployContext): boolean {
@@ -30,7 +29,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
         // auto select if only one subscription
         if (this._picks.length === 1) {
             this._oneSubscription = true;
-            context = Object.assign(context, createSubscriptionContext(this._picks[0].data));
+            context.subscription = this._picks[0].data;
         }
     }
 

@@ -5,13 +5,12 @@
 
 import { type Site } from "@azure/arm-appservice";
 import { parseAzureResourceGroupId, uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, createSubscriptionContext, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { projectLanguageSetting } from "../../constants";
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createWebSiteClient } from "../../utils/azureClients";
 import { getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from "../../vsCodeConfig/settings";
-import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { createCreateFunctionAppComponents } from "../createFunctionApp/createCreateFunctionAppComponents";
 import { type IFuncDeployContext } from "./deploy";
 
@@ -25,24 +24,33 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
     }
 
     private async getPicks(context: IFuncDeployContext): Promise<IAzureQuickPickItem<Site | undefined>[]> {
-        const client = await createWebSiteClient(context);
+        const client = await createWebSiteClient([context, createSubscriptionContext(nonNullProp(context, 'subscription'))]);
         const sites = (await uiUtils.listAllIterator(client.webApps.list()));
-        const qp = sites.filter(s => !!s.kind?.includes('functionapp')).map(fa => {
-            return { label: nonNullProp(fa, 'name'), description: parseAzureResourceGroupId(fa.id).resourceGroup, data: fa }
+        const qp: IAzureQuickPickItem<Site | undefined>[] = sites.filter(s => !!s.kind?.includes('functionapp')).map(fa => {
+            return {
+                label: nonNullProp(fa, 'name'),
+                description: parseAzureResourceGroupId(nonNullProp(fa, 'id')).resourceGroup,
+                data: fa
+            }
         });
 
         qp.unshift({ label: '$(plus) Create new function app', description: '', data: undefined });
-
         return qp;
     }
 
-    public async getSubWizard(context: IFuncDeployContext & Partial<IFunctionAppWizardContext> & Partial<ICreateFunctionAppContext>): Promise<AzureWizardPromptStep<IFuncDeployContext> | undefined> {
+    public async getSubWizard(context: IFuncDeployContext): Promise<IWizardOptions<IFuncDeployContext> | undefined> {
         if (!context.site) {
             const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
             context.telemetry.properties.projectLanguage = language;
 
-            const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, context, language)
-            return { promptSteps, executeSteps };
+            const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context as ICreateFunctionAppContext,
+                createSubscriptionContext(nonNullProp(context, 'subscription')),
+                language);
+            return {
+                // it's ugly, but we can cast because we know that this subwizard doesn't need to have the full IFuncDeployContext
+                promptSteps: promptSteps as unknown as AzureWizardPromptStep<IFuncDeployContext>[],
+                executeSteps: executeSteps as unknown as AzureWizardExecuteStep<IFuncDeployContext>[]
+            };
         }
 
         return;
