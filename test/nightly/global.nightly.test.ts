@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type ServiceClient } from '@azure/core-client';
 import { createHttpHeaders, createPipelineRequest, type PipelineRequest, type PipelineResponse } from '@azure/core-rest-pipeline';
 import { type TokenCredential } from '@azure/identity';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
-import { createTestActionContext, type TestActionContext } from '@microsoft/vscode-azext-dev';
+import { createTestActionContext, type TestActionContext, type TestAzureAccount } from '@microsoft/vscode-azext-dev';
 import { longRunningTestsEnabled } from '../global.test';
 
 /** HARD-CODED VALUES; MODIFY LATER TO OBTAIN THROUGH KEYVALUE!!
@@ -27,6 +28,11 @@ const DOMAIN = "72f988bf-86f1-41af-91ab-2d7cd011db47";
  * The `Service Principal Id` field of the service connection properties
  */
 const CLIENT_ID = "a581a512-0b3b-43b0-bb17-39e24d998b0a";
+
+// Required so the build doesn't fail
+export let testAccount: TestAzureAccount;
+export let testClient: WebSiteManagementClient;
+export const resourceGroupsToDelete: string[] = [];
 
 // Runs before all nightly tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
