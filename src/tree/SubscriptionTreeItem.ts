@@ -141,7 +141,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }
         } else {
             promptSteps.push(new ResourceGroupListStep());
-            CustomLocationListStep.addStep(wizardContext, promptSteps);
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
                 {
@@ -237,6 +236,8 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
 
     if (wizardContext.advancedCreation) {
         promptSteps.push(new FunctionAppHostingPlanStep());
+        // location is required to get flex runtimes, so prompt before stack step
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
     }
 
     promptSteps.push(new FunctionAppStackStep());

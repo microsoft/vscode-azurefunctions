@@ -5,7 +5,7 @@
 
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
-import { createGenericClient, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
+import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
 import { openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
@@ -18,8 +18,10 @@ import { backupStacks } from './backupStacks';
 import { type AppStackMinorVersion } from './models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
 
-export async function getStackPicks(context: IFunctionAppWizardContext): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
-    const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
+export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+    const stacks: FunctionAppStack[] = isFlex ?
+        (await getFlexStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value) :
+        (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
     const picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = [];
     let hasEndOfLife = false;
     let stackHasPicks: boolean;
@@ -171,6 +173,46 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
 
         removeDeprecatedStacks(context._stacks);
         removeHiddenStacksAndProperties(context._stacks);
+    }
+
+    return context._stacks;
+}
+
+async function getFlexStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
+    const client: ServiceClient = await createGenericClient(context, context);
+    const location = await LocationListStep.getLocation(context);
+    const flexFunctionAppStacks: FunctionAppStack[] = [];
+    const stacks = ['dotnet', 'java', 'node', 'powershell', 'python'];
+    if (!context._stacks) {
+        const getFlexStack = async (stack: string) => {
+            const result: AzExtPipelineResponse = await client.sendRequest(createPipelineRequest({
+                method: 'GET',
+                url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location.name}/functionAppStacks`, {
+                    'api-version': '2023-12-01',
+                    stack,
+                    removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
+                }),
+            }));
+            const stacksArmResponse = <StacksArmResponse>result.parsedBody;
+            for (const stack of stacksArmResponse.value) {
+                stack.properties.majorVersions = stack.properties.majorVersions.filter(mv => {
+                    mv.minorVersions = mv.minorVersions.filter(minor => {
+                        // Remove stacks that don't have a SKU
+                        return minor.stackSettings.linuxRuntimeSettings && minor.stackSettings.linuxRuntimeSettings?.Sku !== null;
+
+                    });
+
+                    return mv.minorVersions.length > 0;
+                });
+            }
+            flexFunctionAppStacks.push(...stacksArmResponse.value.map(d => d.properties));
+        }
+
+        for (const stack of stacks) {
+            await getFlexStack(stack);
+        }
+
+        context._stacks = flexFunctionAppStacks;
     }
 
     return context._stacks;
