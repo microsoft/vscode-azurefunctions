@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
@@ -79,7 +80,7 @@ async function getFunctionsForHostedProject(context: IActionContext, project: Lo
         const hostRequest = await project.getHostRequest(context);
         const timeout = getHostStartTimeoutMS();
         const startTime = Date.now();
-        let functions;
+        let functions: AzExtPipelineResponse | undefined = undefined;
         let retry = true;
         while (retry) {
             retry = false;
@@ -106,10 +107,12 @@ async function getFunctionsForHostedProject(context: IActionContext, project: Lo
             }
         }
 
-        return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
-            func = requestUtils.convertToAzureSdkObject(func);
-            return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func);
-        });
+        if (functions !== undefined) {
+            return (<FunctionEnvelope[]>functions.parsedBody).map(func => {
+                func = requestUtils.convertToAzureSdkObject(func);
+                return new LocalFunction(project, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), func);
+            });
+        }
     } else {
         throw new ProjectNotRunningError();
     }
