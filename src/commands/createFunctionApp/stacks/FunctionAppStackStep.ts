@@ -128,10 +128,10 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                     agentMetadata: {}
                 },
                 {
-                    label: 'PowerShell',
+                    label: 'PowerShell 7.4',
                     data: {
                         runtime: 'powershell',
-                        version: '7.2'
+                        version: '7.4'
                     },
                     group: 'PowerShell Core',
                     agentMetadata: {}
