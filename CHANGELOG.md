@@ -1,6 +1,7 @@
 # Change Log
 
 ## 1.14.2 - 2024-04-26
+
 ### Changed
 * [[4096]](https://github.com/microsoft/vscode-azurefunctions/pull/4096) Update initial launch.json for Python to use debugpy
 
