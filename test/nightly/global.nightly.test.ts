@@ -44,9 +44,9 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
             || !process.env.AzCodeServiceConnectionClientID
             || !process.env.AzCodeServiceConnectionDomain) {
             throw new Error(`Failed to retrieve required secrets from Key Vault\n
-                process.env.AZCODE_SERVICE_CONNECTION_ID: ${process.env.AzCodeServiceConnectionID ? "✅" : "❌"}\n
-                process.env.AZCODE_SERVICE_CONNECTION_CLIENT_ID: ${process.env.AzCodeServiceConnectionClientID ? "✅" : "❌"}\n
-                process.env.AZCODE_SERVICE_CONNECTION_DOMAIN: ${process.env.AzCodeServiceConnectionDomain ? "✅" : "❌"}
+                process.env.AzCodeServiceConnectionID: ${process.env.AzCodeServiceConnectionID ? "✅" : "❌"}\n
+                process.env.AzCodeServiceConnectionClientID: ${process.env.AzCodeServiceConnectionClientID ? "✅" : "❌"}\n
+                process.env.AzCodeServiceConnectionDomain: ${process.env.AzCodeServiceConnectionDomain ? "✅" : "❌"}
             `);
         }
         const tokenCredential: TokenCredential = await getTokenCredential(process.env.AzCodeServiceConnectionID, process.env.AzCodeServiceConnectionDomain, process.env.AzCodeServiceConnectionClientID);
