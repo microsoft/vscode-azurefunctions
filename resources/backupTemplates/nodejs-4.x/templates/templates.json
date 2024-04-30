@@ -1453,6 +1453,128 @@
         }
     },
     {
+        "id": "EventGridBlobTrigger-JavaScript",
+        "runtime": "2",
+        "files": {
+            "index.js": "module.exports = async function (context, myBlob) {\r\n    context.log(\"JavaScript blob trigger (using Event Grid) function processed blob \\n Blob:\", context.bindingData.blobTrigger, \"\\n Blob Size:\", myBlob.length, \"Bytes\");\r\n};",
+            "readme.md": "# EventGridBlobTrigger - JavaScript\r\n\r\nThe `EventGridBlobTrigger` makes it incredibly easy to react to new Blobs using [Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/overview). This sample demonstrates a simple use case of processing data from a given Blob using JavaScript.\r\n\r\n## How it works\r\n\r\nFor an `EventGridBlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\nFor more information, please check out [this tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-javascript) on this new version of the Blob Storage trigger.",
+            "sample.dat": "samples-workitems/workitem.txt"
+        },
+        "function": {
+            "bindings": [
+                {
+                    "name": "myBlob",
+                    "type": "blobTrigger",
+                    "direction": "in",
+                    "path": "samples-workitems/{name}",
+                    "source": "EventGrid",
+                    "connection": ""
+                }
+            ]
+        },
+        "metadata": {
+            "defaultFunctionName": "EventGridBlobTrigger",
+            "description": "$BlobTrigger_description",
+            "name": "Azure Blob Storage Trigger (using Event Grid)",
+            "language": "JavaScript",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "blob",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "path"
+            ]
+        }
+    },
+    {
+        "id": "EventGridBlobTrigger-JavaScript-4.x",
+        "runtime": "2",
+        "files": {
+            "%functionName%.js": "const { app } = require('@azure/functions');\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    source: 'EventGrid',\r\n    connection: '%connection%',\r\n    handler: (blob, context) => {\r\n        context.log(`Storage blob (using Event Grid) function processed blob \"${context.triggerMetadata.name}\" with size ${blob.length} bytes`);\r\n    }\r\n});\r\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "eventGridBlobTrigger",
+            "description": "$BlobTrigger_description",
+            "name": "Azure Blob Storage Trigger (using Event Grid)",
+            "language": "JavaScript",
+            "triggerType": "blobTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "blob",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "path"
+            ]
+        }
+    },
+    {
+        "id": "EventGridBlobTrigger-TypeScript",
+        "runtime": "2",
+        "files": {
+            "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst blobTrigger: AzureFunction = async function (context: Context, myBlob: any): Promise<void> {\r\n    context.log(\"Blob trigger function processed blob \\n Name:\", context.bindingData.name, \"\\n Blob Size:\", myBlob.length, \"Bytes\");\r\n};\r\n\r\nexport default blobTrigger;\r\n",
+            "readme.md": "# EventGridBlobTrigger - TypeScript\r\n\r\nThe `EventGridBlobTrigger` makes it incredibly easy to react to new Blobs inside of Azure Blob Storage. This sample demonstrates a simple use case of processing data from a given Blob using TypeScript.\r\n\r\n## How it works\r\n\r\nFor an `EventGridBlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\nFor more information, please check out [this tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-typescript).",
+            "sample.dat": "samples-workitems/workitem.txt"
+        },
+        "function": {
+            "bindings": [
+                {
+                    "name": "myBlob",
+                    "type": "blobTrigger",
+                    "direction": "in",
+                    "path": "samples-workitems/{name}",
+                    "source": "EventGrid",
+                    "connection": ""
+                }
+            ]
+        },
+        "metadata": {
+            "defaultFunctionName": "EventGridBlobTrigger",
+            "description": "$BlobTrigger_description",
+            "name": "Azure Blob Storage Trigger (using Event Grid)",
+            "language": "TypeScript",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "blob",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "path"
+            ]
+        }
+    },
+    {
+        "id": "EventGridBlobTrigger-TypeScript-4.x",
+        "runtime": "2",
+        "files": {
+            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\r\n\r\nexport async function %functionName%(blob: Buffer, context: InvocationContext): Promise<void> {\r\n    context.log(`Storage blob function processed blob \"${context.triggerMetadata.name}\" with size ${blob.length} bytes`);\r\n}\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    source: 'EventGrid',\r\n    connection: '%connection%',\r\n    handler: %functionName%\r\n});\r\n"
+        },
+        "metadata": {
+            "defaultFunctionName": "eventGridBlobTrigger",
+            "description": "$BlobTrigger_description",
+            "name": "Azure Blob Storage Trigger (using Event Grid)",
+            "language": "TypeScript",
+            "triggerType": "blobTrigger",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "blob",
+            "enabledInTryMode": true,
+            "userPrompt": [
+                "connection",
+                "path"
+            ]
+        }
+    },
+    {
         "id": "EventGridTrigger-CSharp",
         "runtime": "2",
         "files": {
