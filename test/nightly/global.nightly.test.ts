@@ -19,15 +19,15 @@ import { longRunningTestsEnabled } from '../global.test';
 *   which can be found on the `resourceId` field of the URL at the address bar
 *   when viewing the service connection in the Azure DevOps portal
  */
-const SERVICE_CONNECTION_ID = "816925d8-6f4a-4b37-8c74-1c16efe33e27";
-/**
- * The `Tenant ID` field of the service connection properties
- */
-const DOMAIN = "72f988bf-86f1-41af-91ab-2d7cd011db47";
-/**
- * The `Service Principal Id` field of the service connection properties
- */
-const CLIENT_ID = "a581a512-0b3b-43b0-bb17-39e24d998b0a";
+// const SERVICE_CONNECTION_ID = "816925d8-6f4a-4b37-8c74-1c16efe33e27";
+// /**
+//  * The `Tenant ID` field of the service connection properties
+//  */
+// const DOMAIN = "72f988bf-86f1-41af-91ab-2d7cd011db47";
+// /**
+//  * The `Service Principal Id` field of the service connection properties
+//  */
+// const CLIENT_ID = "a581a512-0b3b-43b0-bb17-39e24d998b0a";
 
 // Required so the build doesn't fail
 export let testAccount: TestAzureAccount;
@@ -37,9 +37,19 @@ export const resourceGroupsToDelete: string[] = [];
 // Runs before all nightly tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
+
         this.timeout(2 * 60 * 1000);
         console.log('NIGHTLY: starting nightly tests');
-        const tokenCredential: TokenCredential = await getTokenCredential(SERVICE_CONNECTION_ID, DOMAIN, CLIENT_ID);
+        if (!process.env.AzCodeServiceConnectionID
+            || !process.env.AzCodeServiceConnectionClientID
+            || !process.env.AzCodeServiceConnectionDomain) {
+            throw new Error(`Failed to retrieve required secrets from Key Vault\n
+                process.env.AZCODE_SERVICE_CONNECTION_ID: ${process.env.AzCodeServiceConnectionID ? "✅" : "❌"}\n
+                process.env.AZCODE_SERVICE_CONNECTION_CLIENT_ID: ${process.env.AzCodeServiceConnectionClientID ? "✅" : "❌"}\n
+                process.env.AZCODE_SERVICE_CONNECTION_DOMAIN: ${process.env.AzCodeServiceConnectionDomain ? "✅" : "❌"}
+            `);
+        }
+        const tokenCredential: TokenCredential = await getTokenCredential(process.env.AzCodeServiceConnectionID, process.env.AzCodeServiceConnectionDomain, process.env.AzCodeServiceConnectionClientID);
         console.log('NIGHTLY: successfully acquired TokenCredential');
         console.log(`NIGHTLY: TokeCredential: ${JSON.stringify(tokenCredential)}`);
     }
