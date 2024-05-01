@@ -8,7 +8,7 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
     "files.exclude": {
-        "tools/JsonCli/src/**": true
+        "tools/JsonCli/src/**": false
     },
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
