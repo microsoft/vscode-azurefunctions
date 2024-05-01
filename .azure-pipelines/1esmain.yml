@@ -46,4 +46,4 @@ extends:
     stages:
       # Execute stages from the AzExt stages template
       - template: azure-pipelines/1esstages.yml@azExtTemplates
-      - template: tools/JsonCli/.azurepipelines/main.yml@self
+      - template: ../tools/JsonCli/.azurepipelines/main.yml@self
