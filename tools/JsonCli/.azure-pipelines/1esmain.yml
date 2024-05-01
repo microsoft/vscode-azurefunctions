@@ -28,9 +28,9 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
   parameters:
-    # sdl:
-      # credscan:
-        # suppressionsFile: $(Build.SourcesDirectory)\.azure-pipelines\compliance\CredScanSuppressions.json
+    sdl:
+      credscan:
+        suppressionsFile: $(Build.SourcesDirectory)\.azure-pipelines\compliance\CredScanSuppressions.json
       # codeql:
       #   enabled: true # TODO: would like to enable only on scheduled builds but CodeQL cannot currently be disabled per https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/codeql/1es-codeql
     pool:
