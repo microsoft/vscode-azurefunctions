@@ -28,7 +28,7 @@ resources:
     - repository: azExtTemplates
       type: github
       name: microsoft/vscode-azuretools
-      ref: main
+      ref: alex/magenta-orangutan
       endpoint: GitHub-AzureTools # The service connection to use when accessing this repository
 
 extends:
