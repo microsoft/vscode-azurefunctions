@@ -83,11 +83,11 @@ stages:
               feedsToUse: config
               nugetConfigPath: 'tools/JsonCli/src/nuget.config'
 
-          - task: DotNetCoreCLI@2
-            displayName: 'dotnet build signing'
-            inputs:
-              projects: 'tools/JsonCli/src/Signing.csproj'
-              arguments: '--configuration Release'
+          # - task: DotNetCoreCLI@2
+          #   displayName: 'dotnet build signing'
+          #   inputs:
+          #     projects: 'tools/JsonCli/src/Signing.csproj'
+          #     arguments: '--configuration Release'
 
           - task: CopyFiles@2
             displayName: 'Copy Files to Staging'
