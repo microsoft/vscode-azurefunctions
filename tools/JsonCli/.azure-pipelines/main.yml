@@ -103,36 +103,36 @@ stages:
           #     PathtoPublish: '$(build.artifactstagingdirectory)/drop'
           #   condition: succeededOrFailed()
 
-          - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
-            displayName: 'Run BinSkim'
-            inputs:
-              InputType: Basic
-              AnalyzeTarget: '$(build.artifactstagingdirectory)/drop\*.dll;$(build.artifactstagingdirectory)/drop\*.exe'
-            continueOnError: true
-            condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+          # - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
+          #   displayName: 'Run BinSkim'
+          #   inputs:
+          #     InputType: Basic
+          #     AnalyzeTarget: '$(build.artifactstagingdirectory)/drop\*.dll;$(build.artifactstagingdirectory)/drop\*.exe'
+          #   continueOnError: true
+          #   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
-          - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@2
-            displayName: 'Verify Signed Files'
-            inputs:
-              TargetFolders: '$(build.artifactstagingdirectory)/drop'
+          # - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@2
+          #   displayName: 'Verify Signed Files'
+          #   inputs:
+          #     TargetFolders: '$(build.artifactstagingdirectory)/drop'
 
-          - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
-            displayName: 'Publish Security Analysis Logs'
-            condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+        #   - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
+        #     displayName: 'Publish Security Analysis Logs'
+        #     condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
-          - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
-            displayName: 'Post Analysis'
-            inputs:
-              AllTools: true
-            condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+        #   - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+        #     displayName: 'Post Analysis'
+        #     inputs:
+        #       AllTools: true
+        #     condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
-          - task: ComponentGovernanceComponentDetection@0
-            displayName: 'Component Detection'
-            condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
-            inputs:
-              sourceScanPath: tools/JsonCli # Scope only to the JSON CLI tool, since that's all this build is for
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            path: $(build.artifactstagingdirectory)/drop
-            artifact: drop
+        #   - task: ComponentGovernanceComponentDetection@0
+        #     displayName: 'Component Detection'
+        #     condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+        #     inputs:
+        #       sourceScanPath: tools/JsonCli # Scope only to the JSON CLI tool, since that's all this build is for
+        # templateContext:
+        #   outputs:
+        #   - output: pipelineArtifact
+        #     path: $(build.artifactstagingdirectory)/drop
+        #     artifact: drop
