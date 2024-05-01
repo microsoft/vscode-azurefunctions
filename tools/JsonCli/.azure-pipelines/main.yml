@@ -37,7 +37,7 @@ stages:
             displayName: 'dotnet build'
             inputs:
               projects: 'tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj'
-              arguments: '--configuration $(BuildConfiguration)'
+              arguments: '--configuration Release'
 
           - task: DotNetCoreCLI@2
             displayName: 'dotnet publish 6.0'
@@ -45,7 +45,7 @@ stages:
               command: publish
               publishWebProjects: false
               projects: 'tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj'
-              arguments: '--configuration $(BuildConfiguration) --framework net6.0 --no-build'
+              arguments: '--configuration Release --framework net6.0 --no-build'
               zipAfterPublish: false
               modifyOutputPath: false
 
@@ -55,7 +55,7 @@ stages:
               command: publish
               publishWebProjects: false
               projects: 'tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj'
-              arguments: '--configuration $(BuildConfiguration) --framework net7.0 --no-build'
+              arguments: '--configuration Release --framework net7.0 --no-build'
               zipAfterPublish: false
               modifyOutputPath: false
 
@@ -73,7 +73,7 @@ stages:
             continueOnError: true
             condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
             inputs:
-              msBuildCommandline: '$(Agent.ToolsDirectory)\dotnet\dotnet.exe build "$(Build.SourcesDirectory)\tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj" --configuration $(BuildConfiguration)'
+              msBuildCommandline: '$(Agent.ToolsDirectory)\dotnet\dotnet.exe build "$(Build.SourcesDirectory)\tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj" --configuration Release'
 
           - task: DotNetCoreCLI@2
             displayName: 'dotnet restore signing'
@@ -87,7 +87,7 @@ stages:
             displayName: 'dotnet build signing'
             inputs:
               projects: 'tools/JsonCli/src/Signing.csproj'
-              arguments: '--configuration $(BuildConfiguration)'
+              arguments: '--configuration Release'
 
           - task: CopyFiles@2
             displayName: 'Copy Files to Staging'
