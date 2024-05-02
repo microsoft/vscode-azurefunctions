@@ -1,7 +1,7 @@
 stages:
-  - stage: dotnet_JsonCli_stage
+  - stage: DotNet_JsonCli_Stage
     jobs:
-      - job: JsonCli_job
+      - job: DotNet_JsonCli_Job
         steps:
           - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@2
             displayName: 'Install Signing Plugin'

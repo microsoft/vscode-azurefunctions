@@ -15,7 +15,11 @@ schedules:
       include:
         - main
 
-# under here is from https://github.com/microsoft/vscode-azuretools/blob/main/azure-pipelines/1esmain.yml
+# Note: not using template outlined in https://github.com/microsoft/vscode-azuretools/blob/main/azure-pipelines/README.md
+# so that we can customize sdl parameters.
+#
+# Instead, the rest of this is based on https://github.com/microsoft/vscode-azuretools/blob/main/azure-pipelines/1esmain.yml
+
 # `resources` specifies the location of templates to pick up, use it to get 1ES templates
 resources:
   repositories:
@@ -27,6 +31,8 @@ resources:
 
 variables:
   Codeql.BuildIdentifier: JsonCli
+  # Local analysis is only enabled on PR branches
+  Codeql.AnalyzeInPipeline: $[startsWith(variables['Build.SourceBranch'], 'refs/pull/')]
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
@@ -35,7 +41,7 @@ extends:
       credscan:
         suppressionsFile: $(Build.SourcesDirectory)\.azure-pipelines\compliance\CredScanSuppressions.json
       codeql:
-        cadence: 0
+        language: csharp # only build a codeql database for csharp, since the pipeline at the root handles javascript
       #   enabled: true # TODO: would like to enable only on scheduled builds but CodeQL cannot currently be disabled per https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/codeql/1es-codeql
     pool:
       name: VSEngSS-MicroBuild2022-1ES # Name of your hosted pool
