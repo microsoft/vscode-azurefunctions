@@ -1,5 +1,5 @@
 stages:
-  - stage: JsonCli_stage
+  - stage: dotnet_JsonCli_stage
     jobs:
       - job: JsonCli_job
         steps:
