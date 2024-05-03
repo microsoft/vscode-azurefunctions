@@ -27,6 +27,11 @@ resources:
       type: git
       name: 1ESPipelineTemplates/1ESPipelineTemplates
       ref: refs/tags/release
+    - repository: azExtTemplates
+      type: github
+      name: microsoft/vscode-azuretools
+      ref: main
+      endpoint: GitHub-AzureTools # The service connection to use when accessing this repository
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
