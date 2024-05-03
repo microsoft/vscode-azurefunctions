@@ -43,4 +43,4 @@ extends:
       os: windows # OS of the image. Allowed values: windows, linux, macOS
     stages:
       # Execute stages from the AzExt stages template
-      - template: ./1esstages.yml
+      - template: azure-pipelines/1esstages.yml@azExtTemplates
