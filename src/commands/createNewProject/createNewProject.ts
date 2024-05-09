@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
-import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import type * as api from '../../vscode-azurefunctions.api';
@@ -19,7 +18,7 @@ import { FolderListStep } from './FolderListStep';
 import { NewProjectLanguageStep } from './NewProjectLanguageStep';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
-import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
+import { ProjectTypeListStep } from './ProjectTypeListStep';
 
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
@@ -54,15 +53,6 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, undefined) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
     const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version), projectTemplateKey });
-    const optionalExecuteStep = options.executeStep;
-
-    if (optionalExecuteStep instanceof CreateDockerfileProjectStep) {
-        const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run this command.');
-        if (!await validateFuncCoreToolsInstalled(context, message)) {
-            throw new UserCancelledError('validateFuncCoreToolsInstalled');
-        }
-        wizardContext.containerizedProject = true;
-    }
 
     if (options.folderPath) {
         FolderListStep.setProjectPath(wizardContext, options.folderPath);
@@ -77,8 +67,8 @@ export async function createNewProjectInternal(context: IActionContext, options:
 
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
-        promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
-        executeSteps: optionalExecuteStep ? [optionalExecuteStep, new OpenFolderStep()] : [new OpenFolderStep()]
+        promptSteps: [new FolderListStep(), new ProjectTypeListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
+        executeSteps: [new OpenFolderStep()]
     });
 
     await wizard.prompt();

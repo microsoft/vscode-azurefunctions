@@ -23,8 +23,8 @@ export async function getCommands(): Promise<(WizardCommandConfig | SimpleComman
         {
             type: "simple",
             name: createFunctionProjectCommandName,
-            commandId: "azureFunctions.createNewProject",
-            displayName: "Create Function Project",
+            commandId: "azureFunctions.createFunction",
+            displayName: "Create Function Locally",
             intentDescription: "This is best when users ask to create a new function project in VS Code. They may also refer to creating a function project by asking to create a project based upon a function project template.",
             requiresAzureLogin: true,
         },
