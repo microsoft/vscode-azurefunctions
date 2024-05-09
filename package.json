@@ -998,6 +998,11 @@
                         "description": "%azureFunctions.requestTimeout%",
                         "default": 15
                     },
+                    "azureFunctions.hostStartTimeout": {
+                        "type": "number",
+                        "description": "%azureFunctions.hostStartTimeout%",
+                        "default": 60
+                    },
                     "azureFunctions.defaultFunctionAppToDeploy": {
                         "scope": "resource",
                         "type": "string",
