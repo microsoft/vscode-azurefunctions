@@ -17,7 +17,8 @@ import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersi
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
 // TODO: RETURN THIS BACK TO NORMAL AFTER DONE TESTING
-export const longRunningTestsEnabled: boolean = true; // envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
+export const longRunningTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
+export const useAzureFederatedCredentials: boolean = envUtils.isEnvironmentVariableSet(process.env.AzCode_UseAzureFederatedCredentials);
 export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
 export const skipStagingTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 

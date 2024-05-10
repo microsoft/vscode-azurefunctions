@@ -9,7 +9,7 @@ import { createHttpHeaders, createPipelineRequest, type PipelineRequest, type Pi
 import { type TokenCredential } from '@azure/identity';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { createTestActionContext, type TestActionContext, type TestAzureAccount } from '@microsoft/vscode-azext-dev';
-import { longRunningTestsEnabled } from '../global.test';
+import { longRunningTestsEnabled, useAzureFederatedCredentials } from '../global.test';
 
 /** HARD-CODED VALUES; MODIFY LATER TO OBTAIN THROUGH KEYVALUE!!
  * Constants required to connect to the appropriate Azure DevOps federated service connection
@@ -36,7 +36,7 @@ export const resourceGroupsToDelete: string[] = [];
 
 // Runs before all nightly tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
-    if (longRunningTestsEnabled) {
+    if (longRunningTestsEnabled && useAzureFederatedCredentials) {
 
         this.timeout(2 * 60 * 1000);
         console.log('NIGHTLY: starting nightly tests');
