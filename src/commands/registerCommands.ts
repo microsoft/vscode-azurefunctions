@@ -38,7 +38,7 @@ import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
 import { deleteFunctionApp } from './deleteFunctionApp';
 import { deleteNode } from './deleteNode';
-import { deployProductionSlot, deploySlot } from './deploy/deploy';
+import { deployProductionSlot, deployProductionSlotByFunctionAppId, deploySlot } from './deploy/deploy';
 import { connectToGitHub } from './deployments/connectToGitHub';
 import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
@@ -112,6 +112,7 @@ export function registerCommands(): void {
     );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
+    registerCommand('azureFunctions.deployByFunctionAppId', deployProductionSlotByFunctionAppId);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
