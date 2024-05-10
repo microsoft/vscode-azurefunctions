@@ -45,9 +45,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
         const flexSku: Sku | null | undefined = stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
 
-        context.site = !flexSku ?
-            await this.createFunctionApp(context, rgName, siteName, stack) :
-            await this.createFlexFunctionApp(context, rgName, siteName, flexSku);
+        context.site = flexSku ?
+            await this.createFlexFunctionApp(context, rgName, siteName, flexSku) :
+            await this.createFunctionApp(context, rgName, siteName, stack);
         context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
