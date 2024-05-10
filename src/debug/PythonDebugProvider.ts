@@ -8,13 +8,17 @@ import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
+export const defaultPythonDebugHost: string = 'localhost';
 export const defaultPythonDebugPort: number = 9091;
 
 export const pythonDebugConfig: DebugConfiguration = {
     name: localize('attachPython', 'Attach to Python Functions'),
-    type: 'python',
+    type: 'debugpy',
     request: 'attach',
-    port: defaultPythonDebugPort,
+    connect: {
+        host: defaultPythonDebugHost,
+        port: defaultPythonDebugPort
+    },
     preLaunchTask: hostStartTaskName
 };
 
