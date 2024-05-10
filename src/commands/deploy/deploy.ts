@@ -37,9 +37,6 @@ export async function deployProductionSlot(context: IActionContext, target?: vsc
     await deploy(context, target, undefined);
 }
 
-/**
- *
- */
 export async function deployProductionSlotByFunctionAppId(context: IActionContext, functionAppId?: string | {}): Promise<void> {
     await deploy(context, undefined, functionAppId);
 }
