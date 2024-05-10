@@ -40,4 +40,27 @@ export interface FunctionAppRuntimeSettings extends CommonSettings {
     appSettingsDictionary: AppSettingsDictionary;
     siteConfigPropertiesDictionary: SiteConfigPropertiesDictionary;
     supportedFunctionsExtensionVersions: FunctionsExtensionVersion[];
+    // Sku property is only used for flex consumption plans
+    Sku: Sku[] | null;
+}
+
+export interface Sku {
+    skuCode: string;
+    instanceMemoryMB: InstanceMemoryMB[];
+    maximumInstanceCount: {
+        lowestMaximumInstanceCount: number;
+        highestMaximumInstanceCount: number;
+        defaultValue: number;
+    },
+    functionAppConfigProperties: {
+        runtime: {
+            name: string,
+            version: string
+        }
+    }
+}
+
+interface InstanceMemoryMB {
+    size: number;
+    isDefault: boolean;
 }

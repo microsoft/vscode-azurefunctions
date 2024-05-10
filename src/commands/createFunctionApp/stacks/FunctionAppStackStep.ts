@@ -16,9 +16,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
         const isFlex: boolean = context.newPlanSku?.tier === 'FlexConsumption';
-
-        // TODO: Since we aren't able to get the stacks for flex, we're using a simple object to represent the stack but we should when available
-        let result: FullFunctionAppStack | { runtime: string, version: string } | undefined;
+        let result: FullFunctionAppStack | undefined;
         while (true) {
             const options: AgentQuickPickOptions = {
                 placeHolder,
@@ -37,23 +35,18 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 break;
             }
         }
-        if (isFlex) {
-            context.newSiteStackFlex = result as { runtime: string, version: string };
-        } else {
-            context.newSiteStack = result as FullFunctionAppStack;
-
-            if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
-                context.newSiteOS = WebsiteOS.windows;
-            } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
-                context.newSiteOS = WebsiteOS.linux;
-            } else if (!context.advancedCreation) {
-                context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
-            }
+        context.newSiteStack = result as FullFunctionAppStack;
+        if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
+            context.newSiteOS = WebsiteOS.windows;
+        } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
+            context.newSiteOS = WebsiteOS.linux;
+        } else if (!context.advancedCreation) {
+            context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
         }
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return !context.newSiteStack && !context.newSiteStackFlex;
+        return !context.newSiteStack;
     }
 
     public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext>> {
@@ -69,76 +62,8 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return { promptSteps };
     }
 
-    private async getPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | { runtime: string, version: string } | undefined>>[]> {
-        // TODO: hardcoding the runtime versions for now, but we should get this from the API when available
-        if (isFlex) {
-            return [
-                {
-                    label: '.NET 8 Isolated',
-                    data: {
-                        runtime: 'dotnet-isolated',
-                        version: '8.0'
-                    },
-                    group: '.NET',
-                    agentMetadata: {}
-                },
-                {
-                    label: 'Java 17',
-                    data: {
-                        runtime: 'java',
-                        version: '17'
-                    },
-                    group: 'Java',
-                    agentMetadata: {}
-                },
-                {
-                    label: 'Java 11',
-                    data: {
-                        runtime: 'java',
-                        version: '11'
-                    },
-                    group: 'Java',
-                    agentMetadata: {}
-                },
-                {
-                    label: "Node.js 20 LTS",
-                    data: {
-                        runtime: 'node',
-                        version: '20'
-                    },
-                    group: 'Node.js',
-                    agentMetadata: {}
-                },
-                {
-                    label: 'Python 3.11',
-                    data: {
-                        runtime: 'python',
-                        version: '3.11'
-                    },
-                    group: 'Python',
-                    agentMetadata: {}
-                },
-                {
-                    label: 'Python 3.10',
-                    data: {
-                        runtime: 'python',
-                        version: '3.10'
-                    },
-                    group: 'Python',
-                    agentMetadata: {}
-                },
-                {
-                    label: 'PowerShell 7.4',
-                    data: {
-                        runtime: 'powershell',
-                        version: '7.4'
-                    },
-                    group: 'PowerShell Core',
-                    agentMetadata: {}
-                }
-            ];
-        }
-        let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context);
+    private async getPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+        let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context, isFlex);
         if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
             // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []
             picks = [];

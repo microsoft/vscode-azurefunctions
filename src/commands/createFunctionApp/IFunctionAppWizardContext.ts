@@ -22,8 +22,6 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
-    newSiteStackFlex?: { runtime: string, version: string } /* While we're not using the stacks API for flex, it's easier to just hard-code these two values instead of the entire FullFunctionAppStack */
-
     durableStorageType?: DurableBackendValues;
 
     // Detected local connection string
