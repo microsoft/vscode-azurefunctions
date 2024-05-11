@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { promptForFuncVersion } from "../../../FuncVersion";
+import { FuncVersion, promptForFuncVersion } from "../../../FuncVersion";
 import { hiddenStacksSetting } from "../../../constants";
 import { localize } from "../../../localize";
 import { cliFeedUtils } from "../../../utils/cliFeedUtils";
@@ -65,11 +65,27 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
 
 async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils.IWorkerRuntime[]> {
     const funcRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestVersion(context, context.version));
-    const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
-    const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
+    let runtimes = await getReleaseRuntimes(funcRelease);
+    if (context.version === FuncVersion.v4) {
+        try {
+            const inProcessRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestReleaseVersionForMajorVersion(context, '0'));
+            const inProcessRuntimes = await getReleaseRuntimes(inProcessRelease);
+            if (inProcessRuntimes.length > 0) {
+                runtimes = runtimes.concat(inProcessRuntimes);
+            }
+        } catch (error) {
+            // ignore this error - it just means there are no in-process runtimes we need to add
+        }
+    }
     if (runtimes.length === 0) {
         throw new Error('Internal error: No .NET worker runtimes found.');
     }
+    return runtimes;
+}
+
+async function getReleaseRuntimes(release: cliFeedUtils.IRelease): Promise<cliFeedUtils.IWorkerRuntime[]> {
+    const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
+    const runtimes = Object.values(release.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
     return runtimes;
 }
 
