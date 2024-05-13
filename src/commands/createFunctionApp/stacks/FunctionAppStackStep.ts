@@ -8,6 +8,8 @@ import { AzureWizardPromptStep, openUrl, type AgentQuickPickItem, type AgentQuic
 import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
+import { InstanceMemoryMBPromptStep } from '../flex/InstanceMemoryMBPromptStep';
+import { MaximumInstanceCountPromptStep } from '../flex/MaximumInstanceCountPromptStep';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
 import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
@@ -35,6 +37,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 break;
             }
         }
+
         context.newSiteStack = result as FullFunctionAppStack;
         if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
             context.newSiteOS = WebsiteOS.windows;
@@ -42,6 +45,10 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
             context.newSiteOS = WebsiteOS.linux;
         } else if (!context.advancedCreation) {
             context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
+        }
+
+        if (isFlex) {
+            context.newSiteFlexSku = result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
         }
     }
 
@@ -59,6 +66,11 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         } else {
             await setLocationsTask(context);
         }
+
+        if (context.newSiteFlexSku) {
+            promptSteps.push(new InstanceMemoryMBPromptStep(), new MaximumInstanceCountPromptStep());
+        }
+
         return { promptSteps };
     }
 

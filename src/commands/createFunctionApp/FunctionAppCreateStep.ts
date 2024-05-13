@@ -22,7 +22,8 @@ import { getStorageConnectionString } from '../appSettings/connectionSettings/ge
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
-import { type FunctionAppRuntimeSettings, type Sku } from './stacks/models/FunctionAppStackModel';
+import { type Sku } from './stacks/models/FlexSkuModel';
+import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
@@ -43,10 +44,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
-        const flexSku: Sku | null | undefined = stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
 
-        context.site = flexSku ?
-            await this.createFlexFunctionApp(context, rgName, siteName, flexSku) :
+        context.site = context.newSiteFlexSku ?
+            await this.createFlexFunctionApp(context, rgName, siteName, context.newSiteFlexSku) :
             await this.createFunctionApp(context, rgName, siteName, stack);
         context.activityResult = context.site as AppResource;
 
@@ -133,8 +133,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 version: sku.functionAppConfigProperties.runtime.version
             },
             scaleAndConcurrency: {
-                maximumInstanceCount: sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: sku.instanceMemoryMB.find(im => im.isDefault)?.size || 2048,
+                maximumInstanceCount: context.maximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
+                instanceMemoryMB: context.instanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
                 triggers: null
             },
