@@ -20,14 +20,15 @@ import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
-import { type FullFunctionAppStack, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
+import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
-import { type FunctionAppRuntimeSettings, type Sku } from './stacks/models/FunctionAppStackModel';
+import { type Sku } from './stacks/models/FlexSkuModel';
+import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
-    public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+    public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
         const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
 
@@ -43,11 +44,10 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
-        const flexSku: Sku | null | undefined = stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && stack.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
 
-        context.site = !flexSku ?
-            await this.createFunctionApp(context, rgName, siteName, stack) :
-            await this.createFlexFunctionApp(context, rgName, siteName, flexSku);
+        context.site = context.newFlexSku ?
+            await this.createFlexFunctionApp(context, rgName, siteName, context.newFlexSku) :
+            await this.createFunctionApp(context, rgName, siteName, stack);
         context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
@@ -101,7 +101,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
 
-    private async getNewFlexSite(context: IFunctionAppWizardContext, sku: Sku): Promise<Site> {
+    private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
         const site: Site & { properties: FlexFunctionAppProperties } = {
             name: context.newSiteName,
@@ -133,8 +133,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 version: sku.functionAppConfigProperties.runtime.version
             },
             scaleAndConcurrency: {
-                maximumInstanceCount: sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: sku.instanceMemoryMB.find(im => im.isDefault)?.size || 2048,
+                maximumInstanceCount: context.newFlexInstanceMemoryMB ?? sku.maximumInstanceCount.defaultValue,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
                 triggers: null
             },

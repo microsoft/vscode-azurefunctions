@@ -9,6 +9,7 @@ import { type FuncVersion } from '../../FuncVersion';
 import { type DurableBackendValues } from '../../constants';
 import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { type AppStackMajorVersion, type AppStackMinorVersion } from './stacks/models/AppStackModel';
+import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './stacks/models/FunctionAppStackModel';
 
 export type FullFunctionAppStack = {
@@ -28,6 +29,12 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+}
+
+export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {
+    newFlexSku?: Sku | null
+    newFlexInstanceMemoryMB?: number;
+    newFlexMaximumInstanceCount?: number;
 }
 
 export interface IFunctionAppAgentWizardContext extends IFunctionAppWizardContext {

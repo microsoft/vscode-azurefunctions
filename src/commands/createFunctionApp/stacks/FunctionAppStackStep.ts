@@ -8,12 +8,14 @@ import { AzureWizardPromptStep, openUrl, type AgentQuickPickItem, type AgentQuic
 import { noRuntimeStacksAvailableLabel } from '../../../constants';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
-import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { InstanceMemoryMBPromptStep } from '../flex/InstanceMemoryMBPromptStep';
+import { MaximumInstanceCountPromptStep } from '../flex/MaximumInstanceCountPromptStep';
+import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
 import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 
-export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
-    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
+export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionAppWizardContext> {
+    public async prompt(context: IFlexFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
         const isFlex: boolean = context.newPlanSku?.tier === 'FlexConsumption';
         let result: FullFunctionAppStack | undefined;
@@ -35,6 +37,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 break;
             }
         }
+
         context.newSiteStack = result as FullFunctionAppStack;
         if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
             context.newSiteOS = WebsiteOS.windows;
@@ -43,14 +46,18 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         } else if (!context.advancedCreation) {
             context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
         }
+
+        if (isFlex) {
+            context.newFlexSku = result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
+        }
     }
 
-    public shouldPrompt(context: IFunctionAppWizardContext): boolean {
+    public shouldPrompt(context: IFlexFunctionAppWizardContext): boolean {
         return !context.newSiteStack;
     }
 
-    public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext>> {
-        const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
+    public async getSubWizard(context: IFlexFunctionAppWizardContext): Promise<IWizardOptions<IFlexFunctionAppWizardContext>> {
+        const promptSteps: AzureWizardPromptStep<IFlexFunctionAppWizardContext>[] = [];
         if (shouldShowEolWarning(context.newSiteStack?.minorVersion)) {
             promptSteps.push(new FunctionAppEOLWarningStep());
         }
@@ -59,10 +66,15 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         } else {
             await setLocationsTask(context);
         }
+
+        if (context.newFlexSku) {
+            promptSteps.push(new InstanceMemoryMBPromptStep(), new MaximumInstanceCountPromptStep());
+        }
+
         return { promptSteps };
     }
 
-    private async getPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+    private async getPicks(context: IFlexFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
         let picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = await getStackPicks(context, isFlex);
         if (picks.filter(p => p.label !== noRuntimeStacksAvailableLabel).length === 0) {
             // if every runtime only has noRuntimeStackAvailable quickpick items, reset picks to []
