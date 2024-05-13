@@ -5,21 +5,21 @@
 
 import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem, type IAzureQuickPickOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
+import { IFlexFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 import { type Sku } from "../stacks/models/FlexSkuModel";
 
-export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
-    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
-        const flexSku = nonNullProp(context, 'newSiteFlexSku');
+export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFlexFunctionAppWizardContext> {
+    public async prompt(context: IFlexFunctionAppWizardContext): Promise<void> {
+        const flexSku = nonNullProp(context, 'newFlexSku');
         const options: IAzureQuickPickOptions = {
             placeHolder: localize('instanceMemory', 'Select an instance memory size'),
         }
 
-        context.instanceMemoryMB = (await context.ui.showQuickPick(this.getPicks(flexSku), options)).data;
+        context.newFlexInstanceMemoryMB = (await context.ui.showQuickPick(this.getPicks(flexSku), options)).data;
     }
 
-    public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return !context.instanceMemoryMB;
+    public shouldPrompt(context: IFlexFunctionAppWizardContext): boolean {
+        return !context.newFlexInstanceMemoryMB;
     }
 
     private getPicks(flexSku: Sku): IAzureQuickPickItem<number>[] {

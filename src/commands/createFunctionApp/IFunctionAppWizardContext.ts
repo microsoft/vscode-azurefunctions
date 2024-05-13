@@ -25,14 +25,16 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     newSiteStack?: FullFunctionAppStack;
     durableStorageType?: DurableBackendValues;
 
-    newSiteFlexSku?: Sku | null
-    instanceMemoryMB?: number;
-    maximumInstanceCount?: number;
-
     // Detected local connection string
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+}
+
+export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {
+    newFlexSku?: Sku | null
+    newFlexInstanceMemoryMB?: number;
+    newFlexMaximumInstanceCount?: number;
 }
 
 export interface IFunctionAppAgentWizardContext extends IFunctionAppWizardContext {
