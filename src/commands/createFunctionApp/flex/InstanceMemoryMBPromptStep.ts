@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem, type IAzureQuickPickOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { IFlexFunctionAppWizardContext } from "../IFunctionAppWizardContext";
+import { type IFlexFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 import { type Sku } from "../stacks/models/FlexSkuModel";
 
 export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFlexFunctionAppWizardContext> {

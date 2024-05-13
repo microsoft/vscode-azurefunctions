@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep, nonNullProp, type AzExtInputBoxOptions } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
-import { IFlexFunctionAppWizardContext } from "../IFunctionAppWizardContext";
+import { type IFlexFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 import { type Sku } from "../stacks/models/FlexSkuModel";
 
 export class MaximumInstanceCountPromptStep extends AzureWizardPromptStep<IFlexFunctionAppWizardContext> {
