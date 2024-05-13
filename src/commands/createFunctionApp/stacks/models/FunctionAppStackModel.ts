@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AppInsightsSettings, type AppStack, type CommonSettings, type GitHubActionSettings } from './AppStackModel';
+import { type Sku } from './FlexSkuModel';
 
 // Types copied from here:
 // https://github.com/Azure/azure-functions-ux/blob/3322f0b5151bbfcf7a08f281efe678ebac643dc0/server/src/stacks/2020-10-01/models/FunctionAppStackModel.ts
@@ -40,4 +41,6 @@ export interface FunctionAppRuntimeSettings extends CommonSettings {
     appSettingsDictionary: AppSettingsDictionary;
     siteConfigPropertiesDictionary: SiteConfigPropertiesDictionary;
     supportedFunctionsExtensionVersions: FunctionsExtensionVersion[];
+    // Sku property is only used for flex consumption plans
+    Sku: Sku[] | null;
 }

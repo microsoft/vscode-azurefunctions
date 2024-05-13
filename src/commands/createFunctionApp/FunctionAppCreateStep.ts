@@ -20,24 +20,23 @@ import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
-import { type FullFunctionAppStack, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
+import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
-import { type FunctionAppRuntimeSettings } from './stacks/models/FunctionAppStackModel';
+import { type Sku } from './stacks/models/FlexSkuModel';
+import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
-    public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+    public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
-        const stack: FullFunctionAppStack | undefined = context.newSiteStack
+        const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
 
-        if (stack) {
-            context.telemetry.properties.newSiteOS = os;
-            context.telemetry.properties.newSiteStack = stack.stack.value;
-            context.telemetry.properties.newSiteMajorVersion = stack.majorVersion.value;
-            context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
-            context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
-        }
+        context.telemetry.properties.newSiteOS = os;
+        context.telemetry.properties.newSiteStack = stack.stack.value;
+        context.telemetry.properties.newSiteMajorVersion = stack.majorVersion.value;
+        context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
+        context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
 
         const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
         ext.outputChannel.appendLog(message);
@@ -46,8 +45,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
 
-        // TODO: Because we don't have the stack API, assume no stack means it's a flex app
-        context.site = stack ? await this.createFunctionApp(context, rgName, siteName, stack) : await this.createFlexFunctionApp(context, rgName, siteName);
+        context.site = context.newFlexSku ?
+            await this.createFlexFunctionApp(context, rgName, siteName, context.newFlexSku) :
+            await this.createFunctionApp(context, rgName, siteName, stack);
         context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
@@ -101,7 +101,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
 
-    private async getNewFlexSite(context: IFunctionAppWizardContext): Promise<Site> {
+    private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
         const site: Site & { properties: FlexFunctionAppProperties } = {
             name: context.newSiteName,
@@ -129,12 +129,12 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 }
             },
             runtime: {
-                name: context.newSiteStackFlex?.runtime,
-                version: context.newSiteStackFlex?.version
+                name: sku.functionAppConfigProperties.runtime.name,
+                version: sku.functionAppConfigProperties.runtime.version
             },
             scaleAndConcurrency: {
-                maximumInstanceCount: 100,
-                instanceMemoryMB: 2048,
+                maximumInstanceCount: context.newFlexInstanceMemoryMB ?? sku.maximumInstanceCount.defaultValue,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
                 triggers: null
             },
@@ -231,7 +231,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context, stack));
     }
 
-    async createFlexFunctionApp(context: IFunctionAppWizardContext, rgName: string, siteName: string): Promise<Site> {
+    async createFlexFunctionApp(context: IFunctionAppWizardContext, rgName: string, siteName: string, sku: Sku): Promise<Site> {
         const headers = createHttpHeaders({
             'Content-Type': 'application/json',
         });
@@ -239,7 +239,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const options: AzExtRequestPrepareOptions = {
             url: `https://management.azure.com/subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=2023-12-01`,
             method: 'PUT',
-            body: JSON.stringify(await this.getNewFlexSite(context)) as unknown as RequestBodyType,
+            body: JSON.stringify(await this.getNewFlexSite(context, sku)) as unknown as RequestBodyType,
             headers
         };
 

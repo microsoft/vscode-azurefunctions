@@ -9,6 +9,7 @@ import { type FuncVersion } from '../../FuncVersion';
 import { type DurableBackendValues } from '../../constants';
 import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { type AppStackMajorVersion, type AppStackMinorVersion } from './stacks/models/AppStackModel';
+import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './stacks/models/FunctionAppStackModel';
 
 export type FullFunctionAppStack = {
@@ -22,14 +23,18 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
-    newSiteStackFlex?: { runtime: string, version: string } /* While we're not using the stacks API for flex, it's easier to just hard-code these two values instead of the entire FullFunctionAppStack */
-
     durableStorageType?: DurableBackendValues;
 
     // Detected local connection string
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+}
+
+export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {
+    newFlexSku?: Sku | null
+    newFlexInstanceMemoryMB?: number;
+    newFlexMaximumInstanceCount?: number;
 }
 
 export interface IFunctionAppAgentWizardContext extends IFunctionAppWizardContext {
