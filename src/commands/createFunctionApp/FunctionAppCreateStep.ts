@@ -101,7 +101,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
 
-    private async getNewFlexSite(context: IFunctionAppWizardContext, sku: Sku): Promise<Site> {
+    private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
         const site: Site & { properties: FlexFunctionAppProperties } = {
             name: context.newSiteName,
@@ -133,8 +133,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 version: sku.functionAppConfigProperties.runtime.version
             },
             scaleAndConcurrency: {
-                maximumInstanceCount: context.maximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: context.instanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
+                maximumInstanceCount: context.newFlexInstanceMemoryMB ?? sku.maximumInstanceCount.defaultValue,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
                 triggers: null
             },
