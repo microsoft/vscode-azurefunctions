@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
+        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
         <!-- Since this project is just for signing, we don't want to actually build anything -->
         <DefaultItemExcludes>$(DefaultItemExcludes);**/*.cs</DefaultItemExcludes>
     </PropertyGroup>

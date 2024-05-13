@@ -68,6 +68,7 @@
     "azureFunctions.redeploy": "Redeploy",
     "azureFunctions.reportIssue": "Report Issue...",
     "azureFunctions.requestTimeout": "The timeout (in seconds) to be used when making requests, for example getting the latest templates.",
+    "azureFunctions.hostStartTimeout": "The timeout (in seconds) to be used when starting the Azure Functions host.",
     "azureFunctions.restartFunctionApp": "Restart",
     "azureFunctions.scmDoBuildDuringDeployment": "Set to true to build your project on the server. Currently only applicable for Linux Function Apps.",
     "azureFunctions.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",

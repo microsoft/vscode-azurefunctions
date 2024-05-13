@@ -231,9 +231,10 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem];
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem];
         // Deployment configuration not supported by flex consumption at the time
         if (!this._isFlex) {
+            children.push(this._logFilesTreeItem);
             children.push(this.deploymentsNode);
         }
 

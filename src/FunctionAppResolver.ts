@@ -48,19 +48,29 @@ export class FunctionAppResolver implements AppResourceResolver {
 }
 
 async function getSites20231201(context: IActionContext, subContext: ISubscriptionContext): Promise<(Site & { properties?: { functionAppConfig: FunctionAppConfig } })[]> {
-    const headers = createHttpHeaders({
-        'Content-Type': 'application/json',
-    });
+    try {
+        const headers = createHttpHeaders({
+            'Content-Type': 'application/json',
+        });
 
-    // we need the new api-version to get the functionAppConfig
-    const options: AzExtRequestPrepareOptions = {
-        url: `https://management.azure.com/subscriptions/${subContext.subscriptionId}/providers/Microsoft.Web/sites?api-version=2023-12-01`,
-        method: 'GET',
-        headers
-    };
+        const armEndpoint = ensureEndingSlash(subContext.environment.resourceManagerEndpointUrl);
 
-    const client = await createGenericClient(context, subContext);
-    const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
-    return (result.parsedBody as { value: unknown }).value as (Site & { properties?: { functionAppConfig: FunctionAppConfig } })[];
+        // we need the new api-version to get the functionAppConfig
+        const options: AzExtRequestPrepareOptions = {
+            url: `${armEndpoint}subscriptions/${subContext.subscriptionId}/providers/Microsoft.Web/sites?api-version=2023-12-01`,
+            method: 'GET',
+            headers
+        };
+
+        const client = await createGenericClient(context, subContext);
+        const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
+
+        return (result.parsedBody as { value: unknown }).value as (Site & { properties?: { functionAppConfig: FunctionAppConfig } })[] ?? [];
+    } catch (_error) {
+        return [];
+    }
 }
 
+function ensureEndingSlash(url: string): string {
+    return url.endsWith('/') ? url : `${url}/`;
+}

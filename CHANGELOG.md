@@ -1,5 +1,18 @@
 # Change Log
 
+## 1.14.3 - 2024-04-30
+
+### Fixed
+* [[4112]](https://github.com/microsoft/vscode-azurefunctions/pull/4112) Fix listing functions on sovereign clouds
+
+## 1.14.2 - 2024-04-26
+
+### Changed
+* [[4096]](https://github.com/microsoft/vscode-azurefunctions/pull/4096) Update initial launch.json for Python to use debugpy
+
+### Fixed
+* Minor text fixes
+
 ## 1.14.1 - 2024-04-04
 
 ### Fixed
