@@ -16,19 +16,19 @@ interface CreateProjectTestCase extends ICreateProjectTestOptions {
 
 const testCases: CreateProjectTestCase[] = [
     { ...getCSharpValidateOptions('netcoreapp2.1', FuncVersion.v2) },
-    { ...getCSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [TestInput.UseDefaultValue, /3/], description: 'netcoreapp3.1' },
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [TestInput.UseDefaultValue, /6/], description: 'net6.0' },
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [TestInput.UseDefaultValue, /6.*isolated/i], description: 'net6.0 isolated' },
-    { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [TestInput.UseDefaultValue, /7.*isolated/i], description: 'net7.0 isolated' },
+    { ...getCSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
+    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
+    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
+    { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
     { ...getFSharpValidateOptions('netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
-    { ...getFSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [TestInput.UseDefaultValue, /3/], isHiddenLanguage: true },
+    { ...getFSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], isHiddenLanguage: true },
 ];
 
 // Test cases that are the same for both v2 and v3
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     testCases.push(
-        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: [TestInput.UseDefaultValue, 'Model V3'] },
-        { ...getTypeScriptValidateOptions({ version }), inputs: [TestInput.UseDefaultValue, 'Model V3'] },
+        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: ['Model V3'] },
+        { ...getTypeScriptValidateOptions({ version }), inputs: ['Model V3'] },
         { ...getPowerShellValidateOptions(version) },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
@@ -37,11 +37,11 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     // test python v1 model
     testCases.push({
         ...getPythonValidateOptions('.venv', version),
-        inputs: [TestInput.UseDefaultValue, /Model V1/i, TestInput.UseDefaultValue]
+        inputs: [/Model V1/i, TestInput.UseDefaultValue]
     });
 
     const appName: string = 'javaApp';
-    const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
+    const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
     if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
         javaBaseInputs.unshift(/8/);
     }
