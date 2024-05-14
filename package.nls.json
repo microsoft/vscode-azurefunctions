@@ -26,6 +26,7 @@
     "azureFunctions.deleteSlot": "Delete Slot...",
     "azureFunctions.deployProject": "Deploy to Azure...",
     "azureFunctions.deploy": "Deploy to Function App...",
+    "azureFunctions.deployByFunctionAppId": "Deploy to Function App by ID...",
     "azureFunctions.deploySlot": "Deploy to Slot...",
     "azureFunctions.deploySubpath": "The default subpath of a workspace folder to use when deploying. If set, you will not be prompted for the folder path when deploying.",
     "azureFunctions.description": "An Azure Functions extension for Visual Studio Code.",
