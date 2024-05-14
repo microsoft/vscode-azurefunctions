@@ -175,6 +175,16 @@
                 "command": "azureFunctions.createNewProject",
                 "title": "%azureFunctions.createNewProject%",
                 "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/CreateNewProject.svg",
+                    "dark": "resources/dark/CreateNewProject.svg"
+                },
+                "enablement": "!virtualWorkspace"
+            },
+            {
+                "command": "azureFunctions.createNewProjectWithDockerfile",
+                "title": "%azureFunctions.createNewProjectWithDockerfile%",
+                "category": "Azure Functions",
                 "enablement": "!virtualWorkspace"
             },
             {
@@ -370,6 +380,14 @@
                 {
                     "command": "azureFunctions.createFunction",
                     "group": "1_projects@1"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@2"
+                },
+                {
+                    "command": "azureFunctions.createNewProjectWithDockerfile",
+                    "group": "1_projects@3"
                 },
                 {
                     "command": "azureFunctions.deployProject",
