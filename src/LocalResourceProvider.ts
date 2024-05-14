@@ -43,7 +43,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
 
         if (!hasLocalProject && children.length === 0) {
             const ti: GenericTreeItem = new GenericTreeItem(parent, {
-                label: localize('createFunctionLocally', 'Create New Project...'),
+                label: localize('createFunctionLocally', 'Create Function Project...'),
                 commandId: 'azureFunctions.createNewProject',
                 contextValue: 'createNewProject',
                 iconPath: treeUtils.getThemedIconPath('CreateNewProject')
