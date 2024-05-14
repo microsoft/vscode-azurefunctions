@@ -32,7 +32,8 @@ import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
-import { createNewProjectFromCommand } from './createNewProject/createNewProject';
+import { createNewProjectFromCommand, createNewProjectInternal } from './createNewProject/createNewProject';
+import { CreateDockerfileProjectStep } from './createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
 import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
 import { deleteFunctionApp } from './deleteFunctionApp';
@@ -94,6 +95,14 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommandWithTreeNodeUnwrapping(
+        'azureFunctions.createNewProjectWithDockerfile',
+        async (context: IActionContext) =>
+            await createNewProjectInternal(context, {
+                executeStep: new CreateDockerfileProjectStep(),
+                languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i,
+            }),
+    );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunctionApp', deleteFunctionApp);
