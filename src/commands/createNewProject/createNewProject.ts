@@ -81,8 +81,6 @@ export async function createNewProjectInternal(context: IActionContext, options:
         executeSteps: optionalExecuteStep ? [optionalExecuteStep, new OpenFolderStep()] : [new OpenFolderStep()]
     });
 
-
-
     await wizard.prompt();
     await wizard.execute();
 

@@ -27,9 +27,9 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
 
     await wizard.prompt();
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    node = context.site ? await ext.rgApi.tree.findTreeItem(context.site!.id!, context)! : undefined;
+    node = context.site ? await ext.rgApi.tree.findTreeItem(nonNullProp(context.site, 'id'), context) : undefined;
 
+    // if there was no node, then the user is creating a new function app
     if (!node) {
         context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'))
         await wizard.execute();

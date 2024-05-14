@@ -20,7 +20,7 @@ suite('Add Binding', () => {
         await cleanTestWorkspace();
         const testWorkspacePath = getTestWorkspaceFolder();
         await runWithTestActionContext('createNewProject', async (context) => {
-            await context.ui.runWithInputs([testWorkspacePath, 'Create default function project', ProjectLanguage.JavaScript, 'Model V3', /http\s*trigger/i, functionName, 'Anonymous'], async () => {
+            await context.ui.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, 'Model V3', /http\s*trigger/i, functionName, 'Anonymous'], async () => {
                 await createNewProjectInternal(context, {});
             });
         })

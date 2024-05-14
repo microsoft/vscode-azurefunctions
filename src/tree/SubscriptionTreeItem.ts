@@ -98,7 +98,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         // if the providers aren't registered yet, await it here because it is required by this point
         await registerProvidersTask;
-        // move this into create function app step
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
 
