@@ -215,6 +215,12 @@
                 "enablement": "!virtualWorkspace"
             },
             {
+                "command": "azureFunctions.deployByFunctionAppId",
+                "title": "%azureFunctions.deployByFunctionAppId%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.deploySlot",
                 "title": "%azureFunctions.deploySlot%",
                 "category": "Azure Functions",
@@ -662,6 +668,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.deployByFunctionAppId",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.openInPortal",
                     "when": "never"
