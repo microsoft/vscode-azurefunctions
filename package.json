@@ -419,6 +419,16 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.deployProject",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.deployProject",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "1@2"
+                },
+                {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
