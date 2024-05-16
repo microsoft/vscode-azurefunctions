@@ -46,7 +46,7 @@ export async function promptForEventGrid(context: IActionContext, workspaceFolde
 
     const eventGridWarning = localize(
         'eventGridWarning',
-        `Usage of an Event Grid based blob trigger requires an Event Grid subscription created on an Azure Storage v2 account. If you don't already, you need to create a Event Grid subscription to complete your deployment.`);
+        `Usage of an Event Grid based blob trigger requires an Event Grid subscription created on an Azure Storage v2 account. If you haven't already, you need to create a Event Grid subscription to complete your deployment.`);
     const options: IAzureMessageOptions = { learnMoreLink: 'https://aka.ms/learnMoreEventGridSubscription' };
     // need to add don't show again
     const result = await context.ui.showWarningMessage(eventGridWarning, options, { title: 'Close' }, DialogResponses.dontWarnAgain);
