@@ -1,8 +1,12 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { type FunctionEnvelope } from "@azure/arm-appservice";
-import { type IActionContext, type IAzureMessageOptions } from "@microsoft/vscode-azext-utils";
+import { DialogResponses, type IActionContext, type IAzureMessageOptions } from "@microsoft/vscode-azext-utils";
 import * as retry from 'p-retry';
 import { type WorkspaceFolder } from "vscode";
-import { DialogResponses } from "../../../extension.bundle";
 import { localize } from "../../localize";
 import { type IBindingTemplate } from "../../templates/IBindingTemplate";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
