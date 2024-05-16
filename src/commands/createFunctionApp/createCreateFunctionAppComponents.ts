@@ -99,7 +99,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     const storageProvider = 'Microsoft.Storage';
     LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
-    executeSteps.push(new FunctionAppCreateStep());
 
     return {
         wizardContext,

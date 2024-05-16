@@ -21,7 +21,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
     }
 
     public async configureBeforePrompt(context: IFuncDeployContext): Promise<void> {
-        this._picks = await this.getPicks(context);
+        this._picks = await this.getPicks();
         // auto select if only one subscription
         if (this._picks.length === 1) {
             this._oneSubscription = true;
@@ -29,7 +29,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
         }
     }
 
-    private async getPicks(_: IFuncDeployContext): Promise<IAzureQuickPickItem<AzureSubscription>[]> {
+    private async getPicks(): Promise<IAzureQuickPickItem<AzureSubscription>[]> {
         return (await ext.rgApi.getSubscriptions(true)).map(s => {
             return { label: s.name, description: s.subscriptionId, data: s };
         });
