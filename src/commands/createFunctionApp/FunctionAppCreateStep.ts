@@ -133,7 +133,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 version: sku.functionAppConfigProperties.runtime.version
             },
             scaleAndConcurrency: {
-                maximumInstanceCount: context.newFlexInstanceMemoryMB ?? sku.maximumInstanceCount.defaultValue,
+                maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
                 instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
                 triggers: null
