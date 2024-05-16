@@ -1,7 +1,7 @@
 import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
 import { createGenericClient, type AzExtPipelineResponse } from "@microsoft/vscode-azext-azureutils";
 import { openUrl, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type MessageItem } from "vscode";
+import { commands, type MessageItem } from "vscode";
 import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { listLocalFunctions } from "../../workspace/listLocalFunctions";
@@ -36,6 +36,7 @@ export async function hasLocalEventGridBlobTrigger(projectPath: string): Promise
     const deployedProject = projects.initializedProjects.find(p => p.options.effectiveProjectPath === projectPath);
     if (deployedProject) {
         const functions = await listLocalFunctions(deployedProject as LocalProjectInternal);
+        await commands.executeCommand('azureFunctions.executeFunction', functions.functions[0]);
         return functions.functions.some(f => f.triggerBindingType === 'blobTrigger');
     }
 
