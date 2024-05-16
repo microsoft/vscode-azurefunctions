@@ -25,7 +25,6 @@ import { validateEventHubsConnection } from '../appSettings/connectionSettings/e
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
-import { hasEventSystemTopics, hasLocalEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
@@ -121,20 +120,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
 
-    try {
-        const shouldCheckEventSystemTopics = isFlexConsumption && await hasLocalEventGridBlobTrigger(projectPath);
-        if (shouldCheckEventSystemTopics) {
-            // if there are event grid triggers, we need to check if the event system topics are set up
-            const shouldPromptForEventGrid = !(await hasEventSystemTopics(context, node));
-            // if there are not any system topics, we need to prompt the user to set them up
-            if (shouldPromptForEventGrid) {
-                await promptForEventGrid(context);
-            }
-        }
-    } catch (err) {
-        // ignore this error, don't block deploy for this check
-    }
-
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     if (shouldValidateEventHubs) {
         await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
@@ -195,7 +180,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     );
 
-    await notifyDeployComplete(context, node, context.workspaceFolder);
+    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {

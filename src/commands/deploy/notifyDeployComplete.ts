@@ -14,12 +14,22 @@ import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunction
 import { nonNullValue } from '../../utils/nonNull';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
+import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
-export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder): Promise<void> {
+export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
+
+    try {
+        const shouldCheckEventSystemTopics = isFlexConsumption && await hasRemoteEventGridBlobTrigger(context, node);
+        if (shouldCheckEventSystemTopics) {
+            await promptForEventGrid(context, workspaceFolder);
+        }
+    } catch (err) {
+        // ignore this error, don't block deploy for this check
+    }
 
     // Don't wait
     void window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {

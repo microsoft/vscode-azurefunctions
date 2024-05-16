@@ -1,54 +1,53 @@
-import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
-import { createGenericClient, type AzExtPipelineResponse } from "@microsoft/vscode-azext-azureutils";
-import { openUrl, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { commands, type MessageItem } from "vscode";
+import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { type IActionContext, type IAzureMessageOptions } from "@microsoft/vscode-azext-utils";
+import * as retry from 'p-retry';
+import { type WorkspaceFolder } from "vscode";
+import { DialogResponses } from "../../../extension.bundle";
 import { localize } from "../../localize";
+import { type IBindingTemplate } from "../../templates/IBindingTemplate";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
-import { listLocalFunctions } from "../../workspace/listLocalFunctions";
-import { listLocalProjects, type LocalProjectInternal } from "../../workspace/listLocalProjects";
+import { getWorkspaceSetting, updateWorkspaceSetting } from "../../vsCodeConfig/settings";
 
-export async function hasEventSystemTopics(context: IActionContext, node: SlotTreeItem): Promise<boolean> {
-    const client = await createGenericClient(context, node.subscription);
-    const headers = createHttpHeaders({
-        'Content-Type': 'application/json',
+export async function hasRemoteEventGridBlobTrigger(context: IActionContext, node: SlotTreeItem): Promise<boolean> {
+    const retries = 3;
+    const client = await node.site.createClient(context);
+
+    const funcs = await retry<FunctionEnvelope[]>(
+        async () => {
+            // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+            const response = await client.listFunctions();
+            const failedToList = localize('failedToList', 'Failed to list functions.');
+
+            // https://github.com/Azure/azure-functions-host/issues/3502
+            if (!Array.isArray(response)) {
+                throw new Error(failedToList);
+            }
+
+            return response;
+        },
+        { retries, minTimeout: 10 * 1000 }
+    );
+
+    return funcs.some(f => {
+        const bindings = (f.config as { bindings: IBindingTemplate[] }).bindings;
+        return bindings.some(b => b.type === 'blobTrigger');
     });
-    const options = createPipelineRequest({
-        url: `/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01`,
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-            query: `where type =~ 'Microsoft.EventGrid/systemTopics' | where properties.topicType =~ 'Microsoft.Web.sites' | where properties.source =~ '${node.id}' | project id`,
-            subscriptions: [node.subscription.subscriptionId]
-        })
-    });
-
-    const response = await client.sendRequest(options) as AzExtPipelineResponse;
-    const body = response.parsedBody as { count: number };
-    if (body.count >= 1) {
-        return true;
-    }
-
-    return false;
 }
 
-export async function hasLocalEventGridBlobTrigger(projectPath: string): Promise<boolean> {
-    const projects = await listLocalProjects();
-    const deployedProject = projects.initializedProjects.find(p => p.options.effectiveProjectPath === projectPath);
-    if (deployedProject) {
-        const functions = await listLocalFunctions(deployedProject as LocalProjectInternal);
-        await commands.executeCommand('azureFunctions.executeFunction', functions.functions[0]);
-        return functions.functions.some(f => f.triggerBindingType === 'blobTrigger');
+export async function promptForEventGrid(context: IActionContext, workspaceFolder: WorkspaceFolder): Promise<void> {
+    const showFlexEventGridWarning = await getWorkspaceSetting('showFlexEventGridWarning');
+    if (!showFlexEventGridWarning) {
+        return;
     }
 
-    return false;
-}
-
-export async function promptForEventGrid(context: IActionContext): Promise<void> {
-    const eventGridWarning = localize('eventGridWarning', `Usage of Event Grid based blob trigger requires an Event Grid subscription created on an Azure Storage v2 account. If you don't already have a subscription created, create one before continuing with deployment.`);
-    const btns: MessageItem[] = [{ title: localize('createSub', 'Create a subscription') }, { title: localize('continue', 'Continue with deployment') }];
-    const result = await context.ui.showWarningMessage(eventGridWarning, { modal: true }, ...btns);
-
-    if (result.title === btns[0].title) {
-        await openUrl('https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-csharp#create-the-event-subscription');
+    const eventGridWarning = localize(
+        'eventGridWarning',
+        `Usage of an Event Grid based blob trigger requires an Event Grid subscription created on an Azure Storage v2 account. If you don't already, you need to create a Event Grid subscription to complete your deployment.`);
+    const options: IAzureMessageOptions = { learnMoreLink: 'https://aka.ms/learnMoreEventGridSubscription' };
+    // need to add don't show again
+    const result = await context.ui.showWarningMessage(eventGridWarning, options, { title: 'Close' }, DialogResponses.dontWarnAgain);
+    if (result === DialogResponses.dontWarnAgain) {
+        await updateWorkspaceSetting('showFlexEventGridWarning', false, workspaceFolder);
     }
+
 }

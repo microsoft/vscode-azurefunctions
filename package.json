@@ -1088,6 +1088,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.enableFlexConsumption%",
                         "default": false
+                    },
+                    "azureFunctions.showFlexEventGridWarning": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showFlexEventGridWarning%",
+                        "default": true
                     }
                 }
             }
