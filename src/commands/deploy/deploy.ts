@@ -128,8 +128,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await validateSqlDbConnection(context, context.projectPath);
     }
 
-    // prompt for event grid storage thing here?
-
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
         const deployCommandId = 'azureFunctions.deploy';
         await showDeployConfirmation(context, node.site, deployCommandId);
