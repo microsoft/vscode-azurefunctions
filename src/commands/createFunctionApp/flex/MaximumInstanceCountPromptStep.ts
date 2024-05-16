@@ -13,7 +13,7 @@ export class MaximumInstanceCountPromptStep extends AzureWizardPromptStep<IFlexF
         const flexSku = nonNullProp(context, 'newFlexSku');
         const options: AzExtInputBoxOptions = {
             validateInput: (val: string) => this.validateInput(flexSku, val),
-            placeHolder: localize('maximumInstanceCount', 'Enter the maximum instance count'),
+            prompt: localize('maximumInstanceCount', 'Enter the maximum instance count'),
             value: flexSku.maximumInstanceCount.defaultValue.toString()
         }
 
