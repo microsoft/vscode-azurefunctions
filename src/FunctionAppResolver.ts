@@ -22,10 +22,17 @@ export class FunctionAppResolver implements AppResourceResolver {
                 this.siteCache.clear();
                 const sites = await uiUtils.listAllIterator(client.webApps.list());
                 const sites20231201 = await getSites20231201(context, subContext);
-                sites.forEach((site) => {
+                await Promise.all(sites.map(async (site): Promise<void> => {
+                    const id = nonNullProp(site, 'id').toLowerCase();
                     const s = sites20231201.find(s => s.id?.toLowerCase() === site.id?.toLowerCase());
-                    this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), Object.assign(site, { isFlex: !!s?.properties?.functionAppConfig }));
-                });
+                    this.siteCache.set(id, Object.assign(site, { isFlex: !!s?.properties?.functionAppConfig }));
+
+                    if (!site.defaultHostName) {
+                        // if this required property doesn't exist, try getting the full site payload
+                        const fullSite = await client.webApps.get(nonNullProp(site, 'resourceGroup'), nonNullProp(site, 'name'))
+                        this.siteCache.set(id, fullSite);
+                    }
+                }));
                 this.siteCacheLastUpdated = Date.now();
             }
 
