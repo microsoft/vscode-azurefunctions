@@ -112,14 +112,9 @@ export function registerCommands(): void {
     );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
-<<<<<<< HEAD
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deployProject', deployProductionSlot);
-=======
-
     // See: https://github.com/microsoft/vscode-azurefunctions/pull/4125
     registerCommand('azureFunctions.deployByFunctionAppId', deployProductionSlotByFunctionAppId);
-
->>>>>>> 76b7907ee20308db16ce063ce43d86a4de18c699
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
