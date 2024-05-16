@@ -34,25 +34,27 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
             }
         });
 
-        qp.unshift({ label: '$(plus) Create new function app', description: '', data: undefined });
+        qp.unshift({ label: '$(plus) Create new function app', data: undefined });
         return qp;
     }
 
     public async getSubWizard(context: IFuncDeployContext): Promise<IWizardOptions<IFuncDeployContext> | undefined> {
-        if (!context.site) {
-            const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
-            context.telemetry.properties.projectLanguage = language;
-
-            const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context as ICreateFunctionAppContext,
-                createSubscriptionContext(nonNullProp(context, 'subscription')),
-                language);
-            return {
-                // it's ugly, but we can cast because we know that this subwizard doesn't need to have the full IFuncDeployContext
-                promptSteps: promptSteps as unknown as AzureWizardPromptStep<IFuncDeployContext>[],
-                executeSteps: executeSteps as unknown as AzureWizardExecuteStep<IFuncDeployContext>[]
-            };
+        if (context.site) {
+            // if the user selected a function app, then we don't need to create a new one
+            return undefined;
         }
 
-        return;
+        const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+        context.telemetry.properties.projectLanguage = language;
+
+        const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context as ICreateFunctionAppContext,
+            createSubscriptionContext(nonNullProp(context, 'subscription')),
+            language);
+        return {
+            // it's ugly, but we can cast because we know that this subwizard doesn't need to have the full IFuncDeployContext
+            promptSteps: promptSteps as unknown as AzureWizardPromptStep<IFuncDeployContext>[],
+            executeSteps: executeSteps as unknown as AzureWizardExecuteStep<IFuncDeployContext>[]
+        };
     }
+
 }

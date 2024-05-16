@@ -17,12 +17,9 @@ import { type IFuncDeployContext } from "./deploy";
 
 export async function getOrCreateFunctionApp(context: IFuncDeployContext & Partial<IFunctionAppWizardContext>): Promise<SlotTreeItem> {
     let node: SlotTreeItem | undefined;
-
-    const promptSteps = [new SubscriptionListStep(), new FunctionAppListStep()];
-    const title: string = l10n.t('Select Function App');
     const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(context, {
-        promptSteps,
-        title
+        promptSteps: [new SubscriptionListStep(), new FunctionAppListStep()],
+        title: l10n.t('Select Function App')
     });
 
     await wizard.prompt();
