@@ -11,22 +11,17 @@ import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vsco
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
 export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
-        const enableFlexSetting = await getWorkspaceSetting('enableFlexConsumption');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
+            { label: localize('flexConsumption', 'Flex Consumption'), data: [false, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y|FC).)*$/i] }
         ];
-
-        if (enableFlexSetting) {
-            picks.splice(1, 0, { label: localize('flexConsumption', 'Flex Consumption (Preview)'), data: [false, undefined] });
-        }
 
         [context.useConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
         await setLocationsTask(context);
