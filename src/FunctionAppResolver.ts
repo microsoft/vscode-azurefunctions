@@ -24,14 +24,16 @@ export class FunctionAppResolver implements AppResourceResolver {
                 const sites20231201 = await getSites20231201(context, subContext);
                 await Promise.all(sites.map(async (site): Promise<void> => {
                     const id = nonNullProp(site, 'id').toLowerCase();
+                    // check for required properties that sometime don't exist in the LIST operation
+                    if (!site.defaultHostName) {
+                        // if this required property doesn't exist, try getting the full site payload
+                        site = await client.webApps.get(nonNullProp(site, 'resourceGroup'), nonNullProp(site, 'name'))
+                        this.siteCache.set(id, site);
+                    }
+
                     const s = sites20231201.find(s => s.id?.toLowerCase() === site.id?.toLowerCase());
                     this.siteCache.set(id, Object.assign(site, { isFlex: !!s?.properties?.functionAppConfig }));
 
-                    if (!site.defaultHostName) {
-                        // if this required property doesn't exist, try getting the full site payload
-                        const fullSite = await client.webApps.get(nonNullProp(site, 'resourceGroup'), nonNullProp(site, 'name'))
-                        this.siteCache.set(id, fullSite);
-                    }
                 }));
                 this.siteCacheLastUpdated = Date.now();
             }
