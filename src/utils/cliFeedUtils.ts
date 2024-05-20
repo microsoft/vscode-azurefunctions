@@ -54,9 +54,12 @@ export namespace cliFeedUtils {
     }
 
     export async function getLatestVersion(context: IActionContext, version: FuncVersion): Promise<string> {
-        const cliFeed: ICliFeed = await getCliFeed(context);
-
         const majorVersion: string = getMajorVersion(version);
+        return await getLatestReleaseVersionForMajorVersion(context, majorVersion);
+    }
+
+    export async function getLatestReleaseVersionForMajorVersion(context: IActionContext, majorVersion: string): Promise<string> {
+        const cliFeed: ICliFeed = await getCliFeed(context);
         let tag: string = 'v' + majorVersion;
         const templateProvider = ext.templateProvider.get(context);
         if (templateProvider.templateSource === TemplateSource.Staging) {
