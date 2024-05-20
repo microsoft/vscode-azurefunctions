@@ -69,6 +69,7 @@ export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, 
         ],
         expectedTasks: [
             'npm build (functions)',
+            'npm watch (functions)',
             'npm install (functions)',
             'npm prune (functions)',
             'host start'

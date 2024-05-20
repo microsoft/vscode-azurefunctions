@@ -7,11 +7,10 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { FuncVersion } from '../../../FuncVersion';
-import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
+import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
-import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
@@ -38,11 +37,12 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
     protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
         const packageJson = super.getPackageJson(context);
         if (isNodeV4Plus(context)) {
-            // default functionSubpath value is a string
-            const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
-
             // this is set in the super class, but we want to override it
-            packageJson.main = path.posix.join('dist', functionSubpath, '*.js');
+            if (this.shouldAddIndexFile) {
+                packageJson.main = 'dist/src/{index.js,functions/*.js}';
+            } else {
+                packageJson.main = path.posix.join('dist', this.functionSubpath, '*.js');
+            }
         }
 
         return packageJson;
@@ -71,7 +71,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         switch (context.version) {
             case FuncVersion.v4:
                 funcTypesVersion = '3';
-                nodeTypesVersion = isNodeV4Plus(context) ? '18' : '16';
+                nodeTypesVersion = '20';
                 break;
             case FuncVersion.v3:
                 funcTypesVersion = '2';
@@ -95,5 +95,17 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         devDeps['typescript'] = '^4.0.0';
         devDeps['rimraf'] = '^5.0.0';
         return devDeps;
+    }
+
+    protected async addIndexFile(context: IProjectWizardContext): Promise<void> {
+        const indexPath: string = path.join(context.projectPath, 'src', 'index.ts');
+        if (await confirmOverwriteFile(context, indexPath)) {
+            await AzExtFsExtra.writeFile(indexPath, `import { app } from '@azure/functions';
+
+app.setup({
+    enableHttpStream: true,
+});
+`);
+        }
     }
 }
