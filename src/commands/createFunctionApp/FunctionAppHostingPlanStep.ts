@@ -18,7 +18,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
-            { label: localize('flexConsumption', 'Flex Consumption (Preview)'), data: [false, undefined] },
+            { label: localize('flexConsumption', 'Flex Consumption'), description: 'Preview', data: [false, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y|FC).)*$/i] }
         ];
@@ -44,7 +44,7 @@ export function setConsumptionPlanProperties(context: IFunctionAppWizardContext)
 }
 
 export function setFlexConsumptionPlanProperties(context: IAppServiceWizardContext): void {
-    context.newPlanName = `FLEXASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
+    context.newPlanName = `FLEX-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
     context.newPlanSku = { name: 'FC1', tier: 'FlexConsumption', size: 'FC', family: 'FC' };
     // flex consumption only supports linux
     context.newSiteOS = WebsiteOS.linux;
@@ -65,7 +65,5 @@ async function getFlexLocations(context: IAppServiceWizardContext): Promise<stri
     const client = await createGenericClient(context, context);
     const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
     const locations = ((result.parsedBody as { value: Location[] }).value.map(loc => loc.name) as string[])
-    // TODO: hardcoding these locations for now because they are the only ones that work
-    locations.push(...['North Central US (Stage)', 'East US 2 EUAP']);
     return locations;
 }
