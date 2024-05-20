@@ -182,7 +182,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     );
 
-    await notifyDeployComplete(context, node, context.workspaceFolder);
+    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {

@@ -1102,6 +1102,11 @@
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
+                    },
+                    "azureFunctions.showFlexEventGridWarning": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showFlexEventGridWarning%",
+                        "default": true
                     }
                 }
             }
