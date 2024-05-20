@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type SiteConfigResource } from '@azure/arm-appservice';
+import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, type ExecuteActivityContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, DurableBackend, ProjectLanguage, ScmType, deploySubpathSetting, functionFilter, hostFileName, remoteBuildSetting, type DurableBackendValues } from '../../constants';
+import { CodeAction, ConnectionType, DurableBackend, ProjectLanguage, ScmType, deploySubpathSetting, hostFileName, remoteBuildSetting, type DurableBackendValues } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
@@ -24,6 +26,7 @@ import { type ISetConnectionSettingContext } from '../appSettings/connectionSett
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
+import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
@@ -31,7 +34,9 @@ import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
+// context that is used for deployment but since creation is an option in the deployment command, include ICreateFunctionAppContext
+export type IFuncDeployContext = { site?: Site, subscription?: AzureSubscription } &
+    Partial<ICreateFunctionAppContext> & IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem): Promise<void> {
     await deploy(context, target, undefined);
@@ -45,7 +50,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
     await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.pickSlotContextValue));
 }
 
-async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue?: string | RegExp): Promise<void> {
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, _expectedContextValue?: string | RegExp): Promise<void> {
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
@@ -72,10 +77,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     }
 
-    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => ext.rgApi.pickAppResource(context, {
-        filter: functionFilter,
-        expectedChildContextValue: expectedContextValue
-    }));
+    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
+        return await getOrCreateFunctionApp(context)
+    });
 
     const { language, languageModel, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
 

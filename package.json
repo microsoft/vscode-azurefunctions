@@ -208,6 +208,13 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.deployProject",
+                "title": "%azureFunctions.deployProject%",
+                "category": "Azure Functions",
+                "icon": "$(cloud-upload)",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
@@ -389,16 +396,8 @@
                     "group": "1_projects@3"
                 },
                 {
-                    "command": "azureFunctions.deploy",
+                    "command": "azureFunctions.deployProject",
                     "group": "2_deploy@1"
-                },
-                {
-                    "command": "azureFunctions.createFunctionApp",
-                    "group": "3_create@1"
-                },
-                {
-                    "command": "azureFunctions.createFunctionAppAdvanced",
-                    "group": "3_create@2"
                 }
             ],
             "view/title": [
@@ -409,6 +408,26 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.deployProject",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.deployProject",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "1@2"
+                },
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
@@ -1114,7 +1133,7 @@
                         "id": "create",
                         "title": "%azureFunctions.walkthrough.functionsStart.create.title%",
                         "completionEvents": [
-                            "onCommand:azureFunctions.createNewProject"
+                            "onCommand:azureFunctions.createFunction"
                         ],
                         "description": "%azureFunctions.walkthrough.functionsStart.create.description%",
                         "media": {
@@ -1204,7 +1223,7 @@
         "@microsoft/vscode-azext-azureappsettings": "^0.2.1",
         "@microsoft/vscode-azext-azureutils": "^3.0.0",
         "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
-        "@microsoft/vscode-azext-utils": "^2.3.1",
+        "@microsoft/vscode-azext-utils": "^2.5.0",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",

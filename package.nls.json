@@ -24,6 +24,7 @@
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
     "azureFunctions.deleteSlot": "Delete Slot...",
+    "azureFunctions.deployProject": "Deploy to Azure...",
     "azureFunctions.deploy": "Deploy to Function App...",
     "azureFunctions.deployByFunctionAppId": "Deploy to Function App by ID...",
     "azureFunctions.deploySlot": "Deploy to Slot...",
