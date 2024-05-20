@@ -18,6 +18,7 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         'CosmosDBTrigger',
         'EventGridTrigger',
         'EventGridCloudEventTrigger',
+        'SqlTrigger',
     ];
 
     if (version === FuncVersion.v1) {
