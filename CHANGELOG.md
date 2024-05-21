@@ -1,5 +1,21 @@
 # Change Log
 
+## 1.15.0 - 2024-05-21
+
+### Added
+* [[4104]](https://github.com/microsoft/vscode-azurefunctions/pull/4104) Flex Consumption SKU support for creation and deploying
+* [[4115]](https://github.com/microsoft/vscode-azurefunctions/pull/4115) Added Azure Blob Storage Trigger (using Event Grid) templates for flex consumption apps
+* [[4138]](https://github.com/microsoft/vscode-azurefunctions/pull/4138) Display a warning after deploying an Azure Blob Storage Trigger to a flex consumption app
+* [[4130]](https://github.com/microsoft/vscode-azurefunctions/pull/4130) `Create new function app` from Deploy command
+* [[4101]](https://github.com/microsoft/vscode-azurefunctions/pull/4101) Add retry logic to getFunctionsForHostedProject on ECONNREFUSED
+* [[4127]](https://github.com/microsoft/vscode-azurefunctions/pull/4127) Expanding in-proc .NET support
+
+### Changed
+* [[4125]](https://github.com/microsoft/vscode-azurefunctions/pull/4125) Changed deploying by function app id to use `azureFunctions.deployByFunctionAppId` rather than `azureFunctions.deploy`
+* [[4130]](https://github.com/microsoft/vscode-azurefunctions/pull/4130) Various UX changes in local workspace view
+
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/milestone/66?closed=1
+
 ## 1.14.3 - 2024-04-30
 
 ### Fixed
