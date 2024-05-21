@@ -19,7 +19,7 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         'EventGridTrigger',
         'EventGridCloudEventTrigger',
         //TODO: Add unit test for EventGridBlobTrigger
-        'EventGridBlobTrigger,'
+        'EventGridBlobTrigger',
     ];
 
     if (version === FuncVersion.v1) {
@@ -39,3 +39,4 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         return new RegExp(`^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}\\.(?:Net(Core|Fx)\.|)[0-9]+\\.x$`, 'i');
     });
 }
+
