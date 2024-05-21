@@ -1103,11 +1103,6 @@
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
                     },
-                    "azureFunctions.enableFlexConsumption": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.enableFlexConsumption%",
-                        "default": false
-                    },
                     "azureFunctions.showFlexEventGridWarning": {
                         "type": "boolean",
                         "description": "%azureFunctions.showFlexEventGridWarning%",

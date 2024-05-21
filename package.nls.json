@@ -110,7 +110,6 @@
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
     "azureFunctions.eventGrid.sendMockRequest": "Save and execute...",
-    "azureFunctions.enableFlexConsumption": "Enables to create a Flex Consumption Function App. This is a preview feature and may not be available in all regions.",
     "azureFunctions.walkthrough.functionsStart.create.description": "If you're just getting started, you will need to create an Azure Functions project. Follow along with the [Visual Studio Code developer guide](https://aka.ms/functions-getstarted-vscode) for step-by-step instructions.\n[Create New Project](command:azureFunctions.createNewProject)",
     "azureFunctions.walkthrough.functionsStart.create.title": "Create a new Azure Functions project",
     "azureFunctions.walkthrough.functionsStart.description": "Learn about Azure Functions and the Azure Functions extension for Visual Studio Code",
