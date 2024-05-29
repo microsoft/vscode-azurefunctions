@@ -1,6 +1,6 @@
 variables:
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-    ENABLE_LONG_RUNNING_TESTS: false
+    AzCode_UseAzureFederatedCredentials: true
     ENABLE_COMPLIANCE: true
 
 jobs:
