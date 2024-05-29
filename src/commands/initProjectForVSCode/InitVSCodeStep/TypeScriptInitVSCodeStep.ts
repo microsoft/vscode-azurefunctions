@@ -15,6 +15,7 @@ import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
 const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
 const npmBuildTaskLabel: string = convertToFunctionsTaskLabel('npm build');
+const npmWatchTaskLabel: string = convertToFunctionsTaskLabel('npm watch');
 const npmCleanTaskLabel: string = convertToFunctionsTaskLabel('npm clean');
 
 export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
@@ -41,7 +42,7 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
-                dependsOn: npmBuildTaskLabel
+                dependsOn: npmWatchTaskLabel
             },
             {
                 type: 'shell',
@@ -49,6 +50,18 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 command: 'npm run build',
                 dependsOn: this.hasCleanScript ? npmCleanTaskLabel : installDependsOn,
                 problemMatcher: '$tsc'
+            },
+            {
+                type: 'shell',
+                label: npmWatchTaskLabel,
+                command: 'npm run watch',
+                dependsOn: this.hasCleanScript ? npmCleanTaskLabel : installDependsOn,
+                problemMatcher: "$tsc-watch",
+                group: {
+                    kind: "build",
+                    isDefault: true
+                },
+                isBackground: true
             },
             {
                 type: 'shell',
