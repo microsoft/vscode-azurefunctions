@@ -16,7 +16,7 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
         if (context.targetFramework) {
             context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;
-            const runtimes = await getRuntimes(context);
+            const runtimes = (await getRuntimes(context)).reverse(); // reverse so that the latest version is first
             // if a targetFramework was provided from createNewProject
             const workerRuntime = runtimes.find(runtime => context.targetFramework?.includes(runtime.targetFramework));
             if (!workerRuntime) {
