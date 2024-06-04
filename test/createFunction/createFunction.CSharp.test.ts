@@ -151,6 +151,13 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'TestCompany.TestFunction',
                 '0 * * * */6 *'
             ]
+        },
+        {
+            functionName: 'Azure Blob Storage Trigger (using Event Grid)',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'samples-workitems/name'
+            ]
         }
     ];
 

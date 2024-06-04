@@ -188,6 +188,13 @@ function addSuite(tester: FunctionTesterBase): void {
             functionName: 'SendGrid',
             inputs: [],
             skip: tester.language === ProjectLanguage.Python
+        },
+        {
+            functionName: 'Azure Blob Storage Trigger (using Event Grid)',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'samples-workitems/name'
+            ]
         }
     ];
 
