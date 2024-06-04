@@ -63,6 +63,34 @@
     }
   },
   {
+    "id": "EventGridBlobTrigger-Java",
+    "metadata": {
+      "name": "EventGridBlobTrigger",
+      "description": "$BlobTrigger_description",
+      "defaultFunctionName": "eventGridBlobTriggerJava",
+      "language": "Java",
+      "userPrompt": [
+        "connection",
+        "path"
+      ]
+    },
+    "function": {
+      "disabled": false,
+      "bindings": [
+        {
+          "name": "myBlob",
+          "type": "blobTrigger",
+          "direction": "in",
+          "path": "samples-workitems",
+          "connection": ""
+        }
+      ]
+    },
+    "files": {
+      "function.java": "package $packageName$;\n\nimport com.microsoft.azure.functions.annotation.*;\nimport com.microsoft.azure.functions.*;\n\n/**\n * Azure Functions with Azure Blob trigger.\n */\npublic class $className$ {\n    /**\n     * This function will be invoked when a new or updated blob is detected at the specified path. The blob contents are provided as input to this function.\n     */\n    @FunctionName(\"$functionName$\")\n    @StorageAccount(\"$connection$\")\n    public void run(\n        @BlobTrigger(name = \"content\", source = \"EventGrid\", path = \"$path$/{name}\", dataType = \"binary\") byte[] content,\n        @BindingName(\"name\") String name,\n        final ExecutionContext context\n    ) {\n        context.getLogger().info(\"Java Blob trigger function processed a blob. Name: \" + name + \"\\n  Size: \" + content.length + \" Bytes\");\n    }\n}\n"
+    }
+  },
+  {
     "id": "QueueTrigger-Java",
     "metadata": {
       "name": "QueueTrigger",

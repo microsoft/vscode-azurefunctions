@@ -18,7 +18,6 @@ export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRan
 
 export const longRunningTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
 export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
-export const skipStagingTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
 const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 
@@ -87,11 +86,9 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 async function preLoadTemplates(): Promise<void> {
     const providers = [ext.templateProvider.get(await createTestActionContext())];
     for (const source of allTemplateSources) {
-        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
-            const provider = new CentralTemplateProvider(source);
-            templateProviderMap.set(source, provider);
-            providers.push(provider);
-        }
+        const provider = new CentralTemplateProvider(source);
+        templateProviderMap.set(source, provider);
+        providers.push(provider);
     }
 
     const tasks: Promise<unknown>[] = [];

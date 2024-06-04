@@ -6,12 +6,11 @@
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import { FuncVersion, ProjectLanguage, TemplateFilter, TemplateSource, type CentralTemplateProvider, type FunctionTemplateBase } from '../extension.bundle';
-import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion, skipStagingTemplateSource } from './global.test';
+import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
-addSuite(TemplateSource.Staging);
 addSuite(TemplateSource.Backup);
 
 interface TestCase {
@@ -60,7 +59,7 @@ function addSuite(source: TemplateSource | undefined): void {
                 testName += ` ${projectTemplateKey}`;
             }
             test(testName, async function (this: Mocha.Context): Promise<void> {
-                if ((source === TemplateSource.Staging && skipStagingTemplateSource) || shouldSkipVersion(version)) {
+                if (shouldSkipVersion(version)) {
                     this.skip();
                 }
 

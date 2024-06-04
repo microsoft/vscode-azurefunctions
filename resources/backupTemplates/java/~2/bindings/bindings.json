@@ -92,6 +92,37 @@
       ]
     },
     {
+      "type": "eventGridBlobTrigger",
+      "displayName": "$eventGridBlobTrigger_displayName",
+      "direction": "trigger",
+      "enabledInTryMode": true,
+      "settings": [
+        {
+          "name": "path",
+          "value": "string",
+          "defaultValue": "mycontainer",
+          "required": true,
+          "label": "$blobTrigger_path_label",
+          "help": "$blobTrigger_path_help",
+          "validators": [
+            {
+              "expression": "(((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9])|(^[{][a-zA-Z0-9]{1,126}[}])|(^[%][a-zA-Z0-9]{1,126}[%]))[\\/](\\S){0,1023}[^\\/]$)|(((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9]$)|(^[{][a-zA-Z0-9]{1,126}[}]$)|(^[%][a-zA-Z0-9]{1,126}[%]$)))",
+              "errorText": "$blobTrigger_path_errorText"
+            }
+          ]
+        },
+        {
+          "name": "connection",
+          "value": "string",
+          "resource": "Storage",
+          "required": true,
+          "label": "[variables('storageConnStringLabel')]",
+          "help": "[variables('appSettingsHelp')]",
+          "placeholder": "[variables('selectConnection')]"
+        }
+      ]
+    },
+    {
       "type": "httpTrigger",
       "displayName": "$httpTrigger_displayName",
       "direction": "trigger",
