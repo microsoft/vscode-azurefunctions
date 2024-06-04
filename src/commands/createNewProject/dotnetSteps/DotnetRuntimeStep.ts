@@ -16,9 +16,17 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
         if (context.targetFramework) {
             context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;
-            const runtimes = (await getRuntimes(context)).reverse(); // reverse so that the latest version is first
+            const runtimes = (await getRuntimes(context))
             // if a targetFramework was provided from createNewProject
-            const workerRuntime = runtimes.find(runtime => context.targetFramework?.includes(runtime.targetFramework));
+            const filteredRuntimes = runtimes.filter(runtime => context.targetFramework?.includes(runtime.targetFramework));
+            let workerRuntime: cliFeedUtils.IWorkerRuntime | undefined = undefined;
+            if (filteredRuntimes.length > 1) {
+                const placeHolder: string = localize('selectWorkerRuntime', 'Select a .NET runtime');
+                workerRuntime = (await context.ui.showQuickPick(new DotnetRuntimeStep().getPicks(context), { placeHolder })).data;
+            } else if (filteredRuntimes.length === 1) {
+                workerRuntime = filteredRuntimes[0];
+            }
+
             if (!workerRuntime) {
                 throw new Error(localize('unknownFramework', 'Unrecognized target frameworks: "{0}". Available frameworks: {1}.',
                     context.targetFramework.map(tf => `"${tf}"`).join(', '),
@@ -49,8 +57,11 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
         return !context.workerRuntime;
     }
 
-    private async getPicks(context: IProjectWizardContext): Promise<IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[]> {
-        const runtimes = await getRuntimes(context);
+    private async getPicks(context: IProjectWizardContext, runtimes?: cliFeedUtils.IWorkerRuntime[]): Promise<IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[]> {
+        if (!runtimes) {
+            runtimes = await getRuntimes(context);
+        }
+
         const picks: IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[] = [];
         for (const runtime of runtimes) {
             picks.push({
