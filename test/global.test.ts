@@ -121,7 +121,7 @@ export function shouldSkipVersion(version: FuncVersion): boolean {
     return isLongRunningVersion(version) && !longRunningTestsEnabled;
 }
 
-export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
+export const latestBackupTemplateSources: TemplateSource[] = [TemplateSource.Latest, TemplateSource.Backup];
 export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
     let templateProvider: CentralTemplateProvider | undefined;
     if (source === undefined) {
