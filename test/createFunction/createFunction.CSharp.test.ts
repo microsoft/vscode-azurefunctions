@@ -157,7 +157,8 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             inputs: [
                 'AzureWebJobsStorage', // Use existing app setting
                 'samples-workitems/name'
-            ]
+            ],
+            skip: !isIsolated
         }
     ];
 
