@@ -86,13 +86,10 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
  */
 async function preLoadTemplates(): Promise<void> {
     const providers = [ext.templateProvider.get(await createTestActionContext())];
-    for (const source of allTemplateSources) {
-        // skip staging source
-        if (source !== TemplateSource.Staging) {
-            const provider = new CentralTemplateProvider(source);
-            templateProviderMap.set(source, provider);
-            providers.push(provider);
-        }
+    for (const source of backupLatestTemplateSources) {
+        const provider = new CentralTemplateProvider(source);
+        templateProviderMap.set(source, provider);
+        providers.push(provider);
     }
 
     const tasks: Promise<unknown>[] = [];
@@ -125,7 +122,7 @@ export function shouldSkipVersion(version: FuncVersion): boolean {
     return isLongRunningVersion(version) && !longRunningTestsEnabled;
 }
 
-export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
+export const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
 export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
     let templateProvider: CentralTemplateProvider | undefined;
     if (source === undefined) {

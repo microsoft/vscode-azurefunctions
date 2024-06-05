@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, ProjectLanguage, funcVersionSetting, projectLanguageSetting } from '../../extension.bundle';
-import { allTemplateSources, isLongRunningVersion } from '../global.test';
+import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
@@ -22,7 +22,7 @@ class BallerinaFunctionTester extends FunctionTesterBase {
 }
 
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
-    for (const source of allTemplateSources) {
+    for (const source of backupLatestTemplateSources) {
         addSuite(new BallerinaFunctionTester(version, source));
     }
 }

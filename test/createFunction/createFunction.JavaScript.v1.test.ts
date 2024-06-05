@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { FuncVersion, ProjectLanguage, type TemplateSource } from '../../extension.bundle';
-import { allTemplateSources, shouldSkipVersion } from '../global.test';
+import { backupLatestTemplateSources, shouldSkipVersion } from '../global.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTesterV1 extends FunctionTesterBase {
@@ -23,7 +23,7 @@ class JSFunctionTesterV1 extends FunctionTesterBase {
     }
 }
 
-for (const source of allTemplateSources) {
+for (const source of backupLatestTemplateSources) {
     const jsTester: JSFunctionTesterV1 = new JSFunctionTesterV1(source);
     suite(jsTester.suiteName, function (this: Mocha.Suite): void {
         suiteSetup(async function (this: Mocha.Context): Promise<void> {

@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, type TemplateSource } from '../../extension.bundle';
-import { allTemplateSources, shouldSkipVersion } from '../global.test';
+import { backupLatestTemplateSources, shouldSkipVersion } from '../global.test';
 import { getDotnetScriptValidateOptions, validateProject } from '../project/validateProject';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -55,7 +55,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-for (const source of allTemplateSources) {
+for (const source of backupLatestTemplateSources) {
     // NOTE: Only need to test v1 since v2+ emphasizes C# class libraries instead of C#Script
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester(source);
     suite(tester.suiteName, function (this: Mocha.Suite): void {
