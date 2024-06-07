@@ -7,13 +7,13 @@ import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { type apiUtils } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { extensions, type Extension } from "vscode";
-import { ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
+import { FuncVersion, ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
-suite(`AzureFunctionsExtensionApi`, () => {
+suite.only(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {
@@ -71,6 +71,28 @@ suite(`AzureFunctionsExtensionApi`, () => {
             path.join(functionName, 'index.js'),
             path.join(functionName, 'function.json')
         );
+        await validateProject(folderPath, validateOptions);
+    });
+
+    test('createFunction dotnet with targetFramework', async () => {
+        const functionName: string = 'endpoint1';
+        const language: string = ProjectLanguage.CSharp;
+        const workspaceFolder = getTestWorkspaceFolder();
+        const projectSubpath = 'api';
+        const folderPath: string = path.join(workspaceFolder, projectSubpath);
+
+        await runWithInputs('api.createFunction', [language, /6/i, 'Company.Function', 'Anonymous'], registerOnActionStartHandler, async () => {
+            await api.createFunction({
+                folderPath,
+                functionName,
+                templateId: 'HttpTrigger',
+                languageFilter: /^C\#$/i,
+                functionSettings: { authLevel: 'anonymous' },
+                targetFramework: ['net8.0', 'net7.0', 'net6.0']
+            });
+        });
+
+        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4);
         await validateProject(folderPath, validateOptions);
     });
 });
