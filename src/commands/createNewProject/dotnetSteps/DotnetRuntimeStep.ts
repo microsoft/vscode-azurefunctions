@@ -14,7 +14,6 @@ import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
-        context.targetFramework = ['net8.0', 'net7.0', 'net6.0']
         if (context.targetFramework) {
             context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;
             const runtimes = (await getRuntimes(context))
