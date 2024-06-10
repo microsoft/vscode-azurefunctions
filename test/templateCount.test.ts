@@ -6,12 +6,11 @@
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import { FuncVersion, ProjectLanguage, TemplateFilter, TemplateSource, type CentralTemplateProvider, type FunctionTemplateBase } from '../extension.bundle';
-import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion, skipStagingTemplateSource } from './global.test';
+import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
-addSuite(TemplateSource.Staging);
 addSuite(TemplateSource.Backup);
 
 interface TestCase {
@@ -27,22 +26,22 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.JavaScript, version: FuncVersion.v1, expectedCount: 8 },
             { language: ProjectLanguage.JavaScript, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.JavaScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.JavaScript, version: FuncVersion.v4, expectedCount: 16 },
+            { language: ProjectLanguage.JavaScript, version: FuncVersion.v4, expectedCount: 17 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v1, expectedCount: 12 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v2, expectedCount: 11 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 13, projectTemplateKey: 'netcoreapp3.1' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net6.0' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 10, projectTemplateKey: 'net6.0-isolated' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 10, projectTemplateKey: 'net7.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net6.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net7.0-isolated' },
             { language: ProjectLanguage.Python, version: FuncVersion.v2, expectedCount: 12 },
             { language: ProjectLanguage.Python, version: FuncVersion.v3, expectedCount: 12 },
-            { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 13 },
+            { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 14 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 16 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 17 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 14 },
+            { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 15 },
             { language: ProjectLanguage.Java, version: FuncVersion.v2, expectedCount: 4 },
             // https://github.com/microsoft/vscode-azurefunctions/issues/1605
             // { language: ProjectLanguage.Java, version: FuncVersion.v3, expectedCount: 4}]
@@ -60,7 +59,7 @@ function addSuite(source: TemplateSource | undefined): void {
                 testName += ` ${projectTemplateKey}`;
             }
             test(testName, async function (this: Mocha.Context): Promise<void> {
-                if ((source === TemplateSource.Staging && skipStagingTemplateSource) || shouldSkipVersion(version)) {
+                if (shouldSkipVersion(version)) {
                     this.skip();
                 }
 

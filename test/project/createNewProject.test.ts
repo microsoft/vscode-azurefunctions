@@ -6,7 +6,7 @@
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
-import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
+import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
@@ -72,7 +72,7 @@ testCases.push({ ...getCustomValidateOptions(FuncVersion.v3) });
 
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
-    for (const source of allTemplateSources) {
+    for (const source of backupLatestTemplateSources) {
         let title = `${testCase.language} ${testCase.version}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;

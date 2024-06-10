@@ -16,7 +16,7 @@ import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersi
  */
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
-export const longRunningTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
+export const longRunningTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.AzCode_UseAzureFederatedCredentials);
 export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
 export const skipStagingTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
@@ -86,12 +86,10 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
  */
 async function preLoadTemplates(): Promise<void> {
     const providers = [ext.templateProvider.get(await createTestActionContext())];
-    for (const source of allTemplateSources) {
-        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
-            const provider = new CentralTemplateProvider(source);
-            templateProviderMap.set(source, provider);
-            providers.push(provider);
-        }
+    for (const source of backupLatestTemplateSources) {
+        const provider = new CentralTemplateProvider(source);
+        templateProviderMap.set(source, provider);
+        providers.push(provider);
     }
 
     const tasks: Promise<unknown>[] = [];
@@ -124,7 +122,7 @@ export function shouldSkipVersion(version: FuncVersion): boolean {
     return isLongRunningVersion(version) && !longRunningTestsEnabled;
 }
 
-export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
+export const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
 export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
     let templateProvider: CentralTemplateProvider | undefined;
     if (source === undefined) {

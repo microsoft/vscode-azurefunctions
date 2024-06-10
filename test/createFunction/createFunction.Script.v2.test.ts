@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, ProjectLanguage, durableUtils, funcVersionSetting, projectLanguageSetting } from '../../extension.bundle';
-import { allTemplateSources, isLongRunningVersion } from '../global.test';
+import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
@@ -76,7 +76,7 @@ class PowerShellFunctionTester extends FunctionTesterBase {
 }
 
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
-    for (const source of allTemplateSources) {
+    for (const source of backupLatestTemplateSources) {
         addSuite(new JavaScriptFunctionTester(version, source));
         addSuite(new TypeScriptFunctionTester(version, source));
         addSuite(new PythonFunctionTester(version, source));
@@ -188,6 +188,13 @@ function addSuite(tester: FunctionTesterBase): void {
             functionName: 'SendGrid',
             inputs: [],
             skip: tester.language === ProjectLanguage.Python
+        },
+        {
+            functionName: 'Azure Blob Storage Trigger (using Event Grid)',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'samples-workitems/name'
+            ]
         }
     ];
 

@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, type TemplateSource } from '../../extension.bundle';
-import { allTemplateSources, isLongRunningVersion } from '../global.test';
+import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
@@ -41,7 +41,7 @@ class CSharpFunctionTester extends FunctionTesterBase {
     }
 }
 
-for (const source of allTemplateSources) {
+for (const source of backupLatestTemplateSources) {
     addSuite(FuncVersion.v2, 'netcoreapp2.1', source);
     addSuite(FuncVersion.v3, 'netcoreapp3.1', source);
     addSuite(FuncVersion.v4, 'net6.0', source, true);
@@ -151,6 +151,14 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'TestCompany.TestFunction',
                 '0 * * * */6 *'
             ]
+        },
+        {
+            functionName: 'Azure Blob Storage Trigger (using Event Grid)',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'samples-workitems/name'
+            ],
+            skip: !isIsolated
         }
     ];
 

@@ -466,6 +466,330 @@
     }
   },
   {
+    "id": "DaprPublishOutputBinding-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample Dapr Publish Output Binding\r\n * See https://aka.ms/azure-function-dapr-publish-output-binding for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Install Dapr\r\n * Run the app with below steps\r\n *      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n *      2. Function will be invoked by Timer trigger and publish messages to message bus.\r\n * @param context The Azure Function runtime context\r\n */\r\nmodule.exports = async function (context) {\r\n    context.log(\"JavaScript DaprPublish output binding function processed a request.\");\r\n\r\n    const message = \"Invoked by Timer trigger: \" + `Hello, World! The time is ${new Date().toISOString()}`;\r\n    \r\n    context.bindings.pubEvent = {\r\n        payload: message\r\n    };\r\n};",
+      "readme.md": "# DaprPublishOutputBinding - JavaScript\r\n\r\n`Dapr Publish Output Binding` - Dapr's output binding feature enables you to publish messages to external messaging systems (such as message queues, event hubs, or other event-driven systems) as part of your application's workflow. It's a way to send data from your Dapr application to external services.\r\n\r\n## How it works\r\n\r\nIn Dapr's pub-sub building block, the \"publish\" operation allows a Dapr-enabled application to send messages or events to a specific topic. When the application wishes to notify other components or services about an event or data update, it calls Dapr's publish API with the event data and the target topic. Dapr's sidecar takes care of delivering the message to all subscribed components, which can then react to the event as needed. This approach decouples the publisher from the subscribers, enabling a flexible, event-driven architecture where different parts of the application can independently react to and process events without direct dependencies on each other, fostering loose coupling and scalability.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-publish-output-binding)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "schedule": "*/10 * * * * *",
+          "name": "myTimer",
+          "type": "timerTrigger",
+          "direction": "in"
+        },
+        {
+          "type": "daprPublish",
+          "direction": "out",
+          "name": "pubEvent",
+          "pubsubname": "pubsub",
+          "topic": "A"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprPublishOutputBinding",
+      "description": "$DaprPublishOutputBinding_description",
+      "name": "Dapr Publish Output Binding",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprPublishOutputBinding-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprPublishOutputBinding - PowerShell\r\n\r\n`Dapr Publish Output Binding` - Dapr's output binding feature enables you to publish messages to external messaging systems (such as message queues, event hubs, or other event-driven systems) as part of your application's workflow. It's a way to send data from your Dapr application to external services.\r\n\r\n## How it works\r\n\r\nIn Dapr's pub-sub building block, the \"publish\" operation allows a Dapr-enabled application to send messages or events to a specific topic. When the application wishes to notify other components or services about an event or data update, it calls Dapr's publish API with the event data and the target topic. Dapr's sidecar takes care of delivering the message to all subscribed components, which can then react to the event as needed. This approach decouples the publisher from the subscribers, enabling a flexible, event-driven architecture where different parts of the application can independently react to and process events without direct dependencies on each other, fostering loose coupling and scalability.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-publish-output-binding).",
+      "run.ps1": "\r\nusing namespace System\r\nusing namespace Microsoft.Azure.WebJobs\r\nusing namespace Microsoft.Extensions.Logging\r\nusing namespace Microsoft.Azure.WebJobs.Extensions.Dapr\r\nusing namespace Newtonsoft.Json.Linq\r\n\r\n# Sample Dapr Publish Output Binding\r\n# See https://aka.ms/azure-function-dapr-publish-output-binding for more information about using this binding\r\n\r\n# These tasks should be completed prior to running :\r\n#      1. Install Dapr\r\n# Run the app with below steps\r\n#      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n#      2. Function will be invoked by Timer trigger and publish messages to message bus.\r\n\r\nparam (\r\n    $myTimer\r\n)\r\n\r\nWrite-Host \"PowerShell DaprPublish output binding function processed a request.\"\r\n\r\n$currentTime = Get-Date\r\n\r\n$publishOutputBindingReqBody = @{\r\n    \"payload\" = \"Invoked by Timer trigger: Hello, World! The time is $currentTime\"\r\n}\r\n\r\nPush-OutputBinding -Name pubEvent -Value $publishOutputBindingReqBody"
+    },
+    "function": {
+      "bindings": [
+        {
+          "schedule": "*/10 * * * * *",
+          "name": "myTimer",
+          "type": "timerTrigger",
+          "direction": "in"
+        },
+        {
+          "type": "daprPublish",
+          "direction": "out",
+          "name": "pubEvent",
+          "pubsubname": "pubsub",
+          "topic": "A"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprPublishOutputBinding",
+      "description": "$DaprPublishOutputBinding_description",
+      "name": "Dapr Publish Output Binding",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprPublishOutputBinding-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprPublishOutputBinding - Python\r\n\r\n`Dapr Publish Output Binding` - Dapr's output binding feature enables you to publish messages to external messaging systems (such as message queues, event hubs, or other event-driven systems) as part of your application's workflow. It's a way to send data from your Dapr application to external services.\r\n\r\n## How it works\r\n\r\nIn Dapr's pub-sub building block, the \"publish\" operation allows a Dapr-enabled application to send messages or events to a specific topic. When the application wishes to notify other components or services about an event or data update, it calls Dapr's publish API with the event data and the target topic. Dapr's sidecar takes care of delivering the message to all subscribed components, which can then react to the event as needed. This approach decouples the publisher from the subscribers, enabling a flexible, event-driven architecture where different parts of the application can independently react to and process events without direct dependencies on each other, fostering loose coupling and scalability.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-publish-output-binding).",
+      "__init__.py": "import datetime\r\nimport logging\r\nimport json\r\nimport azure.functions as func\r\n\r\ndef main(myTimer: func.TimerRequest,\r\n         pubEvent: func.Out[bytes]) -> None:\r\n    \"\"\"\r\n    Sample Dapr Publish Output Binding\r\n    See https://aka.ms/azure-function-dapr-publish-output-binding for more information about using this binding\r\n    \r\n    These tasks should be completed prior to running :\r\n         1. Install Dapr\r\n    Run the app with below steps\r\n         1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n         2. Function will be invoked by Timer trigger and publish messages to message bus.\r\n    \"\"\"\r\n    logging.info('Python  DaprPublish output binding function processed a request.')\r\n    payload = f\"Invoked by Timer trigger: Hello, World! The time is {datetime.datetime.now()}\"\r\n    pubEvent.set(json.dumps({\"payload\": payload}).encode('utf-8'))"
+    },
+    "function": {
+      "bindings": [
+        {
+          "schedule": "*/10 * * * * *",
+          "name": "myTimer",
+          "type": "timerTrigger",
+          "direction": "in"
+        },
+        {
+          "type": "daprPublish",
+          "direction": "out",
+          "name": "pubEvent",
+          "pubsubname": "pubsub",
+          "topic": "A"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprPublishOutputBinding",
+      "description": "$DaprPublishOutputBinding_description",
+      "name": "Dapr Publish Output Binding",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprServiceInvocationTrigger-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample Dapr Service Invocation Trigger\r\n * See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Install Dapr\r\n * Run the app with below steps\r\n *      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n *      2. Invoke function app by dapr cli: dapr invoke --app-id functionapp --method {yourFunctionName}  --data '{ \\\"data\\\": {\\\"value\\\": { \\\"orderId\\\": \\\"41\\\" } } }'\r\n * @param context The Azure Function runtime context\r\n */\r\nmodule.exports = async function (context) {\r\n    context.log(\"Azure function triggered by Dapr Service Invocation Trigger.\");\r\n    context.log(`Dapr service invocation trigger payload: ${JSON.stringify(context.bindings.payload)}`);\r\n};",
+      "readme.md": "# DaprServiceInvocationTrigger - JavaScript\r\n\r\nUsing `Dapr Service Invocation Trigger`, your azure functions can reliably and securely communicate with other applications using the standard HTTP protocol.\r\n\r\n## How it works\r\n\r\n`Dapr Service Invocation Trigger` uses Dapr's API to invoke other services, and Dapr's sidecar handles routing, protocol translation, and retries, streamlining cross-service interaction.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-service-invocation)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprServiceInvocationTrigger",
+          "name": "payload",
+          "direction": "in"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprServiceInvocationTrigger",
+      "description": "$DaprServiceInvocationTrigger_description",
+      "name": "Dapr Service Invocation Trigger",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprServiceInvocationTrigger-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprServiceInvocationTrigger - PowerShell\r\n\r\nUsing `Dapr Service Invocation Trigger`, your azure functions can reliably and securely communicate with other applications using the standard HTTP protocol.\r\n\r\n## How it works\r\n\r\n`Dapr Service Invocation Trigger` uses Dapr's API to invoke other services, and Dapr's sidecar handles routing, protocol translation, and retries, streamlining cross-service interaction.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-service-invocation).",
+      "run.ps1": "using namespace System\r\nusing namespace Microsoft.Azure.WebJobs\r\nusing namespace Microsoft.Extensions.Logging\r\nusing namespace Microsoft.Azure.WebJobs.Extensions.Dapr\r\nusing namespace Newtonsoft.Json.Linq\r\n\r\n# Sample Dapr Binding Trigger\r\n# See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n\r\n# These tasks should be completed prior to running :\r\n#      1. Install Dapr\r\n# Run the app with below steps\r\n#      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n#      2. Invoke function app by dapr cli: dapr invoke --app-id functionapp --method {yourFunctionName}  --data '{ \\\"data\\\": {\\\"value\\\": { \\\"orderId\\\": \\\"41\\\" } } }'\r\n\r\nparam (\r\n    $payload\r\n)\r\n\r\nWrite-Host \"Azure function triggered by Dapr Service Invocation Trigger.\"\r\n\r\n$jsonString = $payload | ConvertTo-Json\r\nWrite-Host \"Dapr service invocation trigger payload: $jsonString\""
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprServiceInvocationTrigger",
+          "name": "payload",
+          "direction": "in"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprServiceInvocationTrigger",
+      "description": "$DaprServiceInvocationTrigger_description",
+      "name": "Dapr Service Invocation Trigger",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprServiceInvocationTrigger-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprServiceInvocationTrigger - Python\r\n\r\nUsing `Dapr Service Invocation Trigger`, your azure functions can reliably and securely communicate with other applications using the standard HTTP protocol.\r\n\r\n## How it works\r\n\r\n`Dapr Service Invocation Trigger` uses Dapr's API to invoke other services, and Dapr's sidecar handles routing, protocol translation, and retries, streamlining cross-service interaction.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-service-invocation).",
+      "__init__.py": "import logging\r\nimport json\r\n\r\n\r\ndef main(payload) -> None:\r\n    \"\"\"\r\n    Sample Dapr Binding Trigger\r\n    See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n    \r\n    These tasks should be completed prior to running :\r\n         1. Install Dapr\r\n    Run the app with below steps\r\n         1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n         2. Invoke function app by dapr cli: dapr invoke --app-id functionapp --method {yourFunctionName}  --data '{ \\\"data\\\": {\\\"value\\\": { \\\"orderId\\\": \\\"41\\\" } } }'\r\n    \"\"\"\r\n\r\n    logging.info('Azure function triggered by Dapr Service Invocation Trigger.')\r\n    logging.info(f\"Dapr service invocation trigger payload: {payload}\")"
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprServiceInvocationTrigger",
+          "name": "payload",
+          "direction": "in"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprServiceInvocationTrigger",
+      "description": "$DaprServiceInvocationTrigger_description",
+      "name": "Dapr Service Invocation Trigger",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprTopicTrigger-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "/**\r\n * Sample Dapr Service Invocation Trigger\r\n * See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Install Dapr\r\n * Run the app with below steps\r\n *      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n *      2. Invoke function app: dapr publish --pubsub pubsub --publish-app-id functionapp --topic A --data '{\\\"value\\\": { \\\"orderId\\\": \\\"42\\\" } }'\r\n * @param context The Azure Function runtime context\r\n */\r\nmodule.exports = async function (context) {\r\n    context.log(\"JavaScript DaprTopic trigger with DaprState output binding function processed a request from the Dapr Runtime.\");\r\n    context.log(`Data received on topic A: ${JSON.stringify(context.bindings.subEvent.data)}`);\r\n\r\n    context.bindings.value = context.bindings.subEvent.data;\r\n};",
+      "readme.md": "# DaprServiceInvocationTrigger - Javascript\r\n\r\nUsing `Dapr Topic Trigger`, your azure functions can react to a message published on a Topic mentioned in your function.\r\n\r\n## How it works\r\n\r\n`Dapr Topic Trigger` uses Dapr's pub/sub API to receive messages published on a topic.\r\n\r\nPublish and subscribe (pub/sub) enables microservices to communicate with each other using messages for event-driven architectures.\r\n\r\nThe producer, or publisher, writes messages to an input channel and sends them to a topic, unaware which application will receive them.\r\nThe consumer, or subscriber, subscribes to the topic and receives messages from an output channel, unaware which service produced these messages.\r\n\r\nWhen using pub/sub in Dapr:\r\n\r\nYour service makes a network call to a Dapr pub/sub building block API.\r\nThe pub/sub building block makes calls into a Dapr pub/sub component that encapsulates a specific message broker.\r\nTo receive messages on a topic, Dapr subscribes to the pub/sub component on behalf of your service with a topic and delivers the messages to an endpoint on your service when they arrive.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-topic)."
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprTopicTrigger",
+          "pubsubname": "pubsub",
+          "topic": "A",
+          "name": "subEvent",
+          "direction": "in",
+          "dataType": "string"
+        },
+        {
+          "type": "daprState",
+          "stateStore": "statestore",
+          "direction": "out",
+          "name": "value",
+          "key": "product"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprTopicTrigger",
+      "description": "$DaprTopicTrigger_description",
+      "name": "Dapr Topic Trigger",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprTopicTrigger-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprServiceInvocationTrigger - PowerShell\r\n\r\nUsing `Dapr Topic Trigger`, your azure functions can react to a message published on a Topic mentioned in your function.\r\n\r\n## How it works\r\n\r\n`Dapr Topic Trigger` uses Dapr's pub/sub API to receive messages published on a topic.\r\n\r\nPublish and subscribe (pub/sub) enables microservices to communicate with each other using messages for event-driven architectures.\r\n\r\nThe producer, or publisher, writes messages to an input channel and sends them to a topic, unaware which application will receive them.\r\nThe consumer, or subscriber, subscribes to the topic and receives messages from an output channel, unaware which service produced these messages.\r\n\r\nWhen using pub/sub in Dapr:\r\n\r\nYour service makes a network call to a Dapr pub/sub building block API.\r\nThe pub/sub building block makes calls into a Dapr pub/sub component that encapsulates a specific message broker.\r\nTo receive messages on a topic, Dapr subscribes to the pub/sub component on behalf of your service with a topic and delivers the messages to an endpoint on your service when they arrive.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-topic).",
+      "run.ps1": "\r\nusing namespace System\r\nusing namespace Microsoft.Azure.WebJobs\r\nusing namespace Microsoft.Extensions.Logging\r\nusing namespace Microsoft.Azure.WebJobs.Extensions.Dapr\r\nusing namespace Newtonsoft.Json.Linq\r\n\r\n# Sample Dapr Service Invocation Trigger\r\n# See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n# \r\n# These tasks should be completed prior to running :\r\n#      1. Install Dapr\r\n# Run the app with below steps\r\n#      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n#      2. Invoke function app: dapr publish --pubsub pubsub --publish-app-id functionapp --topic A --data '{\\\"value\\\": { \\\"orderId\\\": \\\"42\\\" } }'\r\n\r\nparam (\r\n    $subEvent\r\n)\r\n\r\nWrite-Host \"PowerShell DaprTopic trigger with DaprState output binding function processed a request from the Dapr Runtime.\"\r\n\r\nPush-OutputBinding -Name value -Value $subEvent[\"data\"]\r\n"
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprTopicTrigger",
+          "pubsubname": "pubsub",
+          "topic": "A",
+          "name": "subEvent",
+          "direction": "in",
+          "dataType": "string"
+        },
+        {
+          "type": "daprState",
+          "stateStore": "statestore",
+          "direction": "out",
+          "name": "value",
+          "key": "product"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprTopicTrigger",
+      "description": "$DaprTopicTrigger_description",
+      "name": "Dapr Topic Trigger",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
+    "id": "DaprTopicTrigger-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# DaprServiceInvocationTrigger - Python\r\n\r\nUsing `Dapr Topic Trigger`, your azure functions can react to a message published on a Topic mentioned in your function.\r\n\r\n## How it works\r\n\r\n`Dapr Topic Trigger` uses Dapr's pub/sub API to receive messages published on a topic.\r\n\r\nPublish and subscribe (pub/sub) enables microservices to communicate with each other using messages for event-driven architectures.\r\n\r\nThe producer, or publisher, writes messages to an input channel and sends them to a topic, unaware which application will receive them.\r\nThe consumer, or subscriber, subscribes to the topic and receives messages from an output channel, unaware which service produced these messages.\r\n\r\nWhen using pub/sub in Dapr:\r\n\r\nYour service makes a network call to a Dapr pub/sub building block API.\r\nThe pub/sub building block makes calls into a Dapr pub/sub component that encapsulates a specific message broker.\r\nTo receive messages on a topic, Dapr subscribes to the pub/sub component on behalf of your service with a topic and delivers the messages to an endpoint on your service when they arrive.\r\n\r\nFor more information, see the official [docs](https://aka.ms/azure-function-dapr-trigger-topic).",
+      "__init__.py": "import azure.functions as func\r\nimport logging\r\nimport json\r\n\r\n\r\ndef main(subEvent,\r\n         value: func.Out[bytes]) -> None:\r\n    \"\"\"\r\n    Sample Dapr Service Invocation Trigger\r\n    See https://aka.ms/azure-functions-dapr for more information about using this binding\r\n    \r\n    These tasks should be completed prior to running :\r\n         1. Install Dapr\r\n    Run the app with below steps\r\n         1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n         2. Invoke function app: dapr publish --pubsub pubsub --publish-app-id functionapp --topic A --data '{\\\"value\\\": { \\\"orderId\\\": \\\"42\\\" } }'\r\n    \"\"\"\r\n    logging.info('Python DaprTopic trigger with DaprState output binding function processed a request from the Dapr Runtime.')\r\n    payload_json = json.loads(subEvent)\r\n    value.set(json.dumps(payload_json[\"data\"]))\r\n"
+    },
+    "function": {
+      "bindings": [
+        {
+          "type": "daprTopicTrigger",
+          "pubsubname": "pubsub",
+          "topic": "A",
+          "name": "subEvent",
+          "direction": "in",
+          "dataType": "string"
+        },
+        {
+          "type": "daprState",
+          "stateStore": "statestore",
+          "direction": "out",
+          "name": "value",
+          "key": "product"
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "DaprTopicTrigger",
+      "description": "$DaprTopicTrigger_description",
+      "name": "Dapr Topic Trigger",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "other",
+      "enabledInTryMode": false,
+      "userPrompt": []
+    }
+  },
+  {
     "id": "DurableFunctionsActivity-CSharp",
     "runtime": "2",
     "files": {
@@ -1270,6 +1594,156 @@
       "categoryStyle": "other",
       "enabledInTryMode": false,
       "userPrompt": []
+    }
+  },
+  {
+    "id": "EventGridBlobTrigger-JavaScript",
+    "runtime": "2",
+    "files": {
+      "index.js": "module.exports = async function (context, myEventGridBlob) {\r\n    context.log(\"JavaScript blob storage trigger (using Event Grid) function processed blob \\n Blob:\", context.bindingData.blobTrigger, \"\\n Blob Size:\", myEventGridBlob.length, \"Bytes\");\r\n};"
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "myEventGridBlob",
+          "type": "blobTrigger",
+          "direction": "in",
+          "path": "samples-workitems/{name}",
+          "source": "EventGrid",
+          "connection": ""
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "EventGridBlobTrigger",
+      "description": "$BlobTrigger_description",
+      "name": "Azure Blob Storage Trigger (using Event Grid)",
+      "language": "JavaScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "blob",
+      "enabledInTryMode": true,
+      "userPrompt": [
+        "connection",
+        "path"
+      ]
+    }
+  },
+  {
+    "id": "EventGridBlobTrigger-PowerShell",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# EventGridBlobTrigger - PowerShell\r\n\r\nThe `EventGridBlobTrigger` makes it incredibly easy to react to new Blobs using [Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/overview).\r\nThis sample demonstrates a simple use case of processing data from a given Blob using PowerShell.\r\n\r\n## How it works\r\n\r\nFor a `EventGridBlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\nFor more information, please check out [this tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-powershell) on this new version of the Blob Storage trigger.\r\n",
+      "run.ps1": "# Input bindings are passed in via param block.\r\nparam([byte[]] $InputBlob, $TriggerMetadata)\r\n\r\n# Write out the blob name and size to the information log.\r\nWrite-Host \"PowerShell Blob trigger function Processed blob! Name: $($TriggerMetadata.Name) Size: $($InputBlob.Length) bytes\"\r\n",
+      "sample.dat": "samples-workitems/workitem.txt"
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "InputBlob",
+          "type": "blobTrigger",
+          "direction": "in",
+          "path": "samples-workitems/{name}",
+          "source": "EventGrid",
+          "connection": ""
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "EventGridBlobTrigger",
+      "description": "$BlobTrigger_description",
+      "name": "Azure Blob Storage Trigger (using Event Grid)",
+      "language": "PowerShell",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "blob",
+      "enabledInTryMode": true,
+      "userPrompt": [
+        "connection",
+        "path"
+      ]
+    }
+  },
+  {
+    "id": "EventGridBlobTrigger-Python",
+    "runtime": "2",
+    "files": {
+      "readme.md": "# EventGridBlobTrigger - Python\r\n\r\nThe `EventGridBlobTrigger` makes it incredibly easy to react to new Blobs using [Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/overview).\r\nThis sample demonstrates a simple use case of processing data from a given Blob using PowerShell.\r\n\r\n## How it works\r\n\r\nFor a `EventGridBlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\nFor more information, please check out [this tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-python) on this new version of the Blob Storage trigger.\r\n",
+      "sample.dat": "samples-workitems/workitem.txt",
+      "__init__.py": "import logging\r\n\r\nfrom azure.functions import InputStream\r\n\r\n\r\ndef main(myblob: InputStream):\r\n    logging.info(f\"Python blob trigger function processed blob \\n\"\r\n                 f\"Name: {myblob.name}\\n\"\r\n                 f\"Blob Size: {myblob.length} bytes\")\r\n"
+    },
+    "function": {
+      "scriptFile": "__init__.py",
+      "bindings": [
+        {
+          "name": "myblob",
+          "type": "blobTrigger",
+          "direction": "in",
+          "path": "samples-workitems/{name}",
+          "source": "EventGrid",
+          "connection": ""
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "EventGridBlobTrigger",
+      "description": "$BlobTrigger_description",
+      "name": "Azure Blob Storage Trigger (using Event Grid)",
+      "language": "Python",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "blob",
+      "enabledInTryMode": true,
+      "userPrompt": [
+        "connection",
+        "path"
+      ],
+      "filters": [
+        "Python3"
+      ]
+    }
+  },
+  {
+    "id": "EventGridBlobTrigger-TypeScript",
+    "runtime": "2",
+    "files": {
+      "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst blobTrigger: AzureFunction = async function (context: Context, myBlob: any): Promise<void> {\r\n    context.log(\"Blob trigger function processed blob \\n Name:\", context.bindingData.name, \"\\n Blob Size:\", myBlob.length, \"Bytes\");\r\n};\r\n\r\nexport default blobTrigger;\r\n",
+      "readme.md": "# EventGridBlobTrigger - TypeScript\r\n\r\nThe `EventGridBlobTrigger` makes it incredibly easy to react to new Blobs using [Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/overview).\r\nThis sample demonstrates a simple use case of processing data from a given Blob using PowerShell.\r\n\r\n## How it works\r\n\r\nFor a `EventGridBlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\nFor more information, please check out [this tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?tabs=isolated-process%2Cnodejs-v4&pivots=programming-language-typescript) on this new version of the Blob Storage trigger.\r\n",
+      "sample.dat": "samples-workitems/workitem.txt"
+    },
+    "function": {
+      "bindings": [
+        {
+          "name": "myBlob",
+          "type": "blobTrigger",
+          "direction": "in",
+          "path": "samples-workitems/{name}",
+          "source": "EventGrid",
+          "connection": ""
+        }
+      ]
+    },
+    "metadata": {
+      "defaultFunctionName": "EventGridBlobTrigger",
+      "description": "$BlobTrigger_description",
+      "name": "Azure Blob Storage Trigger (using Event Grid)",
+      "language": "TypeScript",
+      "category": [
+        "$temp_category_core",
+        "$temp_category_dataProcessing"
+      ],
+      "categoryStyle": "blob",
+      "enabledInTryMode": true,
+      "userPrompt": [
+        "connection",
+        "path"
+      ]
     }
   },
   {
