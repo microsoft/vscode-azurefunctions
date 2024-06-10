@@ -137,7 +137,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             contextValuesToAdd: ['azFunc', 'container'],
         });
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this._imageTreeItem, this.appSettingsTreeItem]
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._imageTreeItem,]
 
         return children;
     }
@@ -179,5 +179,9 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         }
 
         return undefined
+    }
+
+    public compareChildrenImpl(): number {
+        return 0; // already sorted
     }
 }
