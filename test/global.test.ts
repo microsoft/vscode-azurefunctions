@@ -65,8 +65,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         await preLoadTemplates();
     }
 
-    console.log('enable long running tests: ', String(longRunningTestsEnabled));
-
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
 });
