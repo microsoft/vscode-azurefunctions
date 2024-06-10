@@ -505,7 +505,7 @@
                 },
                 {
                     "command": "azureFunctions.startJavaRemoteDebug",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot/ && config.azureFunctions.enableJavaRemoteDebugging == true",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)Slot(?!.*container)/ && config.azureFunctions.enableJavaRemoteDebugging == true",
                     "group": "5@2"
                 },
                 {
