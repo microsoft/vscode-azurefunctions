@@ -1191,7 +1191,7 @@
         "copy-webpack-plugin": "^6.0.3",
         "eslint": "^8.42.0",
         "eslint-plugin-import": "^2.27.5",
-        "gulp": "^4.0.2",
+        "gulp": "^5.0.0",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.3",
         "gulp-filter": "^5.1.0",
