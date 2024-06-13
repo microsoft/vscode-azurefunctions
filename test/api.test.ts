@@ -95,4 +95,24 @@ suite.only(`AzureFunctionsExtensionApi`, () => {
         const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4);
         await validateProject(folderPath, validateOptions);
     });
+
+    // When passing in a language version that is not in the target framework the last two inputs should not be prompted if they are this test will fail
+    test('createFunction with language not in targetFramework', async () => {
+        const functionName: string = 'endpoint1';
+        const language: string = ProjectLanguage.CSharp;
+        const workspaceFolder = getTestWorkspaceFolder();
+        const projectSubpath = 'api';
+        const folderPath: string = path.join(workspaceFolder, projectSubpath);
+
+        await runWithInputs('api.createFunction', [language, /8/i], registerOnActionStartHandler, async () => {
+            await api.createFunction({
+                folderPath,
+                functionName,
+                templateId: 'HttpTrigger',
+                languageFilter: /^C\#$/i,
+                functionSettings: { authLevel: 'anonymous' },
+                targetFramework: ['net7.0', 'net6.0']
+            })
+        });
+    });
 });

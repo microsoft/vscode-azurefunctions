@@ -22,7 +22,7 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
             let workerRuntime: cliFeedUtils.IWorkerRuntime | undefined = undefined;
             if (filteredRuntimes.length > 1) {
                 const placeHolder: string = localize('selectWorkerRuntime', 'Select a .NET runtime');
-                workerRuntime = (await context.ui.showQuickPick(new DotnetRuntimeStep().getPicks(context), { placeHolder })).data;
+                workerRuntime = (await context.ui.showQuickPick(new DotnetRuntimeStep().getPicks(context, filteredRuntimes), { placeHolder })).data;
             } else if (filteredRuntimes.length === 1) {
                 workerRuntime = filteredRuntimes[0];
             }
