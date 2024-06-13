@@ -26,7 +26,7 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
     private async getPicks(context: IFuncDeployContext): Promise<IAzureQuickPickItem<Site | undefined>[]> {
         const client = await createWebSiteClient([context, createSubscriptionContext(nonNullProp(context, 'subscription'))]);
         const sites = (await uiUtils.listAllIterator(client.webApps.list()));
-        const qp: IAzureQuickPickItem<Site | undefined>[] = sites.filter(s => !s.kind?.includes('container') && !!s.kind?.includes('functionapp')).map(fa => {
+        const qp: IAzureQuickPickItem<Site | undefined>[] = sites.filter(s => !!s.kind?.includes('functionapp')).map(fa => {
             return {
                 label: nonNullProp(fa, 'name'),
                 description: parseAzureResourceGroupId(nonNullProp(fa, 'id')).resourceGroup,
