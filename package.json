@@ -445,7 +445,7 @@
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(ProductionSlot|Flex)(?!.*container)/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(ProductionSlot|Flex)/",
                     "group": "2@1"
                 },
                 {
