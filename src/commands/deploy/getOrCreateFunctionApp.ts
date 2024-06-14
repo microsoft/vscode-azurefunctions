@@ -32,13 +32,9 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
         context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'))
         await wizard.execute();
 
-        if (context.dockerfilePath) {
-            const resolved = new ResolvedContainerizedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site'))
-            node = await ext.rgApi.tree.findTreeItem(resolved.id, context);
-        } else {
-            const resolved = new ResolvedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site'));
-            node = await ext.rgApi.tree.findTreeItem(resolved.id, context);
-        }
+        const resolved = context.dockerfilePath ? new ResolvedContainerizedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site')) :
+            new ResolvedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site'));
+        node = await ext.rgApi.tree.findTreeItem(resolved.id, context);
 
         await ext.rgApi.tree.refresh(context);
 
