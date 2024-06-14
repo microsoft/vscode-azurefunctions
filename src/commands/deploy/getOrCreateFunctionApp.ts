@@ -10,6 +10,7 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { ResolvedFunctionAppResource } from "../../tree/ResolvedFunctionAppResource";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
+import { ResolvedContainerizedFunctionAppResource } from "../../tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { SubscriptionListStep } from "../SubscriptionListStep";
 import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { FunctionAppListStep } from "./FunctionAppListStep";
@@ -31,10 +32,12 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
         context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'))
         await wizard.execute();
 
-        const resolved = new ResolvedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site'));
+        const resolved = context.dockerfilePath ? new ResolvedContainerizedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site')) :
+            new ResolvedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site'));
+        node = await ext.rgApi.tree.findTreeItem(resolved.id, context);
+
         await ext.rgApi.tree.refresh(context);
 
-        node = await ext.rgApi.tree.findTreeItem(resolved.id, context);
         context.isNewApp = true;
     }
 
