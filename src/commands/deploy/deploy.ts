@@ -83,7 +83,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (node.contextValue.includes('container')) {
         const learnMoreLink: string = 'https://aka.ms/deployContainerApps'
-        await context.ui.showWarningMessage(localize('containerFunctionAppError', 'Deploy is not currently supported for containerized function apps within the Azure Functions extension. Please read here to learn how to deploy your project'), { learnMoreLink });
+        await context.ui.showWarningMessage(localize('containerFunctionAppError', 'Deploy is not currently supported for containerized function apps within the Azure Functions extension. Please read here to learn how to deploy your project.'), { learnMoreLink });
         //suppress display of error message
         context.errorHandling.suppressDisplay = true;
         context.telemetry.properties.error = 'Deploy not supported for containerized function apps';
