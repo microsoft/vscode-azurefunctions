@@ -27,8 +27,8 @@ const testCases: CreateProjectTestCase[] = [
 // Test cases that are the same for both v2 and v3
 for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     testCases.push(
-        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: ['Model V3'] },
-        { ...getTypeScriptValidateOptions({ version }), inputs: ['Model V3'] },
+        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: version === FuncVersion.v2 ? [] : ['Model V3'] },
+        { ...getTypeScriptValidateOptions({ version }), inputs: version === FuncVersion.v2 ? [] : ['Model V3'] },
         { ...getPowerShellValidateOptions(version) },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
         { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
@@ -37,7 +37,7 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     // test python v1 model
     testCases.push({
         ...getPythonValidateOptions('.venv', version),
-        inputs: [/Model V1/i, TestInput.UseDefaultValue]
+        inputs: version === FuncVersion.v2 ? [TestInput.UseDefaultValue] : [/Model V1/i, TestInput.UseDefaultValue]
     });
 
     const appName: string = 'javaApp';
