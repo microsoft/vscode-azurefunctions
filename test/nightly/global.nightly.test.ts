@@ -14,7 +14,7 @@ import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 
 export let testClient: WebSiteManagementClient;
-export let context: TestActionContext;
+let testContext: TestActionContext;
 export let subscriptionContext: ISubscriptionContext;
 export const resourceGroupsToDelete: string[] = [];
 
@@ -23,13 +23,12 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
 
-        // testAccount = new TestAzureAccount(vscode);
         await vscode.commands.executeCommand('azureResourceGroups.logIn');
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
-        context = await createTestActionContext();
-        const subscription: AzureSubscription = await subscriptionExperience(context, ext.rgApi.appResourceTree);
+        testContext = await createTestActionContext();
+        const subscription: AzureSubscription = await subscriptionExperience(testContext, ext.rgApi.appResourceTree);
         subscriptionContext = createSubscriptionContext(subscription);
-        testClient = createAzureClient([context, subscriptionContext], WebSiteManagementClient);
+        testClient = createAzureClient([testContext, subscriptionContext], WebSiteManagementClient);
     }
 });
 
@@ -43,7 +42,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 });
 
 async function deleteResourceGroups(): Promise<void> {
-    const rgClient: ResourceManagementClient = createAzureClient([context, subscriptionContext], ResourceManagementClient);
+    const rgClient: ResourceManagementClient = createAzureClient([testContext, subscriptionContext], ResourceManagementClient);
     await Promise.all(resourceGroupsToDelete.map(async resourceGroup => {
         if ((await rgClient.resourceGroups.checkExistence(resourceGroup)).body) {
             console.log(`Started delete of resource group "${resourceGroup}"...`);
