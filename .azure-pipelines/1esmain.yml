@@ -37,7 +37,7 @@ parameters:
   - name: enableLongRunningTests
     displayName: Enable Long Running Tests
     type: boolean
-    default: false
+    default: true
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
