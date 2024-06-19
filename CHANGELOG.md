@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.15.1 - 2024-06-18
+
+### Changed
+* [[4182]](https://github.com/microsoft/vscode-azurefunctions/pull/4182) Display a warning when attempting to deploy a containerized function app
+
+### Fixed
+* [[4184]](https://github.com/microsoft/vscode-azurefunctions/pull/4184) "+ Create new function app" command when deploying a containerized function app
+
 ## 1.15.0 - 2024-05-21
 
 ### Added
