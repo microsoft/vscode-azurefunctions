@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.15.1 - 2024-06-18
+## 1.15.1 - 2024-06-19
 
 ### Changed
 * [[4182]](https://github.com/microsoft/vscode-azurefunctions/pull/4182) Display a warning when attempting to deploy a containerized function app
