@@ -12,7 +12,7 @@ import { DialogResponses, ProjectLanguage, createFunctionAppAdvanced, deleteFunc
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
-import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
+import { resourceGroupsToDelete, subscriptionContext, testClient } from './global.nightly.test';
 
 suite('Function App Operations', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
@@ -73,7 +73,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
 
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
             await runWithInputs(commandId, inputs, registerOnActionStartHandler, async () => {
-                const actualFuncAppId: string = <string>await vscode.commands.executeCommand(commandId, testAccount.getSubscriptionContext().subscriptionId, apiRgName);
+                const actualFuncAppId: string = <string>await vscode.commands.executeCommand(commandId, subscriptionContext.subscriptionId, apiRgName);
                 const site: Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
                 assert.ok(site);
                 assert.equal(actualFuncAppId, site.id);
