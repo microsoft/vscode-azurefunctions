@@ -54,6 +54,11 @@ extends:
       os: windows # OS of the image. Allowed values: windows, linux, macOS
     stages:
       # Execute stages from the AzExt stages template
+      - task: JavaToolInstaller@0
+        inputs:
+          versionSpec: '8'
+          jdkArchitectureOption: 'x64'
+          jdkSourceOption: 'PreInstalled'
       - template: azure-pipelines/1esstages.yml@azExtTemplates
         parameters:
           useAzureFederatedCredentials: ${{ parameters.enableLongRunningTests }}
