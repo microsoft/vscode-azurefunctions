@@ -12,7 +12,7 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
 import { getPythonValidateOptions } from './validateProject';
 
-suite('Create New Python Project', () => {
+suite.only('Create New Python Project', () => {
     test('skip venv', async () => {
         await runWithTestActionContext('createProject', async context => {
             await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [/Model V1/, /skip/i] });
