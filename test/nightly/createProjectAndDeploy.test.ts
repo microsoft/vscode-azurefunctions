@@ -15,7 +15,7 @@ import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallel
 import { getTestWorkspaceFolder } from '../global.test';
 import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
-import { resourceGroupsToDelete, subscriptionContext } from './global.nightly.test';
+import { resourceGroupsToDelete } from './global.nightly.test';
 
 interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions {
     title: string;
@@ -82,7 +82,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        await context.ui.runWithInputs([testWorkspacePath, subscriptionContext.subscriptionDisplayName, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
+        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
             await deployProductionSlot(context)
         });
     });
