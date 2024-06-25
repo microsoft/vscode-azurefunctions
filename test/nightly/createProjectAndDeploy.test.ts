@@ -82,7 +82,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        await context.ui.runWithInputs([subscriptionContext.subscriptionDisplayName, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
+        await context.ui.runWithInputs([testWorkspacePath, subscriptionContext.subscriptionDisplayName, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
             await deployProductionSlot(context)
         });
     });
