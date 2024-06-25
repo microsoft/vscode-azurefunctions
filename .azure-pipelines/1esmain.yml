@@ -54,15 +54,15 @@ extends:
       os: windows # OS of the image. Allowed values: windows, linux, macOS
       # vmImage: windows-latest
     stages:
-      - stage: PreInstallStage
-        jobs:
-          - job: PreInstallJob
-            steps:
-              - task: JavaToolInstaller@0
-                inputs:
-                  versionSpec: '8'
-                  jdkArchitectureOption: 'x64'
-                  jdkSourceOption: 'PreInstalled'
+      # - stage: PreInstallStage
+      #   jobs:
+      #     - job: PreInstallJob
+      #       steps:
+      #         - task: JavaToolInstaller@0
+      #           inputs:
+      #             versionSpec: '8'
+      #             jdkArchitectureOption: 'x64'
+      #             jdkSourceOption: 'PreInstalled'
       # Execute stages from the AzExt stages template
       - template: azure-pipelines/1esstages.yml@azExtTemplates
         parameters:
