@@ -108,6 +108,10 @@ function addSuite(tester: FunctionTesterBase): void {
             inputs: []
         },
         {
+            functionName: 'EventGridCloudEventTrigger',
+            inputs: []
+        },
+        {
             functionName: 'Azure Event Hub trigger',
             inputs: [
                 'AzureWebJobsStorage', // Use existing app setting
