@@ -37,9 +37,6 @@ export interface ParallelSuiteOptions {
 }
 
 export function addParallelSuite(parallelTests: ParallelTest[], options: ParallelSuiteOptions): void {
-    if (!options.title.includes("Create Function")) {
-        return;
-    }
     suite(options.title, function (this: Mocha.Suite): void {
         this.timeout(options.timeoutMS || 30 * 1000);
 
