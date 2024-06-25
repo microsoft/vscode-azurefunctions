@@ -21,11 +21,10 @@ class BallerinaFunctionTester extends FunctionTesterBase {
     }
 }
 
-for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
-    for (const source of backupLatestTemplateSources) {
-        addSuite(new BallerinaFunctionTester(version, source));
-    }
+for (const source of backupLatestTemplateSources) {
+    addSuite(new BallerinaFunctionTester(FuncVersion.v4, source));
 }
+
 
 function addSuite(tester: FunctionTesterBase): void {
     const testCases: CreateFunctionTestCase[] = [
