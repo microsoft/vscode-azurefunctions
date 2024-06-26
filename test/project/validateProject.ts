@@ -12,11 +12,6 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContaining
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
-// export enum JSModelVersion {
-//     v3 = 'Model V3',
-//     v4 = 'Model V4'
-// }
-
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,

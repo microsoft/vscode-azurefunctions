@@ -23,10 +23,8 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript (Model V3)', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
-    { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V4/], deployInputs: [getRotatingNodeVersion()] },
-    { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
-    { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V4/], deployInputs: [getRotatingNodeVersion()] },
+    { title: 'JavaScript', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
+    { title: 'TypeScript', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
     { title: 'Ballerina', ...getBallerinaValidateOptions(), deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },

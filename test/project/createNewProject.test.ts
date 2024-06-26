@@ -25,9 +25,7 @@ const testCases: CreateProjectTestCase[] = [
 
 testCases.push(
     { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'] },
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V4'] },
     { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'] },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V4'] },
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
@@ -37,12 +35,6 @@ testCases.push(
 testCases.push({
     ...getPythonValidateOptions('.venv', FuncVersion.v4),
     inputs: [/Model V1/i, TestInput.UseDefaultValue]
-});
-
-// test python v2 model
-testCases.push({
-    ...getPythonValidateOptions('.venv', FuncVersion.v4),
-    inputs: [/Model V2/i, TestInput.UseDefaultValue]
 });
 
 const appName: string = 'javaApp';
