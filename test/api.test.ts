@@ -96,7 +96,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
         await validateProject(folderPath, validateOptions);
     });
 
-    // When passing in a language version that is not in the target framework the last two inputs should not be prompted if they are this test will fail
+    // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) this will cause an error to be thrown so no more picks are needed.
+    // In the incorrect case (when 8 is a pick) this will cause the test to fail as there are no further picks being passed in.
     test('createFunction with language not in targetFramework', async () => {
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.CSharp;
