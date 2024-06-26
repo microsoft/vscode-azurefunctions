@@ -96,8 +96,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
         await validateProject(folderPath, validateOptions);
     });
 
-    // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) this will cause an error to be thrown so no more picks are needed.
-    // In the incorrect case (when 8 is a pick) this will cause the test to fail as there are no further picks being passed in.
+    // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) we throw an error. api.createFunction swallows the error and returns undefined.
+    // In the incorrect case (when 8 is a pick) the test fails since the 2 provided test inputs have already been used, but there are more prompts.
     test('createFunction with language not in targetFramework', async () => {
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.CSharp;
