@@ -8,10 +8,11 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, NodeModelVersion, PythonModelVersion } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
+    modelVersion?: PythonModelVersion | NodeModelVersion;
 }
 
 const testCases: CreateProjectTestCase[] = [
@@ -24,10 +25,10 @@ const testCases: CreateProjectTestCase[] = [
 // Test cases that are the same for both v2 and v3
 
 testCases.push(
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'] },
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V4'] },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'] },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V4'] },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'], modelVersion: NodeModelVersion.v3 },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: ['Model V4'], modelVersion: NodeModelVersion.v4 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'], modelVersion: NodeModelVersion.v3 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: ['Model V4'], modelVersion: NodeModelVersion.v4 },
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
@@ -36,13 +37,15 @@ testCases.push(
 // test python v1 model
 testCases.push({
     ...getPythonValidateOptions('.venv', FuncVersion.v4),
-    inputs: [/Model V1/i, TestInput.UseDefaultValue]
+    inputs: [/Model V1/i, TestInput.UseDefaultValue],
+    modelVersion: PythonModelVersion.v1
 });
 
 // test python v2 model
 testCases.push({
-    ...getPythonValidateOptions('.venv', FuncVersion.v4),
-    inputs: [/Model V2/i, TestInput.UseDefaultValue]
+    ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2),
+    inputs: [/Model V2/i, TestInput.UseDefaultValue],
+    modelVersion: PythonModelVersion.v2
 });
 
 const appName: string = 'javaApp';
@@ -79,6 +82,9 @@ for (const testCase of testCases) {
         let title = `${testCase.language} ${testCase.version}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;
+        }
+        if (testCase.modelVersion) {
+            title += `(${testCase.modelVersion})`
         }
         title += ` (${source})`;
 

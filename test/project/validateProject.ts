@@ -12,12 +12,17 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContaining
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
-// export enum JSModelVersion {
-//     v3 = 'Model V3',
-//     v4 = 'Model V4'
-// }
+export enum NodeModelVersion {
+    v3 = 'Model V3',
+    v4 = 'Model V4'
+}
 
-export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
+export enum PythonModelVersion {
+    v1 = 'Model V1',
+    v2 = 'Model V2'
+}
+
+export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
         'azureFunctions.projectRuntime': version,
@@ -26,6 +31,10 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     };
     const expectedPaths: string[] = [];
     const expectedTasks: string[] = ['host start'];
+
+    if (modelVersion === NodeModelVersion.v4) {
+        expectedSettings['azureFunctions.projectLanguageModel'] = '4';
+    }
 
     if (hasPackageJson) {
         expectedSettings['azureFunctions.preDeployTask'] = 'npm prune (functions)';
@@ -50,7 +59,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     };
 }
 
-export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, missingCleanScript?: boolean }): IValidateProjectOptions {
+export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, missingCleanScript?: boolean, modelVersion?: NodeModelVersion }): IValidateProjectOptions {
     const version = options?.version || defaultTestFuncVersion;
     const result = {
         language: ProjectLanguage.TypeScript,
@@ -59,6 +68,7 @@ export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, 
             'azureFunctions.projectLanguage': ProjectLanguage.TypeScript,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.deploySubpath': '.',
+            'azureFunctions.projectLanguageModel': options?.modelVersion === NodeModelVersion.v4 ? '4' : undefined,
             'azureFunctions.preDeployTask': 'npm prune (functions)',
             'azureFunctions.postDeployTask': 'npm install (functions)',
             'debug.internalConsoleOptions': 'neverOpen',
@@ -153,7 +163,7 @@ export function getFSharpValidateOptions(targetFramework: string, version: FuncV
     };
 }
 
-export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultTestFuncVersion, modelVersion: PythonModelVersion = PythonModelVersion.v1): IValidateProjectOptions {
     const expectedTasks: string[] = ['host start'];
     if (venvName) {
         expectedTasks.push('pip install (functions)');
@@ -165,6 +175,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
         expectedSettings: {
             'azureFunctions.projectLanguage': ProjectLanguage.Python,
             'azureFunctions.projectRuntime': version,
+            'azureFunctions.projectLanguageModel': modelVersion === PythonModelVersion.v2 ? '2' : undefined,
             'azureFunctions.deploySubpath': '.',
             'azureFunctions.scmDoBuildDuringDeployment': true,
             'azureFunctions.pythonVenv': venvName,
