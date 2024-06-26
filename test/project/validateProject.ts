@@ -23,7 +23,7 @@ export enum PythonModelVersion {
 }
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
-    const expectedSettings: { [key: string]: string } = {
+    const expectedSettings: { [key: string]: string | RegExp } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
         'azureFunctions.projectRuntime': version,
         'azureFunctions.deploySubpath': projectSubpath ?? '.',
@@ -33,7 +33,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     const expectedTasks: string[] = ['host start'];
 
     if (modelVersion === NodeModelVersion.v4) {
-        expectedSettings['azureFunctions.projectLanguageModel'] = '4';
+        expectedSettings['azureFunctions.projectLanguageModel'] = /4/;
     }
 
     if (hasPackageJson) {
@@ -68,7 +68,7 @@ export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, 
             'azureFunctions.projectLanguage': ProjectLanguage.TypeScript,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.deploySubpath': '.',
-            'azureFunctions.projectLanguageModel': options?.modelVersion === NodeModelVersion.v4 ? '4' : undefined,
+            'azureFunctions.projectLanguageModel': options?.modelVersion === NodeModelVersion.v4 ? /4/ : undefined,
             'azureFunctions.preDeployTask': 'npm prune (functions)',
             'azureFunctions.postDeployTask': 'npm install (functions)',
             'debug.internalConsoleOptions': 'neverOpen',
@@ -175,7 +175,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
         expectedSettings: {
             'azureFunctions.projectLanguage': ProjectLanguage.Python,
             'azureFunctions.projectRuntime': version,
-            'azureFunctions.projectLanguageModel': modelVersion === PythonModelVersion.v2 ? '2' : undefined,
+            'azureFunctions.projectLanguageModel': modelVersion === PythonModelVersion.v2 ? /2/ : undefined,
             'azureFunctions.deploySubpath': '.',
             'azureFunctions.scmDoBuildDuringDeployment': true,
             'azureFunctions.pythonVenv': venvName,
@@ -406,7 +406,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
         if (key === 'debug.internalConsoleOptions' && getContainingWorkspace(rootPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
         } else if (expectedValue instanceof RegExp) {
-            assert.ok(expectedValue.test(settings[key].toString()), `The setting with key "${key}" does not match RegExp "${expectedValue.source}".`);
+            assert.ok(expectedValue.test(settings[key].toString()), `The setting with key "${key}" does not match RegExp "${expectedValue.source}". Setting set to ${settings[key]}.`);
         } else {
             assert.deepStrictEqual(settings[key], expectedValue, `The setting with key "${key}" is not set to value "${expectedValue}".`);
         }
