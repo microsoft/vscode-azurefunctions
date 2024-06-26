@@ -21,7 +21,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
 
     public getExpectedPaths(functionName: string): string[] {
         return [
-            //path.join(functionName, 'function.json'),
+            path.join(functionName, 'function.json'),
             path.join(functionName, 'run.csx')
         ];
     }
