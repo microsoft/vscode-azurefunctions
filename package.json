@@ -1210,7 +1210,7 @@
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",
-        "@azure/arm-appservice": "^14.0.0",
+        "@azure/arm-appservice": "^15.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
         "@azure/arm-servicebus": "^5.0.0",
