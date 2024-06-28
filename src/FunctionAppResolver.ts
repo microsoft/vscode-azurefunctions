@@ -38,7 +38,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
 
-            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site), site?.isFlex);
+            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site));
         });
     }
 
