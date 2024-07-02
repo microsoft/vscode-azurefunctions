@@ -1219,7 +1219,7 @@
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^3.2.1",
+        "@microsoft/vscode-azext-azureappservice": "^3.3.0",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.1",
         "@microsoft/vscode-azext-azureutils": "^3.0.0",
         "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
