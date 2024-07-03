@@ -92,7 +92,9 @@ suite(`AzureFunctionsExtensionApi`, () => {
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4);
+        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4, 1, projectSubpath, workspaceFolder);
+        // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
+        validateOptions.excludedPaths?.push('.git');
         await validateProject(folderPath, validateOptions);
     });
 
