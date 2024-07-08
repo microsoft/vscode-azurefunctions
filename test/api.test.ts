@@ -7,11 +7,11 @@ import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { type apiUtils } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { extensions, type Extension } from "vscode";
-import { ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
+import { FuncVersion, ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
@@ -72,5 +72,50 @@ suite(`AzureFunctionsExtensionApi`, () => {
             path.join(functionName, 'function.json')
         );
         await validateProject(folderPath, validateOptions);
+    });
+
+    test('createFunction dotnet with targetFramework', async () => {
+        const functionName: string = 'endpoint1';
+        const language: string = ProjectLanguage.CSharp;
+        const workspaceFolder = getTestWorkspaceFolder();
+        const projectSubpath = 'api';
+        const folderPath: string = path.join(workspaceFolder, projectSubpath);
+
+        await runWithInputs('api.createFunction', [language, /6/i, 'Company.Function', 'Anonymous'], registerOnActionStartHandler, async () => {
+            await api.createFunction({
+                folderPath,
+                functionName,
+                templateId: 'HttpTrigger',
+                languageFilter: /^C\#$/i,
+                functionSettings: { authLevel: 'anonymous' },
+                targetFramework: ['net8.0', 'net7.0', 'net6.0']
+            });
+        });
+
+        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4, 1, projectSubpath, workspaceFolder);
+        // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
+        validateOptions.excludedPaths?.push('.git');
+        await validateProject(folderPath, validateOptions);
+    });
+
+    // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) we throw an error. api.createFunction swallows the error and returns undefined.
+    // In the incorrect case (when 8 is a pick) the test fails since the 2 provided test inputs have already been used, but there are more prompts.
+    test('createFunction with language not in targetFramework', async () => {
+        const functionName: string = 'endpoint1';
+        const language: string = ProjectLanguage.CSharp;
+        const workspaceFolder = getTestWorkspaceFolder();
+        const projectSubpath = 'api';
+        const folderPath: string = path.join(workspaceFolder, projectSubpath);
+
+        await runWithInputs('api.createFunction', [language, /8/i], registerOnActionStartHandler, async () => {
+            await api.createFunction({
+                folderPath,
+                functionName,
+                templateId: 'HttpTrigger',
+                languageFilter: /^C\#$/i,
+                functionSettings: { authLevel: 'anonymous' },
+                targetFramework: ['net7.0', 'net6.0']
+            })
+        });
     });
 });
