@@ -28,7 +28,7 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
-    { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netframework'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
     { title: 'Python', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.9/], deployInputs: [getRotatingPythonVersion()] }
