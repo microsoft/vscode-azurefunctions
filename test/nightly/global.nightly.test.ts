@@ -28,9 +28,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         testContext = await createTestActionContext();
         const subscription: AzureSubscription = await subscriptionExperience(testContext, ext.rgApi.appResourceTree);
         subscriptionContext = createSubscriptionContext(subscription);
-        console.log(`NIGHTLY TEST: Using subscription "${subscriptionContext.subscriptionDisplayName}"...`);
-        console.log(`NIGHTLY TEST: Subscription: ${JSON.stringify(subscription)}`);
-        console.log(`NIGHTLY TEST: Subscription context: ${JSON.stringify(subscriptionContext)}`);
         testClient = createAzureClient([testContext, subscriptionContext], WebSiteManagementClient);
     }
 });
