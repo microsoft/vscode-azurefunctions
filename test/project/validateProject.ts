@@ -13,14 +13,16 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContaining
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
 export enum NodeModelVersion {
-    v3 = 'Model V3',
-    v4 = 'Model V4'
+    v3 = 3,
+    v4 = 4
 }
 
 export enum PythonModelVersion {
-    v1 = 'Model V1',
-    v2 = 'Model V2'
+    v1 = 1,
+    v2 = 2
 }
+
+export type LanguageModelVersion = NodeModelVersion | PythonModelVersion;
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string | RegExp } = {
