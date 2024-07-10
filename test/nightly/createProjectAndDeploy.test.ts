@@ -49,7 +49,7 @@ for (const testCase of testCases) {
 
 addParallelSuite(parallelTests, {
     title: 'Create Project and Deploy',
-    timeoutMS: 7 * 60 * 1000 * 1000,
+    timeoutMS: 7 * 60 * 1000,
     isLongRunning: true
 });
 
