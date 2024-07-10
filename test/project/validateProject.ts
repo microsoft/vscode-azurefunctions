@@ -93,7 +93,7 @@ export function getCSharpValidateOptions(targetFramework: string, version: FuncV
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
-            { globPattern: path.join(projectSubpath ?? '', '*.csproj'), numMatches: numCsproj }
+            { globPattern: `${projectSubpath ? `${projectSubpath}/` : ''}*.csproj`, numMatches: numCsproj }
         ],
         expectedExtensionRecs: [
             'ms-dotnettools.csharp'
