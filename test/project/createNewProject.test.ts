@@ -93,7 +93,7 @@ for (const testCase of testCases) {
             // Java template provider based on maven, which does not support gradle project for now
             skip: shouldSkipVersion(testCase.version) || (testCase.description === JavaBuildTool.gradle && source !== TemplateSource.Backup),
             // lots of errors like "The process cannot access the file because it is being used by another process" 😢
-            suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language) || (testCase.modelVersion && [NodeModelVersion.v4, PythonModelVersion.v2].includes(testCase.modelVersion)),
+            suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {
                 await runWithTestActionContext('createProject', async context => {
                     await runForTemplateSource(context, source, async () => {

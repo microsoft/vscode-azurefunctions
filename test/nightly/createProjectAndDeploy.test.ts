@@ -30,9 +30,10 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'C# .NET 6', buildMachineOsToSkip: ['darwin', 'win32'], ...getCSharpValidateOptions('net6.0', FuncVersion.v4), createProjectInputs: [/net.*6/i], deployInputs: [/net.*6/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
-    { title: 'Python', buildMachineOsToSkip: 'win32', ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.7/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
+    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.7/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
+    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/Model V2/, /3\.7/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -70,8 +71,8 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
         options.createFunctionInputs = options.createFunctionInputs || [];
         console.log(`Starting create new project...`);
         const inputs = [testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs];
-        if (!isNewProgrammingModel(options.language, options.languageModelVersion)) {
-            inputs.push(getRotatingAuthLevel())
+        if (!isNewNodeProgrammingModel(options.language, options.languageModelVersion as NodeModelVersion)) {
+            inputs.push(new RegExp(getRotatingAuthLevel(), 'i'))
         }
         console.log(`Inputs: ${inputs}`);
         await context.ui.runWithInputs(inputs, async () => {
@@ -106,16 +107,12 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     console.log(`Function URL validated.`);
 }
 
-function isNewProgrammingModel(language: ProjectLanguage, modelVersion: LanguageModelVersion = PythonModelVersion.v1): boolean {
-    return (isNode(language) && modelVersion >= NodeModelVersion.v4) || (isPython(language) && modelVersion >= PythonModelVersion.v2);
+function isNewNodeProgrammingModel(language: ProjectLanguage, modelVersion: NodeModelVersion = NodeModelVersion.v3): boolean {
+    return isNode(language) && modelVersion >= NodeModelVersion.v4
 }
 
 function isNode(language: ProjectLanguage): boolean {
     return language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript;
-}
-
-function isPython(language: ProjectLanguage): boolean {
-    return language === ProjectLanguage.Python;
 }
 
 async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: string): Promise<void> {
