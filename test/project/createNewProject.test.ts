@@ -8,7 +8,7 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -37,9 +37,11 @@ testCases.push({
     inputs: [/Model V1/i, TestInput.UseDefaultValue]
 });
 
+
+/* temporarily disable Java and Ballerina tests until we can install Java on the new pipelines
+
 const appName: string = 'javaApp';
 const javaBaseInputs: (TestInput | string | RegExp)[] = [/8/, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
-
 
 testCases.push({
     ...getJavaValidateOptions(appName, JavaBuildTool.gradle, FuncVersion.v4),
@@ -52,7 +54,7 @@ testCases.push({
     inputs: javaBaseInputs.concat(/Maven/i),
     description: JavaBuildTool.maven
 });
-/* Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
+
 const ballerinaBaseInputs: (TestInput | string | RegExp)[] = [/JVM/i];
 
 testCases.push({

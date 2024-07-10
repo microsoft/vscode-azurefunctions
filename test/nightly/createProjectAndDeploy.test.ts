@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { FuncVersion, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -25,7 +25,8 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'JavaScript', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
     { title: 'TypeScript', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
-    { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
+    // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
+    // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
     // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
