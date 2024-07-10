@@ -43,7 +43,6 @@ for (const source of backupLatestTemplateSources) {
     addSuite(FuncVersion.v4, 'net6.0', source, true);
     addSuite(FuncVersion.v4, 'net6.0', source, false);
     addSuite(FuncVersion.v4, 'net7.0', source, true);
-    addSuite(FuncVersion.v4, 'net8.0', source, true);
 }
 
 function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {
