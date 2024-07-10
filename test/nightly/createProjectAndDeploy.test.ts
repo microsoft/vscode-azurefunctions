@@ -32,8 +32,8 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
-    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.7/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
-    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/Model V2/, /3\.7/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v2 },
+    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
+    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/Model V2/, /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
