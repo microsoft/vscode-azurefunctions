@@ -103,7 +103,6 @@ async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: s
 }
 
 async function validateFunctionUrl(appName: string, functionName: string, routePrefix: string): Promise<void> {
-    // first input matches any item except local project (aka it should match the test subscription)
     const inputs: (string | RegExp)[] = [appName, functionName];
 
     let functionUrl: string | undefined;
