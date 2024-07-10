@@ -63,12 +63,12 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site, isFlex?: boolean) {
+    public constructor(subscription: ISubscriptionContext, site: Site) {
         super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
         this.contextValuesToAdd = [];
-        this._isFlex = !!isFlex;
+        this._isFlex = !!site.functionAppConfig;
         if (this._isFlex) {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.flexContextValue);
         } else if (this.site.isSlot) {
@@ -91,8 +91,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site, isFlex?: boolean): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site, isFlex);
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site);
         void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
         return resource;
     }

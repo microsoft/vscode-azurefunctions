@@ -74,9 +74,9 @@
                 "MOCHA_timeout": "0", // Disable time-outs
                 "DEBUGTELEMETRY": "v",
                 "NODE_DEBUG": "",
-                "ENABLE_LONG_RUNNING_TESTS": "",
                 "FUNC_PATH": "func",
-                "AZFUNC_UPDATE_BACKUP_TEMPLATES": ""
+                "AZFUNC_UPDATE_BACKUP_TEMPLATES": "",
+                "AzCode_EnableLongRunningTestsLocal": "",
             }
         },
         {

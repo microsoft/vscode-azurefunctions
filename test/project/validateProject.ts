@@ -81,7 +81,7 @@ export function getTypeScriptValidateOptions(options?: { version?: FuncVersion, 
     return result;
 }
 
-export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultTestFuncVersion, numCsproj: number = 1): IValidateProjectOptions {
+export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultTestFuncVersion, numCsproj: number = 1, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     return {
         language: ProjectLanguage.CSharp,
         version,
@@ -89,17 +89,17 @@ export function getCSharpValidateOptions(targetFramework: string, version: FuncV
             'azureFunctions.projectLanguage': ProjectLanguage.CSharp,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'publish (functions)',
-            'azureFunctions.deploySubpath': `bin/Release/${targetFramework}/publish`,
+            'azureFunctions.deploySubpath': path.join(projectSubpath ?? '', `bin/Release/${targetFramework}/publish`),
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
-            { globPattern: '*.csproj', numMatches: numCsproj }
+            { globPattern: path.join(projectSubpath ?? '', '*.csproj'), numMatches: numCsproj }
         ],
         expectedExtensionRecs: [
             'ms-dotnettools.csharp'
         ],
         excludedPaths: [
-            '.funcignore'
+            path.join(projectSubpath ?? '', '.funcignore')
         ],
         expectedDebugConfigs: [
             'Attach to .NET Functions'
@@ -110,7 +110,8 @@ export function getCSharpValidateOptions(targetFramework: string, version: FuncV
             'clean release (functions)',
             'publish (functions)',
             'host start'
-        ]
+        ],
+        workspaceFolder
     };
 }
 
