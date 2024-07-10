@@ -58,7 +58,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
 for (const source of backupLatestTemplateSources) {
     // NOTE: Only need to test v1 since v2+ emphasizes C# class libraries instead of C#Script
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester(source);
-    suite.only(tester.suiteName, function (this: Mocha.Suite): void {
+    suite(tester.suiteName, function (this: Mocha.Suite): void {
         suiteSetup(async function (this: Mocha.Context): Promise<void> {
             if (shouldSkipVersion(tester.version)) {
                 this.skip();
