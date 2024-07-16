@@ -89,11 +89,11 @@ export function getCSharpValidateOptions(targetFramework: string, version: FuncV
             'azureFunctions.projectLanguage': ProjectLanguage.CSharp,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'publish (functions)',
-            'azureFunctions.deploySubpath': path.join(projectSubpath ?? '', `bin/Release/${targetFramework}/publish`),
+            'azureFunctions.deploySubpath': `${projectSubpath ? `${projectSubpath}/` : ''}bin/Release/${targetFramework}/publish`,
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
-            { globPattern: path.join(projectSubpath ?? '', '*.csproj'), numMatches: numCsproj }
+            { globPattern: `${projectSubpath ? `${projectSubpath}/` : ''}*.csproj`, numMatches: numCsproj }
         ],
         expectedExtensionRecs: [
             'ms-dotnettools.csharp'

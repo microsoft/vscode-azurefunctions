@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { FuncVersion, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { defaultTestFuncVersion, getBallerinaValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -23,14 +23,15 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript', ...getJavaScriptValidateOptions(true), deployInputs: [getRotatingNodeVersion()] },
-    { title: 'TypeScript', ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion()] },
-    { title: 'Ballerina', ...getBallerinaValidateOptions(), deployInputs: [/java.*11/i] },
-    // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
-    { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'C# .NET 6', buildMachineOsToSkip: ['darwin', 'win32'], ...getCSharpValidateOptions('net6.0', FuncVersion.v4), createProjectInputs: [/net.*6/i], deployInputs: [/net.*6/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7/i] },
-    { title: 'Python', buildMachineOsToSkip: 'win32', ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.7/], deployInputs: [getRotatingPythonVersion()] }
+    { title: 'JavaScript', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
+    { title: 'TypeScript', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
+    // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
+    // https://github.com/microsoft/vscode-azurefunctions/issues/4210
+    // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
+    { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
+    { title: 'Python', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.9/], deployInputs: [getRotatingPythonVersion()] }
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -102,8 +103,7 @@ async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: s
 }
 
 async function validateFunctionUrl(appName: string, functionName: string, routePrefix: string): Promise<void> {
-    // first input matches any item except local project (aka it should match the test subscription)
-    const inputs: (string | RegExp)[] = [/^((?!Local Project).)*$/i, appName, functionName];
+    const inputs: (string | RegExp)[] = [appName, functionName];
 
     let functionUrl: string | undefined;
     await runWithTestActionContext('copyFunctionUrl', async context => {
@@ -119,7 +119,8 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     assert.ok(functionUrl?.includes(routePrefix), `Function url "${functionUrl}" did not include routePrefix "${routePrefix}".`);
 
     const client: ServiceClient = await createGenericClient(await createTestActionContext(), undefined);
-    const response = await client.sendRequest(createPipelineRequest({ method: 'POST', url: functionUrl!, body: JSON.stringify({ name: "World" }) }));
+    // PowerShell functions expect Name capitalized, so we set both
+    const response = await client.sendRequest(createPipelineRequest({ method: 'POST', url: functionUrl!, body: JSON.stringify({ name: "World", Name: "World" }) }));
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');
 }

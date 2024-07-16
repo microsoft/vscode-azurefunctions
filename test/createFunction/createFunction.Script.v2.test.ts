@@ -75,14 +75,14 @@ class PowerShellFunctionTester extends FunctionTesterBase {
     }
 }
 
-for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
-    for (const source of backupLatestTemplateSources) {
-        addSuite(new JavaScriptFunctionTester(version, source));
-        addSuite(new TypeScriptFunctionTester(version, source));
-        addSuite(new PythonFunctionTester(version, source));
-        addSuite(new PowerShellFunctionTester(version, source));
-    }
+
+for (const source of backupLatestTemplateSources) {
+    addSuite(new JavaScriptFunctionTester(FuncVersion.v4, source));
+    addSuite(new TypeScriptFunctionTester(FuncVersion.v4, source));
+    addSuite(new PythonFunctionTester(FuncVersion.v4, source));
+    addSuite(new PowerShellFunctionTester(FuncVersion.v4, source));
 }
+
 
 function addSuite(tester: FunctionTesterBase): void {
     const testCases: CreateFunctionTestCase[] = [
