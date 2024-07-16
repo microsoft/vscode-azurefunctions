@@ -119,7 +119,7 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     assert.ok(functionUrl?.includes(routePrefix), `Function url "${functionUrl}" did not include routePrefix "${routePrefix}".`);
 
     const client: ServiceClient = await createGenericClient(await createTestActionContext(), undefined);
-    // PowerShell funcitons expect Name capitalized, so we set both
+    // PowerShell functions expect Name capitalized, so we set both
     const response = await client.sendRequest(createPipelineRequest({ method: 'POST', url: functionUrl!, body: JSON.stringify({ name: "World", Name: "World" }) }));
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');
