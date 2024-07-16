@@ -356,6 +356,7 @@ type ExpectedPath = string | { globPattern: string; numMatches: number };
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     displayLanguage?: RegExp;
+    languageModelVersion?: NodeModelVersion | PythonModelVersion;
     version: FuncVersion;
     expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
     expectedPaths: ExpectedPath[];

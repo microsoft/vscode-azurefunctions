@@ -12,41 +12,31 @@ import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptVali
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
-    modelVersion?: PythonModelVersion | NodeModelVersion;
 }
 
 const testCases: CreateProjectTestCase[] = [
+    // C# tests
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
     { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
-];
-
-// Test cases that are the same for both v2 and v3
-
-testCases.push(
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'], modelVersion: NodeModelVersion.v3 },
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: ['Model V4'], modelVersion: NodeModelVersion.v4 },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'], modelVersion: NodeModelVersion.v3 },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: ['Model V4'], modelVersion: NodeModelVersion.v4 },
-    { ...getPowerShellValidateOptions(FuncVersion.v4) },
+    // .NET Script tests
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
-);
+    // Node tests
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'], languageModelVersion: NodeModelVersion.v3 },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: ['Model V4'], languageModelVersion: NodeModelVersion.v4 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'], languageModelVersion: NodeModelVersion.v3 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: ['Model V4'], languageModelVersion: NodeModelVersion.v4 },
+    // PowerShell tests
+    { ...getPowerShellValidateOptions(FuncVersion.v4) },
+    // Python tests
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [/Model V1/i, TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [/Model V2/i, TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
+    // Custom language tests
+    { ...getCustomValidateOptions(FuncVersion.v4) }
+];
 
-// test python v1 model
-testCases.push({
-    ...getPythonValidateOptions('.venv', FuncVersion.v4),
-    inputs: [/Model V1/i, TestInput.UseDefaultValue],
-    modelVersion: PythonModelVersion.v1
-});
-
-// test python v2 model
-testCases.push({
-    ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2),
-    inputs: [/Model V2/i, TestInput.UseDefaultValue],
-    modelVersion: PythonModelVersion.v2
-});
 
 /* Temporarily disable Java and Ballerina tests until we can install Ballerina on the new pipelines
 
@@ -74,9 +64,6 @@ testCases.push({
 });
 */
 
-
-testCases.push({ ...getCustomValidateOptions(FuncVersion.v4) });
-
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
     for (const source of backupLatestTemplateSources) {
@@ -84,8 +71,8 @@ for (const testCase of testCases) {
         if (testCase.description) {
             title += ` ${testCase.description}`;
         }
-        if (testCase.modelVersion) {
-            title += ` (${testCase.modelVersion})`
+        if (testCase.languageModelVersion) {
+            title += ` (${testCase.languageModelVersion})`
         }
         title += ` (${source})`;
 
