@@ -34,6 +34,7 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
             }
             setWorkerRuntime(context, workerRuntime);
         }
+
         return new DotnetRuntimeStep();
     }
 
