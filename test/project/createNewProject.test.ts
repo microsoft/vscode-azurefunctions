@@ -39,6 +39,7 @@ testCases.push({
 
 
 /* temporarily disable Java and Ballerina tests until we can install Java on the new pipelines
+    https://github.com/microsoft/vscode-azurefunctions/issues/4210
 
 const appName: string = 'javaApp';
 const javaBaseInputs: (TestInput | string | RegExp)[] = [/8/, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
