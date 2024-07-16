@@ -12,10 +12,13 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
 import { PythonModelVersion, getPythonValidateOptions } from './validateProject';
 
+const modelV1Input = /Model V1/;
+const modelV2Input = /Model V2/;
+
 suite.only('Create New Python Project (Model V1)', () => {
     test('skip venv', async () => {
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [/Model V1/, /skip/i] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [modelV1Input, /skip/i] });
         });
     });
 
@@ -27,14 +30,14 @@ suite.only('Create New Python Project (Model V1)', () => {
 
         const alias: string = process.platform === 'win32' ? 'py -3.9' : 'python3.9';
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [/Model V1/, /enter/i, alias] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [modelV1Input, /enter/i, alias] });
         });
     });
 
     test('no venv', async () => {
         await runWithFuncSetting('createPythonVenv', false, async () => {
             await runWithTestActionContext('createProject', async context => {
-                await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [/Model V1/] });
+                await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [modelV1Input] });
             });
         });
     });
@@ -44,7 +47,7 @@ suite.only('Create New Python Project (Model V1)', () => {
         const venvName: string = 'testVenv';
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4), projectPath, inputs: [/Model V1/] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4), projectPath, inputs: [modelV1Input] });
         });
     });
 
@@ -54,7 +57,7 @@ suite.only('Create New Python Project (Model V1)', () => {
         await createTestVenv(projectPath, 'testVenv1');
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4), projectPath, inputs: [/Model V1/, venvName] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4), projectPath, inputs: [modelV1Input, venvName] });
         });
     });
 });
@@ -62,7 +65,7 @@ suite.only('Create New Python Project (Model V1)', () => {
 suite.only('Create New Python Project (Model V2)', () => {
     test('skip venv', async () => {
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4, PythonModelVersion.v2), inputs: [/Model V2/, /skip/i] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4, PythonModelVersion.v2), inputs: [modelV2Input, /skip/i] });
         });
     });
 
@@ -74,14 +77,14 @@ suite.only('Create New Python Project (Model V2)', () => {
 
         const alias: string = process.platform === 'win32' ? 'py -3.9' : 'python3.9';
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [/Model V2/, /enter/i, alias] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [modelV2Input, /enter/i, alias] });
         });
     });
 
     test('no venv', async () => {
         await runWithFuncSetting('createPythonVenv', false, async () => {
             await runWithTestActionContext('createProject', async context => {
-                await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4, PythonModelVersion.v2), inputs: [/Model V2/] });
+                await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4, PythonModelVersion.v2), inputs: [modelV2Input] });
             });
         });
     });
@@ -91,7 +94,7 @@ suite.only('Create New Python Project (Model V2)', () => {
         const venvName: string = 'testVenv';
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [/Model V2/] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [modelV2Input] });
         });
     });
 
@@ -101,7 +104,7 @@ suite.only('Create New Python Project (Model V2)', () => {
         await createTestVenv(projectPath, 'testVenv1');
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [/Model V2/, venvName] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [modelV2Input, venvName] });
         });
     });
 });
