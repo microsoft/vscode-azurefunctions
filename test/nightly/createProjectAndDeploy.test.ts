@@ -30,7 +30,6 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
-    // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
@@ -71,12 +70,10 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     await runWithTestActionContext('createNewProject', async context => {
         options.createProjectInputs = options.createProjectInputs || [];
         options.createFunctionInputs = options.createFunctionInputs || [];
-        console.log(`Starting create new project...`);
         const inputs = [testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs];
         if (!isNewNodeProgrammingModel(options.language, options.languageModelVersion as NodeModelVersion)) {
             inputs.push(new RegExp(getRotatingAuthLevel(), 'i'))
         }
-        console.log(`Inputs: ${inputs}`);
         await context.ui.runWithInputs(inputs, async () => {
             const createProjectOptions = options.version !== defaultTestFuncVersion ? { version: options.version } : {};
             await createNewProjectInternal(context, createProjectOptions)
@@ -85,9 +82,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
 
     options.excludedPaths = options.excludedPaths || [];
     options.excludedPaths.push('.git'); // Since the workspace is already in a git repo
-    console.log(`Validating project...`);
     await validateProject(testWorkspacePath, options);
-    console.log(`Project validated.`);
 
     const routePrefix: string = getRandomHexString();
     await addRoutePrefixToProject(testWorkspacePath, routePrefix);
@@ -96,17 +91,12 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        console.log(`Starting deploy...`);
-        const deployInputs = [testWorkspacePath, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()];
-        console.log(`Deploy inputs: ${deployInputs}`);
-        await context.ui.runWithInputs(deployInputs, async () => {
+        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
             await deployProductionSlot(context)
         });
     });
 
-    console.log(`Validating function URL...`);
     await validateFunctionUrl(appName, functionName, routePrefix);
-    console.log(`Function URL validated.`);
 }
 
 function isNewNodeProgrammingModel(language: ProjectLanguage, modelVersion: NodeModelVersion = NodeModelVersion.v3): boolean {
