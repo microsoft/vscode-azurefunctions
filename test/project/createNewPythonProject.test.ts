@@ -15,7 +15,7 @@ import { PythonModelVersion, getPythonValidateOptions } from './validateProject'
 const modelV1Input = /Model V1/;
 const modelV2Input = /Model V2/;
 
-suite.only('Create New Python Project (Model V1)', () => {
+suite('Create New Python Project (Model V1)', () => {
     test('skip venv', async () => {
         await runWithTestActionContext('createProject', async context => {
             await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4), inputs: [modelV1Input, /skip/i] });
@@ -62,7 +62,7 @@ suite.only('Create New Python Project (Model V1)', () => {
     });
 });
 
-suite.only('Create New Python Project (Model V2)', () => {
+suite('Create New Python Project (Model V2)', () => {
     test('skip venv', async () => {
         await runWithTestActionContext('createProject', async context => {
             await createAndValidateProject(context, { ...getPythonValidateOptions(undefined, FuncVersion.v4, PythonModelVersion.v2), inputs: [modelV2Input, /skip/i] });
