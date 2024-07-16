@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { createHttpHeaders, createPipelineRequest, type RequestBodyType } from '@azure/core-rest-pipeline';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep, createGenericClient, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { type Progress } from 'vscode';
@@ -45,9 +44,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
 
-        context.site = context.newFlexSku ?
-            await this.createFlexFunctionApp(context, rgName, siteName, context.newFlexSku) :
-            await this.createFunctionApp(context, rgName, siteName, stack);
+        context.site = await this.createFunctionApp(context, rgName, siteName, stack);
         context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
@@ -103,26 +100,22 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
-        const site: Site & { properties: FlexFunctionAppProperties } = {
+        const site: Site = {
             name: context.newSiteName,
             kind: getSiteKind(context),
             location: nonNullProp(location, 'name'),
-            properties: {
-                name: context.newSiteName,
-                serverFarmId: context.plan?.id,
-                clientAffinityEnabled: false,
-                siteConfig: await this.getNewSiteConfig(context)
-            },
+            serverFarmId: context.plan?.id,
+            clientAffinityEnabled: false,
+            siteConfig: await this.getNewSiteConfig(context)
         };
 
-        site.properties.sku = 'FlexConsumption';
-        site.properties.functionAppConfig = {
+        site.functionAppConfig = {
             deployment: {
                 storage: {
                     type: 'blobContainer',
                     value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
                     authentication: {
-                        userAssignedIdentityResourceId: null,
+                        userAssignedIdentityResourceId: undefined,
                         type: 'StorageAccountConnectionString',
                         storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
                     }
@@ -136,7 +129,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
                 instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
                 alwaysReady: [],
-                triggers: null
+                triggers: undefined
             },
         }
 
@@ -226,39 +219,19 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return newSiteConfig;
     }
 
-    async createFunctionApp(context: IFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
+    async createFunctionApp(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
         const client: WebSiteManagementClient = await createWebSiteClient(context);
-        return await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context, stack));
-    }
+        const site = context.newFlexSku ?
+            await this.getNewFlexSite(context, context.newFlexSku) :
+            await this.getNewSite(context, stack);
+        const result = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site);
 
-    async createFlexFunctionApp(context: IFunctionAppWizardContext, rgName: string, siteName: string, sku: Sku): Promise<Site> {
-        const headers = createHttpHeaders({
-            'Content-Type': 'application/json',
-        });
-
-        const options: AzExtRequestPrepareOptions = {
-            url: `https://management.azure.com/subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=2023-12-01`,
-            method: 'PUT',
-            body: JSON.stringify(await this.getNewFlexSite(context, sku)) as unknown as RequestBodyType,
-            headers
-        };
-
-        const client = await createGenericClient(context, context);
-        const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
-        if (result && result.status >= 200 && result.status < 300) {
-            const site = result.parsedBody as Site & { properties: FlexFunctionAppProperties };
+        if (context.newFlexSku) {
             const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-            await tryCreateStorageContainer(site, storageConnectionString);
-            const client: WebSiteManagementClient = await createWebSiteClient(context);
-            // the payload for the new API version "2023-12-01" is incompatiable with our current SiteClient so get the old payload
-            try {
-                return await client.webApps.get(rgName, siteName);
-            } catch (_) {
-                // ignore error and fall thru to throw
-            }
+            await tryCreateStorageContainer(result, storageConnectionString);
         }
 
-        throw new Error(parseError(result.parsedBody).message || localize('failedToCreateFlexFunctionApp', 'Failed to create flex function app "{0}".', siteName));
+        return result;
     }
 }
 
@@ -280,49 +253,22 @@ function getSiteKind(context: IAppServiceWizardContext): string {
 }
 
 // storage container is needed for flex deployment, but it is not created automatically
-async function tryCreateStorageContainer(site: Site & { properties: FlexFunctionAppProperties }, storageConnectionString: string): Promise<void> {
+async function tryCreateStorageContainer(site: Site, storageConnectionString: string): Promise<void> {
     const blobClient = BlobServiceClient.fromConnectionString(storageConnectionString);
-    const containerName = site.properties?.functionAppConfig?.deployment.storage.value.split('/').pop();
-    if (containerName) {
-        const client = blobClient.getContainerClient(containerName);
-        if (!await client.exists()) {
-            await blobClient.createContainer(containerName);
+    const containerUrl: string | undefined = site.functionAppConfig?.deployment?.storage?.value;
+    if (containerUrl) {
+        const containerName = containerUrl.split('/').pop();
+        if (containerName) {
+            const client = blobClient.getContainerClient(containerName);
+            if (!await client.exists()) {
+                await blobClient.createContainer(containerName);
+            } else {
+                ext.outputChannel.appendLog(localize('deploymentStorageExists', 'Deployment storage container "{0}" already exists.', containerName));
+                return;
+            }
         }
     }
+
+    ext.outputChannel.appendLog(localize('noDeploymentStorage', 'No deployment storage specified in function app.'));
+    return;
 }
-
-type FlexFunctionAppProperties = {
-    containerSize?: number,
-    sku?: 'FlexConsumption',
-    name?: string,
-    serverFarmId?: string,
-    clientAffinityEnabled?: boolean,
-    siteConfig: SiteConfig,
-    reserved?: boolean,
-    functionAppConfig?: FunctionAppConfig
-};
-
-// TODO: Temporary until we can get the SDK updated
-export type FunctionAppConfig = {
-    deployment: {
-        storage: {
-            type: string;
-            value: string;
-            authentication: {
-                type: string;
-                userAssignedIdentityResourceId: string | null;
-                storageAccountConnectionStringName: string | null;
-            };
-        }
-    },
-    runtime: {
-        name?: string,
-        version?: string
-    },
-    scaleAndConcurrency: {
-        alwaysReady: number[],
-        maximumInstanceCount: number,
-        instanceMemoryMB: number,
-        triggers: null
-    }
-};

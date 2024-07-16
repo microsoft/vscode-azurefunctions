@@ -27,10 +27,11 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), createProjectInputs: [/Model V4/], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
     { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v3 },
     { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), createProjectInputs: [/Model V4/], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
-    // Disable Ballerina tests until we figure out how to install Ballerina on the new pipelines
+    // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
+    // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
-    // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     // { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
     { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
@@ -128,7 +129,6 @@ async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: s
 }
 
 async function validateFunctionUrl(appName: string, functionName: string, routePrefix: string): Promise<void> {
-    // first input matches any item except local project (aka it should match the test subscription)
     const inputs: (string | RegExp)[] = [appName, functionName];
 
     let functionUrl: string | undefined;
@@ -145,6 +145,7 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     assert.ok(functionUrl?.includes(routePrefix), `Function url "${functionUrl}" did not include routePrefix "${routePrefix}".`);
 
     const client: ServiceClient = await createGenericClient(await createTestActionContext(), undefined);
+    // PowerShell functions expect Name capitalized, so we set both
     const response = await client.sendRequest(createPipelineRequest({ method: 'POST', url: functionUrl!, body: JSON.stringify({ name: "World", Name: "World" }) }));
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');

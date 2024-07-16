@@ -12,8 +12,8 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
 import { PythonModelVersion, getPythonValidateOptions } from './validateProject';
 
-const modelV1Input = /Model V1/;
-const modelV2Input = /Model V2/;
+const modelV1Input: RegExp = /Model V1/;
+const modelV2Input: RegExp = /Model V2/;
 
 suite('Create New Python Project (Model V1)', () => {
     test('skip venv', async () => {
