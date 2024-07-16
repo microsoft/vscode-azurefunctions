@@ -19,7 +19,7 @@ const testCases: CreateProjectTestCase[] = [
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
-
+    { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
 ];
 
 // Test cases that are the same for both v2 and v3

@@ -29,6 +29,7 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net6.0' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net6.0-isolated' },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net7.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net8.0-isolated' },
             { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 14 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 17 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 15 },

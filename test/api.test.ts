@@ -35,7 +35,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                targetFramework: ['netcoreapp3.1', 'net6.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
+                targetFramework: ['netcoreapp3.1', 'net6.0', 'net8.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
             });
         });
 
