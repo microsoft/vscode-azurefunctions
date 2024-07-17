@@ -10,10 +10,10 @@ import { FuncVersion, getRandomHexString } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
-import { PythonModelVersion, getPythonValidateOptions } from './validateProject';
+import { PythonModelInput, PythonModelVersion, getPythonValidateOptions } from './validateProject';
 
-const modelV1Input: RegExp = /Model V1/;
-const modelV2Input: RegExp = /Model V2/;
+const modelV1Input: RegExp = PythonModelInput[PythonModelVersion.v1];
+const modelV2Input: RegExp = PythonModelInput[PythonModelVersion.v2];
 
 suite('Create New Python Project (Model V1)', () => {
     test('skip venv', async () => {

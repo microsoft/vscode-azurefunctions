@@ -24,6 +24,16 @@ export enum PythonModelVersion {
 
 export type LanguageModelVersion = NodeModelVersion | PythonModelVersion;
 
+export const NodeModelInput = {
+    [NodeModelVersion.v3]: / Model V3/,
+    [NodeModelVersion.v4]: / Model V4/
+}
+
+export const PythonModelInput = {
+    [PythonModelVersion.v1]: / Model V1/,
+    [PythonModelVersion.v2]: / Model V2/
+}
+
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string | RegExp } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
@@ -357,7 +367,7 @@ type ExpectedPath = string | { globPattern: string; numMatches: number };
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     displayLanguage?: RegExp;
-    languageModelVersion?: NodeModelVersion | PythonModelVersion;
+    languageModelVersion?: LanguageModelVersion;
     version: FuncVersion;
     expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
     expectedPaths: ExpectedPath[];
