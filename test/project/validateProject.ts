@@ -25,13 +25,13 @@ export enum PythonModelVersion {
 export type LanguageModelVersion = NodeModelVersion | PythonModelVersion;
 
 export const NodeModelInput = {
-    [NodeModelVersion.v3]: / Model V3/,
-    [NodeModelVersion.v4]: / Model V4/
+    [NodeModelVersion.v3]: /Model V3/,
+    [NodeModelVersion.v4]: /Model V4/
 }
 
 export const PythonModelInput = {
-    [PythonModelVersion.v1]: / Model V1/,
-    [PythonModelVersion.v2]: / Model V2/
+    [PythonModelVersion.v1]: /Model V1/,
+    [PythonModelVersion.v2]: /Model V2/
 }
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
