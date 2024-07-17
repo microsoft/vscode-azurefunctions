@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { FuncVersion, ProjectLanguage, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion, defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions, type LanguageModelVersion } from '../project/validateProject';
+import { NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion, defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -60,7 +60,6 @@ interface ICreateProjectAndDeployOptions extends IValidateProjectOptions {
     createProjectInputs?: (string | RegExp | TestInput)[];
     createFunctionInputs?: (string | RegExp | TestInput)[];
     deployInputs?: (string | RegExp | TestInput)[];
-    languageModelVersion?: LanguageModelVersion;
 }
 
 async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOptions): Promise<void> {
