@@ -149,12 +149,20 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         let newSiteConfig: SiteConfig = {};
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-        let appSettings: NameValuePair[] = [
-            {
+
+        let appSettings: NameValuePair[] = [];
+        if (context.managedIdentity) {
+            appSettings.push({
                 name: `${ConnectionKey.Storage}__accountName`,
                 value: context.newStorageAccountName ?? context.storageAccount?.name
-            }
-        ];
+            });
+        } else {
+            appSettings.push({
+                name: ConnectionKey.Storage,
+                value: storageConnectionString
+            });
+        }
+
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
