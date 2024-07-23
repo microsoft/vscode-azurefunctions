@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { AuthorizationManagementClient } from '@azure/arm-authorization-profile-2020-09-01-hybrid';
+import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
@@ -57,16 +57,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = parseError(error).message;
             }
         }
-        const principalId = nonNullProp(nonNullProp(context.site, 'identity'), 'principalId');
-        // this is the same apiVersion being used by the portal
-        const apiVersion = '2020-06-01';
-        const amClient = new AuthorizationManagementClient(context.credentials, context.subscriptionId, { apiVersion });
-
-        const scope = nonNullProp(nonNullProp(context, 'storageAccount'), 'id');
-        const guid = crypto.randomUUID();
-        // this roleDefintionId cooresponds to the "Storage Blob Data Contributor" role
-        const roleDefinitionId = '/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe';
-        await amClient.roleAssignments.create(scope, guid, { properties: { roleDefinitionId, principalId } });
         showSiteCreated(site, context);
     }
 
@@ -76,6 +66,14 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
+        let identity: Identity | undefined = undefined;
+        if (context.managedIdentity) {
+            const userAssignedIdentities = {};
+            userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
+                { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
+            identity = { type: 'UserAssigned', userAssignedIdentities }
+        }
+
         const site: Site = {
             name: context.newSiteName,
             kind: getSiteKind(context),
@@ -84,7 +82,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             clientAffinityEnabled: false,
             siteConfig: await this.getNewSiteConfig(context, stack),
             reserved: context.newSiteOS === WebsiteOS.linux,  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
-            identity: { type: 'SystemAssigned' }
+            identity
         };
 
         if (context.customLocation) {
