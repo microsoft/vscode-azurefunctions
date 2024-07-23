@@ -8,41 +8,42 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
 }
 
 const testCases: CreateProjectTestCase[] = [
+    // C# tests
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
-
-];
-
-// Test cases that are the same for both v2 and v3
-
-testCases.push(
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: ['Model V3'] },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: ['Model V3'] },
-    { ...getPowerShellValidateOptions(FuncVersion.v4) },
+    { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
+    // .NET Script tests
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
-);
+    // Node tests
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
+    // PowerShell tests
+    { ...getPowerShellValidateOptions(FuncVersion.v4) },
+    // Python tests
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [PythonModelInput[PythonModelVersion.v1], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [PythonModelInput[PythonModelVersion.v2], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
+    // Custom language tests
+    { ...getCustomValidateOptions(FuncVersion.v4) }
+];
 
-// test python v1 model
-testCases.push({
-    ...getPythonValidateOptions('.venv', FuncVersion.v4),
-    inputs: [/Model V1/i, TestInput.UseDefaultValue]
-});
 
-
-/* temporarily disable Java and Ballerina tests until we can install Java on the new pipelines
+/* Temporarily disable Java and Ballerina tests until we can install Ballerina on the new pipelines
     https://github.com/microsoft/vscode-azurefunctions/issues/4210
 
 const appName: string = 'javaApp';
 const javaBaseInputs: (TestInput | string | RegExp)[] = [/8/, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
+
 
 testCases.push({
     ...getJavaValidateOptions(appName, JavaBuildTool.gradle, FuncVersion.v4),
@@ -55,7 +56,6 @@ testCases.push({
     inputs: javaBaseInputs.concat(/Maven/i),
     description: JavaBuildTool.maven
 });
-
 const ballerinaBaseInputs: (TestInput | string | RegExp)[] = [/JVM/i];
 
 testCases.push({
@@ -65,15 +65,15 @@ testCases.push({
 });
 */
 
-
-testCases.push({ ...getCustomValidateOptions(FuncVersion.v4) });
-
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
     for (const source of backupLatestTemplateSources) {
         let title = `${testCase.language} ${testCase.version}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;
+        }
+        if (testCase.languageModelVersion) {
+            title += ` (Model v${testCase.languageModelVersion})`
         }
         title += ` (${source})`;
 

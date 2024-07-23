@@ -10,10 +10,10 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { FuncVersion, ProjectLanguage, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion, defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -23,15 +23,18 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript', ...getJavaScriptValidateOptions(true), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
-    { title: 'TypeScript', ...getTypeScriptValidateOptions(), createProjectInputs: [/Model V3/], deployInputs: [getRotatingNodeVersion()] },
+    { title: 'JavaScript (Model V3)', ...getJavaScriptValidateOptions(true), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v3 },
+    { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v3 },
+    { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
     { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
-    { title: 'Python', ...getPythonValidateOptions('.venv'), createProjectInputs: [/Model V1/, /3\.9/], deployInputs: [getRotatingPythonVersion()] }
+    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [PythonModelInput[PythonModelVersion.v1], /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
+    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [PythonModelInput[PythonModelVersion.v2], /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -66,7 +69,11 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     await runWithTestActionContext('createNewProject', async context => {
         options.createProjectInputs = options.createProjectInputs || [];
         options.createFunctionInputs = options.createFunctionInputs || [];
-        await context.ui.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
+        const inputs = [testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs];
+        if (!isNewNodeProgrammingModel(options.language, options.languageModelVersion as NodeModelVersion)) {
+            inputs.push(new RegExp(getRotatingAuthLevel(), 'i'))
+        }
+        await context.ui.runWithInputs(inputs, async () => {
             const createProjectOptions = options.version !== defaultTestFuncVersion ? { version: options.version } : {};
             await createNewProjectInternal(context, createProjectOptions)
         });
@@ -89,6 +96,14 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     });
 
     await validateFunctionUrl(appName, functionName, routePrefix);
+}
+
+function isNewNodeProgrammingModel(language: ProjectLanguage, modelVersion: NodeModelVersion = NodeModelVersion.v3): boolean {
+    return isNode(language) && modelVersion >= NodeModelVersion.v4
+}
+
+function isNode(language: ProjectLanguage): boolean {
+    return language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript;
 }
 
 async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: string): Promise<void> {
