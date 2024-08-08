@@ -2,9 +2,8 @@
 
 ## 1.15.2 - 2024-08-08
 
-### Added
-* [[4165]](https://github.com/microsoft/vscode-azurefunctions/pull/4165) Show multiple runtime matches for `targetFramework` when creating from Functions API
 ### Engineering
+* [[4165]](https://github.com/microsoft/vscode-azurefunctions/pull/4165) Show multiple runtime matches for `targetFramework` when creating from Functions API
 * [[4195]](https://github.com/microsoft/vscode-azurefunctions/pull/4195) Enable end-to-end Azure tests and add more tests
 * [[4215]](https://github.com/microsoft/vscode-azurefunctions/pull/4215) Update backup templates
 * [[4200]](https://github.com/microsoft/vscode-azurefunctions/pull/4200) Upgrade `@azure/arm-appservice` to enable flex consumption SKU support
