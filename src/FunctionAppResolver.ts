@@ -11,19 +11,28 @@ type Site20231201 = Site & { isFlex?: boolean };
 export class FunctionAppResolver implements AppResourceResolver {
     private siteCacheLastUpdated = 0;
     private siteCache: Map<string, Site20231201> = new Map<string, Site20231201>();
+    private task: Promise<void> | undefined;
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
             const client = await createWebSiteClient({ ...context, ...subContext });
 
-            if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
-                this.siteCache.clear();
-                const sites = await uiUtils.listAllIterator(client.webApps.list());
-                for (const site of sites) {
-                    this.siteCache.set(resource.id, site);
-                    this.siteCacheLastUpdated = Date.now();
-                }
+            if (!this.task || this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
+                this.siteCacheLastUpdated = Date.now();
+                this.task = new Promise((resolve, reject) => {
+                    this.siteCache.clear();
+                    uiUtils.listAllIterator(client.webApps.list()).then((sites) => {
+                        for (const site of sites) {
+                            this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), site);
+                        }
+                        resolve();
+                    })
+                        .catch((reason) => {
+                            reject(reason);
+                        });
+                });
             }
+            await this.task;
 
             let site = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
             // check for required properties that sometime don't exist in the LIST operation
