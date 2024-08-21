@@ -17,7 +17,7 @@ export class FunctionAppResolver implements AppResourceResolver {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
             const client = await createWebSiteClient({ ...context, ...subContext });
 
-            if (!this.listFunctionAppsTask || this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
+            if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
                 this.siteCacheLastUpdated = Date.now();
                 this.listFunctionAppsTask = new Promise((resolve, reject) => {
                     this.siteCache.clear();
