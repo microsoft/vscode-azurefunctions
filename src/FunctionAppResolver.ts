@@ -39,7 +39,7 @@ export class FunctionAppResolver implements AppResourceResolver {
             if (!site || !site.defaultHostName) {
                 // if this required property doesn't exist, try getting the full site payload
                 site = await client.webApps.get(getResourceGroupFromId(resource.id), resource.name);
-                this.siteCache.set(resource.id, site);
+                this.siteCache.set(resource.id.toLowerCase(), site);
             }
 
             if (nonNullValueAndProp(site, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
