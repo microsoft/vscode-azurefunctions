@@ -161,7 +161,6 @@ export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
 export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
-export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
 
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).
