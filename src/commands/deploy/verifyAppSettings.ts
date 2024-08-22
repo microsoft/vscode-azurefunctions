@@ -9,11 +9,10 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, DurableBackend, azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ConnectionKeyValues, type DurableBackendValues, type ProjectLanguage } from '../../constants';
+import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ConnectionKeyValues, type DurableBackendValues, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
-import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
@@ -47,11 +46,6 @@ export async function verifyAppSettings(options: {
             updateAppSettings ||= remoteBuildSettingsChanged;
         } else {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
-        }
-
-        // feature flag is necessary for the new programming model
-        if (isNodeV4Plus(options) || isPythonV2Plus(options.language, options.languageModel)) {
-            updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
@@ -190,25 +184,6 @@ function verifyLinuxRemoteBuildSettings(context: IActionContext, remotePropertie
 
     context.telemetry.properties.linuxBuildSettingsChanged = String(hasChanged);
     return hasChanged;
-}
-
-function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
-    const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
-
-    // Feature flags are comma-delimited lists of beta features
-    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
-    const featureFlagArray = !featureFlagString ? [] : featureFlagString.split(',');
-    const enableWorkerIndexingValue = 'EnableWorkerIndexing';
-    const shouldAddSetting: boolean = !featureFlagArray.includes(enableWorkerIndexingValue);
-
-    if (shouldAddSetting) {
-        featureFlagArray.push(enableWorkerIndexingValue);
-        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the new programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
-        remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
-    }
-
-    context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
-    return shouldAddSetting;
 }
 
 // App settings are not always propagated before the deployment leading to an inconsistent behavior so verify that
