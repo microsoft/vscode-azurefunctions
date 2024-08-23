@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.15.3 - 2024-08-23
+### Added
+* [[4239]](https://github.com/microsoft/vscode-azurefunctions/pull/4239) Use a list task for the cache that is used for all resolving
+
+### Removed
+* [[4243]](https://github.com/microsoft/vscode-azurefunctions/pull/4243) Remove `EnableWorkerIndexing` feature flag
+
+### Engineering
+* [[4241]](https://github.com/microsoft/vscode-azurefunctions/pull/4241) Improve telemetry and performance
+
 ## 1.15.2 - 2024-08-08
 
 ### Engineering
