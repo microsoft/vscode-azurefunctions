@@ -39,6 +39,11 @@ parameters:
     type: boolean
     default: true
 
+variables:
+  # Required by MicroBuild template
+  - name: TeamName
+    value: "Azure Tools for VS Code"
+
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
   parameters:
