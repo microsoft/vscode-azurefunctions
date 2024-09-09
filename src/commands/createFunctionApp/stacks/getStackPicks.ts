@@ -6,7 +6,7 @@
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { maskUserInfo, openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { funcVersionLink } from '../../../FuncVersion';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
@@ -166,7 +166,7 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
             // Some environments (like Azure Germany/Mooncake) don't support the stacks ARM API yet
             // And since the stacks don't change _that_ often, we'll just use a backup hard-coded value
             stacksArmResponse = <StacksArmResponse>JSON.parse(backupStacks);
-            context.telemetry.properties.getStacksError = parseError(error).message;
+            context.telemetry.properties.getStacksError = maskUserInfo(parseError(error).message, []);
         }
 
         context._stacks = stacksArmResponse.value.map(d => d.properties);

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { maskUserInfo, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { Disposable, workspace, type ConfigurationChangeEvent } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage, TemplateFilter, projectTemplateKeySetting } from '../constants';
@@ -237,7 +237,7 @@ export class CentralTemplateProvider implements Disposable {
             // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
             latestErrorMessage = localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage);
             ext.outputChannel.appendLog(latestErrorMessage);
-            context.telemetry.properties.latestTemplatesError = errorMessage;
+            context.telemetry.properties.latestTemplatesError = maskUserInfo(errorMessage, []);
         }
 
         // 3. Use the cached templates, even if they don't match latestTemplateVersion
@@ -293,7 +293,7 @@ export class CentralTemplateProvider implements Disposable {
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
                 ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
-                context.telemetry.properties.cachedTemplatesError = errorMessage;
+                context.telemetry.properties.cachedTemplatesError = maskUserInfo(errorMessage, []);
             }
         }
 
@@ -313,7 +313,7 @@ export class CentralTemplateProvider implements Disposable {
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
                 ext.outputChannel.appendLog(localize('backupTemplatesError', 'Failed to get backup templates: {0}', errorMessage));
-                context.telemetry.properties.backupTemplatesError = errorMessage;
+                context.telemetry.properties.backupTemplatesError = maskUserInfo(errorMessage, []);
             }
         }
 

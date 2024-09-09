@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
@@ -90,7 +90,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
         } else {
             // Don't block debugging for "unexpected" errors. The func cli might still work
             shouldContinue = true;
-            context.telemetry.properties.preDebugValidateError = pe.message;
+            context.telemetry.properties.preDebugValidateError = maskUserInfo(pe.message, []);
         }
     }
 

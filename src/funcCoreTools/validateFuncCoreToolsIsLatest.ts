@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, maskUserInfo, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import type * as vscode from 'vscode';
 import { PackageManager } from '../constants';
@@ -120,7 +120,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
             return (await getNpmDistTag(context, versionFromSetting)).value;
         }
     } catch (error) {
-        context.telemetry.properties.latestRuntimeError = parseError(error).message;
+        context.telemetry.properties.latestRuntimeError = maskUserInfo(parseError(error).message, []);
     }
 
     return undefined;
