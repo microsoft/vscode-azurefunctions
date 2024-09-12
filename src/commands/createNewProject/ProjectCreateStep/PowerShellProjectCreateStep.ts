@@ -68,7 +68,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         if (await hasMinFuncCliVersion(context, '3.0.2534', context.version)) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.localSettingsJson.Values![workerRuntimeVersionKey] = '7.2';
+            this.localSettingsJson.Values![workerRuntimeVersionKey] = '7.4';
         }
 
         await super.executeCore(context, progress);
