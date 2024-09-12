@@ -30,3 +30,14 @@ pipelines:
           lastModifiedDate: 2024-08-22
         spotbugs:
           lastModifiedDate: 2024-08-22
+  23653:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2024-09-12
+        eslint:
+          lastModifiedDate: 2024-09-12
+        psscriptanalyzer:
+          lastModifiedDate: 2024-09-12
+        armory:
+          lastModifiedDate: 2024-09-12
