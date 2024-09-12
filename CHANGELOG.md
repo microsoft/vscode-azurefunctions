@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.15.4 - 2024-09-12
+### Engineering
+* [[4256]](https://github.com/microsoft/vscode-azurefunctions/pull/4256) Upgrade packages for additional improvements to telemetry
+* [[4247]](https://github.com/microsoft/vscode-azurefunctions/pull/4247) [[4266]](https://github.com/microsoft/vscode-azurefunctions/pull/4266) Update release pipeline to support signing
+
 ## 1.15.3 - 2024-08-23
 ### Added
 * [[4239]](https://github.com/microsoft/vscode-azurefunctions/pull/4239) Use a list task for the cache that is used for all resolving
