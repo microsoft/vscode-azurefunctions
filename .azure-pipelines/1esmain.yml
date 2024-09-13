@@ -25,7 +25,7 @@ resources:
   repositories:
     - repository: 1esPipelines
       type: git
-      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      name: 1ESPipelineTemplates/MicroBuildTemplate
       ref: refs/tags/release
     - repository: azExtTemplates
       type: github
@@ -45,7 +45,7 @@ variables:
     value: "Azure Tools for VS Code"
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
+  template: azure-pipelines/MicroBuild.1ES.Official.yml@1esPipelines
   parameters:
     sdl:
       credscan:
