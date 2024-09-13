@@ -16,6 +16,10 @@
         {
             "hash": "f5OEvErpkTa9NH7vzpAEBelEWfIeyYOZFoMHOc9yKWc=",
             "_justification": "This is a false positive"
+        },
+        {
+            "folder": "\\resources\\backupTemplates",
+            "_justification": "folder to be suppressed because the templates contain lots of fake passwords and secrets"
         }
     ]
 }
