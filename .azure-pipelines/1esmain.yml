@@ -15,7 +15,12 @@ schedules:
       include:
         - main
 
-# `resources` specifies the location of templates to pick up, use it to get AzExt templates
+# Note: not using template outlined in https://github.com/microsoft/vscode-azuretools/blob/main/azure-pipelines/README.md
+# so that we can customize sdl parameters.
+#
+# Instead, the rest of this is based on https://github.com/microsoft/vscode-azuretools/blob/main/azure-pipelines/1esmain.yml
+
+# `resources` specifies the location of templates to pick up, use it to get 1ES templates
 resources:
   repositories:
     - repository: 1esPipelines
