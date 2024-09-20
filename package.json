@@ -1107,6 +1107,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showFlexEventGridWarning%",
                         "default": true
+                    },
+                    "azureFunctions.showMarkdownPreview": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showMarkdownPreview%",
+                        "default": true
                     }
                 }
             }
