@@ -109,6 +109,7 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
+    "azureFunctions.showMarkdownPreview": "Enables showing the markdown preview after creating a new PythonV2 template",
     "azureFunctions.eventGrid.sendMockRequest": "Save and execute...",
     "azureFunctions.walkthrough.functionsStart.create.description": "If you're just getting started, you will need to create an Azure Functions project. Follow along with the [Visual Studio Code developer guide](https://aka.ms/functions-getstarted-vscode) for step-by-step instructions.\n[Create New Project](command:azureFunctions.createNewProject)",
     "azureFunctions.walkthrough.functionsStart.create.title": "Create a new Azure Functions project",
@@ -117,5 +118,5 @@
     "azureFunctions.walkthrough.functionsStart.initialize.title": "Initialize an existing project",
     "azureFunctions.walkthrough.functionsStart.scenarios.description": "Learn how you can use Azure Functions to build event-driven systems.\n\nIf you're just getting started with Azure Functions, you can [learn about the anatomy of an Azure Functions application](https://aka.ms/functions-getstarted-devguide).",
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
-    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions"
+    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions""
 }
