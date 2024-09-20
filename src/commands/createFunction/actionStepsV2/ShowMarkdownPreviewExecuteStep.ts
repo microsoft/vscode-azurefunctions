@@ -20,6 +20,6 @@ export class ShowMarkdownPreviewExecuteStep<T extends FunctionV2WizardContext> e
     }
 
     public shouldExecute(_context: T): boolean {
-        return !!getWorkspaceSetting('showMarkdownPreview')
+        return !!getWorkspaceSetting('showMarkdownPreview');
     }
 }
