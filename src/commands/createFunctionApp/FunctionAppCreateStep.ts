@@ -201,8 +201,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         if (context.appInsightsComponent) {
             appSettings.push({
-                name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
-                value: context.appInsightsComponent.instrumentationKey
+                name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',
+                value: context.appInsightsComponent.connectionString
             });
 
             if (isElasticPremium && context.newSiteStack?.stack.value === 'java') {
