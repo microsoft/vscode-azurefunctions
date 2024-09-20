@@ -7,7 +7,7 @@ import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementC
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, maskUserInfo, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { type Progress } from 'vscode';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -53,7 +53,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 await enableFileLogging(context, site);
             } catch (error) {
                 // optional part of creating function app, so not worth blocking on error
-                context.telemetry.properties.fileLoggingError = parseError(error).message;
+                context.telemetry.properties.fileLoggingError = maskUserInfo(parseError(error).message, []);
             }
         }
 
