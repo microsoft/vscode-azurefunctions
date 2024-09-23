@@ -6,6 +6,7 @@
 import { UserCancelledError, apiUtils, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
 import { commands } from "vscode";
+import { type API as GitAPI, type GitExtension } from './api/git';
 import { localize } from "./localize";
 import type * as acaApi from "./vscode-azurecontainerapps.api";
 
@@ -36,4 +37,13 @@ export async function getAzureContainerAppsApi(context: IActionContext, installM
 
     // We still need to throw an error even if the user installs
     throw new UserCancelledError('postInstallContainerApps');
+}
+
+export async function getGitApi(): Promise<GitAPI> {
+    const gitExtension: GitExtension | undefined = await apiUtils.getExtensionExports('vscode.git');
+    if (gitExtension) {
+        return gitExtension.getAPI(1);
+    }
+
+    throw new Error(localize('noGitExt', 'Could not find the Git extension'));
 }
