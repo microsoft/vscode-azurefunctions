@@ -20,7 +20,7 @@ export namespace gitUtils {
 
     export async function gitInit(workingDirectory: string): Promise<void> {
         const gitApi = await getGitApi();
-        if (gitApi.init) await gitApi.init(Uri.file(workingDirectory));
+        await gitApi.init(Uri.file(workingDirectory));
     }
 
     export async function isInsideRepo(workingDirectory: string): Promise<boolean> {
