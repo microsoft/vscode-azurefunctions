@@ -1,3 +1,4 @@
+// from https://raw.githubusercontent.com/Microsoft/vscode/refs/heads/main/extensions/git/src/api/git.d.ts
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
