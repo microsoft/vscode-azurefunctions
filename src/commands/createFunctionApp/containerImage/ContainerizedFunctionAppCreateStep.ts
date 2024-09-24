@@ -62,7 +62,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                     },
                     {
                         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',
-                        value: `InstrumentationKey=${context.appInsightsComponent?.instrumentationKey}`
+                        value: context.appInsightsComponent?.connectionString
                     },
                     {
                         name: 'FUNCTIONS_EXTENSION_VERSION',

@@ -56,14 +56,15 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
 async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, node: AzExtTreeItem): Promise<void> {
     const client = await site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
-    const aiKey: string | undefined = appSettings.properties && appSettings.properties.APPINSIGHTS_INSTRUMENTATIONKEY;
+    const aiKey: string | undefined = appSettings.properties &&
+        (appSettings.properties.APPLICATIONINSIGHTS_CONNECTION_STRING || appSettings.properties.APPINSIGHTS_INSTRUMENTATIONKEY);
     if (!aiKey) {
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
         const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node.subscription]);
         const components = await uiUtils.listAllIterator(aiClient.components.list());
-        const component: ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
+        const component: ApplicationInsightsComponent | undefined = components.find(c => c.connectionString === aiKey || c.instrumentationKey === aiKey);
         if (!component) {
             throw new Error(localize('failedToFindAI', 'Failed to find application insights component.'));
         } else {
