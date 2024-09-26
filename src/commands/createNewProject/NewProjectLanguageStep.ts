@@ -65,14 +65,12 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             throw new UserCancelledError('viewSampleProjects');
         } else {
             context.language = result.language;
-            // TODO: Probably should include a ProgrammingModelStep for all languages and set there. but for now we know if it's not Python, there's no way it'll be v2
-            if (result.language !== ProjectLanguage.Python) {
-                context.templateSchemaVersion = TemplateSchemaVersion.v1;
-            }
+            this.setTemplateSchemaVersion(context);
         }
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {
+        this.setTemplateSchemaVersion(context);
         return context.language === undefined;
     }
 
@@ -144,5 +142,12 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         }));
 
         return wizardOptions;
+    }
+
+    private setTemplateSchemaVersion(context: IProjectWizardContext): void {
+        // TODO: Probably should include a ProgrammingModelStep for all languages and set there. but for now we know if it's not Python, there's no way it'll be v2
+        if (context.language && context.language !== ProjectLanguage.Python) {
+            context.templateSchemaVersion = TemplateSchemaVersion.v1;
+        }
     }
 }
