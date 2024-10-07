@@ -10,7 +10,6 @@ import { type IBundleMetadata, type IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { type IBindingTemplate } from '../templates/IBindingTemplate';
 import { type FunctionTemplateBase, type IFunctionTemplate } from '../templates/IFunctionTemplate';
-import { type TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { feedUtils } from './feedUtils';
 import { nugetUtils } from './nugetUtils';
 
@@ -46,20 +45,19 @@ export namespace bundleFeedUtils {
 
     export interface ITemplatesReleaseV2 extends ITemplatesReleaseBase {
         userPrompts: string;
-        // it is not supposed to exist in the v2 schema, but sometimes userPrompts accidentally gets replaced with bindings
+        // for v3 runtimes, it still uses bindings for user prompts
         bindings?: string;
     }
 
-    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateSchemaVersion: TemplateSchemaVersion): Promise<string> {
+    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<string> {
         bundleMetadata = bundleMetadata || {};
-
-        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
-        const validVersions: string[] = Object.keys(feed.templates[templateSchemaVersion]).filter((v: string) => !!semver.valid(v));
+        const versionArray: string[] = await feedUtils.getJsonFeed(context, 'https://aka.ms/azFuncBundleVersions');
+        const validVersions: string[] = versionArray.filter((v: string) => !!semver.valid(v));
         const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || await getLatestVersionRange(context), validVersions);
         if (!bundleVersion) {
             throw new Error(localize('failedToFindBundleVersion', 'Failed to find bundle version satisfying range "{0}".', bundleMetadata.version));
         } else {
-            return feed.bundleVersions[bundleVersion].templates;
+            return bundleVersion;
         }
     }
 
@@ -68,9 +66,15 @@ export namespace bundleFeedUtils {
         return feed.templates.v1[templateVersion];
     }
 
-    export async function getReleaseV2(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesReleaseV2> {
-        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
-        return feed.templates.v2[templateVersion];
+    export async function getReleaseV2(templateVersion: string): Promise<ITemplatesReleaseV2> {
+        // build the url ourselves because the index-v2.json file is no longer publishing version updates for v2 templates
+        const functionsCdn: string = 'https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/';
+        return {
+            functions: `${functionsCdn}${templateVersion}/StaticContent/v2/templates/templates.json`,
+            bindings: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
+            userPrompts: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
+            resources: `${functionsCdn}${templateVersion}/StaticContent/v2/resources/Resources.{locale}.json`,
+        }
     }
 
     export function isBundleTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {
