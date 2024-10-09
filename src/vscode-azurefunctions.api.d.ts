@@ -67,7 +67,14 @@ export interface AzureFunctionsExtensionApi {
     listLocalProjects(): Promise<ListLocalProjectsResult>;
     listLocalFunctions(localProject: WorkspaceProject): Promise<ListLocalFunctionsResult>;
 
-    isFuncCoreToolsInstalled(context: IActionContext): Promise<boolean>;
+    /**
+     *
+     * @param notInstalledMessage The message to show if the tools are not installed
+     * If it is not installed, the extension will prompt the user to install the tools.
+     * If they install, the function will retrn true after installing the Func Core Tools.
+     * If they cancel, the function will return false.
+     */
+    isFuncCoreToolsInstalled(notInstalledMessage: string): Promise<boolean>;
     /**
      * Starts a new function process and returns the process id of the new process. This is for .NET projects only.
      *

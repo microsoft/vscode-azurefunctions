@@ -113,8 +113,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         uploadAppSettings: uploadAppSettingsFromApi,
         listLocalProjects: listLocalProjects,
         listLocalFunctions: listLocalFunctions,
-        isFuncCoreToolsInstalled: async (context: IActionContext) => {
-            return await validateFuncCoreToolsInstalled(context, '', undefined);
+        isFuncCoreToolsInstalled: async (message: string) => {
+            return await callWithTelemetryAndErrorHandling('azureFunctions.api.isFuncCoreToolsInstalled', async (context: IActionContext) => {
+                return await validateFuncCoreToolsInstalled(context, message, undefined);
+            });
         },
         startFuncProcess: startFuncProcessFromApi,
         apiVersion: '1.9.0'

@@ -38,7 +38,7 @@ export async function startFuncProcessFromApi(
         funcHostStartCmd += ` ${args.join(' ')}`;
     }
 
-    await callWithTelemetryAndErrorHandling('startFuncProcessFromApi', async (context: IActionContext) => {
+    await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
         try {
             await waitForPrevFuncTaskToStop(workspaceFolder);
             const funcTask = new vscode.Task({ type: 'func' },
