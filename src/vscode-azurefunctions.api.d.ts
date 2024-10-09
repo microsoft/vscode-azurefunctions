@@ -79,7 +79,7 @@ export interface AzureFunctionsExtensionApi {
      * Starts a new function process and returns the process id of the new process. This is for .NET projects only.
      *
      * @param {vscode.WorkspaceFolder} workspaceFolder - The workspace folder of the root of the project.
-     * @param {string} buildPath - The relative path to the project's build output.
+     * @param {string} buildPath - The fully qualified path to the project's build output.
      * @param {string[]} args - A list of command-line arguments to pass to the process.
      *
      * @returns {Promise<{ processId: string; success: boolean; error: string }>} -
