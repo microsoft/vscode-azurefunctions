@@ -71,8 +71,8 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
 export async function getFuncPortFromTaskOrProject(context: IActionContext, funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
     try {
         // First, check the task itself
-        if (funcTask && typeof funcTask.definition.command === 'string') {
-            const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+        if (funcTask && funcTask.execution instanceof vscode.ShellExecution) {
+            const match = funcTask.execution?.commandLine?.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
             if (match) {
                 return match[1];
             }

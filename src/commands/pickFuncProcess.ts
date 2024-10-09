@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
-import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
@@ -15,11 +15,50 @@ import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
-import { ProcessDataFlag, getWindowsProcessTree, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import path = require('path');
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
+
+export async function startFuncProcessFromApi(
+    workspaceFolder: vscode.WorkspaceFolder,
+    buildPath: string,
+    args?: string[]
+): Promise<{ processId: string; success: boolean; error: string }> {
+    const result = {
+        processId: '',
+        success: false,
+        error: ''
+    };
+
+    let funcHostStartCmd: string = 'func host start';
+    if (args) {
+        funcHostStartCmd += ` ${args.join(' ')}`;
+    }
+
+    await callWithTelemetryAndErrorHandling('startFuncProcessFromApi', async (context: IActionContext) => {
+        try {
+            await waitForPrevFuncTaskToStop(workspaceFolder);
+            const funcTask = new vscode.Task({ type: 'func' },
+                workspaceFolder,
+                hostStartTaskName, 'func',
+                new vscode.ShellExecution(funcHostStartCmd, {
+                    cwd: path.posix.join('${workspaceFolder}', buildPath),
+                }));
+
+            const taskInfo = await startFuncTask(context, workspaceFolder, funcTask);
+            result.processId = await pickChildProcess(taskInfo);
+            result.success = true;
+        } catch (err) {
+            const pError = parseError(err);
+            result.error = pError.message;
+        }
+    });
+
+    return result
+}
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);

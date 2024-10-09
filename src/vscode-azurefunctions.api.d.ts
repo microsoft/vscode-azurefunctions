@@ -5,7 +5,6 @@
 
 import { type AzureWizardExecuteStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import type * as vscode from 'vscode';
-import { type JobType } from "./templates/script/parseScriptTemplatesV2";
 
 export interface ILocalFunction {
     name: string;
@@ -67,6 +66,21 @@ export interface AzureFunctionsExtensionApi {
 
     listLocalProjects(): Promise<ListLocalProjectsResult>;
     listLocalFunctions(localProject: WorkspaceProject): Promise<ListLocalFunctionsResult>;
+
+    isFuncCoreToolsInstalled(context: IActionContext): Promise<boolean>;
+    /**
+     * Starts a new function process and returns the process id of the new process. This is for .NET projects only.
+     *
+     * @param {vscode.WorkspaceFolder} workspaceFolder - The workspace folder of the root of the project.
+     * @param {string} buildPath - The relative path to the project's build output.
+     * @param {string[]} args - A list of command-line arguments to pass to the process.
+     *
+     * @returns {Promise<{ processId: string; success: boolean; error: string }>} -
+     * - `processId` {string}: The ID of the started process.
+     * - `success` {boolean}: Whether the process started successfully.
+     * - `error` {string}: Error message in case the process fails to start, otherwise an empty string.
+    */
+    startFuncProcess(workspaceFolder: vscode.WorkspaceFolder, buildPath: string, args: string[]): Promise<{ processId: string; success: boolean; error: string }>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
@@ -81,7 +95,6 @@ export interface IAppSettingsClient {
 interface IStringDictionary {
     properties?: { [propertyName: string]: string };
 }
-
 
 /**
  * The options to use when creating a function. If an option is not specified, the default will be used or the user will be prompted
@@ -108,8 +121,6 @@ export interface ICreateFunctionOptions {
     languageFilter?: RegExp;
 
     languageModel?: number;
-
-    jobType?: JobType;
 
     /**
      * The version of the project. Defaults to the latest GA version
