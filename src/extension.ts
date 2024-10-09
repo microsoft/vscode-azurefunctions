@@ -17,6 +17,7 @@ import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFr
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
+import { startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
@@ -28,6 +29,7 @@ import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
+import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
@@ -111,7 +113,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         uploadAppSettings: uploadAppSettingsFromApi,
         listLocalProjects: listLocalProjects,
         listLocalFunctions: listLocalFunctions,
-        apiVersion: '1.9.0'
+        isFuncCoreToolsInstalled: async (message: string) => {
+            return await callWithTelemetryAndErrorHandling('azureFunctions.api.isFuncCoreToolsInstalled', async (context: IActionContext) => {
+                return await validateFuncCoreToolsInstalled(context, message, undefined);
+            });
+        },
+        startFuncProcess: startFuncProcessFromApi,
+        apiVersion: '1.10.0'
     }]);
 }
 
