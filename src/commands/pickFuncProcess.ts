@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { AzureFunctionTaskDefinition, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -18,19 +18,26 @@ import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
-const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
+const funcTaskReadyEmitter = new vscode.EventEmitter<string>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
 
 export async function startFuncProcessFromApi(
-    workspaceFolder: vscode.WorkspaceFolder,
     buildPath: string,
-    args?: string[]
+    args: string[],
+    env: { [key: string]: string }
 ): Promise<{ processId: string; success: boolean; error: string }> {
     const result = {
         processId: '',
         success: false,
         error: ''
     };
+
+    const uriFile: vscode.Uri = vscode.Uri.file(buildPath)
+
+    const azFuncTaskDefinition: AzureFunctionTaskDefinition = {
+        type: 'func',
+        functionsApp: uriFile.fsPath
+    }
 
     let funcHostStartCmd: string = 'func host start';
     if (args) {
@@ -39,15 +46,16 @@ export async function startFuncProcessFromApi(
 
     await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
         try {
-            await waitForPrevFuncTaskToStop(workspaceFolder);
-            const funcTask = new vscode.Task({ type: 'func' },
-                workspaceFolder,
+            await waitForPrevFuncTaskToStop(azFuncTaskDefinition.functionsApp);
+            const funcTask = new vscode.Task(azFuncTaskDefinition,
+                vscode.TaskScope.Global,
                 hostStartTaskName, 'func',
                 new vscode.ShellExecution(funcHostStartCmd, {
                     cwd: buildPath,
+                    env: env
                 }));
 
-            const taskInfo = await startFuncTask(context, workspaceFolder, funcTask);
+            const taskInfo = await startFuncTask(context, funcTask);
             result.processId = await pickChildProcess(taskInfo);
             result.success = true;
         } catch (err) {
@@ -65,7 +73,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new UserCancelledError('preDebugValidate');
     }
 
-    await waitForPrevFuncTaskToStop(result.workspace);
+    await waitForPrevFuncTaskToStop(result.workspace.uri.fsPath);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
@@ -78,17 +86,17 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
-    const taskInfo = await startFuncTask(context, result.workspace, funcTask);
+    const taskInfo = await startFuncTask(context, funcTask);
     return await pickChildProcess(taskInfo);
 }
 
-async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    stopFuncTaskIfRunning(workspaceFolder);
+async function waitForPrevFuncTaskToStop(functionApp: string): Promise<void> {
+    stopFuncTaskIfRunning(functionApp);
 
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
-        if (!runningFuncTaskMap.has(workspaceFolder)) {
+        if (!runningFuncTaskMap.has(functionApp)) {
             return;
         }
         await delay(1000);
@@ -96,7 +104,7 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<IRunningFuncTask> {
+async function startFuncTask(context: IActionContext, funcTask: vscode.Task): Promise<IRunningFuncTask> {
     const settingKey: string = 'pickProcessTimeout';
     const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
     const timeoutInSeconds: number = Number(settingValue);
@@ -105,64 +113,71 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
 
-    let taskError: Error | undefined;
-    const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
-        if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
-            context.errorHandling.suppressReportIssue = true;
-            // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
-            taskError = new Error(localize('taskFailed', 'Error exists after running preLaunchTask "{0}". View task output for more information.', e.execution.task.name, e.exitCode));
-            errorListener.dispose();
-        }
-    });
-
-    try {
-        // The "IfNotActive" part helps when the user starts, stops and restarts debugging quickly in succession. We want to use the already-active task to avoid two func tasks causing a port conflict error
-        // The most common case we hit this is if the "clean" or "build" task is running when we get here. It's unlikely the "func host start" task is active, since we would've stopped it in `waitForPrevFuncTaskToStop` above
-        await taskUtils.executeIfNotActive(funcTask);
-
-        const intervalMs: number = 500;
-        const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
-        let statusRequestTimeout: number = intervalMs;
-        const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-        while (Date.now() < maxTime) {
-            if (taskError !== undefined) {
-                throw taskError;
+    if (AzureFunctionTaskDefinition.is(funcTask.definition)) {
+        let taskError: Error | undefined;
+        const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
+            if (AzureFunctionTaskDefinition.is(e.execution.task.definition) && e.execution.task.definition.functionsApp === funcTask.definition.functionsApp && e.exitCode !== 0) {
+                context.errorHandling.suppressReportIssue = true;
+                // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
+                taskError = new Error(localize('taskFailed', 'Error exists after running preLaunchTask "{0}". View task output for more information.', e.execution.task.name, e.exitCode));
+                errorListener.dispose();
             }
+        });
 
-            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
-            if (taskInfo) {
-                for (const scheme of ['http', 'https']) {
-                    const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
-                    if (scheme === 'https') {
-                        statusRequest.rejectUnauthorized = false;
-                    }
+        const workspaceFolder: vscode.WorkspaceFolder | undefined = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(funcTask.definition.functionsApp))
 
-                    try {
-                        // wait for status url to indicate functions host is running
-                        const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                        if (response.parsedBody.state.toLowerCase() === 'running') {
-                            funcTaskReadyEmitter.fire(workspaceFolder);
-                            return taskInfo;
+        try {
+            // The "IfNotActive" part helps when the user starts, stops and restarts debugging quickly in succession. We want to use the already-active task to avoid two func tasks causing a port conflict error
+            // The most common case we hit this is if the "clean" or "build" task is running when we get here. It's unlikely the "func host start" task is active, since we would've stopped it in `waitForPrevFuncTaskToStop` above
+            await taskUtils.executeIfNotActive(funcTask);
+
+            const intervalMs: number = 500;
+            const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
+            let statusRequestTimeout: number = intervalMs;
+            const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+            while (Date.now() < maxTime) {
+                if (taskError !== undefined) {
+                    throw taskError;
+                }
+
+                const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(funcTask.definition.functionsApp);
+                if (taskInfo) {
+                    for (const scheme of ['http', 'https']) {
+                        const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
+                        if (scheme === 'https') {
+                            statusRequest.rejectUnauthorized = false;
                         }
-                    } catch (error) {
-                        if (requestUtils.isTimeoutError(error)) {
-                            // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
-                            statusRequestTimeout *= 2;
-                            context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
-                        } else {
-                            // ignore
+
+                        try {
+                            // wait for status url to indicate functions host is running
+                            const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                            if (response.parsedBody.state.toLowerCase() === 'running') {
+                                funcTaskReadyEmitter.fire(funcTask.definition.functionsApp);
+                                return taskInfo;
+                            }
+                        } catch (error) {
+                            if (requestUtils.isTimeoutError(error)) {
+                                // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                                statusRequestTimeout *= 2;
+                                context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                            } else {
+                                // ignore
+                            }
                         }
                     }
                 }
+
+                await delay(intervalMs);
             }
 
-            await delay(intervalMs);
+            throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
+        } finally {
+            errorListener.dispose();
         }
-
-        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
-    } finally {
-        errorListener.dispose();
+    }
+    else {
+        throw new Error(localize('failedToFindFuncTask', 'Failed to detect AzFunctions Task'));
     }
 }
 

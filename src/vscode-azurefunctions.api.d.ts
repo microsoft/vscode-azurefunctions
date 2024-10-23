@@ -78,16 +78,16 @@ export interface AzureFunctionsExtensionApi {
     /**
      * Starts a new function process and returns the process id of the new process. This is for .NET projects only.
      *
-     * @param {vscode.WorkspaceFolder} workspaceFolder - The workspace folder of the root of the project.
      * @param {string} buildPath - The fully qualified path to the project's build output.
      * @param {string[]} args - A list of command-line arguments to pass to the process.
+     * @param {{ [key: string]: string }} env - A map of key-value pairs representing environment variables to pass to the process.
      *
      * @returns {Promise<{ processId: string; success: boolean; error: string }>} -
      * - `processId` {string}: The ID of the started process.
      * - `success` {boolean}: Whether the process started successfully.
      * - `error` {string}: Error message in case the process fails to start, otherwise an empty string.
     */
-    startFuncProcess(workspaceFolder: vscode.WorkspaceFolder, buildPath: string, args: string[]): Promise<{ processId: string; success: boolean; error: string }>;
+    startFuncProcess(buildPath: string, args: string[], env: { [key: string]: string }): Promise<{ processId: string; success: boolean; error: string }>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
