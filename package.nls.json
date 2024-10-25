@@ -9,6 +9,8 @@
     "azureFunctions.appSettings.rename": "Rename Setting...",
     "azureFunctions.appSettings.toggleSlotSetting": "Toggle as Slot Setting",
     "azureFunctions.appSettings.upload": "Upload Local Settings...",
+    "azureFunctions.assignManagedIdentity": "Assign Managed Identity to Function App...",
+    "azureFunctions.addNewRoleAssignment": "Add New Role Assignment to Existing Identity...",
     "azureFunctions.browseWebsite": "Browse Website",
     "azureFunctions.configureDeploymentSource": "Configure Deployment Source...",
     "azureFunctions.connectToGitHub": "Connect to GitHub Repository...",

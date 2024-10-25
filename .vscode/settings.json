@@ -19,5 +19,6 @@
         "resources/backup*Templates": true
     },
     "typescript.preferences.importModuleSpecifier": "relative",
-    "typescript.tsdk": "node_modules/typescript/lib"
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "FSharp.suggestGitignore": false
 }

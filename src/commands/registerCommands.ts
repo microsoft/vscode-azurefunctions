@@ -48,6 +48,7 @@ import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
 import { executeFunction } from './executeFunction/executeFunction';
+import { assignManagedIdentity } from './identity/assignManagedIdentity';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -154,4 +155,6 @@ export function registerCommands(): void {
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.assignManagedIdentity', assignManagedIdentity);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.addNewRoleAssignment', addNewRoleAssignment);
 }
