@@ -35,7 +35,9 @@ export async function startFuncProcessFromApi(
     const uriFile: vscode.Uri = vscode.Uri.file(buildPath)
 
     const azFuncTaskDefinition: AzureFunctionTaskDefinition = {
-        type: 'func',
+        // VS Code will only run a single instance of a task `type`,
+        // the path will be used here to make each project be unique.
+        type: `func ${uriFile.fsPath}`,
         functionsApp: uriFile.fsPath
     }
 

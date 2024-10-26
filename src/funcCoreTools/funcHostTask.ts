@@ -17,12 +17,12 @@ export interface IRunningFuncTask {
 }
 
 export class AzureFunctionTaskDefinition implements vscode.TaskDefinition {
-    type: 'func';
+    type: string;
     // This is either vscode.WorkspaceFolder.uri.fsPath or a vscode.Uri.file().fsPath
     functionsApp: string
 
     static is(taskDefinition: vscode.TaskDefinition): taskDefinition is AzureFunctionTaskDefinition {
-        return "functionsApp" in taskDefinition;
+        return taskDefinition.type.startsWith('func') && "functionsApp" in taskDefinition;
     }
 }
 
