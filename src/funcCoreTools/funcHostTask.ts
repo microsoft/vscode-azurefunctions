@@ -7,7 +7,7 @@ import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-util
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { localSettingsFileName } from '../constants';
+import { func, localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -18,11 +18,13 @@ export interface IRunningFuncTask {
 
 export class AzureFunctionTaskDefinition implements vscode.TaskDefinition {
     type: string;
-    // This is either vscode.WorkspaceFolder.uri.fsPath or a vscode.Uri.file().fsPath
+    // This is either:
+    // - vscode.WorkspaceFolder.uri.fsPath (used for most of the scenarios in this extension.)
+    // - If using the exported API 'startFuncProcessFromApi', it will be the binary path wrapped with vscode.Uri.file().fsPath
     functionsApp: string
 
     static is(taskDefinition: vscode.TaskDefinition): taskDefinition is AzureFunctionTaskDefinition {
-        return taskDefinition.type.startsWith('func') && "functionsApp" in taskDefinition;
+        return taskDefinition.type.startsWith(func) && "functionsApp" in taskDefinition;
     }
 }
 
