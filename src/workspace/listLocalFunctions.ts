@@ -76,7 +76,7 @@ function getHostStartTimeoutMS(): number {
  * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
 */
 async function getFunctionsForHostedProject(context: IActionContext, project: LocalProjectInternal): Promise<ILocalFunction[]> {
-    if (runningFuncTaskMap.has(project.options.folder)) {
+    if (runningFuncTaskMap.has(project.options.folder.uri.fsPath)) {
         const hostRequest = await project.getHostRequest(context);
         const timeout = getHostStartTimeoutMS();
         const startTime = Date.now();
