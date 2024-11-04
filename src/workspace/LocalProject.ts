@@ -42,7 +42,7 @@ export class LocalProject implements LocalProjectInternal {
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
-        let port = runningFuncPortMap.get(this.options.folder);
+        let port = runningFuncPortMap.get(this.options.folder.uri.fsPath);
         if (!port) {
             const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === this.options.folder && isFuncHostTask(t));
             port = await getFuncPortFromTaskOrProject(context, funcTask, this.options.effectiveProjectPath);

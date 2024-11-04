@@ -5,7 +5,6 @@
 
 import { type AzureWizardExecuteStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import type * as vscode from 'vscode';
-import { type JobType } from "./templates/script/parseScriptTemplatesV2";
 
 export interface ILocalFunction {
     name: string;
@@ -67,6 +66,28 @@ export interface AzureFunctionsExtensionApi {
 
     listLocalProjects(): Promise<ListLocalProjectsResult>;
     listLocalFunctions(localProject: WorkspaceProject): Promise<ListLocalFunctionsResult>;
+
+    /**
+     *
+     * @param notInstalledMessage The message to show if the tools are not installed
+     * If it is not installed, the extension will prompt the user to install the tools.
+     * If they install, the function will retrn true after installing the Func Core Tools.
+     * If they cancel, the function will return false.
+     */
+    isFuncCoreToolsInstalled(notInstalledMessage: string): Promise<boolean>;
+    /**
+     * Starts a new function process and returns the process id of the new process. This is for .NET projects only.
+     *
+     * @param {string} buildPath - The fully qualified path to the project's build output.
+     * @param {string[]} args - A list of command-line arguments to pass to the process.
+     * @param {{ [key: string]: string }} env - A map of key-value pairs representing environment variables to pass to the process.
+     *
+     * @returns {Promise<{ processId: string; success: boolean; error: string }>} -
+     * - `processId` {string}: The ID of the started process.
+     * - `success` {boolean}: Whether the process started successfully.
+     * - `error` {string}: Error message in case the process fails to start, otherwise an empty string.
+    */
+    startFuncProcess(buildPath: string, args: string[], env: { [key: string]: string }): Promise<{ processId: string; success: boolean; error: string }>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
@@ -81,7 +102,6 @@ export interface IAppSettingsClient {
 interface IStringDictionary {
     properties?: { [propertyName: string]: string };
 }
-
 
 /**
  * The options to use when creating a function. If an option is not specified, the default will be used or the user will be prompted
@@ -108,8 +128,6 @@ export interface ICreateFunctionOptions {
     languageFilter?: RegExp;
 
     languageModel?: number;
-
-    jobType?: JobType;
 
     /**
      * The version of the project. Defaults to the latest GA version

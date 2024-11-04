@@ -5,7 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
+import { Disposable, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
@@ -105,9 +105,9 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         await this.project.setApplicationSetting(context, key, value);
     }
 
-    private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {
+    private async onFuncTaskChanged(scope: string): Promise<void> {
         await callWithTelemetryAndErrorHandling('onFuncTaskChanged', async (context: IActionContext) => {
-            if (this.workspaceFolder === scope) {
+            if (this.workspaceFolder.uri.fsPath === scope) {
                 context.errorHandling.suppressDisplay = true;
                 context.telemetry.suppressIfSuccessful = true;
                 await this.refresh(context);
