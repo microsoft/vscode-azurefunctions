@@ -12,12 +12,13 @@ import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
 export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
-    const framework: string = await getFramework(context, workingDirectory);
-    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
+    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
         workingDirectory,
         'dotnet',
+        '--roll-forward',
+        'Major',
         cpUtils.wrapArgInQuotes(jsonDllPath),
         '--templateDir',
         cpUtils.wrapArgInQuotes(getDotnetTemplateDir(context, version, projTemplateKey)),
