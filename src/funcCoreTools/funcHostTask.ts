@@ -28,7 +28,51 @@ namespace DotnetDebugDebugConfiguration {
     }
 }
 
-export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>();
+class RunningFunctionTaskMap {
+    private _map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>();
+
+    public set(key: vscode.WorkspaceFolder | vscode.TaskScope, value: IRunningFuncTask): void {
+        const values = this._map.get(key) || [];
+        values.push(value)
+        this._map.set(key, values);
+    }
+
+    public get(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): IRunningFuncTask | undefined {
+        const values = this._map.get(key) || [];
+        return values.find(t => {
+            const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
+            // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
+            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
+        });
+    }
+
+    public getAll(key: vscode.WorkspaceFolder | vscode.TaskScope): (IRunningFuncTask | undefined)[] {
+        return this._map.get(key) || [];
+    }
+
+    public has(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): boolean {
+        return !!this.get(key, buildPath);
+    }
+
+    public delete(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): void {
+        const value = this.get(key, buildPath)
+        const values = this._map.get(key) || [];
+
+        if (value) {
+            // remove the individual entry from the array
+            values.splice(values.indexOf(value), 1);
+            this._map.set(key, values);
+        }
+
+        if (values?.length === 0) {
+            this._map.delete(key);
+        }
+    }
+}
+
+export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
 
 const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
@@ -48,7 +92,7 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
             const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber };
-            set(runningFuncTaskMap, e.execution.task.scope, runningFuncTask);
+            runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
@@ -56,9 +100,8 @@ export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
-        // e.execution.task.execution.options.cwd will be the build path
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            remove(runningFuncTaskMap, e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
         }
     });
 
@@ -91,9 +134,10 @@ export function registerFuncHostTaskEvents(): void {
 export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, killAll?: boolean, terminate?: boolean): void {
     let runningFuncTask: (IRunningFuncTask | undefined)[] | undefined;
     if (killAll) {
-        runningFuncTask = runningFuncTaskMap.get(workspaceFolder);
+        // get all is needed here
+        runningFuncTask = runningFuncTaskMap.getAll(workspaceFolder);
     } else {
-        runningFuncTask = [get(runningFuncTaskMap, workspaceFolder, buildPath)];
+        runningFuncTask = [runningFuncTaskMap.get(workspaceFolder, buildPath)];
     }
 
     if (runningFuncTask !== undefined) {
@@ -110,7 +154,7 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | 
             }
         }
         if (buildPath) {
-            remove(runningFuncTaskMap, workspaceFolder, buildPath);
+            runningFuncTaskMap.delete(workspaceFolder, buildPath);
         }
     }
 
@@ -152,42 +196,6 @@ export async function getFuncPortFromTaskOrProject(context: IActionContext, func
 
     // Finally, fall back to the default port
     return defaultFuncPort;
-}
-
-function set(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>, key: vscode.WorkspaceFolder | vscode.TaskScope, value: IRunningFuncTask): void {
-    const values = map.get(key) || [];
-    values.push(value)
-    map.set(key, values);
-}
-
-export function get(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>, key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): IRunningFuncTask | undefined {
-    const values = map.get(key) || [];
-    return values.find(t => {
-        const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
-        // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-        const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-        buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-        return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
-    });
-}
-
-export function has(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>, key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): boolean {
-    return !!get(map, key, buildPath);
-}
-
-function remove(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>, key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): void {
-    const value = get(map, key, buildPath)
-    const values = map.get(key) || [];
-
-    if (value) {
-        // remove the individual entry from the array
-        values.splice(values.indexOf(value), 1);
-        map.set(key, values);
-    }
-
-    if (values?.length === 0) {
-        map.delete(key);
-    }
 }
 
 function normalizePath(fsPath: string): string {

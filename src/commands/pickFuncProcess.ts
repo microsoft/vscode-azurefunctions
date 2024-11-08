@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { hostStartTaskName, ProjectLanguage } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { buildPathToWorkspaceFolderMap, get, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -56,7 +56,8 @@ export async function startFuncProcessFromApi(
 
             const funcTask = new vscode.Task({ type: `func  ${buildPath}` },
                 workspaceFolder,
-                hostStartTaskName, `func`,
+                hostStartTaskName,
+                `func`,
                 new vscode.ShellExecution(funcHostStartCmd, {
                     cwd: buildPath,
                     env
@@ -147,7 +148,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                 throw taskError;
             }
 
-            const taskInfo: IRunningFuncTask | undefined = get(runningFuncTaskMap, workspaceFolder, buildPath);
+            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
                 for (const scheme of ['http', 'https']) {
                     const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
