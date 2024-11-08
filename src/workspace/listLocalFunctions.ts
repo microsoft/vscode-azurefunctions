@@ -8,7 +8,7 @@ import { type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionJsonFileName } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
+import { has, runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { ProjectNotRunningError, getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { nonNullValue } from "../utils/nonNull";
 import { isNodeV4Plus, isPythonV2Plus } from "../utils/programmingModelUtils";
@@ -76,7 +76,7 @@ function getHostStartTimeoutMS(): number {
  * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
 */
 async function getFunctionsForHostedProject(context: IActionContext, project: LocalProjectInternal): Promise<ILocalFunction[]> {
-    if (runningFuncTaskMap.has(project.options.folder.uri.fsPath)) {
+    if (has(runningFuncTaskMap, project.options.folder, project.options.effectiveProjectPath)) {
         const hostRequest = await project.getHostRequest(context);
         const timeout = getHostStartTimeoutMS();
         const startTime = Date.now();
