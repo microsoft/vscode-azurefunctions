@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
+import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
@@ -71,7 +72,7 @@ export function registerFuncHostTaskEvents(): void {
 
             const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath)
             if (workspaceFolder === undefined) {
-                throw Error()
+                throw new Error(localize('noWorkspaceFolderForBuildPath', 'No workspace folder found for path "{0}".', buildPathUri.fsPath));
             }
 
             stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, true)
