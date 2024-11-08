@@ -32,6 +32,7 @@ export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, 
 const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
+export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 export const runningFuncPortMap = new Map<vscode.WorkspaceFolder | vscode.TaskScope | undefined, string[]>();
 const defaultFuncPort: string = '7071';
 
@@ -66,9 +67,17 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
 
         // Used to stop the task started with pickFuncProcess.ts startFuncProcessFromApi.
-        if (DotnetDebugDebugConfiguration.is(debugSession.configuration) && debugSession.configuration.launchServiceData.buildPath && debugSession.workspaceFolder) {
+        if (DotnetDebugDebugConfiguration.is(debugSession.configuration) && debugSession.configuration.launchServiceData.buildPath) {
             const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath)
-            stopFuncTaskIfRunning(debugSession.workspaceFolder, buildPathUri.fsPath)
+
+            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath)
+            if (workspaceFolder === undefined) {
+                throw Error()
+            }
+
+            stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, undefined, true)
+
+            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath)
         }
 
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
@@ -78,7 +87,7 @@ export function registerFuncHostTaskEvents(): void {
     });
 }
 
-export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, pid?: string): void {
+export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, pid?: string, terminate?: boolean): void {
     let runningFuncTask: IRunningFuncTask | undefined
     if (buildPath) {
         runningFuncTask = get(runningFuncTaskMap, workspaceFolder, buildPath);
@@ -87,10 +96,15 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | 
     }
 
     if (runningFuncTask !== undefined) {
-        // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
-        // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
-        process.kill(runningFuncTask.processId);
-        remove(runningFuncTaskMap, workspaceFolder, buildPath);
+        if (terminate) {
+            runningFuncTask.taskExecution.terminate()
+        }
+        else {
+            // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
+            // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
+            process.kill(runningFuncTask.processId);
+            remove(runningFuncTaskMap, workspaceFolder, buildPath);
+        }
     }
 }
 
@@ -141,7 +155,7 @@ export function get(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunning
         const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
         // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
         const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-        return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
+        return taskDirectory && buildPath && normalizePath(vscode.Uri.parse(taskDirectory).fsPath) === normalizePath(vscode.Uri.parse(buildPath).fsPath);
     });
 }
 

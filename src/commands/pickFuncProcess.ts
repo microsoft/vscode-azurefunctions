@@ -7,10 +7,10 @@ import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@micros
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { func, hostStartTaskName, ProjectLanguage } from '../constants';
+import { hostStartTaskName, ProjectLanguage } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { get, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { buildPathToWorkspaceFolderMap, get, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -40,14 +40,23 @@ export async function startFuncProcessFromApi(
 
     await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
         try {
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(buildPath));
-            if (!workspaceFolder) {
-                throw new Error(localize('failedToFindWorkspace', 'Failed to find workspace folder for "{0}".', buildPath));
+            let workspaceFolder: vscode.WorkspaceFolder | undefined = buildPathToWorkspaceFolderMap.get(buildPath);
+
+            if (workspaceFolder === undefined) {
+                workspaceFolder = {
+                    uri: vscode.Uri.parse(buildPath),
+                    name: buildPath,
+                    index: -1
+                }
             }
+
             await waitForPrevFuncTaskToStop(workspaceFolder);
-            const funcTask = new vscode.Task({ type: func },
+
+            buildPathToWorkspaceFolderMap.set(buildPath, workspaceFolder);
+
+            const funcTask = new vscode.Task({ type: `func  ${buildPath}` },
                 workspaceFolder,
-                hostStartTaskName, `func ${buildPath}`,
+                hostStartTaskName, `func`,
                 new vscode.ShellExecution(funcHostStartCmd, {
                     cwd: buildPath,
                     env
