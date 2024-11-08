@@ -7,7 +7,7 @@ import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@micros
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { func, hostStartTaskName, ProjectLanguage } from '../constants';
+import { hostStartTaskName, ProjectLanguage } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { get, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
@@ -45,9 +45,9 @@ export async function startFuncProcessFromApi(
                 throw new Error(localize('failedToFindWorkspace', 'Failed to find workspace folder for "{0}".', buildPath));
             }
             await waitForPrevFuncTaskToStop(workspaceFolder);
-            const funcTask = new vscode.Task({ type: func },
+            const funcTask = new vscode.Task({ type: `func ${buildPath}` },
                 workspaceFolder,
-                hostStartTaskName, `func ${buildPath}`,
+                hostStartTaskName, 'func',
                 new vscode.ShellExecution(funcHostStartCmd, {
                     cwd: buildPath,
                     env
