@@ -166,7 +166,7 @@ export function get(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunning
         // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
         const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
         buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-        return taskDirectory && buildPath && normalizePath(vscode.Uri.parse(taskDirectory).fsPath) === normalizePath(vscode.Uri.parse(buildPath).fsPath);
+        return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
     });
 }
 
@@ -190,5 +190,5 @@ function remove(map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFunc
 }
 
 function normalizePath(fsPath: string): string {
-    return path.normalize(fsPath).replace(/^(\/|\\)+|(\/|\\)+$/g, '')
+    return vscode.Uri.parse(path.normalize(fsPath).replace(/^(\/|\\)+|(\/|\\)+$/g, '')).fsPath;
 }
