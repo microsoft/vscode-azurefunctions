@@ -37,7 +37,7 @@ parameters:
   - name: enableLongRunningTests
     displayName: Enable Long Running Tests
     type: boolean
-    default: true
+    default: false
 
 variables:
   # Required by MicroBuild template
