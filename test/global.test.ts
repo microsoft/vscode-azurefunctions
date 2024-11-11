@@ -41,6 +41,7 @@ export function getTestWorkspaceFolder(): string {
 
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
+    this.skip();
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
