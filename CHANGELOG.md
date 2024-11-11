@@ -1,5 +1,26 @@
 # Change Log
 
+## 1.16.0 - 2024-11-11
+
+### Added
+* [[4292]](https://github.com/microsoft/vscode-azurefunctions/pull/4292) Create a setting to suppress readme tabs from opening for Python V2 templates
+* [[4299]](https://github.com/microsoft/vscode-azurefunctions/pull/4299) Expose API commands to start a func task and to check if CLI tools are installed
+* [[4298]](https://github.com/microsoft/vscode-azurefunctions/pull/4298) Add .NET 9.0 to list of runtimes and update backup templates
+
+### Changed
+* [[4286]](https://github.com/microsoft/vscode-azurefunctions/pull/4286) Exclude backup templates from credential scanning
+* [[4291]](https://github.com/microsoft/vscode-azurefunctions/pull/4291) Use app insight connection string instead of aiKey
+* [[4293]](https://github.com/microsoft/vscode-azurefunctions/pull/4293) Use vscode.git API to initialize new workspace
+* [[4297]](https://github.com/microsoft/vscode-azurefunctions/pull/4297) For v2 templates, use `index.json` for template versioning and construct the URL ourselves
+
+### Engineering
+* [[4264]](https://github.com/microsoft/vscode-azurefunctions/pull/4264) Improvements to error masking
+* [[4295]](https://github.com/microsoft/vscode-azurefunctions/pull/4295) Ensure `templateSchemaVersion` is set even if prompt is skipped
+* [[4314]](https://github.com/microsoft/vscode-azurefunctions/pull/4314) Use `--roll-forward Major` flag to make `.dll` JSON CLI tool runtime agnostic
+* [[4320]](https://github.com/microsoft/vscode-azurefunctions/pull/4320) Create a `RunningAzureFunctions` class to handle multiple function tasks in one workspace
+
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.15.4...v1.16.0
+
 ## 1.15.4 - 2024-09-12
 ### Engineering
 * [[4256]](https://github.com/microsoft/vscode-azurefunctions/pull/4256) Upgrade packages for additional improvements to telemetry
