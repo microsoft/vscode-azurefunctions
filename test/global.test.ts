@@ -53,7 +53,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (!funcExtension) {
         throw new Error('Could not find the Azure Functions extension.');
     }
-    await funcExtension.activate(); // activate the extension before tests begin
+    // await funcExtension.activate(); // activate the extension before tests begin
 
     ext.outputChannel = new TestOutputChannel();
 
