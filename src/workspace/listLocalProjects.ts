@@ -92,7 +92,7 @@ export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
 
 type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
 
-async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
+export async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
         const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, projectLanguage, projectPath);
         if (projFiles.length === 1) {

@@ -9,7 +9,7 @@ import { type FuncVersion } from "../FuncVersion";
 import { hostFileName, localSettingsFileName } from "../constants";
 import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
 import { MismatchBehavior, getLocalSettingsJson, setLocalAppSetting, type ILocalSettingsJson } from "../funcConfig/local.settings";
-import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncPortMap } from "../funcCoreTools/funcHostTask";
+import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap } from "../funcCoreTools/funcHostTask";
 import { type ApplicationSettings, type FuncHostRequest } from "../tree/IProjectTreeItem";
 import { ProjectSource } from "../tree/projectContextValues";
 import { requestUtils } from "../utils/requestUtils";
@@ -42,7 +42,7 @@ export class LocalProject implements LocalProjectInternal {
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
-        let port = runningFuncPortMap.get(this.options.folder.uri.fsPath);
+        let port = runningFuncTaskMap.get(this.options.folder)?.portNumber;
         if (!port) {
             const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === this.options.folder && isFuncHostTask(t));
             port = await getFuncPortFromTaskOrProject(context, funcTask, this.options.effectiveProjectPath);
