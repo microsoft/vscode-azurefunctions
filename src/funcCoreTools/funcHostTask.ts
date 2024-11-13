@@ -140,9 +140,7 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | 
         runningFuncTask = [runningFuncTaskMap.get(workspaceFolder, buildPath)];
     }
 
-    if (runningFuncTask !== undefined) {
-
-
+    if (runningFuncTask !== undefined && runningFuncTask.length > 0) {
         for (const runningFuncTaskItem of runningFuncTask) {
             if (!runningFuncTaskItem) break;
             if (terminate) {
