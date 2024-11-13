@@ -7,7 +7,7 @@ import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@micros
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { hostStartTaskName, ProjectLanguage } from '../constants';
+import { hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
@@ -17,7 +17,6 @@ import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { getCompiledProjectInfo } from '../workspace/listLocalProjects';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
@@ -82,10 +81,6 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new UserCancelledError('preDebugValidate');
     }
 
-    const projectInfo = await getCompiledProjectInfo(context, result.workspace.uri.fsPath, ProjectLanguage.CSharp);
-    const buildPath: string = projectInfo?.compiledProjectPath || result.workspace.uri.fsPath;
-    await waitForPrevFuncTaskToStop(result.workspace, buildPath);
-
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
@@ -97,6 +92,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
+    const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
+    await waitForPrevFuncTaskToStop(result.workspace, buildPath);
     const taskInfo = await startFuncTask(context, result.workspace, buildPath, funcTask);
     return await pickChildProcess(taskInfo);
 }
