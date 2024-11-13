@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.16.1 - 2024-11-13
+
+### Fixes
+* [[4333]](https://github.com/microsoft/vscode-azurefunctions/pull/4333) Fixes .NET debugging with multiple `.csproj` files
+
 ## 1.16.0 - 2024-11-11
 
 ### Added
