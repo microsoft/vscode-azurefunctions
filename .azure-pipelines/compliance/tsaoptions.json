@@ -1,0 +1,18 @@
+{
+    "tsaVersion": "TsaV2",
+    "codeBase": "NewOrUpdate",
+    "codeBaseName": "vscode-azurefunctions",
+    "tsaStamp": "DevDiv",
+    "notificationAliases": [
+        "AzCode@microsoft.com"
+    ],
+    "codebaseAdmins": [
+        "REDMOND\\jinglou",
+        "REDMOND\\AzCode"
+    ],
+    "instanceUrl": "https://devdiv.visualstudio.com",
+    "projectName": "DevDiv",
+    "areaPath": "DevDiv\\VS Azure Tools\\AzCode Extensions",
+    "iterationPath": "DevDiv",
+    "allTools": true
+}
