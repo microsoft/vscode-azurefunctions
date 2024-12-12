@@ -107,7 +107,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
 
     public get description(): string | undefined {
         if (this._isFlex) {
-            return localize('flexFunctionApp', 'Flex (Preview)');
+            return localize('flexFunctionApp', 'Flex Consumption');
         }
         return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
     }
