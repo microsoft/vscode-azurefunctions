@@ -21,6 +21,7 @@ import { ResolvedFunctionAppBase } from "./ResolvedFunctionAppBase";
 import { type SlotTreeItem } from "./SlotTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContextValues";
+import { AppIdentityTreeItem } from "./remoteProject/AppIdentityTreeItem";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
 
 export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBase {
@@ -47,6 +48,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _logFilesTreeItem: LogFilesTreeItem;
     private _siteFilesTreeItem: SiteFilesTreeItem;
+    private _appIdentityTreeItem: AppIdentityTreeItem | undefined;
 
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
@@ -231,7 +233,11 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem];
+        if (!this._appIdentityTreeItem) {
+            this._appIdentityTreeItem = await AppIdentityTreeItem.createAppIdentityTreeItem(context, proxyTree);
+        }
+
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this._appIdentityTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem];
         // Deployment configuration not supported by flex consumption at the time
         if (!this._isFlex) {
             children.push(this._logFilesTreeItem);

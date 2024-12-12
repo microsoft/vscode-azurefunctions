@@ -369,6 +369,20 @@
                 "title": "%azureFunctions.eventGrid.sendMockRequest%",
                 "category": "Azure Functions",
                 "icon": "$(notebook-execute)"
+            },
+            {
+                "command": "azureFunctions.assignManagedIdentity",
+                "title": "%azureFunctions.assignManagedIdentity%",
+                "category": "Azure Functions",
+                "icon": "$(add)",
+                "when": "viewItem =~ assignNewIdentity"
+            },
+            {
+                "command": "azureFunctions.addNewRoleAssignment",
+                "title": "%azureFunctions.addNewRoleAssignment%",
+                "category": "Azure Functions",
+                "icon": "$(add)",
+                "when": "viewItem =~ addNewRoleAssignment"
             }
         ],
         "submenus": [
