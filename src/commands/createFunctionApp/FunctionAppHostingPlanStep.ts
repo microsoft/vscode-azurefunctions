@@ -36,6 +36,12 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
         return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
     }
+
+    public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
+        if (!context.advancedCreation) {
+            setFlexConsumptionPlanProperties(context);
+        }
+    }
 }
 
 export function setConsumptionPlanProperties(context: IFunctionAppWizardContext): void {
