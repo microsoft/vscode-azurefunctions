@@ -17,8 +17,8 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
+            { label: localize('flexConsumption', 'Flex Consumption'), data: [false, undefined] },
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
-            { label: localize('flexConsumption', 'Flex Consumption'), description: 'Preview', data: [false, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y|FC).)*$/i] }
         ];
@@ -35,6 +35,12 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
         return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
+    }
+
+    public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
+        if (!context.advancedCreation) {
+            setFlexConsumptionPlanProperties(context);
+        }
     }
 }
 
