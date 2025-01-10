@@ -38,8 +38,7 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
     }
 
     return verifiedTemplateIds.map(id => {
-        const reg = `^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}|(\\.(?:Net(Core|Fx)\.|)[0-9]+\\.x)$`
-        return new RegExp(reg, 'i');
+        return new RegExp(`^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}((\\.(?:Net(Core|Fx)\.|)[0-9]+\\.x)|)$`, 'i');
     });
 }
 
