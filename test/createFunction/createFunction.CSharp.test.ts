@@ -158,11 +158,19 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             skip: !isIsolated
         },
         {
-            functionName: 'SQL trigger',
+            functionName: 'SQLInputBindingIsolated',
             inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
-                'SqlConnectionString'
+                'TABLE'
+            ]
+        },
+        {
+            functionName: 'SQLOutputBindingIsolated',
+            inputs: [
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'TABLE'
             ]
         },
     ];

@@ -37,7 +37,6 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
             'IoTHubTrigger',
             //TODO: Add unit test for EventGridBlobTrigger
             'EventGridBlobTrigger',
-            //TODO: Add unit test for SqlTrigger
             'SqlTrigger'
         ]);
 

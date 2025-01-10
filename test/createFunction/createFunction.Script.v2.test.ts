@@ -203,6 +203,7 @@ function addSuite(tester: FunctionTesterBase): void {
                 'SqlConnectionString'
             ]
         },
+
     ];
 
     tester.addParallelSuite(testCases, {

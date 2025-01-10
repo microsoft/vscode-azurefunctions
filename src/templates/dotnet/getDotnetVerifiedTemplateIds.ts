@@ -20,7 +20,6 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         'EventGridCloudEventTrigger',
         //TODO: Add unit test for EventGridBlobTrigger
         'EventGridBlobTrigger',
-        //TODO: Add unit test for SqlInputBinding
         'SqlInputBinding',
         'SqlOutputBinding'
     ];
