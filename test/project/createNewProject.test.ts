@@ -31,8 +31,8 @@ const testCases: CreateProjectTestCase[] = [
     // PowerShell tests
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
     // Python tests
-    { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [PythonModelInput[PythonModelVersion.v1], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
-    { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [PythonModelInput[PythonModelVersion.v2], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [PythonModelInput[PythonModelVersion.v1], TestInput.UseDefaultValue, TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
+    { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [PythonModelInput[PythonModelVersion.v2], TestInput.UseDefaultValue, TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
     // Custom language tests
     { ...getCustomValidateOptions(FuncVersion.v4) }
 ];

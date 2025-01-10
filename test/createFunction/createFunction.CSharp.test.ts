@@ -158,7 +158,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             skip: !isIsolated
         },
         {
-            functionName: 'SQLInputBindingIsolated',
+            functionName: 'SqlInputBindingIsolated',
             inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
@@ -166,7 +166,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             ]
         },
         {
-            functionName: 'SQLOutputBindingIsolated',
+            functionName: 'SqlOutputBindingIsolated',
             inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting

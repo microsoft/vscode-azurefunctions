@@ -197,7 +197,7 @@ function addSuite(tester: FunctionTesterBase): void {
             ]
         },
         {
-            functionName: 'SQL trigger',
+            functionName: 'SQL Trigger',
             inputs: [
                 'AzureWebJobsStorage', // Use existing app setting
                 'SqlConnectionString'
