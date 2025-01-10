@@ -156,7 +156,15 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'samples-workitems/name'
             ],
             skip: !isIsolated
-        }
+        },
+        {
+            functionName: 'SQL trigger',
+            inputs: [
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'SqlConnectionString'
+            ]
+        },
     ];
 
     const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);

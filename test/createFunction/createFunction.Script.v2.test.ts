@@ -195,7 +195,14 @@ function addSuite(tester: FunctionTesterBase): void {
                 'AzureWebJobsStorage', // Use existing app setting
                 'samples-workitems/name'
             ]
-        }
+        },
+        {
+            functionName: 'SQL trigger',
+            inputs: [
+                'AzureWebJobsStorage', // Use existing app setting
+                'SqlConnectionString'
+            ]
+        },
     ];
 
     tester.addParallelSuite(testCases, {
