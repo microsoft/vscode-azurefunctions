@@ -75,7 +75,7 @@
                 "DEBUGTELEMETRY": "v",
                 "NODE_DEBUG": "",
                 "FUNC_PATH": "func",
-                "AZFUNC_UPDATE_BACKUP_TEMPLATES": "",
+                "AZFUNC_UPDATE_BACKUP_TEMPLATES": "1",
                 "AzCode_EnableLongRunningTestsLocal": "",
             }
         },
