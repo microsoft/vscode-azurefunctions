@@ -48,6 +48,9 @@
                 "branches": [
                     {
                         "type": "FunctionApp"
+                    },
+                    {
+                        "type": "DurableTaskScheduler"
                     }
                 ]
             },
@@ -69,10 +72,12 @@
             ],
             "activation": {
                 "onFetch": [
-                    "microsoft.web/sites"
+                    "microsoft.web/sites",
+                    "microsoft.durabletask/schedulers"
                 ],
                 "onResolve": [
-                    "microsoft.web/sites"
+                    "microsoft.web/sites",
+                    "microsoft.durabletask/schedulers"
                 ]
             }
         },
