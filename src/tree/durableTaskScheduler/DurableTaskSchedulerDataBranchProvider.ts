@@ -1,9 +1,25 @@
-import { type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import { type ResourceModelBase, type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { type ProviderResult, TreeItem } from "vscode";
 
-export class DurableTaskSchedulerResourceModel implements AzureResourceModel {
+interface DurableTaskSchedulerModelBase extends ResourceModelBase {
+    getChildren(_: DurableTaskSchedulerModelBase): ProviderResult<DurableTaskSchedulerModelBase[]>;
+
+    getTreeItem(element: DurableTaskSchedulerModelBase): TreeItem | Thenable<TreeItem>;
+}
+
+export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModelBase, AzureResourceModel {
     public constructor(private readonly resource: AzureResource) {
     }
+
+    getChildren(): ProviderResult<DurableTaskSchedulerResourceModel[]> {
+        return [];
+    }
+
+    getTreeItem(): TreeItem | Thenable<TreeItem> {
+        return new TreeItem(this.name);
+    }
+
+    public get id(): string | undefined { return this.resource.id; }
 
     public get azureResourceId() { return this.resource.id; }
 
@@ -11,8 +27,8 @@ export class DurableTaskSchedulerResourceModel implements AzureResourceModel {
 }
 
 export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBranchDataProvider<DurableTaskSchedulerResourceModel> {
-    getChildren(_: DurableTaskSchedulerResourceModel): ProviderResult<DurableTaskSchedulerResourceModel[]> {
-        return [];
+    getChildren(element: DurableTaskSchedulerResourceModel): ProviderResult<DurableTaskSchedulerResourceModel[]> {
+        return element.getChildren();
     }
 
     getResourceItem(element: AzureResource): DurableTaskSchedulerResourceModel | Thenable<DurableTaskSchedulerResourceModel> {
@@ -20,6 +36,6 @@ export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBran
     }
 
     getTreeItem(element: DurableTaskSchedulerResourceModel): TreeItem | Thenable<TreeItem> {
-        return new TreeItem(element.name);
+        return element.getTreeItem();
     }
 }
