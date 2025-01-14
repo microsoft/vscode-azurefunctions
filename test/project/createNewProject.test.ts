@@ -30,9 +30,6 @@ const testCases: CreateProjectTestCase[] = [
     { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
     // PowerShell tests
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
-    // Python tests (I think that this is covered in `createNewPythonProject.test.ts` so we can skip this)
-    // { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [PythonModelInput[PythonModelVersion.v1], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
-    // { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [PythonModelInput[PythonModelVersion.v2], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
     // Custom language tests
     { ...getCustomValidateOptions(FuncVersion.v4) }
 ];
