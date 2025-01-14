@@ -39,6 +39,7 @@ import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
+import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -108,7 +109,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const azureResourcesApi = await getAzureResourcesExtensionApi(context, '2.0.0');
 
-        azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, new DurableTaskSchedulerDataBranchProvider());
+        azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, new DurableTaskSchedulerDataBranchProvider(new HttpDurableTaskSchedulerClient()));
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

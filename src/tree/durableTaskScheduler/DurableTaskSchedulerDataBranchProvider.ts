@@ -1,18 +1,7 @@
 import { type AzureSubscription, type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { type ProviderResult, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
-
-interface DurableTaskHubResource {
-    readonly id: string;
-    readonly name: string;
-    readonly properties: {
-        readonly dashboardUrl: string;
-    };
-}
-
-interface DurableTaskHubsResponse {
-    readonly value: DurableTaskHubResource[];
-}
+import { type DurableTaskHubResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 
 interface DurableTaskSchedulerModelBase extends AzureResourceModel {
     getChildren(): ProviderResult<DurableTaskSchedulerModelBase[]>;
@@ -54,37 +43,17 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBas
 }
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModelBase, AzureResourceModel {
-    public constructor(private readonly resource: AzureResource) {
+    public constructor(private readonly resource: AzureResource, private readonly schedulerClient: DurableTaskSchedulerClient) {
     }
 
     async getChildren(): Promise<DurableTaskHubResourceModel[]> {
-        const armEndpoint = 'https://management.azure.com';
-        const apiVersion = '2024-10-01-preview';
-
-        const subscriptionId = this.resource.subscription.subscriptionId;
-        const resourceGroupName = this.resource.resourceGroup;
-        const provider = 'Microsoft.DurableTask';
-        const schedulerName = this.resource.name;
-
-        const authSession = await this.resource.subscription.authentication.getSession();
-
-        if (!authSession) {
+        if (!this.resource.resourceGroup) {
             return [];
         }
 
-        const accessToken = authSession.accessToken;
+        const taskHubs = await this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup, this.resource.name);
 
-        const taskHubsUrl = `${armEndpoint}/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}/taskHubs?api-version=${apiVersion}`;
-
-        const request = new Request(taskHubsUrl);
-
-        request.headers.append('Authorization', `Bearer ${accessToken}`);
-
-        const response = await fetch(request);
-
-        const taskHubs = await response.json() as DurableTaskHubsResponse;
-
-        return taskHubs.value.map(resource => new DurableTaskHubResourceModel(this.resource.subscription, resource));
+        return taskHubs.map(resource => new DurableTaskHubResourceModel(this.resource.subscription, resource));
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
@@ -99,12 +68,15 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 }
 
 export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBranchDataProvider<DurableTaskSchedulerModelBase> {
+    constructor(private readonly schedulerClient: DurableTaskSchedulerClient) {
+    }
+
     getChildren(element: DurableTaskSchedulerModelBase): ProviderResult<DurableTaskSchedulerModelBase[]> {
         return element.getChildren();
     }
 
     getResourceItem(element: AzureResource): DurableTaskSchedulerResourceModel | Thenable<DurableTaskSchedulerResourceModel> {
-        return new DurableTaskSchedulerResourceModel(element);
+        return new DurableTaskSchedulerResourceModel(element, this.schedulerClient);
     }
 
     getTreeItem(element: DurableTaskSchedulerModelBase): TreeItem | Thenable<TreeItem> {
