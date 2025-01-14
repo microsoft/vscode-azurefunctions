@@ -8,6 +8,7 @@ import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
 import { type DurableTaskHubResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { type ProviderResult, TreeItem, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
+import { localize } from '../../localize';
 
 export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
     constructor(
@@ -33,7 +34,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
             label: this.resource.name,
             getData: async () => {
                 if (!this.schedulerResource.resourceGroup) {
-                    throw new Error('Azure resource does not have a valid resource group name.');
+                    throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
                 }
 
                 const json = await this.schedulerClient.getSchedulerTaskHub(

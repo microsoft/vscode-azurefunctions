@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
+import { type AzureAuthentication, type AzureSubscription } from "@microsoft/vscode-azureresources-api";
+import { localize } from '../../localize';
 
 export interface DurableTaskHubResource {
     readonly id: string;
@@ -13,10 +14,6 @@ export interface DurableTaskHubResource {
     };
 }
 
-interface DurableTaskHubsResponse {
-    readonly value: DurableTaskHubResource[];
-}
-
 export interface DurableTaskSchedulerClient {
     getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
     getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]>;
@@ -24,58 +21,49 @@ export interface DurableTaskSchedulerClient {
 
 export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClient {
     async getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource> {
-        const armEndpoint = subscription.environment.resourceManagerEndpointUrl;
-        const apiVersion = '2024-10-01-preview';
+        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskHubs/${taskHubName}`;
 
-        const subscriptionId = subscription.subscriptionId;
-        const provider = 'Microsoft.DurableTask';
-
-        const authSession = await subscription.authentication.getSession();
-
-        if (!authSession) {
-            throw new Error('Unable to obtain an authentication session.');
-        }
-
-        const accessToken = authSession.accessToken;
-
-        const taskHubsUrl = `${armEndpoint}/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}/taskHubs/${taskHubName}?api-version=${apiVersion}`;
-
-        const request = new Request(taskHubsUrl);
-
-        request.headers.append('Authorization', `Bearer ${accessToken}`);
-
-        const response = await fetch(request);
-
-        const taskHub = await response.json() as DurableTaskHubResource;
+        const taskHub = await this.getAsJson<DurableTaskHubResource>(taskHubsUrl, subscription.authentication);
 
         return taskHub;
     }
 
     async getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]> {
-        const armEndpoint = subscription.environment.resourceManagerEndpointUrl;
-        const apiVersion = '2024-10-01-preview';
+        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskHubs`;
 
-        const subscriptionId = subscription.subscriptionId;
+        const response = await this.getAsJson<{ value: DurableTaskHubResource[] }>(taskHubsUrl, subscription.authentication);
+
+        return response.value;
+    }
+
+    private static getBaseUrl(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string) {
         const provider = 'Microsoft.DurableTask';
 
-        const authSession = await subscription.authentication.getSession();
+        return `${subscription.environment.resourceManagerEndpointUrl}/subscriptions/${subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}`;
+    }
+
+    private async getAsJson<T>(url: string, authentication: AzureAuthentication): Promise<T> {
+        const apiVersion = '2024-10-01-preview';
+        const versionedUrl = `${url}?api-version=${apiVersion}`;
+
+        const authSession = await authentication.getSession();
 
         if (!authSession) {
-            throw new Error('Unable to obtain an authentication session.');
+            throw new Error(localize('noAuthenticationSessionErrorMessage', 'Unable to obtain an authentication session.'));
         }
 
         const accessToken = authSession.accessToken;
 
-        const taskHubsUrl = `${armEndpoint}/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}/taskHubs?api-version=${apiVersion}`;
-
-        const request = new Request(taskHubsUrl);
+        const request = new Request(versionedUrl);
 
         request.headers.append('Authorization', `Bearer ${accessToken}`);
 
         const response = await fetch(request);
 
-        const taskHubs = await response.json() as DurableTaskHubsResponse;
+        if (!response.ok) {
+            throw new Error(localize('failureInvokingArmErrorMessage', 'Azure management API returned an unsuccessful response.'));
+        }
 
-        return taskHubs.value;
+        return await response.json() as T;
     }
 }
