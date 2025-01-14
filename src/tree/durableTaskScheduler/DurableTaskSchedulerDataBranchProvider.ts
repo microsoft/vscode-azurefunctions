@@ -45,6 +45,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBas
         const treeItem = new TreeItem(this.resource.name)
 
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
+        treeItem.contextValue = 'azFunc.dts.taskHub';
 
         return treeItem;
     }
