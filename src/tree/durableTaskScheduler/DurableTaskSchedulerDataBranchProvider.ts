@@ -26,6 +26,8 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBas
 
     public get azureResourceId() { return this.resource.id; }
 
+    get dashboardUrl(): Uri { return Uri.parse(this.resource.properties.dashboardUrl); }
+
     get id(): string { return this.resource.id; }
 
     get portalUrl(): Uri {

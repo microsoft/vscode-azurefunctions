@@ -1,6 +1,10 @@
-import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { openUrl, type IActionContext } from "@microsoft/vscode-azext-utils";
 import {type DurableTaskHubResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 
 export async function openTaskHubDashboard(_: IActionContext, __: DurableTaskHubResourceModel | undefined): Promise<void> {
-    await Promise.resolve();
+    if (!__) {
+        return;
+    }
+
+    await openUrl(__?.dashboardUrl.toString(/* skipEncoding: */ true));
 }
