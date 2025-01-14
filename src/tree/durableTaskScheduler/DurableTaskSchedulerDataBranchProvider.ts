@@ -1,4 +1,4 @@
-import { type AzureSubscription, type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import { type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { type ProviderResult, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
 import { type DurableTaskHubResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
@@ -10,7 +10,10 @@ interface DurableTaskSchedulerModelBase extends AzureResourceModel {
 }
 
 export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBase {
-    constructor(private readonly subscription: AzureSubscription, private readonly resource: DurableTaskHubResource) {
+    constructor(
+        private readonly schedulerResource: AzureResource,
+        private readonly resource: DurableTaskHubResource,
+        private readonly schedulerClient: DurableTaskSchedulerClient) {
     }
 
     public get azureResourceId() { return this.resource.id; }
@@ -20,10 +23,28 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBas
     get id(): string { return this.resource.id; }
 
     get portalUrl(): Uri {
-        const queryPrefix = '';
-        const url: string = `${this.subscription.environment.portalUrl}/${queryPrefix}#@${this.subscription.tenantId}/resource${this.id}`;
+        const url: string = `${this.schedulerResource.subscription.environment.portalUrl}/#@${this.schedulerResource.subscription.tenantId}/resource${this.id}`;
 
         return Uri.parse(url);
+    }
+
+    get viewProperties(): ViewPropertiesModel {
+        return {
+            label: this.resource.name,
+            getData: async () => {
+                if (!this.schedulerResource.resourceGroup) {
+                    throw new Error('Azure resource does not have a valid resource group name.');
+                }
+
+                const json = await this.schedulerClient.getSchedulerTaskHub(
+                    this.schedulerResource.subscription,
+                    this.schedulerResource.resourceGroup,
+                    this.schedulerResource.name,
+                    this.resource.name);
+
+                return json;
+            }
+        };
     }
 
     getChildren(): ProviderResult<DurableTaskSchedulerModelBase[]>
@@ -53,7 +74,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 
         const taskHubs = await this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup, this.resource.name);
 
-        return taskHubs.map(resource => new DurableTaskHubResourceModel(this.resource.subscription, resource));
+        return taskHubs.map(resource => new DurableTaskHubResourceModel(this.resource, resource, this.schedulerClient));
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
