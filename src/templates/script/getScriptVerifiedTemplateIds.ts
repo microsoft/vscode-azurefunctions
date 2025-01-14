@@ -36,7 +36,8 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
             'SendGrid',
             'IoTHubTrigger',
             //TODO: Add unit test for EventGridBlobTrigger
-            'EventGridBlobTrigger'
+            'EventGridBlobTrigger',
+            'SqlTrigger'
         ]);
 
         // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
