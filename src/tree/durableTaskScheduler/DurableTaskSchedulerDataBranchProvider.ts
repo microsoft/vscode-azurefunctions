@@ -1,5 +1,6 @@
 import { type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { type ProviderResult, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { treeUtils } from "../../utils/treeUtils";
 
 interface DurableTaskHubResource {
     readonly id: string;
@@ -32,7 +33,11 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBas
 
     getTreeItem(): TreeItem | Thenable<TreeItem>
     {
-        return new TreeItem(this.resource.name);
+        const treeItem = new TreeItem(this.resource.name)
+
+        treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
+
+        return treeItem;
     }
 }
 
