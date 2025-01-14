@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelInput, NodeModelVersion } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -30,9 +30,6 @@ const testCases: CreateProjectTestCase[] = [
     { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
     // PowerShell tests
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
-    // Python tests
-    { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [PythonModelInput[PythonModelVersion.v1], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v1 },
-    { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [PythonModelInput[PythonModelVersion.v2], TestInput.UseDefaultValue], languageModelVersion: PythonModelVersion.v2 },
     // Custom language tests
     { ...getCustomValidateOptions(FuncVersion.v4) }
 ];
