@@ -1,22 +1,77 @@
-import { type ResourceModelBase, type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
-import { type ProviderResult, TreeItem } from "vscode";
+import { type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import { type ProviderResult, TreeItem, TreeItemCollapsibleState } from "vscode";
 
-interface DurableTaskSchedulerModelBase extends ResourceModelBase {
-    getChildren(_: DurableTaskSchedulerModelBase): ProviderResult<DurableTaskSchedulerModelBase[]>;
+interface DurableTaskHubResource {
+    readonly id: string;
+    readonly name: string;
+    readonly properties: {
+        readonly dashboardUrl: string;
+    };
+}
 
-    getTreeItem(element: DurableTaskSchedulerModelBase): TreeItem | Thenable<TreeItem>;
+interface DurableTaskHubsResponse {
+    readonly value: DurableTaskHubResource[];
+}
+
+interface DurableTaskSchedulerModelBase extends AzureResourceModel {
+    getChildren(): ProviderResult<DurableTaskSchedulerModelBase[]>;
+
+    getTreeItem(): TreeItem | Thenable<TreeItem>;
+}
+
+export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBase {
+    constructor(private readonly resource: DurableTaskHubResource) {
+    }
+
+    get id(): string { return this.resource.id; }
+
+    getChildren(): ProviderResult<DurableTaskSchedulerModelBase[]>
+    {
+        return [];
+    }
+
+    getTreeItem(): TreeItem | Thenable<TreeItem>
+    {
+        return new TreeItem(this.resource.name);
+    }
 }
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModelBase, AzureResourceModel {
     public constructor(private readonly resource: AzureResource) {
     }
 
-    getChildren(): ProviderResult<DurableTaskSchedulerResourceModel[]> {
-        return [];
+    async getChildren(): Promise<DurableTaskHubResourceModel[]> {
+        const armEndpoint = 'https://management.azure.com';
+        const apiVersion = '2024-10-01-preview';
+
+        const subscriptionId = this.resource.subscription.subscriptionId;
+        const resourceGroupName = this.resource.resourceGroup;
+        const provider = 'Microsoft.DurableTask';
+        const schedulerName = this.resource.name;
+
+        const authSession = await this.resource.subscription.authentication.getSession();
+
+        if (!authSession) {
+            return [];
+        }
+
+        const accessToken = authSession.accessToken;
+
+        const taskHubsUrl = `${armEndpoint}/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}/taskHubs?api-version=${apiVersion}`;
+
+        const request = new Request(taskHubsUrl);
+
+        request.headers.append('Authorization', `Bearer ${accessToken}`);
+
+        const response = await fetch(request);
+
+        const taskHubs = await response.json() as DurableTaskHubsResponse;
+
+        return taskHubs.value.map(resource => new DurableTaskHubResourceModel(resource));
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
-        return new TreeItem(this.name);
+        return new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
     }
 
     public get id(): string | undefined { return this.resource.id; }
@@ -26,8 +81,8 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     public get name() { return this.resource.name; }
 }
 
-export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBranchDataProvider<DurableTaskSchedulerResourceModel> {
-    getChildren(element: DurableTaskSchedulerResourceModel): ProviderResult<DurableTaskSchedulerResourceModel[]> {
+export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBranchDataProvider<DurableTaskSchedulerModelBase> {
+    getChildren(element: DurableTaskSchedulerModelBase): ProviderResult<DurableTaskSchedulerModelBase[]> {
         return element.getChildren();
     }
 
@@ -35,7 +90,7 @@ export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBran
         return new DurableTaskSchedulerResourceModel(element);
     }
 
-    getTreeItem(element: DurableTaskSchedulerResourceModel): TreeItem | Thenable<TreeItem> {
+    getTreeItem(element: DurableTaskSchedulerModelBase): TreeItem | Thenable<TreeItem> {
         return element.getTreeItem();
     }
 }
