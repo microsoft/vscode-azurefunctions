@@ -1,5 +1,5 @@
-import { type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
-import { type ProviderResult, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { type AzureSubscription, type AzureResource, type AzureResourceBranchDataProvider, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import { type ProviderResult, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
 
 interface DurableTaskHubResource {
@@ -21,10 +21,19 @@ interface DurableTaskSchedulerModelBase extends AzureResourceModel {
 }
 
 export class DurableTaskHubResourceModel implements DurableTaskSchedulerModelBase {
-    constructor(private readonly resource: DurableTaskHubResource) {
+    constructor(private readonly subscription: AzureSubscription, private readonly resource: DurableTaskHubResource) {
     }
 
+    public get azureResourceId() { return this.resource.id; }
+
     get id(): string { return this.resource.id; }
+
+    get portalUrl(): Uri {
+        const queryPrefix = '';
+        const url: string = `${this.subscription.environment.portalUrl}/${queryPrefix}#@${this.subscription.tenantId}/resource${this.id}`;
+
+        return Uri.parse(url);
+    }
 
     getChildren(): ProviderResult<DurableTaskSchedulerModelBase[]>
     {
@@ -72,7 +81,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 
         const taskHubs = await response.json() as DurableTaskHubsResponse;
 
-        return taskHubs.value.map(resource => new DurableTaskHubResourceModel(resource));
+        return taskHubs.value.map(resource => new DurableTaskHubResourceModel(this.resource.subscription, resource));
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
