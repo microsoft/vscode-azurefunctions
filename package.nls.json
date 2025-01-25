@@ -120,5 +120,6 @@
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
     "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
 
+    "azureFunctions.durableTaskScheduler.createTaskHub": "Create Task Hub",
     "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard"
 }

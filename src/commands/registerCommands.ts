@@ -64,8 +64,10 @@ import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
+import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
+import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 
-export function registerCommands(): void {
+export function registerCommands(schedulerClient: DurableTaskSchedulerClient): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
@@ -156,5 +158,6 @@ export function registerCommands(): void {
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
 }

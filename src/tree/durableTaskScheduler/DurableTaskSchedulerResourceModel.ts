@@ -25,7 +25,11 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
-        return new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
+        const treeItem = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
+
+        treeItem.contextValue = 'azFunc.dts.scheduler';
+
+        return treeItem;
     }
 
     public get id(): string | undefined { return this.resource.id; }
@@ -33,4 +37,14 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     public get azureResourceId() { return this.resource.id; }
 
     public get name() { return this.resource.name; }
+
+    get resourceGroup() {
+        if (!this.resource.resourceGroup) {
+            throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
+        }
+
+        return this.resource.resourceGroup;
+    }
+
+    get subscription() { return this.resource.subscription; }
 }
