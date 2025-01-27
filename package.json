@@ -48,6 +48,9 @@
                 "branches": [
                     {
                         "type": "FunctionApp"
+                    },
+                    {
+                        "type": "DurableTaskScheduler"
                     }
                 ]
             },
@@ -69,10 +72,12 @@
             ],
             "activation": {
                 "onFetch": [
-                    "microsoft.web/sites"
+                    "microsoft.web/sites",
+                    "microsoft.durabletask/schedulers"
                 ],
                 "onResolve": [
-                    "microsoft.web/sites"
+                    "microsoft.web/sites",
+                    "microsoft.durabletask/schedulers"
                 ]
             }
         },
@@ -369,6 +374,11 @@
                 "title": "%azureFunctions.eventGrid.sendMockRequest%",
                 "category": "Azure Functions",
                 "icon": "$(notebook-execute)"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [
@@ -662,6 +672,10 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*folder/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/"
                 }
             ],
             "explorer/context": [

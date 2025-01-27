@@ -63,6 +63,7 @@ import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
+import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
 
 export function registerCommands(): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
@@ -154,4 +155,6 @@ export function registerCommands(): void {
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
+
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
 }
