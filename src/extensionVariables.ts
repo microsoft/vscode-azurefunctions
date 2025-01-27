@@ -12,6 +12,7 @@ import { type CentralTemplateProvider } from './templates/CentralTemplateProvide
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
 import { type IFunction } from './workspace/LocalFunction';
+import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 
 /**
  * Used for extensionVariables that can also be set per-action
@@ -57,6 +58,7 @@ export namespace ext {
     export let experimentationService: IExperimentationServiceAdapter;
     export const templateProvider = new ActionVariable<CentralTemplateProvider>('_centralTemplateProvider');
     export let rgApi: AzureHostExtensionApi;
+    export let rgApiV2: AzureResourcesExtensionApi;
     export let eventGridProvider: EventGridCodeLensProvider;
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap: Map<string, FunctionTreeItemBase | IFunction> = new Map();

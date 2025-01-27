@@ -376,6 +376,11 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                "title": "%azureFunctions.durableTaskScheduler.createScheduler%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.createTaskHub",
                 "title": "%azureFunctions.durableTaskScheduler.createTaskHub%",
                 "category": "Azure Functions"
@@ -677,6 +682,10 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*folder/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",

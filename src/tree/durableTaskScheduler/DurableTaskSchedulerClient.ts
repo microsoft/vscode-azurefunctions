@@ -9,7 +9,7 @@ import { localize } from '../../localize';
 interface DurableTaskSchedulerCreateRequest {
     readonly location: string;
     readonly properties: {
-        readonly ipAllowList: string[];
+        readonly ipAllowlist: string[];
         readonly sku: {
             readonly name: string;
             readonly capacity: number;
@@ -50,7 +50,7 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         const request: DurableTaskSchedulerCreateRequest = {
             location,
             properties: {
-                ipAllowList: ['0.0.0.0/0'],
+                ipAllowlist: ['0.0.0.0/0'],
                 sku: {
                     name: 'Dedicated',
                     capacity: 1
@@ -150,7 +150,8 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
                 method: 'PUT'
             });
 
-        request.headers.append('Authorization', `Bearer ${accessToken}`);
+        request.headers.set('Authorization', `Bearer ${accessToken}`);
+        request.headers.set('Content-Type', 'application/json');
 
         const response = await fetch(request);
 

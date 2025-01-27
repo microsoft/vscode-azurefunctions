@@ -66,6 +66,7 @@ import { viewProperties } from './viewProperties';
 import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
 import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
 
 export function registerCommands(schedulerClient: DurableTaskSchedulerClient): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
@@ -158,6 +159,7 @@ export function registerCommands(schedulerClient: DurableTaskSchedulerClient): v
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
 }

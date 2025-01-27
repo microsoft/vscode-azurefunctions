@@ -111,6 +111,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const azureResourcesApi = await getAzureResourcesExtensionApi(context, '2.0.0');
 
+        ext.rgApiV2 = azureResourcesApi;
+
         azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, new DurableTaskSchedulerDataBranchProvider(schedulerClient));
     });
 
