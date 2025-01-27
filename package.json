@@ -64,6 +64,12 @@
             },
             "commands": [
                 {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "title": "%azureFunctions.durableTaskScheduler.createScheduler%",
+                    "type": "DurableTaskScheduler",
+                    "detail": "%azureFunctions.durableTaskScheduler.createScheduler.detail%"
+                },
+                {
                     "command": "azureFunctions.createFunctionApp",
                     "title": "%azureFunctions.createFunctionApp%",
                     "type": "FunctionApp",
