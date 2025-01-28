@@ -9,7 +9,7 @@ import { localize } from '../../localize';
 import { type IProjectTreeItem } from '../IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from '../projectContextValues';
 import { type SlotTreeItem } from '../SlotTreeItem';
-import { ManagedIdentitiesTreeItem, type ManagedIdentity } from './ManagedIdentitiesTreeItem';
+import { ManagedIdentitiesTreeItem } from './ManagedIdentitiesTreeItem';
 import { RoleAccessTreeItem } from './RoleAccessTreeItem';
 import { SystemIdentityTreeItem } from './SystemIdentityTreeItem';
 
@@ -100,30 +100,12 @@ export class AppIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const myIdentity = this.parent.site.rawSite.identity;
-        let systemIdentitiesTreeItem: SystemIdentityTreeItem | undefined = undefined;
-        if (myIdentity) {
-            if (myIdentity.type?.includes('SystemAssigned')) {
-                const systemAssignedManagedIdentity: ManagedIdentity = {
-                    type: 'SystemAssigned',
-                    principalId: myIdentity.principalId,
-                    tenantId: myIdentity.tenantId,
-                    resourceId: this.parent.site.id,
-                    name: this.parent.site.fullName,
-                }
-                systemIdentitiesTreeItem = new SystemIdentityTreeItem(this, systemAssignedManagedIdentity);
-            }
-        }
-
+        const systemIdentitiesTreeItem: AzExtTreeItem = SystemIdentityTreeItem.create(this);
         const managedIdentitiesTreeItem = await ManagedIdentitiesTreeItem.createManagedIdentitiesTreeItem(context, this.parent);
         const roleAccessTreeItem = await RoleAccessTreeItem.createRoleAccessTreeItem(context, this.parent);
 
 
-        const children: AzExtTreeItem[] = [managedIdentitiesTreeItem, roleAccessTreeItem];
-        if (systemIdentitiesTreeItem) {
-            children.unshift(systemIdentitiesTreeItem);
-        }
-
+        const children: AzExtTreeItem[] = [systemIdentitiesTreeItem, managedIdentitiesTreeItem, roleAccessTreeItem];
         return children;
     }
 

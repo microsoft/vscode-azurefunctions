@@ -6,23 +6,27 @@
 import { UserAssignedIdentityListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
+import { type ManagedIdentitiesTreeItem } from '../../tree/remoteProject/ManagedIdentitiesTreeItem';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { type ManagedIdentityAssignContext } from './ManagedIdentityAssignContext';
 import { ManagedIdentityAssignStep } from './ManagedIdentityAssignStep';
 
-export async function assignManagedIdentity(context: IActionContext, node?: SlotTreeItem): Promise<SlotTreeItem> {
+export async function assignManagedIdentity(context: IActionContext, node?: ManagedIdentitiesTreeItem | SlotTreeItem): Promise<SlotTreeItem> {
     const title: string = localize('assignManagedIdentity', 'Assign Managed Identity to Function App');
 
     if (!node) {
         node = await pickFunctionApp(context);
+    } else {
+        // if it's a ManagedIdentitiesTreeItem, we need to get the parent SlotTreeItem
+        node = node.parent as SlotTreeItem;
     }
 
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
         site: node.site,
+        ...node.subscription
     }
-
 
     const promptSteps: AzureWizardPromptStep<ManagedIdentityAssignContext>[] = [
         new UserAssignedIdentityListStep()

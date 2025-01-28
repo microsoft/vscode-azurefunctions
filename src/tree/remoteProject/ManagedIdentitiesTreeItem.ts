@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, type GenericResourceExpanded, type Identity } from '@azure/arm-resources';
-import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { treeUtils } from '../../utils/treeUtils';
 import { type IProjectTreeItem } from '../IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from '../projectContextValues';
 import { type SlotTreeItem } from '../SlotTreeItem';
@@ -16,7 +15,6 @@ export interface ManagedIdentity extends Identity {
     resourceId?: string;
     name?: string;
 }
-
 export abstract class ManagedIdentitiesTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('ManagedIdentities', 'Managed');
     public readonly childTypeLabel: string = localize('managedIdentity', 'Managed Identity');
@@ -71,10 +69,6 @@ export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
 
     public async initAsync(context: IActionContext): Promise<void> {
         this.isReadOnly = await this.parent.isReadOnly(context);
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath("ManagedIdentityUserAssignedIdentities");
     }
 
     public async refreshImpl(context: IActionContext): Promise<void> {

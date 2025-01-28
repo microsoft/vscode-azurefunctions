@@ -14,13 +14,9 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
     public async execute(context: ManagedIdentityAssignContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const site: ParsedSite = nonNullProp(context, 'site');
-        const identityResourceId: string = nonNullProp(context, 'identityResourceId');
-        // const client: SiteClient = site.createClient(context);
-
-        // const client = await createWebSiteClient(context);
+        const managedIdentity = nonNullProp(context, 'managedIdentity');
+        const id: string = nonNullProp(managedIdentity, 'id');
         const client = await createWebSiteClient([context, site.subscription]);
-
-
 
         const existingIdentity = site.rawSite.identity || {};
         const updatedIdentity: ManagedServiceIdentity = {
@@ -29,10 +25,9 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
             type: addUserAssignedType(existingIdentity.type),
             userAssignedIdentities: {
                 ...existingIdentity.userAssignedIdentities,
-                [identityResourceId]: {
-                    // TOOD: test if this is needed or if it's handled automatically
-                    principalId: context.identityPrincipalId,
-                    clientId: context.identityClientId,
+                [id]: {
+                    principalId: managedIdentity.principalId,
+                    clientId: managedIdentity.clientId,
                 }
             }
         };
@@ -40,11 +35,8 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
         const newSite = site.rawSite;
         newSite.identity = updatedIdentity;
 
-
-
         await client.webApps.beginCreateOrUpdateAndWait(site.resourceGroup, site.siteName, newSite);
-
-        console.log(`Assigned managed identity ${identityResourceId} to function app ${site.fullName}`);
+        console.log(`Assigned managed identity ${id} to function app ${site.fullName}`);
     }
 
     public shouldExecute(_context: ManagedIdentityAssignContext): boolean {
