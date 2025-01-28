@@ -392,6 +392,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                "title": "%azureFunctions.durableTaskScheduler.deleteScheduler%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
                 "title": "%azureFunctions.durableTaskScheduler.deleteTaskHub%",
                 "category": "Azure Functions"
@@ -702,6 +707,11 @@
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
