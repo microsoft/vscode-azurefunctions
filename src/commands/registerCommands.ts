@@ -67,6 +67,7 @@ import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboar
 import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
+import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
 
 export function registerCommands(schedulerClient: DurableTaskSchedulerClient): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
@@ -161,5 +162,6 @@ export function registerCommands(schedulerClient: DurableTaskSchedulerClient): v
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteTaskHub', deleteTaskHubCommandFactory(schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
 }

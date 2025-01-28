@@ -55,11 +55,25 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
 
     getTreeItem(): TreeItem | Thenable<TreeItem>
     {
-        const treeItem = new TreeItem(this.resource.name)
+        const treeItem = new TreeItem(this.name)
 
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
         treeItem.contextValue = 'azFunc.dts.taskHub';
 
         return treeItem;
     }
+
+    get name() { return this.resource.name; }
+
+    get resourceGroup() {
+        if (!this.schedulerResource.resourceGroup) {
+            throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
+        }
+
+        return this.schedulerResource.resourceGroup;
+    }
+
+    get schedulerName() { return this.schedulerResource.name; }
+
+    get subscription() { return this.schedulerResource.subscription; }
 }

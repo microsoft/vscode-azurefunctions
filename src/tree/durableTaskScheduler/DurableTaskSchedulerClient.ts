@@ -39,6 +39,8 @@ export interface DurableTaskSchedulerClient {
     createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerResource>;
     createTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
 
+    deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void>;
+
     getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
     getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]>;
 }
@@ -84,6 +86,12 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         return taskHub;
     }
 
+    async deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void> {
+        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskhubs/${taskHubName}`;
+
+        await this.delete(taskHubsUrl, subscription.authentication);
+    }
+
     async getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource> {
         const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskHubs/${taskHubName}`;
 
@@ -104,6 +112,33 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         const provider = 'Microsoft.DurableTask';
 
         return `${subscription.environment.resourceManagerEndpointUrl}subscriptions/${subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}`;
+    }
+
+    private async delete(url: string, authentication: AzureAuthentication): Promise<void> {
+        const apiVersion = '2024-10-01-preview';
+        const versionedUrl = `${url}?api-version=${apiVersion}`;
+
+        const authSession = await authentication.getSession();
+
+        if (!authSession) {
+            throw new Error(localize('noAuthenticationSessionErrorMessage', 'Unable to obtain an authentication session.'));
+        }
+
+        const accessToken = authSession.accessToken;
+
+        const request = new Request(
+            versionedUrl,
+            {
+                method: 'DELETE'
+            });
+
+        request.headers.append('Authorization', `Bearer ${accessToken}`);
+
+        const response = await fetch(request);
+
+        if (!response.ok) {
+            throw new Error(localize('failureInvokingArmErrorMessage', 'Azure management API returned an unsuccessful response.'));
+        }
     }
 
     private async getAsJson<T>(url: string, authentication: AzureAuthentication): Promise<T> {

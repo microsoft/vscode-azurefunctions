@@ -392,6 +392,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                "title": "%azureFunctions.durableTaskScheduler.deleteTaskHub%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                 "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
                 "category": "Azure Functions"
@@ -695,11 +700,18 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/"
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/"
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "group": "1@1"
                 }
             ],
             "explorer/context": [
