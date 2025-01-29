@@ -11,7 +11,7 @@ export function getRotatingAuthLevel(): string {
 }
 
 let locationCount: number = getStartingIndex();
-const locations: string[] = ["East US", "South Central US", "West US 2", "West US 3", "Australia East", "Southeast Asia", "North Europe", "Sweden Central", "UK South", "East Asia", "East US 2", "East US 2 EUAP"];
+const locations: string[] = ["East US", "South Central US", "West US 2", "West US 3", "Australia East", "Southeast Asia", "North Europe", "Sweden Central", "UK South", "East Asia", "East US 2"];
 export function getRotatingLocation(): string {
     locationCount += 1;
     return locations[locationCount % locations.length];
