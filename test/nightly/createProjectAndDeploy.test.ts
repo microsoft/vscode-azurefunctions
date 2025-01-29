@@ -5,7 +5,7 @@
 
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
-import { createTestActionContext, runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
+import { TestInput, createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
@@ -23,18 +23,18 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript (Model V3)', ...getJavaScriptValidateOptions(true), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v3 },
-    { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
-    { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v3 },
-    { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion()], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'JavaScript (Model V3)', ...getJavaScriptValidateOptions(true), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v3 },
+    { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v3 },
+    { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
-    { title: 'C# .NET Framework', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net48'), createProjectInputs: [/net.*Framework/i], deployInputs: [/net.*Framework/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i], createFunctionInputs: ['Company.Function'] },
-    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i] },
-    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [PythonModelInput[PythonModelVersion.v1], /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v1 },
-    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [PythonModelInput[PythonModelVersion.v2], /3\.9/], deployInputs: [getRotatingPythonVersion()], languageModelVersion: PythonModelVersion.v2 },
+    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET 9', ...getCSharpValidateOptions('net9.0', FuncVersion.v4), createProjectInputs: [/net.*9/i], deployInputs: [/net.*9/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
+    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/] },
+    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [PythonModelInput[PythonModelVersion.v1], /3\.9/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v1 },
+    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [PythonModelInput[PythonModelVersion.v2], /3\.9/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -90,7 +90,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
+        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, getRotatingLocation(), ...options.deployInputs], async () => {
             await deployProductionSlot(context)
         });
     });
