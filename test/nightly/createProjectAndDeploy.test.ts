@@ -63,7 +63,7 @@ interface ICreateProjectAndDeployOptions extends IValidateProjectOptions {
 }
 
 async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOptions): Promise<void> {
-    const functionName: string = getRandomAlphanumericString(); // function name must only contain alphanumeric
+    const functionName: string = 'f' + getRandomAlphanumericString(); // function name must only contain alphanumeric
 
     const testWorkspacePath = getTestWorkspaceFolder();
     await runWithTestActionContext('createNewProject', async context => {

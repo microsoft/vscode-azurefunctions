@@ -63,6 +63,9 @@ extends:
         parameters:
           useAzureFederatedCredentials: ${{ parameters.enableLongRunningTests }}
           additionalSetupSteps:
-          - script: sudo apt install python3
-            displayName: Install Python3
-            name: Install_azcopy
+          - script: |
+              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+              chmod +x ./dotnet-install.sh
+              ./dotnet-install.sh --channel 9.0
+            displayName: Install .NET 9.0
+            name: Install_dotnet
