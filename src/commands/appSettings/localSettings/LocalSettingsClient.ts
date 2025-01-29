@@ -27,11 +27,11 @@ export class LocalSettingsClientProvider implements AppSettingsClientProvider {
 export class LocalSettingsClient implements IAppSettingsClient {
     public fullName: string;
     public isLinux: boolean;
-
     private _node: LocalProjectTreeItem;
 
     constructor(node: LocalProjectTreeItem) {
         this.isLinux = false;
+        this.fullName = 'local';
         this._node = node;
     }
 
