@@ -86,8 +86,8 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     const routePrefix: string = getRandomHexString();
     await addRoutePrefixToProject(testWorkspacePath, routePrefix);
 
-    // TODO: investigate why our SDK calls are throwing errors when app name is over 12 characters~
-    const appName: string = getRandomAlphanumericString();
+    // TODO: investigate why our SDK calls are throwing errors when app name is over 12 characters~y
+    const appName: string = 'f' + getRandomAlphanumericString();
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
