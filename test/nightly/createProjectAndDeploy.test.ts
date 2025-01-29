@@ -63,7 +63,7 @@ interface ICreateProjectAndDeployOptions extends IValidateProjectOptions {
 }
 
 async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOptions): Promise<void> {
-    const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
+    const functionName: string = getRandomAlphanumericString(); // function name must only contain alphanumeric
 
     const testWorkspacePath = getTestWorkspaceFolder();
     await runWithTestActionContext('createNewProject', async context => {
@@ -86,7 +86,8 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     const routePrefix: string = getRandomHexString();
     await addRoutePrefixToProject(testWorkspacePath, routePrefix);
 
-    const appName: string = 'funcBasic' + getRandomAlphanumericString();
+    // TODO: investigate why our SDK calls are throwing errors when app name is over 12 characters~
+    const appName: string = getRandomAlphanumericString();
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
