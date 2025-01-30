@@ -25,6 +25,10 @@ interface DurableTaskHubCreateRequest {
 export interface DurableTaskSchedulerResource {
     readonly id: string;
     readonly name: string;
+    readonly properties: {
+        readonly endpoint: string;
+        readonly provisioningState: string;
+    };
 }
 
 export interface DurableTaskHubResource {
@@ -32,6 +36,7 @@ export interface DurableTaskHubResource {
     readonly name: string;
     readonly properties: {
         readonly dashboardUrl: string;
+        readonly provisioningState: string;
     };
 }
 
@@ -41,6 +46,8 @@ export interface DurableTaskSchedulerClient {
 
     deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<void>;
     deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void>;
+
+    getScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskSchedulerResource>;
 
     getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
     getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]>;
@@ -97,6 +104,14 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskhubs/${taskHubName}`;
 
         await this.delete(taskHubsUrl, subscription.authentication);
+    }
+
+    async getScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskSchedulerResource> {
+        const schedulerUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName);
+
+        const scheduler = await this.getAsJson<DurableTaskSchedulerResource>(schedulerUrl, subscription.authentication);
+
+        return scheduler;
     }
 
     async getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource> {

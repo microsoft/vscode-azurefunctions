@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type AzureResource, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import { type ViewPropertiesModel, type AzureResource, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
 import { type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
@@ -54,4 +54,22 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     }
 
     get subscription() { return this.resource.subscription; }
+
+    get viewProperties(): ViewPropertiesModel {
+        return {
+            label: this.resource.name,
+            getData: async () => {
+                if (!this.resource.resourceGroup) {
+                    throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
+                }
+
+                const json = await this.schedulerClient.getScheduler(
+                    this.resource.subscription,
+                    this.resource.resourceGroup,
+                    this.resource.name);
+
+                return json;
+            }
+        };
+    }
 }
