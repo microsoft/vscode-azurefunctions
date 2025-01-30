@@ -701,7 +701,8 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i"
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
