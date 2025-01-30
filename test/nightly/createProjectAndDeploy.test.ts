@@ -88,6 +88,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     await addRoutePrefixToProject(testWorkspacePath, routePrefix);
 
     // TODO: investigate why our SDK calls are throwing errors when app name is over ~12 characters
+    // https://github.com/microsoft/vscode-azurefunctions/issues/4368
     const appName: string = 'f' + getRandomAlphanumericString();
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
