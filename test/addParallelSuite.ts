@@ -37,7 +37,7 @@ export interface ParallelSuiteOptions {
 }
 
 export function addParallelSuite(parallelTests: ParallelTest[], options: ParallelSuiteOptions): void {
-    suite.only(options.title, function (this: Mocha.Suite): void {
+    suite(options.title, function (this: Mocha.Suite): void {
         this.timeout(options.timeoutMS || 30 * 1000);
 
         suiteSetup(async function (this: Mocha.Context): Promise<void> {
