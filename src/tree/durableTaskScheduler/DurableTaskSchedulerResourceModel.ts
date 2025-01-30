@@ -11,7 +11,10 @@ import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { localize } from '../../localize';
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModel, AzureResourceModel {
-    public constructor(private readonly resource: AzureResource, private readonly schedulerClient: DurableTaskSchedulerClient) {
+    public constructor(
+        private readonly resource: AzureResource,
+        private readonly schedulerClient: DurableTaskSchedulerClient,
+        private readonly refreshModel: (model: DurableTaskSchedulerModel | undefined) => void) {
     }
 
     async getChildren(): Promise<DurableTaskHubResourceModel[]> {
@@ -30,6 +33,10 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
         treeItem.contextValue = 'azFunc.dts.scheduler';
 
         return treeItem;
+    }
+
+    refresh() {
+        this.refreshModel(this);
     }
 
     public get id(): string | undefined { return this.resource.id; }

@@ -73,6 +73,12 @@ export function createTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
             });
 
         await wizard.prompt();
-        await wizard.execute();
+
+        try {
+            await wizard.execute();
+        }
+        finally {
+            scheduler.refresh();
+        }
     }
 }
