@@ -24,7 +24,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 
         const taskHubs = await this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup, this.resource.name);
 
-        return taskHubs.map(resource => new DurableTaskHubResourceModel(this.resource, resource, this.schedulerClient));
+        return taskHubs.map(resource => new DurableTaskHubResourceModel(this, resource, this.schedulerClient));
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {

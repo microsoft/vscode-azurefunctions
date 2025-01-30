@@ -31,4 +31,8 @@ export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBran
     getTreeItem(element: DurableTaskSchedulerModel): TreeItem | Thenable<TreeItem> {
         return element.getTreeItem();
     }
+
+    refresh() {
+        this.onDidChangeTreeDataEventEmitter.fire();
+    }
 }

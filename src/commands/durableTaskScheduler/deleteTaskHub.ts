@@ -31,11 +31,16 @@ export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
             return;
         }
 
-        await schedulerClient.deleteTaskHub(
-            taskHub.subscription,
-            taskHub.resourceGroup,
-            taskHub.schedulerName,
-            taskHub.name
-        );
+        try {
+            await schedulerClient.deleteTaskHub(
+                taskHub.scheduler.subscription,
+                taskHub.scheduler.resourceGroup,
+                taskHub.scheduler.name,
+                taskHub.name
+            );
+        }
+        finally {
+            taskHub.scheduler.refresh();
+        }
     }
 }

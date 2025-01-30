@@ -69,8 +69,15 @@ import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/Du
 import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
 import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
 import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
+import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 
-export function registerCommands(schedulerClient: DurableTaskSchedulerClient): void {
+export function registerCommands(
+    services: {
+        dts: {
+            dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
+            schedulerClient: DurableTaskSchedulerClient
+        }
+    }): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
@@ -161,9 +168,9 @@ export function registerCommands(schedulerClient: DurableTaskSchedulerClient): v
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(schedulerClient));
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(schedulerClient));
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteScheduler', deleteSchedulerCommandFactory(schedulerClient));
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteTaskHub', deleteTaskHubCommandFactory(schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(services.dts.schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteScheduler', deleteSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteTaskHub', deleteTaskHubCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
 }

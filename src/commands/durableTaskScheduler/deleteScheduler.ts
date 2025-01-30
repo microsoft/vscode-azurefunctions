@@ -8,8 +8,9 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { localize } from "../../localize";
 import { type MessageItem } from "vscode";
 import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
+import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 
-export function deleteSchedulerCommandFactory(schedulerClient: DurableTaskSchedulerClient) {
+export function deleteSchedulerCommandFactory(dataBranchProvider: DurableTaskSchedulerDataBranchProvider, schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, scheduler: DurableTaskSchedulerResourceModel | undefined): Promise<void> => {
         if (!scheduler) {
             throw new Error(localize('noSchedulerSelectedErrorMessage', 'No scheduler was selected.'));
@@ -31,10 +32,15 @@ export function deleteSchedulerCommandFactory(schedulerClient: DurableTaskSchedu
             return;
         }
 
-        await schedulerClient.deleteScheduler(
-            scheduler.subscription,
-            scheduler.resourceGroup,
-            scheduler.name
-        );
+        try {
+            await schedulerClient.deleteScheduler(
+                scheduler.subscription,
+                scheduler.resourceGroup,
+                scheduler.name
+            );
+        }
+        finally {
+            dataBranchProvider.refresh();
+        }
     }
 }

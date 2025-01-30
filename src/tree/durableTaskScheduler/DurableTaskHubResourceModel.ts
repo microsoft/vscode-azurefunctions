@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type AzureResource, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
 import { type DurableTaskHubResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { type ProviderResult, TreeItem, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
 import { localize } from '../../localize';
+import { type DurableTaskSchedulerResourceModel } from "./DurableTaskSchedulerResourceModel";
 
 export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
     constructor(
-        private readonly schedulerResource: AzureResource,
+        public readonly scheduler: DurableTaskSchedulerResourceModel,
         private readonly resource: DurableTaskHubResource,
         private readonly schedulerClient: DurableTaskSchedulerClient) {
     }
@@ -24,7 +25,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
     get id(): string { return this.resource.id; }
 
     get portalUrl(): Uri {
-        const url: string = `${this.schedulerResource.subscription.environment.portalUrl}/#@${this.schedulerResource.subscription.tenantId}/resource${this.id}`;
+        const url: string = `${this.scheduler.subscription.environment.portalUrl}/#@${this.scheduler.subscription.tenantId}/resource${this.id}`;
 
         return Uri.parse(url);
     }
@@ -33,14 +34,14 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
         return {
             label: this.resource.name,
             getData: async () => {
-                if (!this.schedulerResource.resourceGroup) {
+                if (!this.scheduler.resourceGroup) {
                     throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
                 }
 
                 const json = await this.schedulerClient.getSchedulerTaskHub(
-                    this.schedulerResource.subscription,
-                    this.schedulerResource.resourceGroup,
-                    this.schedulerResource.name,
+                    this.scheduler.subscription,
+                    this.scheduler.resourceGroup,
+                    this.scheduler.name,
                     this.resource.name);
 
                 return json;
@@ -64,16 +65,4 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
     }
 
     get name() { return this.resource.name; }
-
-    get resourceGroup() {
-        if (!this.schedulerResource.resourceGroup) {
-            throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
-        }
-
-        return this.schedulerResource.resourceGroup;
-    }
-
-    get schedulerName() { return this.schedulerResource.name; }
-
-    get subscription() { return this.schedulerResource.subscription; }
 }

@@ -11,6 +11,7 @@ import { type Progress } from "vscode";
 import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { ext } from '../../extensionVariables';
 import { createActivityContext } from "../../utils/activityUtils";
+import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
@@ -54,7 +55,7 @@ class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerConte
     }
 }
 
-export function createSchedulerCommandFactory(schedulerClient: DurableTaskSchedulerClient) {
+export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSchedulerDataBranchProvider, schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, node?: { subscription: AzureSubscription }): Promise<void> => {
         const subscription = node?.subscription ?? await subscriptionExperience(actionContext, ext.rgApiV2.resources.azureResourceTreeDataProvider);
 
@@ -84,6 +85,12 @@ export function createSchedulerCommandFactory(schedulerClient: DurableTaskSchedu
             });
 
         await wizard.prompt();
-        await wizard.execute();
+
+        try {
+            await wizard.execute();
+        }
+        finally {
+            dataBranchProvider.refresh();
+        }
     }
 }
