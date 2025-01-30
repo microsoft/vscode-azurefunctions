@@ -382,6 +382,11 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                "title": "%azureFunctions.durableTaskScheduler.copySchedulerEndpoint%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.createScheduler",
                 "title": "%azureFunctions.durableTaskScheduler.createScheduler%",
                 "category": "Azure Functions"
@@ -698,6 +703,11 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*folder/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",
