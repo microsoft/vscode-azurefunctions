@@ -54,12 +54,22 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
         return [];
     }
 
-    getTreeItem(): TreeItem | Thenable<TreeItem>
+    async getTreeItem(): Promise<TreeItem>
     {
         const treeItem = new TreeItem(this.name)
 
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
         treeItem.contextValue = 'azFunc.dts.taskHub';
+
+        const json = await this.schedulerClient.getSchedulerTaskHub(
+            this.scheduler.subscription,
+            this.scheduler.resourceGroup,
+            this.scheduler.name,
+            this.name);
+
+        if (json.properties.provisioningState !== 'Succeeded') {
+            treeItem.description = localize('taskHubDescription', '({0})', json.properties.provisioningState);
+        }
 
         return treeItem;
     }

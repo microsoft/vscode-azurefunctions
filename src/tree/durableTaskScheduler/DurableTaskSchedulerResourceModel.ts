@@ -27,10 +27,21 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
         return taskHubs.map(resource => new DurableTaskHubResourceModel(this, resource, this.schedulerClient));
     }
 
-    getTreeItem(): TreeItem | Thenable<TreeItem> {
+    async getTreeItem(): Promise<TreeItem> {
         const treeItem = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
 
         treeItem.contextValue = 'azFunc.dts.scheduler';
+
+        if (this.resource.resourceGroup) {
+            const json = await this.schedulerClient.getScheduler(
+                this.resource.subscription,
+                this.resource.resourceGroup,
+                this.resource.name);
+
+            if (json.properties.provisioningState !== 'Succeeded') {
+                treeItem.description = localize('schedulerDescription', '({0})', json.properties.provisioningState);
+            }
+        }
 
         return treeItem;
     }
