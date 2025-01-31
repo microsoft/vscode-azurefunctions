@@ -8,7 +8,7 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
 import { localize } from "../../localize";
 import { ext } from "../../extensionVariables";
-import { env, type QuickPickItem } from "vscode";
+import { env, QuickPickItemKind, type QuickPickItem } from "vscode";
 
 export function copySchedulerConnectionStringCommandFactory(schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, scheduler: DurableTaskSchedulerResourceModel | undefined): Promise<void> => {
@@ -16,7 +16,12 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             throw new Error(localize('noSchedulerSelectedErrorMessage', 'No scheduler was selected.'));
         }
 
-        // TODO: Prompt for type of connection string (local development, user-assigned managed identity, server-assigned managed identity)
+        const schedulerJson = schedulerClient.getScheduler(
+            scheduler.subscription,
+            scheduler.resourceGroup,
+            scheduler.name);
+
+        const { endpoint } = (await schedulerJson).properties;
 
         const localDevelopment: QuickPickItem = {
             label: localize('localDevelopmentLabel', 'Local development')
@@ -37,17 +42,9 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
                 systemAssignedManagedIdentity
             ],
             {
-                canPickMany: false
+                canPickMany: false,
+                placeHolder: localize('authenticationTypePlaceholder', 'Select the type of authentication to be used')
             });
-
-        // TODO: Prompt for (optional) task hub
-
-        const schedulerJson = schedulerClient.getScheduler(
-            scheduler.subscription,
-            scheduler.resourceGroup,
-            scheduler.name);
-
-        const { endpoint } = (await schedulerJson).properties;
 
         let connectionString = `Endpoint=${endpoint};Authentication=`
 
@@ -59,6 +56,41 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
 
             if (result === userAssignedManagedIdentity) {
                 connectionString += ';ClientID=<ClientID>';
+            }
+        }
+
+        // TODO: Prompt for (optional) task hub
+
+        const taskHubs = await schedulerClient.getSchedulerTaskHubs(
+            scheduler.subscription,
+            scheduler.resourceGroup,
+            scheduler.name);
+
+        if (taskHubs.length > 0) {
+
+            const noTaskHubItem: QuickPickItem = {
+                    label: localize('noTaskHubLabel', 'No task hub')
+                }
+
+            const taskHubItems: QuickPickItem[] =
+                taskHubs.map(taskHub => ({ label: taskHub.name }));
+
+            const taskHubResult = await actionContext.ui.showQuickPick(
+                [
+                    noTaskHubItem,
+                    {
+                        kind: QuickPickItemKind.Separator,
+                        label: localize('taskHubSepratorLabel', 'Task Hubs')
+                    },
+                    ...taskHubItems
+                ],
+                {
+                    canPickMany: false,
+                    placeHolder: localize('taskHubSelectionPlaceholder', 'Select the task hub')
+                });
+
+            if (taskHubResult && taskHubResult !== noTaskHubItem) {
+                connectionString += `;TaskHub=${taskHubResult.label}`;
             }
         }
 
