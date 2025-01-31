@@ -49,7 +49,7 @@ extends:
   parameters:
     sdl:
       credscan:
-        suppressionsFile: $(Build.SourcesDirectory)\.azure-pipelines\compliance\CredScanSuppressions.json
+        suppressionsFile: $(Build.SourcesDirectory)/.azure-pipelines/compliance/CredScanSuppressions.json
       codeql:
         language: javascript # only build a codeql database for javascript, since the jsoncli pipeline handles csharp
       #   enabled: true # TODO: would like to enable only on scheduled builds but CodeQL cannot currently be disabled per https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/codeql/1es-codeql
@@ -62,3 +62,10 @@ extends:
       - template: azure-pipelines/1esstages.yml@azExtTemplates
         parameters:
           useAzureFederatedCredentials: ${{ parameters.enableLongRunningTests }}
+          additionalSetupSteps:
+          - script: |
+              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+              chmod +x ./dotnet-install.sh
+              ./dotnet-install.sh --channel 9.0
+            displayName: Install .NET 9.0
+            name: Install_dotnet
