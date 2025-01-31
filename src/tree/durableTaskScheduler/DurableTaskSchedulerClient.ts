@@ -6,6 +6,14 @@
 import { type AzureAuthentication, type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { localize } from '../../localize';
 
+interface FetchOptions {
+    authentication: AzureAuthentication;
+    contentType?: string | undefined;
+    body?: string | undefined;
+    method: string;
+    url: string;
+}
+
 interface DurableTaskSchedulerCreateRequest {
     readonly location: string;
     readonly properties: {
@@ -16,6 +24,10 @@ interface DurableTaskSchedulerCreateRequest {
         };
     };
     readonly tags: unknown;
+}
+
+interface AzureAsyncOperationStatus {
+    status: string;
 }
 
 interface DurableTaskHubCreateRequest {
@@ -40,11 +52,20 @@ export interface DurableTaskHubResource {
     };
 }
 
+export interface DurableTaskStatus {
+    get: () => Promise<boolean | undefined>;
+}
+
+export interface DurableTaskSchedulerCreateResponse {
+    scheduler: DurableTaskSchedulerResource;
+    status: DurableTaskStatus;
+}
+
 export interface DurableTaskSchedulerClient {
-    createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerResource>;
+    createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerCreateResponse>;
     createTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
 
-    deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<void>;
+    deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskStatus>;
     deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void>;
 
     getScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskSchedulerResource>;
@@ -54,7 +75,7 @@ export interface DurableTaskSchedulerClient {
 }
 
 export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClient {
-    async createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerResource> {
+    async createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerCreateResponse> {
         const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName);
 
         const request: DurableTaskSchedulerCreateRequest = {
@@ -70,16 +91,37 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
             }
         };
 
-        const scheduler = await this.putAsJson<DurableTaskSchedulerResource>(
+        const response = await this.putAsJson<DurableTaskSchedulerResource>(
             taskHubsUrl,
             request,
             subscription.authentication);
 
-        return scheduler;
+        return  {
+            scheduler: response.value,
+            status: {
+                get: async () => {
+                    if (!response.asyncOperation) {
+                        return true;
+                    }
+
+                    const status = await this.getAsJson<AzureAsyncOperationStatus>(
+                        response.asyncOperation,
+                        subscription.authentication
+                    );
+
+                    switch (status.status) {
+                        case 'Succeeded': return true;
+                        case 'Failed': return false;
+                        case 'Canceled': return false;
+                        default: return undefined;
+                    }
+                }
+            }
+        };
     }
 
     async createTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource> {
-        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskhubs/${taskHubName}`;
+        const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName, `/taskhubs/${taskHubName}`);
 
         const request: DurableTaskHubCreateRequest = {
             properties: {
@@ -91,17 +133,21 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
             request,
             subscription.authentication);
 
-        return taskHub;
+        return taskHub.value;
     }
 
-    async deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<void> {
-        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}`;
+    async deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskStatus> {
+        const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName);
 
         await this.delete(taskHubsUrl, subscription.authentication);
+
+        return {
+            get: () => Promise.resolve(true)
+        }
     }
 
     async deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void> {
-        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskhubs/${taskHubName}`;
+        const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName, `/taskhubs/${taskHubName}`);
 
         await this.delete(taskHubsUrl, subscription.authentication);
     }
@@ -115,82 +161,80 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
     }
 
     async getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource> {
-        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskHubs/${taskHubName}`;
+        const taskHubUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName, `/taskHubs/${taskHubName}`);
 
-        const taskHub = await this.getAsJson<DurableTaskHubResource>(taskHubsUrl, subscription.authentication);
+        const taskHub = await this.getAsJson<DurableTaskHubResource>(taskHubUrl, subscription.authentication);
 
         return taskHub;
     }
 
     async getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]> {
-        const taskHubsUrl = `${HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName)}/taskHubs`;
+        const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName, '/taskHubs');
 
         const response = await this.getAsJson<{ value: DurableTaskHubResource[] }>(taskHubsUrl, subscription.authentication);
 
         return response.value;
     }
 
-    private static getBaseUrl(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string) {
+    private static getBaseUrl(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, relativeUrl?: string | undefined) {
         const provider = 'Microsoft.DurableTask';
+        const apiVersion = '2024-10-01-preview';
 
-        return `${subscription.environment.resourceManagerEndpointUrl}subscriptions/${subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}`;
+        let url = `${subscription.environment.resourceManagerEndpointUrl}subscriptions/${subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/${provider}/schedulers/${schedulerName}`;
+
+        if (relativeUrl) {
+            url += relativeUrl;
+        }
+
+        url += `?api-version=${apiVersion}`;
+
+        return url;
     }
 
     private async delete(url: string, authentication: AzureAuthentication): Promise<void> {
-        const apiVersion = '2024-10-01-preview';
-        const versionedUrl = `${url}?api-version=${apiVersion}`;
-
-        const authSession = await authentication.getSession();
-
-        if (!authSession) {
-            throw new Error(localize('noAuthenticationSessionErrorMessage', 'Unable to obtain an authentication session.'));
-        }
-
-        const accessToken = authSession.accessToken;
-
-        const request = new Request(
-            versionedUrl,
-            {
-                method: 'DELETE'
-            });
-
-        request.headers.append('Authorization', `Bearer ${accessToken}`);
-
-        const response = await fetch(request);
-
-        if (!response.ok) {
-            throw new Error(localize('failureInvokingArmErrorMessage', 'Azure management API returned an unsuccessful response.'));
-        }
+        await this.fetch({
+            authentication,
+            method: 'DELETE',
+            url
+        });
     }
 
     private async getAsJson<T>(url: string, authentication: AzureAuthentication): Promise<T> {
-        const apiVersion = '2024-10-01-preview';
-        const versionedUrl = `${url}?api-version=${apiVersion}`;
-
-        const authSession = await authentication.getSession();
-
-        if (!authSession) {
-            throw new Error(localize('noAuthenticationSessionErrorMessage', 'Unable to obtain an authentication session.'));
-        }
-
-        const accessToken = authSession.accessToken;
-
-        const request = new Request(versionedUrl);
-
-        request.headers.append('Authorization', `Bearer ${accessToken}`);
-
-        const response = await fetch(request);
-
-        if (!response.ok) {
-            throw new Error(localize('failureInvokingArmErrorMessage', 'Azure management API returned an unsuccessful response.'));
-        }
+        const response = await this.fetch({
+            authentication,
+            method: 'GET',
+            url
+        });
 
         return await response.json() as T;
     }
 
-    private async putAsJson<T>(url: string, body: unknown, authentication: AzureAuthentication): Promise<T> {
-        const apiVersion = '2024-10-01-preview';
-        const versionedUrl = `${url}?api-version=${apiVersion}`;
+    private async putAsJson<T>(url: string, body: unknown, authentication: AzureAuthentication): Promise<{ asyncOperation?: string, value: T }> {
+        const response = await this.fetch({
+            authentication,
+            contentType: 'application/json',
+            body: JSON.stringify(body),
+            method: 'PUT',
+            url
+        });
+
+        const value = await response.json() as T;
+
+        return {
+            asyncOperation: response.headers.get('Azure-AsyncOperation') ?? undefined,
+            value
+        }
+    }
+
+    private async fetch(options: FetchOptions): Promise<Response> {
+        const { authentication, body, contentType, method, url } = options;
+
+        const request = new Request(
+            url,
+            {
+                body,
+                method
+            });
 
         const authSession = await authentication.getSession();
 
@@ -200,15 +244,11 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
 
         const accessToken = authSession.accessToken;
 
-        const request = new Request(
-            versionedUrl,
-            {
-                body: JSON.stringify(body),
-                method: 'PUT'
-            });
-
         request.headers.set('Authorization', `Bearer ${accessToken}`);
-        request.headers.set('Content-Type', 'application/json');
+
+        if (contentType) {
+            request.headers.set('Content-Type', contentType);
+        }
 
         const response = await fetch(request);
 
@@ -216,6 +256,6 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
             throw new Error(localize('failureInvokingArmErrorMessage', 'Azure management API returned an unsuccessful response.'));
         }
 
-        return await response.json() as T;
+        return response;
     }
 }

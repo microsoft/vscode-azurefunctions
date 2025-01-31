@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, type IActionContext, subscriptionExperience, createSubscriptionContext, type ExecuteActivityContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
-import { localize } from '../../localize';
-import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
+import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type Progress } from "vscode";
-import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
+import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
 import { ext } from '../../extensionVariables';
-import { createActivityContext } from "../../utils/activityUtils";
+import { localize } from '../../localize';
+import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
+import { createActivityContext } from "../../utils/activityUtils";
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
@@ -21,7 +22,7 @@ interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationW
 class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
     async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
-            prompt: localize('taskHubNamingStepPrompt', 'Enter a name for the new task hub')
+            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
         })
     }
 
@@ -40,12 +41,29 @@ class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerConte
     async execute(wizardContext: ICreateSchedulerContext, _: Progress<{ message?: string; increment?: number; }>): Promise<void> {
         const location = await LocationListStep.getLocation(wizardContext);
 
-        await this.schedulerClient.createScheduler(
+        const response = await this.schedulerClient.createScheduler(
             wizardContext.subscription as AzureSubscription,
             wizardContext.resourceGroup?.name as string,
             location.name,
             wizardContext.schedulerName as string
         );
+
+        const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+        while (true) {
+            await delay(1000);
+
+            const status = await response.status.get();
+
+            if (status === true)
+            {
+                break;
+            }
+
+            if (status === false) {
+                throw new Error(localize('schedulerCreationFailed', 'The scheduler could not be created.'));
+            }
+        }
     }
 
     shouldExecute(wizardContext: ICreateSchedulerContext): boolean {
@@ -60,16 +78,20 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
         const subscription = node?.subscription ?? await subscriptionExperience(actionContext, ext.rgApiV2.resources.azureResourceTreeDataProvider);
 
         const wizardContext =
-            {
-                subscription,
+        {
+            subscription,
 
-                ...actionContext,
-                ...createSubscriptionContext(subscription),
-                ...await createActivityContext()
-            };
+            ...actionContext,
+            ...createSubscriptionContext(subscription),
+            ...await createActivityContext()
+        };
 
-        const promptSteps: AzureWizardPromptStep<ICreateSchedulerContext>[] = [ new ResourceGroupListStep(), new SchedulerNamingStep() ];
+        const promptSteps: AzureWizardPromptStep<ICreateSchedulerContext>[] = [
+            new SchedulerNamingStep(),
+            new ResourceGroupListStep()
+        ];
 
+        LocationListStep.addProviderForFiltering(wizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
         LocationListStep.addStep(wizardContext, promptSteps);
 
         const wizard = new AzureWizard<ICreateSchedulerContext>(
@@ -81,7 +103,7 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
                     new ResourceGroupCreateStep(),
                     new SchedulerCreationStep(schedulerClient)
                 ],
-                title: localize('createSchedulerWizardTitle', 'Create Scheduler')
+                title: localize('createSchedulerWizardTitle', 'Create Durable Task Scheduler')
             });
 
         await wizard.prompt();

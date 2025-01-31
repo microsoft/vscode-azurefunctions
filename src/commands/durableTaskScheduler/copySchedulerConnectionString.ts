@@ -59,8 +59,6 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             }
         }
 
-        // TODO: Prompt for (optional) task hub
-
         const taskHubs = await schedulerClient.getSchedulerTaskHubs(
             scheduler.subscription,
             scheduler.resourceGroup,
