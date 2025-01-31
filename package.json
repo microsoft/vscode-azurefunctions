@@ -382,6 +382,11 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
+                "title": "%azureFunctions.durableTaskScheduler.copySchedulerConnectionString%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
                 "title": "%azureFunctions.durableTaskScheduler.copySchedulerEndpoint%",
                 "category": "Azure Functions"
@@ -705,9 +710,14 @@
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
                     "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",

@@ -120,7 +120,8 @@
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
     "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
 
-    "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Scheduler Endpoint",
+    "azureFunctions.durableTaskScheduler.copySchedulerConnectionString": "Copy Connection String",
+    "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Endpoint",
     "azureFunctions.durableTaskScheduler.createScheduler": "Create Durable Task Scheduler...",
     "azureFunctions.durableTaskScheduler.createScheduler.detail": "For long-running and reliable workflows.",
     "azureFunctions.durableTaskScheduler.createTaskHub": "Create Task Hub...",

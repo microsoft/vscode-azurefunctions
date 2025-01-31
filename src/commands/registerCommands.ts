@@ -71,6 +71,7 @@ import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHu
 import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
+import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
 
 export function registerCommands(
     services: {
@@ -169,6 +170,7 @@ export function registerCommands(
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(services.dts.schedulerClient));
