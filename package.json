@@ -58,6 +58,9 @@
                 "branches": [
                     {
                         "type": "func"
+                    },
+                    {
+                        "type": "DurableTaskSchedulerEmulator"
                     }
                 ],
                 "resources": true
