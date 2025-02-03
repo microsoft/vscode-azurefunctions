@@ -6,13 +6,14 @@
 import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
-import { type Progress } from "vscode";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
+import { withCancellation } from "../../utils/cancellation";
+import { type Progress } from "vscode";
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
@@ -48,21 +49,10 @@ class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerConte
             wizardContext.schedulerName as string
         );
 
-        const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+        const status = await withCancellation(token => response.status.waitForCompletion(token), 1000 * 60 * 30);
 
-        while (true) {
-            await delay(1000);
-
-            const status = await response.status.get();
-
-            if (status === true)
-            {
-                break;
-            }
-
-            if (status === false) {
-                throw new Error(localize('schedulerCreationFailed', 'The scheduler could not be created.'));
-            }
+        if (status !== true) {
+            throw new Error(localize('schedulerCreationFailed', 'The scheduler could not be created.'));
         }
     }
 

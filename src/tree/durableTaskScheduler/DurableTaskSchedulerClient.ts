@@ -5,6 +5,8 @@
 
 import { type AzureAuthentication, type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { localize } from '../../localize';
+import { type CancellationToken } from "vscode";
+import { delay } from "../../utils/delay";
 
 interface FetchOptions {
     authentication: AzureAuthentication;
@@ -54,6 +56,7 @@ export interface DurableTaskHubResource {
 
 export interface DurableTaskStatus {
     get: () => Promise<boolean | undefined>;
+    waitForCompletion: (token: CancellationToken) => Promise<boolean | undefined>;
 }
 
 export interface DurableTaskSchedulerCreateResponse {
@@ -98,25 +101,7 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
 
         return  {
             scheduler: response.value,
-            status: {
-                get: async () => {
-                    if (!response.asyncOperation) {
-                        return true;
-                    }
-
-                    const status = await this.getAsJson<AzureAsyncOperationStatus>(
-                        response.asyncOperation,
-                        subscription.authentication
-                    );
-
-                    switch (status.status) {
-                        case 'Succeeded': return true;
-                        case 'Failed': return false;
-                        case 'Canceled': return false;
-                        default: return undefined;
-                    }
-                }
-            }
+            status: this.createStatus(response.asyncOperation, subscription.authentication)
         };
     }
 
@@ -139,11 +124,9 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
     async deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskStatus> {
         const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName);
 
-        await this.delete(taskHubsUrl, subscription.authentication);
+        const response = await this.delete(taskHubsUrl, subscription.authentication);
 
-        return {
-            get: () => Promise.resolve(true)
-        }
+        return this.createStatus(response.asyncOperation, subscription.authentication);
     }
 
     async deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<void> {
@@ -191,12 +174,16 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         return url;
     }
 
-    private async delete(url: string, authentication: AzureAuthentication): Promise<void> {
-        await this.fetch({
+    private async delete(url: string, authentication: AzureAuthentication): Promise<{ asyncOperation?: string }> {
+        const response = await this.fetch({
             authentication,
             method: 'DELETE',
             url
         });
+
+        return {
+            asyncOperation: response.headers.get('Azure-AsyncOperation') ?? undefined
+        }
     }
 
     private async getAsJson<T>(url: string, authentication: AzureAuthentication): Promise<T> {
@@ -257,5 +244,49 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         }
 
         return response;
+    }
+
+    private createStatus(asyncOperation: string | undefined, authentication: AzureAuthentication): DurableTaskStatus {
+        const get = async () => {
+            if (!asyncOperation) {
+                return true;
+            }
+
+            const status = await this.getAsJson<AzureAsyncOperationStatus>(
+                asyncOperation,
+                authentication
+            );
+
+            switch (status.status) {
+                case 'Succeeded': return true;
+                case 'Failed': return false;
+                case 'Canceled': return false;
+                default: return undefined;
+            }
+        };
+
+        return {
+            get,
+            waitForCompletion: async token => {
+                while (true) {
+                    await delay(1000);
+
+                    if (token.isCancellationRequested) {
+                        return undefined;
+                    }
+
+                    const status = await get();
+
+                    if (status === true)
+                    {
+                        return true;
+                    }
+
+                    if (status === false) {
+                        return false;
+                    }
+                }
+            }
+        };
     }
 }
