@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, type ExecuteActivityContext, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from '../../localize';
 import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
 import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type Progress } from "vscode";
+import { createActivityContext } from "../../utils/activityUtils";
 
-interface ICreateTaskHubContext extends IActionContext {
+interface ICreateTaskHubContext extends IActionContext, ExecuteActivityContext {
     readonly subscription: AzureSubscription;
     readonly resourceGroup: string;
     readonly schedulerName: string;
@@ -58,10 +59,11 @@ export function createTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
 
         const wizardContext: ICreateTaskHubContext =
             {
-                ...actionContext,
                 subscription: scheduler.subscription,
                 resourceGroup: scheduler.resourceGroup,
-                schedulerName: scheduler.name
+                schedulerName: scheduler.name,
+                ...actionContext,
+                ...await createActivityContext()
             };
 
         const wizard = new AzureWizard<ICreateTaskHubContext>(
@@ -69,10 +71,12 @@ export function createTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
             {
                 promptSteps: [new TaskHubNamingStep()],
                 executeSteps: [new TaskHubCreationStep(schedulerClient)],
-                title: localize('createTaskHubWizardTitle', 'Create Task Hub')
+                title: localize('createTaskHubWizardTitle', 'Create Durable Task Hub')
             });
 
         await wizard.prompt();
+
+        wizardContext.activityTitle = localize('createTaskHubActivityTitle', 'Create Durable Task Hub \'{0}\'', wizardContext.taskHubName);
 
         try {
             await wizard.execute();
