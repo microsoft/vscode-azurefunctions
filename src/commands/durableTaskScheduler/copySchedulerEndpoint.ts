@@ -16,12 +16,16 @@ export function copySchedulerEndpointCommandFactory(schedulerClient: DurableTask
             throw new Error(localize('noSchedulerSelectedErrorMessage', 'No scheduler was selected.'));
         }
 
-        const schedulerJson = schedulerClient.getScheduler(
+        const schedulerJson = await schedulerClient.getScheduler(
             scheduler.subscription,
             scheduler.resourceGroup,
             scheduler.name);
 
-        const { endpoint } = (await schedulerJson).properties;
+        if (!schedulerJson) {
+            throw new Error(localize('schedulerNotFoundErrorMessage', 'Scheduler does not exist.'));
+        }
+
+        const { endpoint } = schedulerJson.properties;
 
         await env.clipboard.writeText(endpoint);
 

@@ -83,8 +83,10 @@ export function deleteSchedulerCommandFactory(
 
         await ext.rgApi.registerActivity(activity);
 
+        const label = localize('deletingSchedulerActivityLabel', 'Delete Durable Task Scheduler \'{0}\'', scheduler.name);
+
         activity.start({
-            label: localize('deletingSchedulerActivityLabel', 'Deleting scheduler \'{0}\'', scheduler.name)
+            label
         });
 
         try {
@@ -98,17 +100,17 @@ export function deleteSchedulerCommandFactory(
 
             if (result === true) {
                 activity.succeed({
-                    label: localize('deleteSucceededActivityLabel', 'Deleted scheduler \'{0}\'', scheduler.name)
+                    label
                 });
             }
             else {
-                throw new Error(localize('deleteFailureMessage', 'The scheduler failed to be deleted in the allotted time.'));
+                throw new Error(localize('deleteFailureMessage', 'The scheduler failed to delete within the allotted time.'));
             }
         }
         catch (error: unknown) {
             activity.fail({
                 error,
-                label: localize('deleteFailureActivityLabel', 'Failed to delete scheduler \'{0}\'', scheduler.name)
+                label
             });
         }
         finally {

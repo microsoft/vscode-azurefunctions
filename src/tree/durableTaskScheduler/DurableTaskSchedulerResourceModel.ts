@@ -38,8 +38,8 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
                 this.resource.resourceGroup,
                 this.resource.name);
 
-            if (json.properties.provisioningState !== 'Succeeded') {
-                treeItem.description = localize('schedulerDescription', '({0})', json.properties.provisioningState);
+            if (json?.properties.provisioningState !== 'Succeeded') {
+                treeItem.description = localize('schedulerDescription', '({0})', json?.properties.provisioningState ?? 'Deleted');
             }
         }
 
@@ -79,7 +79,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
                     this.resource.resourceGroup,
                     this.resource.name);
 
-                return json;
+                return json ?? '';
             }
         };
     }

@@ -44,7 +44,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
                     this.scheduler.name,
                     this.resource.name);
 
-                return json;
+                return json ?? '';
             }
         };
     }
@@ -67,8 +67,8 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
             this.scheduler.name,
             this.name);
 
-        if (json.properties.provisioningState !== 'Succeeded') {
-            treeItem.description = localize('taskHubDescription', '({0})', json.properties.provisioningState);
+        if (json?.properties.provisioningState !== 'Succeeded') {
+            treeItem.description = localize('taskHubDescription', '({0})', json?.properties.provisioningState || 'Deleted');
         }
 
         return treeItem;

@@ -67,7 +67,7 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
     return async (actionContext: IActionContext, node?: { subscription: AzureSubscription }): Promise<void> => {
         const subscription = node?.subscription ?? await subscriptionExperience(actionContext, ext.rgApiV2.resources.azureResourceTreeDataProvider);
 
-        const wizardContext =
+        const wizardContext: ICreateSchedulerContext =
         {
             subscription,
 
@@ -97,6 +97,8 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
             });
 
         await wizard.prompt();
+
+        wizardContext.activityTitle = localize('createSchedulerActivityTitle', 'Create Durable Task Scheduler \'{0}\'', wizardContext.schedulerName);
 
         try {
             await wizard.execute();
