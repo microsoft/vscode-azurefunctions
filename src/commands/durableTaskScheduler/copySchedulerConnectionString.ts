@@ -27,32 +27,44 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
 
         const { endpoint } = schedulerJson.properties;
 
+        const noAuthentication: QuickPickItem = {
+            detail: localize('noAuthenticationDetail', 'No credentials will be used.'),
+            label: localize('noAuthenticationLabel', 'None')
+        }
+
         const localDevelopment: QuickPickItem = {
+            detail: localize('localDevelopmentDetail', 'Use the credentials of the local developer.'),
             label: localize('localDevelopmentLabel', 'Local development')
         };
 
         const userAssignedManagedIdentity: QuickPickItem = {
+            detail: localize('userAssignedManagedIdentityDetail', 'Use managed identity credentials for a specific client.'),
             label: localize('userAssignedManagedIdentityLabel', 'User-assigned managed identity')
         }
 
         const systemAssignedManagedIdentity: QuickPickItem = {
+            detail: localize('systemAssignedManagedIdentityDetail', 'Use managed identity credentials for a client assigned to a specific Azure resource.'),
             label: localize('systemAssignedManagedIdentityLabel', 'System-assigned managed identity')
         }
 
         const result = await actionContext.ui.showQuickPick(
             [
+                noAuthentication,
                 localDevelopment,
                 userAssignedManagedIdentity,
                 systemAssignedManagedIdentity
             ],
             {
                 canPickMany: false,
-                placeHolder: localize('authenticationTypePlaceholder', 'Select the type of authentication to be used')
+                placeHolder: localize('authenticationTypePlaceholder', 'Select the credentials to be used to connect to the scheduler')
             });
 
         let connectionString = `Endpoint=${endpoint};Authentication=`
 
-        if (result === localDevelopment) {
+        if (result === noAuthentication) {
+            connectionString += 'None';
+        }
+        else if (result === localDevelopment) {
             connectionString += 'DefaultAzure';
         }
         else {
@@ -71,7 +83,8 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
         if (taskHubs.length > 0) {
 
             const noTaskHubItem: QuickPickItem = {
-                    label: localize('noTaskHubLabel', 'No task hub')
+                    detail: localize('noTaskHubDetail', 'Do not connect to a specific task hub.'),
+                    label: localize('noTaskHubLabel', 'None')
                 }
 
             const taskHubItems: QuickPickItem[] =
@@ -88,7 +101,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
                 ],
                 {
                     canPickMany: false,
-                    placeHolder: localize('taskHubSelectionPlaceholder', 'Select the task hub')
+                    placeHolder: localize('taskHubSelectionPlaceholder', 'Select a task hub to connect to')
                 });
 
             if (taskHubResult && taskHubResult !== noTaskHubItem) {
