@@ -8,6 +8,8 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { localize } from "../../localize";
 import { type DurableTaskHubResourceModel } from "../../tree/durableTaskScheduler/DurableTaskHubResourceModel";
 import { type MessageItem } from "vscode";
+import { withAzureActivity } from "../../utils/AzureActivity";
+import { withCancellation } from "../../utils/cancellation";
 
 export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, taskHub: DurableTaskHubResourceModel | undefined): Promise<void> => {
@@ -16,7 +18,7 @@ export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         }
 
         const deleteItem: MessageItem = {
-            title: 'Delete'
+            title: localize('deleteTaskHubLabel', 'Delete')
         };
 
         const result = await actionContext.ui.showWarningMessage(
@@ -32,12 +34,21 @@ export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         }
 
         try {
-            await schedulerClient.deleteTaskHub(
-                taskHub.scheduler.subscription,
-                taskHub.scheduler.resourceGroup,
-                taskHub.scheduler.name,
-                taskHub.name
-            );
+            await withAzureActivity(
+                localize('deletingTaskHubActivityLabel', 'Delete Durable Task Hub \'{0}\'', taskHub.name),
+                async () => {
+                    const response = await schedulerClient.deleteTaskHub(
+                        taskHub.scheduler.subscription,
+                        taskHub.scheduler.resourceGroup,
+                        taskHub.scheduler.name,
+                        taskHub.name);
+
+                    const result = await withCancellation(token => response.waitForCompletion(token), 1000 * 60 * 5);
+
+                    if (result !== true) {
+                        throw new Error(localize('deleteFailureMessage', 'The scheduler failed to delete within the allotted time.'));
+                    }
+                });
         }
         finally {
             taskHub.scheduler.refresh();
