@@ -9,6 +9,7 @@ import { type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { localize } from '../../localize';
+import * as retry from 'p-retry';
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModel, AzureResourceModel {
     public constructor(
@@ -22,7 +23,15 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
             throw new Error(localize('noResourceGroupErrorMessage', 'Azure resource does not have a valid resource group name.'));
         }
 
-        const taskHubs = await this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup, this.resource.name);
+        // NOTE: The DTS RP may return a 500 when getting task hubs for a just-deleted scheduler.
+        //       In the case of such a failure, just wait a moment and try again.
+
+        const taskHubs = await retry(
+            () => this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup as string, this.resource.name),
+            {
+                retries: 3,
+                minTimeout: 2500
+            });
 
         return taskHubs.map(resource => new DurableTaskHubResourceModel(this, resource, this.schedulerClient));
     }
