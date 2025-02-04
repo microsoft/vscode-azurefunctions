@@ -13,7 +13,7 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { workspace, type Progress } from "vscode";
+import { type Progress } from "vscode";
 import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
@@ -72,14 +72,6 @@ export async function createResourcesClient(context: AzExtClientContext): Promis
     }
 }
 
-export async function isDtsCreationEnabled(): Promise<boolean> {
-    const configuration = workspace.getConfiguration('azureFunctions');
-
-    const enableCreation = configuration.get<boolean>('durableTaskScheduler.enableCreation');
-
-    return Promise.resolve(enableCreation === true);
-}
-
 export async function isDtsProviderRegistered(context: AzExtClientContext): Promise<boolean> {
     const resourcesClient = await createResourcesClient(context);
 
@@ -101,15 +93,11 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
             ...await createActivityContext()
         };
 
-        if (!await isDtsCreationEnabled()) {
-            throw new Error('Creation is not enabled!');
-        }
-
         if (!await isDtsProviderRegistered(wizardContext)) {
             await actionContext.ui.showWarningMessage(
-                localize('dtsProviderNotRegistered', 'The Durable Task Scheduler provider is not registered for the subscription.'),
+                localize('dtsProviderNotRegistered', 'The Durable Task Scheduler provider ({0}) is not registered for the subscription ({1}).', DurableTaskProvider, subscription.subscriptionId),
                 {
-                    learnMoreLink: 'https://aka.ms/'
+                    learnMoreLink: 'https://aka.ms/dts-preview-info'
                 });
 
             return;

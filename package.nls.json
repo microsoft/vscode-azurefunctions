@@ -129,5 +129,5 @@
     "azureFunctions.durableTaskScheduler.deleteTaskHub": "Delete Task Hub...",
     "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
 
-    "azureFunctions.durableTaskScheduler.enableCreation": "Enable Durable Task Scheduler creation"
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
 }
