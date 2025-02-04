@@ -11,7 +11,7 @@ export interface DurableTaskSchedulerEmulatorClient {
     readonly onEmulatorsChanged: Event<void>;
 
     getEmulators(): Promise<DurableTaskSchedulerEmulator[]>;
-    startEmulator(): Promise<DurableTaskSchedulerEmulator>;
+    startEmulator(): Promise<string>;
     stopEmulator(id: string): Promise<void>;
 }
 
@@ -38,8 +38,15 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
         }));
     }
 
-    startEmulator(): Promise<DurableTaskSchedulerEmulator> {
-        return Promise.resolve({} as DurableTaskSchedulerEmulator);
+    async startEmulator(): Promise<string> {
+        try {
+            const id = await this.dockerClient.startContainer('durabletasks.azurecr.io/durable-task-scheduler/emulator:latest-linux-arm64');
+
+            return id;
+        }
+        finally {
+            this.onEmulatorsChangedEmitter.fire();
+        }
     }
 
     async stopEmulator(id: string): Promise<void> {
