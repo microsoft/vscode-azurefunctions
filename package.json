@@ -418,6 +418,16 @@
                 "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                 "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                "title": "%azureFunctions.durableTaskScheduler.startEmulator%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [
@@ -745,6 +755,16 @@
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulators/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
                     "group": "1@1"
                 }
             ],

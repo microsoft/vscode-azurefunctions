@@ -81,10 +81,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+        const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new CliDockerClient());
 
         registerCommands({
             dts: {
                 dataBranchProvider,
+                emulatorClient,
                 schedulerClient
             }
         });
