@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
+import { type AzExtClientContext, createAzureClient, type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, parseClientContext, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
@@ -13,7 +13,8 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { type Progress } from "vscode";
+import { workspace, type Progress } from "vscode";
+import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
@@ -63,6 +64,30 @@ class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerConte
     }
 }
 
+export async function createResourcesClient(context: AzExtClientContext): Promise<ResourceManagementClient> {
+    if (parseClientContext(context).isCustomCloud) {
+        return <ResourceManagementClient><unknown>createAzureClient(context, (await import('@azure/arm-resources-profile-2020-09-01-hybrid')).ResourceManagementClient);
+    } else {
+        return createAzureClient(context, (await import('@azure/arm-resources')).ResourceManagementClient);
+    }
+}
+
+export async function isDtsCreationEnabled(): Promise<boolean> {
+    const configuration = workspace.getConfiguration('azureFunctions');
+
+    const enableCreation = configuration.get<boolean>('durableTaskScheduler.enableCreation');
+
+    return Promise.resolve(enableCreation === true);
+}
+
+export async function isDtsProviderRegistered(context: AzExtClientContext): Promise<boolean> {
+    const resourcesClient = await createResourcesClient(context);
+
+    const provider = await resourcesClient.providers.get(DurableTaskProvider);
+
+    return provider.registrationState?.toLocaleLowerCase() === "registered";
+}
+
 export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSchedulerDataBranchProvider, schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, node?: { subscription: AzureSubscription }): Promise<void> => {
         const subscription = node?.subscription ?? await subscriptionExperience(actionContext, ext.rgApiV2.resources.azureResourceTreeDataProvider);
@@ -75,6 +100,20 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
             ...createSubscriptionContext(subscription),
             ...await createActivityContext()
         };
+
+        if (!await isDtsCreationEnabled()) {
+            throw new Error('Creation is not enabled!');
+        }
+
+        if (!await isDtsProviderRegistered(wizardContext)) {
+            await actionContext.ui.showWarningMessage(
+                localize('dtsProviderNotRegistered', 'The Durable Task Scheduler provider is not registered for the subscription.'),
+                {
+                    learnMoreLink: 'https://aka.ms/'
+                });
+
+            return;
+        }
 
         const promptSteps: AzureWizardPromptStep<ICreateSchedulerContext>[] = [
             new SchedulerNamingStep(),

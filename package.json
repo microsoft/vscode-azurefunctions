@@ -721,7 +721,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i && config.azureFunctions.durableTaskScheduler.enableCreation == true",
                     "group": "1@1"
                 },
                 {
@@ -803,6 +803,10 @@
                 {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "when": "config.azureFunctions.durableTaskScheduler.enableCreation == true"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
@@ -926,6 +930,16 @@
             }
         ],
         "configuration": [
+            {
+                "title": "Durable Task Scheduler",
+                "properties": {
+                    "azureFunctions.durableTaskScheduler.enableCreation": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "%azureFunctions.durableTaskScheduler.enableCreation%"
+                    }
+                }
+            },
             {
                 "title": "Azure Functions",
                 "properties": {
@@ -1323,6 +1337,7 @@
         "@azure/arm-appservice": "^15.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
+        "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@azure/arm-servicebus": "^5.0.0",
         "@azure/arm-sql": "^9.1.0",
         "@azure/arm-storage": "^18.1.0",
