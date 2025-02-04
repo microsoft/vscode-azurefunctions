@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
+import { type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
@@ -90,6 +90,7 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
                 hideStepCount: true,
                 promptSteps,
                 executeSteps: [
+                    new VerifyProvidersStep([DurableTaskProvider]),
                     new ResourceGroupCreateStep(),
                     new SchedulerCreationStep(schedulerClient)
                 ],
