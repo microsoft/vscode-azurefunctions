@@ -42,6 +42,8 @@ import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskSchedu
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceDataBranchProvider';
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
+import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { CliDockerClient } from './tree/durableTaskScheduler/DockerClient';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -124,7 +126,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, dataBranchProvider);
 
         azureResourcesApi.resources.registerWorkspaceResourceProvider(new DurableTaskSchedulerWorkspaceResourceProvider());
-        azureResourcesApi.resources.registerWorkspaceResourceBranchDataProvider('DurableTaskSchedulerEmulator', new DurableTaskSchedulerWorkspaceDataBranchProvider());
+        azureResourcesApi.resources.registerWorkspaceResourceBranchDataProvider(
+            'DurableTaskSchedulerEmulator',
+            new DurableTaskSchedulerWorkspaceDataBranchProvider(
+                new DockerDurableTaskSchedulerEmulatorClient(
+                    new CliDockerClient())));
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
