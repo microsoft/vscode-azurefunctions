@@ -7,15 +7,9 @@ export interface DockerContainer {
     ports: { [key: number]: number };
 }
 
-export interface DockerContainerInternal {
-    ID: string;
-    Image: string;
-    Names: string;
-    Ports: string;
-}
-
 export interface DockerClient {
     getContainers(): Promise<DockerContainer[]>;
+    stopContainer(id: string): Promise<void>;
 }
 
 export class CliDockerClient implements DockerClient {
@@ -36,5 +30,17 @@ export class CliDockerClient implements DockerClient {
                 name: container.name,
                 ports: []
             }));
+    }
+
+    async stopContainer(id: string): Promise<void> {
+        const dockerClient = new ContainerClient.DockerClient();
+        const factory = new ContainerClient.ShellStreamCommandRunnerFactory({
+        });
+
+        const commandRunner = factory.getCommandRunner();
+
+        await commandRunner(dockerClient.stopContainers({
+            container: [id]
+        }));
     }
 }

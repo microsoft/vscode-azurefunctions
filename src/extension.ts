@@ -130,9 +130,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         azureResourcesApi.resources.registerWorkspaceResourceProvider(new DurableTaskSchedulerWorkspaceResourceProvider());
         azureResourcesApi.resources.registerWorkspaceResourceBranchDataProvider(
             'DurableTaskSchedulerEmulator',
-            new DurableTaskSchedulerWorkspaceDataBranchProvider(
-                new DockerDurableTaskSchedulerEmulatorClient(
-                    new CliDockerClient())));
+            new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

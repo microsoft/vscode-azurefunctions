@@ -12,7 +12,7 @@ export interface DurableTaskSchedulerEmulatorClient {
 
     getEmulators(): Promise<DurableTaskSchedulerEmulator[]>;
     startEmulator(): Promise<DurableTaskSchedulerEmulator>;
-    stopEmulator(emulator: DurableTaskSchedulerEmulator): Promise<void>;
+    stopEmulator(id: string): Promise<void>;
 }
 
 export class DockerDurableTaskSchedulerEmulatorClient extends Disposable implements DurableTaskSchedulerEmulatorClient {
@@ -25,7 +25,7 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
             });
     }
 
-    get onEmulatorsChanged(): Event<void> { return this.onEmulatorsChangedEmitter.event; }
+    readonly onEmulatorsChanged: Event<void> = this.onEmulatorsChangedEmitter.event;
 
     async getEmulators(): Promise<DurableTaskSchedulerEmulator[]> {
         const containers = await this.dockerClient.getContainers();
@@ -42,7 +42,12 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
         return Promise.resolve({} as DurableTaskSchedulerEmulator);
     }
 
-    stopEmulator(_: DurableTaskSchedulerEmulator): Promise<void> {
-        return Promise.resolve();
+    async stopEmulator(id: string): Promise<void> {
+        try {
+            await this.dockerClient.stopContainer(id);
+        }
+        finally {
+            this.onEmulatorsChangedEmitter.fire();
+        }
     }
 }

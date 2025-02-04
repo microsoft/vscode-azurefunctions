@@ -21,5 +21,5 @@ export class DurableTaskSchedulerEmulatorWorkspaceResourceModel implements Durab
         return treeItem;
     }
 
-    id?: string | undefined;
+    get id(): string { return this.emulator.id; }
 }
