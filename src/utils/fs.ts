@@ -64,6 +64,11 @@ export function getRandomHexString(length: number = 10): string {
     return buffer.toString('hex').slice(0, length);
 }
 
+export function getRandomAlphanumericString(): string {
+    // toString(36) to convert it into base 36 (26 char + 0 to 9) and slice(2) to remove the '0.'
+    return Math.random().toString(36).slice(2);
+}
+
 export function isPathEqual(fsPath1: string, fsPath2: string, relativeFunc: pathRelativeFunc = path.relative): boolean {
     const relativePath: string = relativeFunc(fsPath1, fsPath2);
     return relativePath === '';
