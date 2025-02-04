@@ -28,7 +28,7 @@ suite('Create New Python Project (Model V1)', () => {
         }
         this.timeout(2 * 60 * 1000);
 
-        const alias: string = process.platform === 'win32' ? 'py -3.9' : 'python3.9';
+        const alias: string = process.platform === 'win32' ? 'py' : 'python';
         await runWithTestActionContext('createProject', async context => {
             await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4), inputs: [modelV1Input, /enter/i, alias] });
         });

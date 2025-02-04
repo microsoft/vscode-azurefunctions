@@ -18,7 +18,7 @@
             "_justification": "This is a false positive"
         },
         {
-            "folder": "\\resources\\backupTemplates",
+            "folder": "/resources/backupTemplates",
             "_justification": "folder to be suppressed because the templates contain lots of fake passwords and secrets"
         }
     ]
