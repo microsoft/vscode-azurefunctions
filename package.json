@@ -754,7 +754,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHubDashboard/",
                     "group": "1@1"
                 },
                 {

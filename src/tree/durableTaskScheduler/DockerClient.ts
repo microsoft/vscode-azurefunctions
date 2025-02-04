@@ -27,11 +27,18 @@ export class CliDockerClient implements DockerClient {
         const containers = await commandRunner(dockerClient.listContainers({}));
 
         return containers.map(
-            container => ({
+            container =>
+             ({
                 id: container.id,
                 image: container.image.image as string,
                 name: container.name,
-                ports: []
+                ports: container.ports.reduce(
+                    (previous, port) => {
+                        previous[port.containerPort] = port.hostPort;
+
+                        return previous;
+                    },
+                    {})
             }));
     }
 

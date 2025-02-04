@@ -1,10 +1,12 @@
-import { type Event, EventEmitter } from "vscode";
+import { type Event, EventEmitter, Uri } from "vscode";
 import { type DockerClient } from "./DockerClient";
 import { Disposable } from "vscode";
 
 export interface DurableTaskSchedulerEmulator {
+    dashboardEndpoint: Uri;
     id: string;
     name: string;
+    schedulerEndpoint: Uri;
 }
 
 export interface DurableTaskSchedulerEmulatorClient {
@@ -33,8 +35,10 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
         const emulatorContainers = containers.filter(container => container.image.toLowerCase().startsWith('durable-task-scheduler/emulator'));
 
         return emulatorContainers.map(container => ({
+            dashboardEndpoint: Uri.parse(`http://localhost:${container.ports[8082]}`),
             id: container.id,
-            name: container.name
+            name: container.name,
+            schedulerEndpoint: Uri.parse(`http://localhost:${container.ports[8080]}`)
         }));
     }
 
