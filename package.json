@@ -805,10 +805,6 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "never"
-                },
-                {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
                     "when": "never"
                 },
