@@ -795,6 +795,34 @@
                 {
                     "command": "azureFunctions.viewProperties",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createTaskHub",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "never"
                 }
             ],
             "editor/context": [
