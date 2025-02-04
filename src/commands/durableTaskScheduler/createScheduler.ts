@@ -13,7 +13,7 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { type Progress } from "vscode";
+import { workspace, type Progress } from "vscode";
 import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
@@ -72,6 +72,12 @@ export async function createResourcesClient(context: AzExtClientContext): Promis
     }
 }
 
+export function isDtsPreviewFeaturesEnabled(): boolean {
+    const configuration = workspace.getConfiguration('azureFunctions');
+
+    return configuration.get<boolean>('durableTaskScheduler.enablePreviewFeatures') === true;
+}
+
 export async function isDtsProviderRegistered(context: AzExtClientContext): Promise<boolean> {
     const resourcesClient = await createResourcesClient(context);
 
@@ -92,6 +98,10 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
             ...createSubscriptionContext(subscription),
             ...await createActivityContext()
         };
+
+        if (!isDtsPreviewFeaturesEnabled()) {
+            throw new Error(localize('dtsPreviewFeaturesNotEnabled', 'Durable Task Scheduler preview features have not been enabled in settings.'));
+        }
 
         if (!await isDtsProviderRegistered(wizardContext)) {
             await actionContext.ui.showWarningMessage(
