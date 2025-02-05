@@ -129,5 +129,7 @@
     "azureFunctions.durableTaskScheduler.deleteTaskHub": "Delete Task Hub...",
     "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
     "azureFunctions.durableTaskScheduler.startEmulator": "Start Durable Task Emulator",
-    "azureFunctions.durableTaskScheduler.stopEmulator": "Stop Emulator"
+    "azureFunctions.durableTaskScheduler.stopEmulator": "Stop Emulator",
+
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
 }
