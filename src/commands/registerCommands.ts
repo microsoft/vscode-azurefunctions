@@ -175,7 +175,7 @@ export function registerCommands(
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory(services.dts.schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteScheduler', deleteSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));

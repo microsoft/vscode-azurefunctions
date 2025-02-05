@@ -6,6 +6,7 @@ export interface DurableTaskSchedulerEmulator {
     id: string;
     name: string;
     schedulerEndpoint: Uri;
+    taskHubs: string[];
 }
 
 export interface DurableTaskSchedulerEmulatorClient {
@@ -50,7 +51,8 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
             dashboardEndpoint: Uri.parse(`http://localhost:${container.ports[8082]}`),
             id: container.id,
             name: container.name,
-            schedulerEndpoint: Uri.parse(`http://localhost:${container.ports[8080]}`)
+            schedulerEndpoint: Uri.parse(`http://localhost:${container.ports[8080]}`),
+            taskHubs: ['default']
         }));
     }
 

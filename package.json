@@ -729,7 +729,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.schedulerEndpoint/",
                     "group": "3@2"
                 },
                 {
