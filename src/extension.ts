@@ -33,17 +33,19 @@ import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCore
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
+import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
+import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceDataBranchProvider';
+import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
-import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceDataBranchProvider';
-import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
-import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { CliDockerClient } from './tree/durableTaskScheduler/DockerClient';
+
+const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -81,7 +83,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
-        const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new CliDockerClient());
 
         registerCommands({
             dts: {
@@ -150,6 +151,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     }]);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivateInternal(): void {
+export async function deactivateInternal(): Promise<void> {
+    await emulatorClient.disposeAsync();
 }

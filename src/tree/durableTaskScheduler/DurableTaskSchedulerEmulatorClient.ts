@@ -1,6 +1,5 @@
-import { type Event, EventEmitter, Uri } from "vscode";
-import { type DockerClient } from "./DockerClient";
-import { Disposable } from "vscode";
+import { Disposable, type Event, EventEmitter, Uri } from "vscode";
+import { type ContainerClient } from "./ContainerClient";
 
 export interface DurableTaskSchedulerEmulator {
     dashboardEndpoint: Uri;
@@ -20,7 +19,9 @@ export interface DurableTaskSchedulerEmulatorClient {
 export class DockerDurableTaskSchedulerEmulatorClient extends Disposable implements DurableTaskSchedulerEmulatorClient {
     private readonly onEmulatorsChangedEmitter = new EventEmitter<void>();
 
-    constructor(private readonly dockerClient: DockerClient) {
+    private localEmulatorIds = new Set<string>();
+
+    constructor(private readonly dockerClient: ContainerClient) {
         super(
             () => {
                 this.onEmulatorsChangedEmitter.dispose();
@@ -28,6 +29,17 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
     }
 
     readonly onEmulatorsChanged: Event<void> = this.onEmulatorsChangedEmitter.event;
+
+    async disposeAsync(): Promise<void> {
+        for (const id of this.localEmulatorIds) {
+            await this.dockerClient.stopContainer(id);
+            await this.dockerClient.removeContainer(id);
+        }
+
+        this.localEmulatorIds.clear();
+
+        this.dispose();
+    }
 
     async getEmulators(): Promise<DurableTaskSchedulerEmulator[]> {
         const containers = await this.dockerClient.getContainers();
@@ -44,7 +56,9 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
 
     async startEmulator(): Promise<string> {
         try {
-            const id = await this.dockerClient.startContainer('durabletasks.azurecr.io/durable-task-scheduler/emulator:latest-linux-arm64');
+            const id = await this.dockerClient.runContainer('durabletasks.azurecr.io/durable-task-scheduler/emulator:latest-linux-arm64');
+
+            this.localEmulatorIds.add(id);
 
             return id;
         }
@@ -56,6 +70,12 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
     async stopEmulator(id: string): Promise<void> {
         try {
             await this.dockerClient.stopContainer(id);
+
+            if (this.localEmulatorIds.has(id)) {
+                await this.dockerClient.removeContainer(id);
+
+                this.localEmulatorIds.delete(id);
+            }
         }
         finally {
             this.onEmulatorsChangedEmitter.fire();
