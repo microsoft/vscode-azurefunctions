@@ -974,6 +974,21 @@
                         "type": "boolean",
                         "default": false,
                         "description": "%azureFunctions.durableTaskScheduler.enablePreviewFeatures%"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorRegistry": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorRegistry%",
+                        "default": "durabletasks.azurecr.io"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorImage": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorImage%",
+                        "default": "durable-task-scheduler/emulator"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorTag": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorTag%",
+                        "default": "latest-linux-amd64"
                     }
                 }
             },

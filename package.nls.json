@@ -132,5 +132,8 @@
     "azureFunctions.durableTaskScheduler.startEmulator": "Start Durable Task Emulator",
     "azureFunctions.durableTaskScheduler.stopEmulator": "Stop Emulator",
 
-    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features",
+    "azureFunctions.durableTaskScheduler.emulatorRegistry": "The registry of the Durable Task Scheduler emulator image.",
+    "azureFunctions.durableTaskScheduler.emulatorImage": "The name of the Durable Task Scheduler emulator image.",
+    "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image."
 }
