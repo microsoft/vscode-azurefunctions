@@ -120,6 +120,7 @@
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
     "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
 
+    "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString": "Copy Connection String",
     "azureFunctions.durableTaskScheduler.copySchedulerConnectionString": "Copy Connection String",
     "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Endpoint",
     "azureFunctions.durableTaskScheduler.createScheduler": "Create Durable Task Scheduler...",

@@ -30,4 +30,6 @@ export class DurableTaskSchedulerEmulatorWorkspaceResourceModel implements Durab
     get endpointUrl(): Uri { return this.emulator.schedulerEndpoint; }
 
     get id(): string { return this.emulator.id; }
+
+    get taskHubs(): string[] { return this.emulator.taskHubs; }
 }

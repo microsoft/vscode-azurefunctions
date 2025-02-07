@@ -75,6 +75,7 @@ import { copySchedulerConnectionStringCommandFactory } from './durableTaskSchedu
 import { startEmulatorCommandFactory } from './durableTaskScheduler/startEmulator';
 import { stopEmulatorCommandFactory } from './durableTaskScheduler/stopEmulator';
 import { type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { copyEmulatorConnectionStringCommandFactory } from './durableTaskScheduler/copyEmulatorConnectionString';
 
 export function registerCommands(
     services: {
@@ -174,6 +175,7 @@ export function registerCommands(
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copyEmulatorConnectionString', copyEmulatorConnectionStringCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));

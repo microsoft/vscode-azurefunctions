@@ -385,6 +385,11 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
+                "title": "%azureFunctions.durableTaskScheduler.copyEmulatorConnectionString%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                 "title": "%azureFunctions.durableTaskScheduler.copySchedulerConnectionString%",
                 "category": "Azure Functions"
@@ -723,6 +728,11 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
+                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "group": "3@1"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
                     "group": "3@1"
@@ -817,6 +827,10 @@
                 },
                 {
                     "command": "azureFunctions.viewProperties",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
                     "when": "never"
                 },
                 {
