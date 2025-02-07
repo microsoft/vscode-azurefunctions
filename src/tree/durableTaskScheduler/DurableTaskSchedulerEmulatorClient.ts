@@ -67,7 +67,7 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
         const { image } = getEmulatorFullTag();
         const containers = await this.dockerClient.getContainers();
 
-        const emulatorContainers = containers.filter(container => container.image.toLowerCase().startsWith(image));
+        const emulatorContainers = containers.filter(container => container.image.toLowerCase() === image.toLowerCase());
 
         return emulatorContainers.map(container => ({
             dashboardEndpoint: Uri.parse(`http://localhost:${container.ports[8082]}`),

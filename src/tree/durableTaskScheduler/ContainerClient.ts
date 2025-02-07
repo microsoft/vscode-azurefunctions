@@ -25,7 +25,7 @@ export class ShellContainerClient implements ContainerClient {
     async getContainers(): Promise<DockerContainer[]> {
         const commandRunner = this.factory.getCommandRunner();
 
-        const containers = await commandRunner(this.dockerClient.listContainers({}));
+        const containers = await commandRunner(this.dockerClient.listContainers({ running: true }));
 
         return containers.map(
             container =>
