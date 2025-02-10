@@ -75,7 +75,15 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
         registerReportIssueCommand('azureFunctions.reportIssue');
 
-        registerCommands();
+        const schedulerClient = new HttpDurableTaskSchedulerClient();
+        const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+
+        registerCommands({
+            dts: {
+                dataBranchProvider,
+                schedulerClient
+            }
+        });
 
         registerFuncHostTaskEvents();
 
@@ -109,7 +117,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const azureResourcesApi = await getAzureResourcesExtensionApi(context, '2.0.0');
 
-        azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, new DurableTaskSchedulerDataBranchProvider(new HttpDurableTaskSchedulerClient()));
+        ext.rgApiV2 = azureResourcesApi;
+
+        azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, dataBranchProvider);
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
