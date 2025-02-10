@@ -1,12 +1,13 @@
 # Change Log
 
-## 1.16.2 - 2025-01-30
+## 1.16.2 - 2025-02-10
 
 ### Added
 * [[4351]](https://github.com/microsoft/vscode-azurefunctions/pull/4351) Default flex consumption for basic creation
 * [[4358]](https://github.com/microsoft/vscode-azurefunctions/pull/4358) SqlBinding triggers to verified list
 * [[4359]](https://github.com/microsoft/vscode-azurefunctions/pull/4359) Set `publicBlobAccess` to false for created storage accounts
 * [[4361]](https://github.com/microsoft/vscode-azurefunctions/pull/4361) Add basic support for Durable Task Scheduler resources
+* [[4370]](https://github.com/microsoft/vscode-azurefunctions/pull/4370) Adds a number of commands related to the management of Durable Task Scheduler resources under preview flag
 
 ## 1.16.1 - 2024-11-13
 
