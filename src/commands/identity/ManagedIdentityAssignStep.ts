@@ -7,6 +7,8 @@ import { type ManagedServiceIdentity, type ManagedServiceIdentityType } from "@a
 import { createWebSiteClient, type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
+import { ext } from "../../extensionVariables";
+import { localize } from "../../localize";
 import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContext";
 
 export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIdentityAssignContext> {
@@ -34,9 +36,12 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
         const newSite = site.rawSite;
         newSite.identity = updatedIdentity;
+        const assigning: string = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', site.fullName, id);
+        const assigned: string = localize('assigned', 'Assigned user assigned identity "{1}" for "{0}".', site.fullName, id);
+        ext.outputChannel.appendLog(assigning);
 
         await client.webApps.beginCreateOrUpdateAndWait(site.resourceGroup, site.siteName, newSite);
-        console.log(`Assigned managed identity ${id} to function app ${site.fullName}`);
+        ext.outputChannel.appendLog(assigned);
     }
 
     public shouldExecute(_context: ManagedIdentityAssignContext): boolean {

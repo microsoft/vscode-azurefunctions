@@ -8,13 +8,12 @@ import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, t
 import { localize } from '../../localize';
 import { type ManagedIdentitiesTreeItem } from '../../tree/remoteProject/ManagedIdentitiesTreeItem';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
+import { createActivityContext } from '../../utils/activityUtils';
 import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { type ManagedIdentityAssignContext } from './ManagedIdentityAssignContext';
 import { ManagedIdentityAssignStep } from './ManagedIdentityAssignStep';
 
 export async function assignManagedIdentity(context: IActionContext, node?: ManagedIdentitiesTreeItem | SlotTreeItem): Promise<SlotTreeItem> {
-    const title: string = localize('assignManagedIdentity', 'Assign Managed Identity to Function App');
-
     if (!node) {
         node = await pickFunctionApp(context);
     } else {
@@ -25,7 +24,8 @@ export async function assignManagedIdentity(context: IActionContext, node?: Mana
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
         site: node.site,
-        ...node.subscription
+        ...node.subscription,
+        ...(await createActivityContext())
     }
 
     const promptSteps: AzureWizardPromptStep<ManagedIdentityAssignContext>[] = [
@@ -35,28 +35,21 @@ export async function assignManagedIdentity(context: IActionContext, node?: Mana
     const executeSteps: AzureWizardExecuteStep<ManagedIdentityAssignContext>[] = [
         new ManagedIdentityAssignStep()
     ];
-
-    // const executeSteps: AzureWizardExecuteStep<EventGridExecuteFunctionContext>[] = [
-    //     new EventGridFileOpenStep(),
-    // ];
-
-    // const wizardContext: EventGridExecuteFunctionContext = {
-    //     ...context,
-    //     eventSource: undefined,
-    //     selectedFileName: undefined,
-    //     selectedFileUrl: undefined,
-    //     fileOpened: false,
-    // };
-
+    const title: string = localize('assignManagedIdentity', 'Assign Managed Identity to Function App');
     const wizard: AzureWizard<ManagedIdentityAssignContext> = new AzureWizard(wizardContext, {
         title,
         promptSteps,
         executeSteps,
-        showLoadingPrompt: true,
+        showLoadingPrompt: true
     });
 
-    await wizard.prompt();
-    await wizard.execute();
 
+    await wizard.prompt();
+    wizardContext.activityTitle = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', wizardContext.site?.fullName, wizardContext.managedIdentity?.id);
+    await node.runWithTemporaryDescription(context, localize('enabling', 'Assigning managed identity...'), async () => {
+        await wizard.execute();
+    });
+
+    void node.refresh(context)
     return node;
 }

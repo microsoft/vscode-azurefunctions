@@ -10,9 +10,7 @@ import { type IProjectTreeItem } from '../IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from '../projectContextValues';
 import { type SlotTreeItem } from '../SlotTreeItem';
 import { ManagedIdentitiesTreeItem } from './ManagedIdentitiesTreeItem';
-import { RoleAccessTreeItem } from './RoleAccessTreeItem';
-import { SystemIdentityTreeItem } from './SystemIdentityTreeItem';
-
+import { SystemIdentityTreeItemBase } from './SystemIdentityTreeItemBase';
 
 export abstract class IdentitiesTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('Identities', 'Identities');
@@ -100,12 +98,9 @@ export class AppIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const systemIdentitiesTreeItem: AzExtTreeItem = SystemIdentityTreeItem.create(this);
+        const systemIdentitiesTreeItem: AzExtTreeItem = SystemIdentityTreeItemBase.create(this);
         const managedIdentitiesTreeItem = await ManagedIdentitiesTreeItem.createManagedIdentitiesTreeItem(context, this.parent);
-        const roleAccessTreeItem = await RoleAccessTreeItem.createRoleAccessTreeItem(context, this.parent);
-
-
-        const children: AzExtTreeItem[] = [systemIdentitiesTreeItem, managedIdentitiesTreeItem, roleAccessTreeItem];
+        const children: AzExtTreeItem[] = [systemIdentitiesTreeItem, managedIdentitiesTreeItem];
         return children;
     }
 

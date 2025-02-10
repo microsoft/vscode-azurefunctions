@@ -43,11 +43,6 @@ export abstract class ManagedIdentitiesTreeItemBase extends AzExtParentTreeItem 
     public get id(): string {
         return 'identities';
     }
-
-    // public get iconPath(): TreeItemIconPath {
-    //     return new ThemeIcon('key');
-    // }
-
 }
 
 export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
@@ -120,93 +115,6 @@ export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
 
         console.log(`FOUND IDENTITIES:`);
         console.log(identities);
-
-
-        // // Get all user-assigned managed identities
-        // const userAssignedManagedIdentities = resources.filter(resource => {
-        //     return resource.type === 'Microsoft.ManagedIdentity/userAssignedIdentities';
-        // });
-
-        // console.log(`FOUND USER ASSIGNED MANAGED IDENTITIES:`);
-        // console.log(userAssignedManagedIdentities);
-
-
-        // /*
-        //     Related to issue: https://github.com/microsoft/vscode-azurefunctions/issues/3179
-        //     Sometimes receive a 'BadGateway' error on initial fetch, but consecutive re-fetching usually fixes the issue.
-        //     Under these circumstances, we will attempt to do the call 3 times during warmup before throwing the error.
-        // */
-        // const client = new AuthorizationManagementClient(this.parent.site.subscription.credentials, this.parent.site.subscription.subscriptionId);
-        // const roleAssignmentsIter = client.roleAssignments.listForScope(this.parent.site.id);
-        // const roleAssignments: RoleAssignment[] = [];
-        // while (true) {
-        //     const assignment = await roleAssignmentsIter.next();
-        //     if (assignment.done) {
-        //         break;
-        //     }
-        //     roleAssignments.push(assignment.value);
-        // }
-
-        // console.log(`TEST: FOUND ROLE ASSIGNMENTS:`);
-        // console.log(roleAssignments);
-
-        // const managedIdentities = roleAssignments.filter(roleAssignment => {
-        //     return roleAssignment.principalType === 'ServicePrincipal';
-        // });
-
-        // console.log(`TEST: FOUND MANAGED IDENTITIES:`);
-        // console.log(managedIdentities);
-
-        // const mySystemAssignedManagedIdentities = managedIdentities.filter(roleAssignment => roleAssignment.principalId === "9ce64fb7-5f1f-43bd-a284-2c573b422d91" || roleAssignment.principalId === "7e111aeb-cb73-49f0-a057-767c5275d752" /* this.parent.site.identity.principalId */);
-
-        // console.log(`TEST: FOUND MY SYSTEM ASSIGNED MANAGED IDENTITIES:`);
-        // console.log(mySystemAssignedManagedIdentities);
-        // const retries = 3;
-        // const client = await this.parent.site.createClient(context);
-
-        // const funcs = await retry<FunctionEnvelope[]>(
-        //     async (attempt: number) => {
-        //         const credential = ext.
-        //         const authorizationClient: AuthorizationManagementClient = await this.parent.site.createAuthorizationClient(context);
-        //         const response = await client.listFunctions();
-        //         const failedToList = localize('failedToList', 'Failed to list functions.');
-
-        //         // https://github.com/Azure/azure-functions-host/issues/3502
-        //         if (!Array.isArray(response)) {
-        //             throw new Error(failedToList);
-        //         }
-
-        //         // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
-        //         if (!(response.length === 1 && isWarmupFunction(response[0]))) {
-        //             context.telemetry.measurements.listFunctionsAttempt = attempt;
-        //         } else {
-        //             throw new Error(failedToList);
-        //         }
-
-        //         return response;
-        //     },
-        //     { retries, minTimeout: 10 * 1000 }
-        // );
-
-        // return await this.createTreeItemsWithErrorHandling(
-        //     funcs,
-        //     'azFuncInvalidFunction',
-        //     async (fe: FunctionEnvelope) => await RemoteFunctionTreeItem.create(
-        //         context,
-        //         this,
-        //         new RemoteFunction(
-        //             this.parent,
-        //             getFunctionNameFromId(nonNullProp(fe, 'id')),
-        //             new ParsedFunctionJson(fe.config),
-        //             this.parent.site,
-        //             fe,
-        //         )
-        //     ),
-        //     (fe: FunctionEnvelope) => {
-        //         return fe.id ? getFunctionNameFromId(fe.id) : undefined;
-        //     }
-        // );
-
         return children;
     }
 }

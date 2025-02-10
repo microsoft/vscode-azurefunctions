@@ -5,8 +5,9 @@
 
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { type IResourceGroupWizardContext } from "@microsoft/vscode-azext-azureutils";
+import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 
-export interface ManagedIdentityAssignContext extends IResourceGroupWizardContext {
+export interface ManagedIdentityAssignContext extends IResourceGroupWizardContext, ExecuteActivityContext {
     site?: ParsedSite;
     identityResourceId?: string;
     identityPrincipalId?: string;
