@@ -64,6 +64,12 @@
             },
             "commands": [
                 {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "title": "%azureFunctions.durableTaskScheduler.createScheduler%",
+                    "type": "DurableTaskScheduler",
+                    "detail": "%azureFunctions.durableTaskScheduler.createScheduler.detail%"
+                },
+                {
                     "command": "azureFunctions.createFunctionApp",
                     "title": "%azureFunctions.createFunctionApp%",
                     "type": "FunctionApp",
@@ -376,6 +382,36 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
+                "title": "%azureFunctions.durableTaskScheduler.copySchedulerConnectionString%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                "title": "%azureFunctions.durableTaskScheduler.copySchedulerEndpoint%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                "title": "%azureFunctions.durableTaskScheduler.createScheduler%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.createTaskHub",
+                "title": "%azureFunctions.durableTaskScheduler.createTaskHub%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                "title": "%azureFunctions.durableTaskScheduler.deleteScheduler%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                "title": "%azureFunctions.durableTaskScheduler.deleteTaskHub%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                 "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
                 "category": "Azure Functions"
@@ -674,8 +710,39 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "3@2"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i && config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createTaskHub",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "group": "2@1"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/"
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "group": "1@1"
                 }
             ],
             "explorer/context": [
@@ -727,6 +794,34 @@
                 },
                 {
                     "command": "azureFunctions.viewProperties",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
+                    "when": "config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.createTaskHub",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteScheduler",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.deleteTaskHub",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                     "when": "never"
                 }
             ],
@@ -835,6 +930,16 @@
             }
         ],
         "configuration": [
+            {
+                "title": "Durable Task Scheduler",
+                "properties": {
+                    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "%azureFunctions.durableTaskScheduler.enablePreviewFeatures%"
+                    }
+                }
+            },
             {
                 "title": "Azure Functions",
                 "properties": {
@@ -1232,6 +1337,7 @@
         "@azure/arm-appservice": "^15.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
+        "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@azure/arm-servicebus": "^5.0.0",
         "@azure/arm-sql": "^9.1.0",
         "@azure/arm-storage": "^18.1.0",
