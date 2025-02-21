@@ -13,7 +13,7 @@ import { ManagedIdentitiesTreeItem } from './ManagedIdentitiesTreeItem';
 import { SystemIdentityTreeItemBase } from './SystemIdentityTreeItemBase';
 
 export abstract class IdentitiesTreeItemBase extends AzExtParentTreeItem {
-    public readonly label: string = localize('Identities', 'Identities');
+    public readonly label: string = localize('Identities', 'Assigned Identities');
     public readonly childTypeLabel: string = localize('Identity', 'Identity');
     public parent: AzExtParentTreeItem & IProjectTreeItem;
     public suppressMaskLabel: boolean = true;

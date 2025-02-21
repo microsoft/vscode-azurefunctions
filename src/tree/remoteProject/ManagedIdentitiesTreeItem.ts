@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient, type GenericResourceExpanded, type Identity } from '@azure/arm-resources';
+import { type Identity } from '@azure/arm-msi';
+import { createManagedServiceIdentityClient, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { type IProjectTreeItem } from '../IProjectTreeItem';
@@ -11,13 +12,9 @@ import { getProjectContextValue, ProjectAccess, ProjectResource } from '../proje
 import { type SlotTreeItem } from '../SlotTreeItem';
 import { ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
 
-export interface ManagedIdentity extends Identity {
-    resourceId?: string;
-    name?: string;
-}
 export abstract class ManagedIdentitiesTreeItemBase extends AzExtParentTreeItem {
-    public readonly label: string = localize('ManagedIdentities', 'Managed');
-    public readonly childTypeLabel: string = localize('managedIdentity', 'Managed Identity');
+    public readonly label: string = localize('ManagedIdentities', 'User Assigned');
+    public readonly childTypeLabel: string = localize('managedIdentity', 'User Assigned Identity');
     public parent: AzExtParentTreeItem & IProjectTreeItem;
     public suppressMaskLabel: boolean = true;
 
@@ -80,41 +77,30 @@ export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
             this._nextLink = undefined;
         }
 
-        // Get all resources in a subscription
-        const resourceClient = new ResourceManagementClient(this.parent.site.subscription.credentials, this.parent.site.subscription.subscriptionId);
-        const resources: GenericResourceExpanded[] = [];
-        for await (const resource of resourceClient.resources.list()) {
-            resources.push(resource);
-        }
-        console.log(`FOUND RESOURCES:`);
-        console.log(resources);
-
-        // // 1. Find this current app's resource
-        // const myResource = resources.find(resource => resource.id === this.parent.site.id);
         const myIdentity = this.parent.site.rawSite.identity;
-        const identities: ManagedIdentity[] = [];
+        const identities: Identity[] = [];
+        const identityClient = await createManagedServiceIdentityClient([context, this.parent.subscription]);
+        const userAssignedIdentities = await uiUtils.listAllIterator(identityClient.userAssignedIdentities.listBySubscription());
+
         const children: AzExtTreeItem[] = [];
         if (myIdentity) {
             if (myIdentity.type?.includes('UserAssigned')) {
-                for (const [identityId, identityValue] of Object.entries(myIdentity.userAssignedIdentities || {})) {
-                    identities.push({
-                        type: 'UserAssigned',
-                        resourceId: identityId,
-                        name: resources.filter(resource => resource.id?.toLowerCase() === identityId.toLowerCase())[0]?.name,
-                        ...identityValue,
-                    });
+                for (const identityId of Object.keys(myIdentity.userAssignedIdentities || {})) {
+                    const identity = userAssignedIdentities.find((id) => id.id === identityId);
+                    if (identity) {
+                        identities.push(identity);
+                    }
                 }
-                children.push(...(await this.createTreeItemsWithErrorHandling<ManagedIdentity>(
+
+                children.push(...(await this.createTreeItemsWithErrorHandling<Identity>(
                     identities,
                     'azFuncInvalidIdentity',
-                    async (identity: ManagedIdentity) => await ManagedIdentityTreeItem.create(context, this, identity),
-                    (identity: ManagedIdentity) => identity.name
+                    (identity: Identity) => new ManagedIdentityTreeItem(this, identity),
+                    (identity: Identity) => identity.name
                 )));
             }
         }
 
-        console.log(`FOUND IDENTITIES:`);
-        console.log(identities);
         return children;
     }
 }
