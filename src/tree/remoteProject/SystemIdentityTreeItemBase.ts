@@ -65,6 +65,7 @@ class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
         return false;
     }
 }
+const clickToEnable: string = localize('disabled', 'System assigned identity is disabled. Click to enable it.');
 class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
     public readonly parent: AppIdentityTreeItem;
 
@@ -80,7 +81,7 @@ class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const disabledTreeItem = new GenericTreeItem(this, {
-            label: localize('disabled', 'System-assigned identity is disabled. Click to enable it.'),
+            label: clickToEnable,
             contextValue: 'disabled',
             iconPath: new ThemeIcon('gear'),
             commandId: 'azureFunctions.enableSystemIdentity',
@@ -95,6 +96,6 @@ class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
     }
 
     public get tooltip(): string {
-        return localize('disabled', 'System assigned identity is disabled. Right-click to enable it.');
+        return clickToEnable;
     }
 }

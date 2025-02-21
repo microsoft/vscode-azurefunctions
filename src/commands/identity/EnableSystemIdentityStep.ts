@@ -23,8 +23,8 @@ export class EnableSystemIdentityAssignStep extends AzureWizardExecuteStep<Manag
         identity.type = addSystemAssignedType(identity);
         site.rawSite.identity = identity;
 
-        const enabling: string = localize('enabling', 'Enabling system-assigned identity for "{0}"...', site.fullName);
-        const enabled: string = localize('enabled', 'Enabled system-assigned identity for "{0}".', site.fullName);
+        const enabling: string = localize('enabling', 'Enabling system assigned identity for "{0}"...', site.fullName);
+        const enabled: string = localize('enabled', 'Enabled system assigned identity for "{0}".', site.fullName);
         ext.outputChannel.appendLog(enabling);
 
         await client.webApps.update(site.resourceGroup, site.siteName, site.rawSite);

@@ -13,7 +13,7 @@ import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContex
 
 export async function enableSystemIdentity(context: IActionContext, node: SystemIdentityTreeItemBase): Promise<undefined> {
     const grandparentNode = node.parent.parent as SlotTreeItem;
-    const title: string = localize('enabling', 'Enabling system-assigned identity for "{0}"...', grandparentNode.site.fullName);
+    const title: string = localize('enabling', 'Enabling system assigned identity for "{0}"...', grandparentNode.site.fullName);
 
     const wizardContext: ManagedIdentityAssignContext & ExecuteActivityContext = Object.assign(context, {
         site: grandparentNode.site,
@@ -26,7 +26,7 @@ export async function enableSystemIdentity(context: IActionContext, node: System
         title
     });
 
-    await node.runWithTemporaryDescription(context, localize('enabling', 'Enabling system-assigned identity...'), async () => {
+    await node.runWithTemporaryDescription(context, localize('enabling', 'Enabling system assigned identity...'), async () => {
         await wizard.execute();
     });
 
