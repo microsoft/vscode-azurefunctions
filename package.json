@@ -377,12 +377,6 @@
                 "icon": "$(add)"
             },
             {
-                "command": "azureFunctions.addNewRoleAssignment",
-                "title": "%azureFunctions.addNewRoleAssignment%",
-                "category": "Azure Functions",
-                "icon": "$(add)"
-            },
-            {
                 "command": "azureFunctions.enableSystemIdentity",
                 "title": "%azureFunctions.enableSystemIdentity%",
                 "category": "Azure Functions"
@@ -682,18 +676,18 @@
                 },
                 {
                     "command": "azureFunctions.enableSystemIdentity",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*system assigned.*disabled/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /systemIdentity.*disabled/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.assignManagedIdentity",
-                    "when": "viewItem =~ /assignNewIdentity/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /userAssignedIdentities/",
                     "group": "inline"
                 },
                 {
-                    "command": "azureFunctions.addNewRoleAssignment",
-                    "when": "viewItem =~ /addNewRoleAssignment/",
-                    "group": "inline"
+                    "command": "azureFunctions.assignManagedIdentity",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /userAssignedIdentities/",
+                    "group": "1@1"
                 }
             ],
             "explorer/context": [

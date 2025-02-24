@@ -6,14 +6,14 @@
 import { UserAssignedIdentityListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { type ManagedIdentitiesTreeItem } from '../../tree/remoteProject/ManagedIdentitiesTreeItem';
+import { type UserAssignedIdentitiesTreeItem } from '../../tree/remoteProject/UserAssignedIdentitiesTreeItem';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createActivityContext } from '../../utils/activityUtils';
 import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { type ManagedIdentityAssignContext } from './ManagedIdentityAssignContext';
 import { ManagedIdentityAssignStep } from './ManagedIdentityAssignStep';
 
-export async function assignManagedIdentity(context: IActionContext, node?: ManagedIdentitiesTreeItem | SlotTreeItem): Promise<SlotTreeItem> {
+export async function assignManagedIdentity(context: IActionContext, node?: UserAssignedIdentitiesTreeItem | SlotTreeItem): Promise<SlotTreeItem> {
     if (!node) {
         node = await pickFunctionApp(context);
     } else {
@@ -45,8 +45,8 @@ export async function assignManagedIdentity(context: IActionContext, node?: Mana
 
 
     await wizard.prompt();
-    wizardContext.activityTitle = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', wizardContext.site?.fullName, wizardContext.managedIdentity?.id);
-    await node.runWithTemporaryDescription(context, localize('enabling', 'Assigning managed identity...'), async () => {
+    wizardContext.activityTitle = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', wizardContext.site?.fullName, wizardContext.managedIdentity?.name);
+    await node.runWithTemporaryDescription(context, localize('enabling', 'Assigning identity...'), async () => {
         await wizard.execute();
     });
 

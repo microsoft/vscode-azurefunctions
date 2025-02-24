@@ -158,5 +158,4 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.assignManagedIdentity', assignManagedIdentity);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableSystemIdentity', enableSystemIdentity);
-    // registerCommandWithTreeNodeUnwrapping('azureFunctions.addNewRoleAssignment', addNewRoleAssignment);
 }

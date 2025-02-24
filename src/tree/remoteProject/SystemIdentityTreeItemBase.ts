@@ -8,19 +8,19 @@ import { createManagedServiceIdentityClient, createRoleDefinitionItems, RoleDefi
 import { AzExtParentTreeItem, GenericTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
 import { localize } from '../../localize';
-import { getProjectContextValue, ProjectResource } from '../projectContextValues';
-import { type AppIdentityTreeItem } from './AppIdentityTreeItem';
+import { type ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
 
 export abstract class SystemIdentityTreeItemBase extends AzExtParentTreeItem {
-    public readonly parent: AppIdentityTreeItem;
+    public readonly parent: ManagedIdentityTreeItem;
+    public static contextValue: string = 'systemIdentity';
     public state: string;
 
-    public constructor(parent: AppIdentityTreeItem) {
+    public constructor(parent: ManagedIdentityTreeItem) {
         super(parent);
         this.parent = parent;
     }
 
-    public static create(parent: AppIdentityTreeItem): SystemIdentityTreeItem | DisabledIdentityTreeItem {
+    public static create(parent: ManagedIdentityTreeItem): SystemIdentityTreeItem | DisabledIdentityTreeItem {
         if (!parent.parent.site.rawSite.identity?.type?.includes('SystemAssigned')) {
             return new DisabledIdentityTreeItem(parent);
         } else {
@@ -37,14 +37,14 @@ export abstract class SystemIdentityTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get contextValue(): string {
-        return getProjectContextValue(this.parent.parent.source, this.parent.access, ProjectResource.Identities, this.label, this.state);
+        return SystemIdentityTreeItem.contextValue + '/' + this.state;
     }
 }
 
 class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
     public readonly identity: Identity;
 
-    public constructor(parent: AppIdentityTreeItem, identity: Identity) {
+    public constructor(parent: ManagedIdentityTreeItem, identity: Identity) {
         super(parent);
         this.identity = identity;
         this.state = 'enabled';
@@ -65,11 +65,11 @@ class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
         return false;
     }
 }
-const clickToEnable: string = localize('disabled', 'System assigned identity is disabled. Click to enable it.');
+const rightClickToEnable: string = localize('disabled', 'System assigned identity is disabled. Right-click to enable.');
 class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
-    public readonly parent: AppIdentityTreeItem;
+    public readonly parent: ManagedIdentityTreeItem;
 
-    public constructor(parent: AppIdentityTreeItem) {
+    public constructor(parent: ManagedIdentityTreeItem) {
         super(parent);
         this.state = 'disabled';
         this.parent = parent;
@@ -81,13 +81,11 @@ class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const disabledTreeItem = new GenericTreeItem(this, {
-            label: clickToEnable,
+            label: rightClickToEnable,
             contextValue: 'disabled',
-            iconPath: new ThemeIcon('gear'),
-            commandId: 'azureFunctions.enableSystemIdentity',
+            iconPath: new ThemeIcon('gear')
         });
 
-        disabledTreeItem.commandArgs = [this];
         return [disabledTreeItem];
     }
 
@@ -96,6 +94,6 @@ class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
     }
 
     public get tooltip(): string {
-        return clickToEnable;
+        return rightClickToEnable;
     }
 }

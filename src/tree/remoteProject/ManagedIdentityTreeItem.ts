@@ -3,51 +3,55 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Identity } from '@azure/arm-msi';
-import { createPortalUri, createRoleDefinitionItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, nonNullProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
-import { type Uri } from 'vscode';
+import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { ThemeIcon } from 'vscode';
 import { localize } from '../../localize';
-import { treeUtils } from '../../utils/treeUtils';
-import { getProjectContextValue, ProjectResource } from '../projectContextValues';
-import { type ManagedIdentitiesTreeItem } from './ManagedIdentitiesTreeItem';
+import { type IProjectTreeItem } from '../IProjectTreeItem';
+import { type SlotTreeItem } from '../SlotTreeItem';
+import { SystemIdentityTreeItemBase } from './SystemIdentityTreeItemBase';
+import { UserAssignedIdentitiesTreeItem } from './UserAssignedIdentitiesTreeItem';
 
 export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
-    readonly portalUrl: Uri;
-    children: AzExtTreeItem[] = [];
-    public constructor(parent: ManagedIdentitiesTreeItem, identity: Identity) {
+    public readonly label: string = localize('Identity', 'Identity');
+    public static contextValue: string = 'azFuncManagedIdentity';
+    public readonly parent: AzExtParentTreeItem & IProjectTreeItem & SlotTreeItem;
+    public readonly site: ParsedSite;
+    public suppressMaskLabel: boolean = true;
+
+    constructor(parent: SlotTreeItem) {
         super(parent);
-        this.parent = parent;
-        this.identity = identity;
-        this.portalUrl = createPortalUri(parent.parent.subscription as unknown as AzureSubscription, nonNullProp(identity, 'id'));
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath("ManagedIdentityUserAssignedIdentities");
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionItems(context, this.parent.subscription, this.identity)
-        return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false
-    }
-
-    public readonly parent: ManagedIdentitiesTreeItem;
-    public readonly identity: Identity;
-
-    public get id(): string {
-        return this.identity.principalId || '';
-    }
-
-    public get label(): string {
-        return this.identity.name || this.identity.principalId || this.identity.tenantId || localize('userAssigned', 'User assigned');
     }
 
     public get contextValue(): string {
-        return getProjectContextValue(this.parent.parent.source, this.parent.access, ProjectResource.Identities, this.label);
+        return createContextValue([ManagedIdentityTreeItem.contextValue]);
+    }
+
+    public get id(): string {
+        return 'appIdentityView';
+    }
+
+    public get iconPath(): TreeItemIconPath {
+        return new ThemeIcon('key');
+    }
+
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        await this.loadAllChildren(context);
+    }
+
+    public hasMoreChildrenImpl(): boolean {
+        return false;
+    }
+
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
+        const systemIdentitiesTreeItem: AzExtTreeItem = SystemIdentityTreeItemBase.create(this);
+        const userAssignedIdentitiesTreeItem = new UserAssignedIdentitiesTreeItem(this.parent);
+        const children: AzExtTreeItem[] = [systemIdentitiesTreeItem, userAssignedIdentitiesTreeItem];
+        return children;
+    }
+
+    public compareChildrenImpl(_ti1: AzExtTreeItem, _ti2: AzExtTreeItem): number {
+        // don't sort
+        return 0;
     }
 }

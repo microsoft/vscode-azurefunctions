@@ -5,66 +5,27 @@
 
 import { type Identity } from '@azure/arm-msi';
 import { createManagedServiceIdentityClient, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
-import { type IProjectTreeItem } from '../IProjectTreeItem';
-import { getProjectContextValue, ProjectAccess, ProjectResource } from '../projectContextValues';
 import { type SlotTreeItem } from '../SlotTreeItem';
-import { ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
+import { UserAssignedIdentityTreeItem } from './UserAssignedIdentityTreeItem';
 
-export abstract class ManagedIdentitiesTreeItemBase extends AzExtParentTreeItem {
-    public readonly label: string = localize('ManagedIdentities', 'User Assigned');
-    public readonly childTypeLabel: string = localize('managedIdentity', 'User Assigned Identity');
-    public parent: AzExtParentTreeItem & IProjectTreeItem;
-    public suppressMaskLabel: boolean = true;
-
-    public abstract isReadOnly: boolean;
-
-    public constructor(parent: AzExtParentTreeItem & IProjectTreeItem) {
-        super(parent);
-    }
-
-    public get contextValue(): string {
-        // add context value
-        return createContextValue([getProjectContextValue(this.parent.source, this.access, ProjectResource.Identities), 'assignNewIdentity']);
-    }
-
-    public get description(): string {
-        return '';
-    }
-
-    public get access(): ProjectAccess {
-        return this.isReadOnly ? ProjectAccess.ReadOnly : ProjectAccess.ReadWrite;
-    }
-
-    public get id(): string {
-        return 'identities';
-    }
-}
-
-export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
+export class UserAssignedIdentitiesTreeItem extends AzExtParentTreeItem {
+    public readonly label: string = localize('userAssignedIdentities', 'User Assigned');
     public readonly parent: SlotTreeItem;
     public isReadOnly: boolean;
+    public readonly contextValue: string = 'userAssignedIdentities';
+    public get id(): string {
+        return 'userAssignedIdentities';
+    }
 
     private _nextLink: string | undefined;
 
-    private constructor(parent: SlotTreeItem) {
+    constructor(parent: SlotTreeItem) {
         super(parent);
     }
 
-    public static async createManagedIdentitiesTreeItem(context: IActionContext, parent: SlotTreeItem): Promise<ManagedIdentitiesTreeItem> {
-        const ti: ManagedIdentitiesTreeItem = new ManagedIdentitiesTreeItem(parent);
-        // initialize
-        await ti.initAsync(context);
-        return ti;
-    }
-
-    public async initAsync(context: IActionContext): Promise<void> {
-        this.isReadOnly = await this.parent.isReadOnly(context);
-    }
-
     public async refreshImpl(context: IActionContext): Promise<void> {
-        await this.initAsync(context);
         await this.loadAllChildren(context);
     }
 
@@ -95,7 +56,7 @@ export class ManagedIdentitiesTreeItem extends ManagedIdentitiesTreeItemBase {
                 children.push(...(await this.createTreeItemsWithErrorHandling<Identity>(
                     identities,
                     'azFuncInvalidIdentity',
-                    (identity: Identity) => new ManagedIdentityTreeItem(this, identity),
+                    (identity: Identity) => new UserAssignedIdentityTreeItem(this, identity),
                     (identity: Identity) => identity.name
                 )));
             }

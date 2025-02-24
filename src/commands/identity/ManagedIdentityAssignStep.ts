@@ -23,7 +23,7 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
         const existingIdentity = site.rawSite.identity || {};
         const updatedIdentity: ManagedServiceIdentity = {
             ...existingIdentity,
-            // TODO: test if this is needed or if it's handles automatically
+            // type property is required and may not exist yet
             type: addUserAssignedType(existingIdentity.type),
             userAssignedIdentities: {
                 ...existingIdentity.userAssignedIdentities,
@@ -36,8 +36,8 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
         const newSite = site.rawSite;
         newSite.identity = updatedIdentity;
-        const assigning: string = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', site.fullName, id);
-        const assigned: string = localize('assigned', 'Assigned user assigned identity "{1}" for "{0}".', site.fullName, id);
+        const assigning: string = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', site.fullName, managedIdentity.name);
+        const assigned: string = localize('assigned', 'Assigned user assigned identity "{1}" for "{0}".', site.fullName, managedIdentity.name);
         ext.outputChannel.appendLog(assigning);
 
         await client.webApps.beginCreateOrUpdateAndWait(site.resourceGroup, site.siteName, newSite);

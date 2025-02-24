@@ -9,7 +9,4 @@ import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 
 export interface ManagedIdentityAssignContext extends IResourceGroupWizardContext, ExecuteActivityContext {
     site?: ParsedSite;
-    identityResourceId?: string;
-    identityPrincipalId?: string;
-    identityClientId?: string;
 }

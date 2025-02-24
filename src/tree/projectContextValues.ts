@@ -20,7 +20,6 @@ export enum ProjectAccess {
 export enum ProjectResource {
     Functions = 'Functions',
     Function = 'Function',
-    Identities = 'Identities'
 }
 
 export function getProjectContextValue(source: ProjectSource, access: ProjectAccess, resource: ProjectResource, ...parts: string[]): string {
