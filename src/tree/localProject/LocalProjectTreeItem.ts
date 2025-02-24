@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
 import { callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
+import { LocalSettingsClientProvider } from '../../commands/appSettings/localSettings/LocalSettingsClient';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { type IParsedHostJson } from '../../funcConfig/host';
 import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
 import { type LocalProjectInternal } from '../../workspace/listLocalProjects';
@@ -35,6 +38,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
+    private readonly _localSettingsTreeItem: AppSettingsTreeItem;
 
     public constructor(parent: AzExtParentTreeItem, localProject: LocalProjectInternal) {
         const options = localProject.options;
@@ -56,6 +60,9 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged(scope)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
+        this._localSettingsTreeItem = new AppSettingsTreeItem(this, new LocalSettingsClientProvider(this), ext.prefix, {
+            contextValuesToAdd: ['localSettings']
+        });
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
@@ -72,7 +79,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     // eslint-disable-next-line @typescript-eslint/require-await
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        return [this._localFunctionsTreeItem];
+        return [this._localFunctionsTreeItem, this._localSettingsTreeItem];
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

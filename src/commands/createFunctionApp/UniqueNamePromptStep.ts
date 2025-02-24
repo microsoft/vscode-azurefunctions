@@ -6,7 +6,6 @@
 import { type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../localize";
-import { setConsumptionPlanProperties } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 
 export class ConfigureCommonNamesStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
@@ -26,7 +25,6 @@ export class ConfigureCommonNamesStep extends AzureWizardPromptStep<IAppServiceW
                 throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
             }
             context.newResourceGroupName = context.newResourceGroupName || newName;
-            setConsumptionPlanProperties(context);
             context.newStorageAccountName = newName;
             context.newAppInsightsName = newName;
         }
