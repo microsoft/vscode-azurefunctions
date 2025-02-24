@@ -120,5 +120,16 @@
     "azureFunctions.walkthrough.functionsStart.initialize.title": "Initialize an existing project",
     "azureFunctions.walkthrough.functionsStart.scenarios.description": "Learn how you can use Azure Functions to build event-driven systems.\n\nIf you're just getting started with Azure Functions, you can [learn about the anatomy of an Azure Functions application](https://aka.ms/functions-getstarted-devguide).",
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
-    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions"
+    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
+
+    "azureFunctions.durableTaskScheduler.copySchedulerConnectionString": "Copy Connection String",
+    "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Endpoint",
+    "azureFunctions.durableTaskScheduler.createScheduler": "Create Durable Task Scheduler...",
+    "azureFunctions.durableTaskScheduler.createScheduler.detail": "For long-running and reliable workflows.",
+    "azureFunctions.durableTaskScheduler.createTaskHub": "Create Task Hub...",
+    "azureFunctions.durableTaskScheduler.deleteScheduler": "Delete Scheduler...",
+    "azureFunctions.durableTaskScheduler.deleteTaskHub": "Delete Task Hub...",
+    "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
+
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
 }
