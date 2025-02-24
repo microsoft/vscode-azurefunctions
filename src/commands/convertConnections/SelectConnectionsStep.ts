@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { type StringDictionary } from "@azure/arm-appservice";
 import { AzExtFsExtra, AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -15,17 +16,21 @@ import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
 export interface Connection {
     name: string;
     value: string;
-    role?: string;
+    originalValue?: string;
 }
 
 export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnectionsContext> {
     public async prompt(context: IConvertConnectionsContext): Promise<void> {
-        const noItemFoundMessage: string = localize('noRolesFound', 'No connections found in local settings');
-        context.connections = (await context.ui.showQuickPick(this.getQuickPics(context), {
+        let picks: IAzureQuickPickItem<Connection>[];
+        if (context.local) {
+            picks = await this.getLocalQuickPics(context);
+        } else {
+            picks = await this.getRemoteQuickPics(context);
+        }
+        context.connections = (await context.ui.showQuickPick(picks, {
             placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
             suppressPersistence: true,
-            canPickMany: true,
-            noPicksMessage: noItemFoundMessage //way to make this error out instead of just a message?
+            canPickMany: true // todo: if there are no connections, we don't want to allow the user to pick multiple
         })).map(item => item.data);
     }
 
@@ -33,34 +38,87 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
         return !context.connections || context.connections.length === 0;
     }
 
-    private async getQuickPics(context: IConvertConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getLocalQuickPics(context: IConvertConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
         const picks: IAzureQuickPickItem<Connection>[] = [];
-        const message: string = localize('selectLocalSettings', 'Select the local settings file to convert.');
+        const message: string = localize('selectLocalSettings', 'Select the local settings to convert.');
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
         const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
+        context.localSettingsPath = localSettingsPath;
 
-        let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
-        if (localSettings.IsEncrypted) {
-            await decryptLocalSettings(context, localSettingsUri);
-            try {
-                localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
-            } finally {
-                await encryptLocalSettings(context, localSettingsUri);
+
+        if (await AzExtFsExtra.pathExists(localSettingsPath)) {
+            let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+            if (localSettings.IsEncrypted) {
+                await decryptLocalSettings(context, localSettingsUri);
+                try {
+                    localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+                } finally {
+                    await encryptLocalSettings(context, localSettingsUri);
+                }
+            }
+
+            if (localSettings.Values) {
+                for (const [key, value] of Object.entries(localSettings.Values)) {
+                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key.includes('AzureWebJobsStorage')) {
+                        if (key === 'AzureWebJobsStorage' && (value === 'UseDevelopmentStorage=true' || value === '')) {
+                            continue;
+                        }
+
+                        picks.push({
+                            label: key,
+                            data: {
+                                name: key,
+                                value: value
+                            }
+                        });
+                    }
+                }
             }
         }
 
-        if (localSettings.Values) {
-            for (const [key, value] of Object.entries(localSettings.Values)) {
-                // ToDo: any other keys we should ignore?
-                if (key.includes('FUNCTIONS_WORKER_RUNTIME')) {
-                    continue;
+        if (picks.length === 0) {
+            const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found in local settings');
+            picks.push({
+                label: noItemFoundMessage,
+                data: {
+                    name: noItemFoundMessage,
+                    value: '',
                 }
+            });
+        }
 
+        return picks;
+    }
+
+    private async getRemoteQuickPics(context: IConvertConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
+        const picks: IAzureQuickPickItem<Connection>[] = [];
+
+        if (context.functionapp) {
+            const client = await context.functionapp?.site.createClient(context);
+            const appSettings: StringDictionary = await client.listApplicationSettings();
+            if (appSettings.properties) {
+                for (const [key, value] of Object.entries(appSettings.properties)) {
+                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key.includes('AzureWebJobsStorage')) {
+                        if (key === 'AzureWebJobsStorage' && (value === 'UseDevelopmentStorage=true' || value === '')) {
+                            continue;
+                        }
+
+                        picks.push({
+                            label: key,
+                            data: {
+                                name: key,
+                                value: value
+                            }
+                        });
+                    }
+                }
+            } else {
+                const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found');
                 picks.push({
-                    label: key,
+                    label: noItemFoundMessage,
                     data: {
-                        name: key,
-                        value: value
+                        name: noItemFoundMessage,
+                        value: '',
                     }
                 });
             }

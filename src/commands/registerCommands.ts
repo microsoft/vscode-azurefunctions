@@ -29,6 +29,7 @@ import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { convertLocalConnections } from './convertConnections/convertLocalConnections';
+import { convertRemoteConnections } from './convertConnections/convertRemoteConnections';
 import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
@@ -152,7 +153,8 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => {
         ext.outputChannel.show();
     });
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.convertLocalConnections', convertLocalConnections)
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.convertLocalConnections', convertLocalConnections);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.convertRemoteConnections', convertRemoteConnections);
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);

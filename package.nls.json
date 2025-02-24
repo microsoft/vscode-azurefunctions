@@ -22,6 +22,7 @@
     "azureFunctions.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azureFunctions.createSlot": "Create Slot...",
     "azureFunctions.convertLocalConnections": "Convert Local Project Connections to Identity-Based Connections...",
+    "azureFunctions.convertRemoteConnections": "Convert Function App Connections to Identity-Based Connections...",
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
     "azureFunctions.deleteSlot": "Delete Slot...",

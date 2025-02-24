@@ -151,6 +151,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.convertRemoteConnections",
+                "title": "%azureFunctions.convertRemoteConnections%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.copyFunctionUrl",
                 "title": "%azureFunctions.copyFunctionUrl%",
                 "category": "Azure Functions"
@@ -447,6 +452,11 @@
                     "command": "azureFunctions.convertLocalConnections",
                     "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
                     "group": "1@3"
+                },
+                {
+                    "command": "azureFunctions.convertRemoteConnections",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettings.*azFunc/",
+                    "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.browseWebsite",
@@ -1236,7 +1246,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^3.3.1",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.1",
-        "@microsoft/vscode-azext-azureutils": "^3.1.3",
+        "@microsoft/vscode-azext-azureutils": "file:../vscode-azuretools/azure/microsoft-vscode-azext-azureutils-3.1.2.tgz",
         "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
         "@microsoft/vscode-azext-utils": "^2.5.7",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
