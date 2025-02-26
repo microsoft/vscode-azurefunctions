@@ -26,7 +26,7 @@ Backup templates should be updated every time there is a major change in the lat
 
 Basic script templates (i.e. http and timer) are retrieved from the 'templates' property in each entry of the [CLI Feed](https://aka.ms/funcCliFeedV4). More advanced templates (i.e. blob and cosmos) are retrieved from another feed specific to the extension bundle for that project. For example, the default bundle is 'Microsoft.Azure.Functions.ExtensionBundle' and the matching feed is https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json
 
-> NOTE: Both template feeds support 'staging' environments for us to test against before moving to production. The main CLI Feed uses a "vX-prerelease" tag, while the bundle feed has a completely different url leveraging "functionscdnstaging" instead of "functionscdn".
+> NOTE: Both template feeds support 'staging' environments for us to test against before moving to production. The main CLI Feed uses a "vX-prerelease" tag, while the bundle feed has a completely different url leveraging "cdn-staging.functions.azure.com" instead of "cdn.functions.azure.com ".
 
 In both cases, the templates are split into three parts: templates.json, bindings.json, and resources.json. See below for an example of the schema for the TimerTrigger template:
 
