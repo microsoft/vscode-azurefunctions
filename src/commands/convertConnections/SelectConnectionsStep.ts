@@ -59,8 +59,8 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
 
             if (localSettings.Values) {
                 for (const [key, value] of Object.entries(localSettings.Values)) {
-                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key.includes('AzureWebJobsStorage')) {
-                        if (key === 'AzureWebJobsStorage' && (value === 'UseDevelopmentStorage=true' || value === '')) {
+                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key === ('AzureWebJobsStorage')) {
+                        if (value === 'UseDevelopmentStorage=true' || value === '') {
                             continue;
                         }
 

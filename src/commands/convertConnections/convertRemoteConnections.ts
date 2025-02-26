@@ -6,18 +6,32 @@
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../localize";
+import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
 import { pickFunctionApp } from "../../utils/pickFunctionApp";
 import { ConvertSettingsStep } from "./ConvertSettingsStep";
 import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
-import { SelectConnectionsStep } from "./SelectConnectionsStep";
+import { SelectConnectionsStep, type Connection } from "./SelectConnectionsStep";
 
-export async function convertRemoteConnections(context: IActionContext): Promise<void> {
+export async function convertRemoteConnections(context: IActionContext, node?: SlotTreeItem): Promise<void> {
+    const connections: Connection[] = []
+    if (node) {
+        await node.runWithTemporaryDescription(context, localize('converting', 'Converting...'), async () => {
+            await convertRemoteConnectionsInternal(context, connections, node);
+        });
+    } else {
+        await convertRemoteConnectionsInternal(context);
+    }
+}
+
+export async function convertRemoteConnectionsInternal(context: IActionContext, connections?: Connection[], functionApp?: SlotTreeItem): Promise<void> {
     const wizardContext: IActionContext & Partial<IConvertConnectionsContext> = {
         ...context,
         local: false,
         ...await createActivityContext()
-    }
+    };
+
+    wizardContext.connections = connections;
 
     wizardContext.activityChildren = [];
 
@@ -26,9 +40,8 @@ export async function convertRemoteConnections(context: IActionContext): Promise
     const promptSteps: AzureWizardPromptStep<IConvertConnectionsContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IConvertConnectionsContext>[] = [];
 
-    if (!wizardContext.functionapp) {
-        wizardContext.functionapp = await pickFunctionApp(wizardContext)
-    }
+
+    wizardContext.functionapp = functionApp ? functionApp : await pickFunctionApp(wizardContext)
 
     promptSteps.push(new SelectConnectionsStep(), new UserAssignedIdentityListStep());
     executeSteps.push(new ConvertSettingsStep(), new RoleAssignmentExecuteStep(() => wizardContext.roles))

@@ -8,6 +8,7 @@ import { CommonRoleDefinitions, createRoleId, uiUtils } from "@microsoft/vscode-
 import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
+import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
 
 export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnectionsContext> {
@@ -194,12 +195,29 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 }
             }
 
+            if (!context.localSettingsPath) {
+                const message: string = localize('selectLocalSettings', 'Select the local settings to convert.');
+                context.localSettingsPath = await getLocalSettingsFile(context, message);
+            }
+
             if (context.local) {
                 const localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(nonNullProp(context, 'localSettingsPath'));
                 if (localSettings.Values) {
                     for (const connection of context.convertedConnections) {
                         localSettings.Values[connection.name] = connection.value;
                         delete localSettings.Values[nonNullProp(connection, 'originalValue')];
+                        context.activityChildren?.push(
+                            new GenericTreeItem(undefined, {
+                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                                label: localize('deletedSetting', `Local setting "${connection.originalValue}" deleted`),
+                                iconPath: activitySuccessIcon
+                            }),
+                            new GenericTreeItem(undefined, {
+                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                                label: localize('addedSetting', `Local setting "${connection.name}" added`),
+                                iconPath: activitySuccessIcon
+                            })
+                        );
                     }
                     await AzExtFsExtra.writeJSON(nonNullProp(context, 'localSettingsPath'), localSettings);
                 }
@@ -214,6 +232,18 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         } else {
                             await client.updateApplicationSettings({ properties: { [connection.name]: connection.value } });
                         }
+                        context.activityChildren?.push(
+                            new GenericTreeItem(undefined, {
+                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                                label: localize('deletedSetting', `App setting "${connection.originalValue}" deleted`),
+                                iconPath: activitySuccessIcon
+                            }),
+                            new GenericTreeItem(undefined, {
+                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                                label: localize('addedSetting', `App setting "${connection.name}" added`),
+                                iconPath: activitySuccessIcon
+                            })
+                        );
                     }
                     await client.updateApplicationSettings({ properties: remoteSettings.properties });
                 }

@@ -10,7 +10,7 @@ import { type Connection } from "./SelectConnectionsStep";
 
 export interface IConvertConnectionsContext extends ExecuteActivityContext, IResourceGroupWizardContext, ISubscriptionActionContext {
     local: boolean;
-    functionapp?: SlotTreeItem
+    functionapp?: SlotTreeItem;
     connections?: Connection[];
     convertedConnections?: Connection[];
     roles?: Roles[];
