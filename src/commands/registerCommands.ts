@@ -18,6 +18,8 @@ import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runW
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
@@ -44,10 +46,19 @@ import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
+import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
+import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
+import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
+import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
+import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
+import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
+import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
 import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
 import { executeFunction } from './executeFunction/executeFunction';
+import { assignManagedIdentity } from './identity/assignManagedIdentity';
+import { enableSystemIdentity } from './identity/enableSystemIdentity';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -63,15 +74,6 @@ import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
-import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
-import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
-import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
-import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
-import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
-import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
-import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
 
 export function registerCommands(
     services: {
@@ -169,6 +171,8 @@ export function registerCommands(
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.assignManagedIdentity', assignManagedIdentity);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.enableSystemIdentity', enableSystemIdentity);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory(services.dts.schedulerClient));
