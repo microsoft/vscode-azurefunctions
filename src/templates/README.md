@@ -1,6 +1,6 @@
 # Azure Function Templates
 
-The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions CLI Feed](https://aka.ms/AAbbk68). The Functions CLI Feed provides a central location to get the latest version of all templates used for functions.
+The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions CLI Feed](https://aka.ms/funcCliFeedV4). The Functions CLI Feed provides a central location to get the latest version of all templates used for functions.
 
 ## Template Sources
 
@@ -24,7 +24,7 @@ Backup templates should be updated every time there is a major change in the lat
 
 ## Script Templates
 
-Basic script templates (i.e. http and timer) are retrieved from the 'templates' property in each entry of the [CLI Feed](https://aka.ms/AAbbk68). More advanced templates (i.e. blob and cosmos) are retrieved from another feed specific to the extension bundle for that project. For example, the default bundle is 'Microsoft.Azure.Functions.ExtensionBundle' and the matching feed is https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json
+Basic script templates (i.e. http and timer) are retrieved from the 'templates' property in each entry of the [CLI Feed](https://aka.ms/funcCliFeedV4). More advanced templates (i.e. blob and cosmos) are retrieved from another feed specific to the extension bundle for that project. For example, the default bundle is 'Microsoft.Azure.Functions.ExtensionBundle' and the matching feed is https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json
 
 > NOTE: Both template feeds support 'staging' environments for us to test against before moving to production. The main CLI Feed uses a "vX-prerelease" tag, while the bundle feed has a completely different url leveraging "functionscdnstaging" instead of "functionscdn".
 
