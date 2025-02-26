@@ -6,14 +6,13 @@
 import { AzureWizard, type ExecuteActivityContext, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../localize";
 import { type SystemIdentityTreeItemBase } from "../../tree/remoteProject/SystemIdentityTreeItemBase";
-import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
 import { EnableSystemIdentityAssignStep } from "./EnableSystemIdentityStep";
 import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContext";
 
 export async function enableSystemIdentity(context: IActionContext, node: SystemIdentityTreeItemBase): Promise<undefined> {
-    const grandparentNode = node.parent.parent as SlotTreeItem;
-    const title: string = localize('enabling', 'Enabling system assigned identity for "{0}"...', grandparentNode.site.fullName);
+    const grandparentNode = node.parent.parent;
+    const title: string = localize('enabling', 'Enabled system assigned identity for "{0}".', grandparentNode.site.fullName);
 
     const wizardContext: ManagedIdentityAssignContext & ExecuteActivityContext = Object.assign(context, {
         site: grandparentNode.site,
@@ -22,8 +21,7 @@ export async function enableSystemIdentity(context: IActionContext, node: System
         activityTitle: title
     });
     const wizard = new AzureWizard(wizardContext, {
-        executeSteps: [new EnableSystemIdentityAssignStep()],
-        title
+        executeSteps: [new EnableSystemIdentityAssignStep()]
     });
 
     await node.runWithTemporaryDescription(context, localize('enabling', 'Enabling system assigned identity...'), async () => {

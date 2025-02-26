@@ -7,7 +7,6 @@ import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
 import { localize } from '../../localize';
-import { type IProjectTreeItem } from '../IProjectTreeItem';
 import { type SlotTreeItem } from '../SlotTreeItem';
 import { SystemIdentityTreeItemBase } from './SystemIdentityTreeItemBase';
 import { UserAssignedIdentitiesTreeItem } from './UserAssignedIdentitiesTreeItem';
@@ -15,7 +14,7 @@ import { UserAssignedIdentitiesTreeItem } from './UserAssignedIdentitiesTreeItem
 export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
     public readonly label: string = localize('Identity', 'Identity');
     public static contextValue: string = 'azFuncManagedIdentity';
-    public readonly parent: AzExtParentTreeItem & IProjectTreeItem & SlotTreeItem;
+    public readonly parent: SlotTreeItem;
     public readonly site: ParsedSite;
     public suppressMaskLabel: boolean = true;
 

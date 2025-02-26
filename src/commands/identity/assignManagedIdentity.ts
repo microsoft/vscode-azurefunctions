@@ -35,7 +35,7 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
     const executeSteps: AzureWizardExecuteStep<ManagedIdentityAssignContext>[] = [
         new ManagedIdentityAssignStep()
     ];
-    const title: string = localize('assignManagedIdentity', 'Assign Managed Identity to Function App');
+    const title: string = localize('assignManagedIdentity', 'Assign User Assigned Identity to Function App');
     const wizard: AzureWizard<ManagedIdentityAssignContext> = new AzureWizard(wizardContext, {
         title,
         promptSteps,
@@ -45,7 +45,7 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
 
 
     await wizard.prompt();
-    wizardContext.activityTitle = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', wizardContext.site?.fullName, wizardContext.managedIdentity?.name);
+    wizardContext.activityTitle = localize('assigning', 'Assigned user assigned identity "{1}" for "{0}"', wizardContext.site?.fullName, wizardContext.managedIdentity?.name);
     await node.runWithTemporaryDescription(context, localize('enabling', 'Assigning identity...'), async () => {
         await wizard.execute();
     });
