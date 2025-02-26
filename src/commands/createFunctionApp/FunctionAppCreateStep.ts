@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
@@ -56,7 +57,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = maskUserInfo(parseError(error).message, []);
             }
         }
-
         showSiteCreated(site, context);
     }
 
@@ -66,6 +66,14 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
+        let identity: Identity | undefined = undefined;
+        if (context.managedIdentity) {
+            const userAssignedIdentities = {};
+            userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
+                { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
+            identity = { type: 'UserAssigned', userAssignedIdentities }
+        }
+
         const site: Site = {
             name: context.newSiteName,
             kind: getSiteKind(context),
@@ -73,7 +81,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             serverFarmId: context.plan?.id,
             clientAffinityEnabled: false,
             siteConfig: await this.getNewSiteConfig(context, stack),
-            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+            reserved: context.newSiteOS === WebsiteOS.linux,  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+            identity
         };
 
         if (context.customLocation) {
@@ -140,12 +149,20 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         let newSiteConfig: SiteConfig = {};
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-        let appSettings: NameValuePair[] = [
-            {
+
+        let appSettings: NameValuePair[] = [];
+        if (context.managedIdentity) {
+            appSettings.push({
+                name: `${ConnectionKey.Storage}__accountName`,
+                value: context.newStorageAccountName ?? context.storageAccount?.name
+            });
+        } else {
+            appSettings.push({
                 name: ConnectionKey.Storage,
                 value: storageConnectionString
-            }
-        ];
+            });
+        }
+
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
