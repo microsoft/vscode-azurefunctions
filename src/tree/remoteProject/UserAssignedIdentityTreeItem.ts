@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Identity } from '@azure/arm-msi';
-import { createPortalUri, createRoleDefinitionItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
+import { createPortalUri, createRoleDefinitionsItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, nonNullProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import { type Uri } from 'vscode';
@@ -30,7 +30,7 @@ export class UserAssignedIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionItems(context, this.parent.subscription, this.identity)
+        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, this.identity);
         return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
     }
 

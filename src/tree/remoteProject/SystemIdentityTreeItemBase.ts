@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Identity } from '@azure/arm-resources';
-import { createManagedServiceIdentityClient, createRoleDefinitionItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
+import { createManagedServiceIdentityClient, createRoleDefinitionsItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, GenericTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
 import { localize } from '../../localize';
@@ -57,7 +57,7 @@ class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const msiClient = await createManagedServiceIdentityClient([context, this.subscription]);
         const systemIdentity = await msiClient.systemAssignedIdentities.getByScope(this.parent.parent.id);
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionItems(context, this.parent.subscription, systemIdentity)
+        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, systemIdentity)
         return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
     }
 
