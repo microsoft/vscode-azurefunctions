@@ -11,21 +11,21 @@ export function getRotatingAuthLevel(): string {
 }
 
 let locationCount: number = getStartingIndex();
-const locations: string[] = ['Australia East', 'East Asia', 'East US', 'North Europe', 'South Central US', 'Southeast Asia', 'UK South', 'West Europe'];
+const locations: string[] = ["East US", "South Central US", "West US 2", "West US 3", "Australia East", "Southeast Asia", "North Europe", "Sweden Central", "UK South", "East Asia", "East US 2"];
 export function getRotatingLocation(): string {
     locationCount += 1;
     return locations[locationCount % locations.length];
 }
 
 let nodeVersionCount: number = getStartingIndex();
-const nodeVersions: RegExp[] = [/node.*12/i, /node.*14/i];
+const nodeVersions: RegExp[] = [/node.*20/i];
 export function getRotatingNodeVersion(): RegExp {
     nodeVersionCount += 1;
     return nodeVersions[nodeVersionCount % nodeVersions.length];
 }
 
 let pyVersionCount: number = getStartingIndex();
-const pyVersions: RegExp[] = [/python.*3\.7/i, /python.*3\.8/i, /python.*3\.9/i];
+const pyVersions: RegExp[] = [/python.*3\.10/i, /python.*3\.11/i];
 export function getRotatingPythonVersion(): RegExp {
     pyVersionCount += 1;
     return pyVersions[pyVersionCount % pyVersions.length];

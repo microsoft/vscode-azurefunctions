@@ -7,11 +7,11 @@ import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { type apiUtils } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { extensions, type Extension } from "vscode";
-import { FuncVersion, ProjectLanguage, extensionId, nonNullValue, registerOnActionStartHandler } from '../extension.bundle';
+import { extensionId, FuncVersion, nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelInput, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
@@ -28,14 +28,14 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /Model V3/, functionName], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3], functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 suppressOpenFolder: true,
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                targetFramework: ['netcoreapp3.1', 'net6.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
+                targetFramework: ['net6.0', 'net7.0', 'net8.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
             });
         });
 
@@ -55,7 +55,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi2');
 
-        await runWithInputs('api.createFunction', [language, /Model V3/], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3]], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,

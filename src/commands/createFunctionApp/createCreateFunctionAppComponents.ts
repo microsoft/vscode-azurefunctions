@@ -133,11 +133,8 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
-    if (wizardContext.advancedCreation) {
-        promptSteps.push(new FunctionAppHostingPlanStep());
-        // location is required to get flex runtimes, so prompt before stack step
-        CustomLocationListStep.addStep(wizardContext, promptSteps);
-    }
+    promptSteps.push(new FunctionAppHostingPlanStep());
+    CustomLocationListStep.addStep(wizardContext, promptSteps);
 
     promptSteps.push(new FunctionAppStackStep());
 

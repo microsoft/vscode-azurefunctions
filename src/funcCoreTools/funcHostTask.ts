@@ -9,18 +9,75 @@ import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
+import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
+    taskExecution: vscode.TaskExecution;
     processId: number;
+    portNumber: string;
 }
 
-export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask>();
+interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
+    launchServiceData: { [key: string]: string }
+}
 
-const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope | undefined>();
+namespace DotnetDebugDebugConfiguration {
+    export function is(debugConfiguration: vscode.DebugConfiguration): debugConfiguration is DotnetDebugDebugConfiguration {
+        return debugConfiguration.type === 'coreclr' && 'launchServiceData' in debugConfiguration
+    }
+}
+
+class RunningFunctionTaskMap {
+    private _map: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask[]>();
+
+    public set(key: vscode.WorkspaceFolder | vscode.TaskScope, value: IRunningFuncTask): void {
+        const values = this._map.get(key) || [];
+        values.push(value)
+        this._map.set(key, values);
+    }
+
+    public get(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): IRunningFuncTask | undefined {
+        const values = this._map.get(key) || [];
+        return values.find(t => {
+            const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
+            // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
+            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
+        });
+    }
+
+    public getAll(key: vscode.WorkspaceFolder | vscode.TaskScope): (IRunningFuncTask | undefined)[] {
+        return this._map.get(key) || [];
+    }
+
+    public has(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): boolean {
+        return !!this.get(key, buildPath);
+    }
+
+    public delete(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): void {
+        const value = this.get(key, buildPath)
+        const values = this._map.get(key) || [];
+
+        if (value) {
+            // remove the individual entry from the array
+            values.splice(values.indexOf(value), 1);
+            this._map.set(key, values);
+        }
+
+        if (values?.length === 0) {
+            this._map.delete(key);
+        }
+    }
+}
+
+export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
+
+const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
-export const runningFuncPortMap = new Map<vscode.WorkspaceFolder | vscode.TaskScope | undefined, string>();
+export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
 export function isFuncHostTask(task: vscode.Task): boolean {
@@ -33,8 +90,9 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
-            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope));
+            const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
+            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber };
+            runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
@@ -43,7 +101,7 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            runningFuncTaskMap.delete(e.execution.task.scope);
+            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
         }
     });
 
@@ -51,19 +109,54 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
 
+        // Used to stop the task started with pickFuncProcess.ts startFuncProcessFromApi.
+        if (DotnetDebugDebugConfiguration.is(debugSession.configuration) && debugSession.configuration.launchServiceData.buildPath) {
+            const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath)
+
+            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath)
+            if (workspaceFolder === undefined) {
+                throw new Error(localize('noWorkspaceFolderForBuildPath', 'No workspace folder found for path "{0}".', buildPathUri.fsPath));
+            }
+
+            stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, true)
+
+            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath)
+        }
+
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
-            stopFuncTaskIfRunning(debugSession.workspaceFolder);
+            // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
+            stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true);
         }
     });
 }
 
-export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): void {
-    const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
-    if (runningFuncTask !== undefined) {
-        // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
-        // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
-        process.kill(runningFuncTask.processId);
+export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, killAll?: boolean, terminate?: boolean): void {
+    let runningFuncTask: (IRunningFuncTask | undefined)[] | undefined;
+    if (killAll) {
+        // get all is needed here
+        runningFuncTask = runningFuncTaskMap.getAll(workspaceFolder);
+    } else {
+        runningFuncTask = [runningFuncTaskMap.get(workspaceFolder, buildPath)];
+    }
+
+    if (runningFuncTask !== undefined && runningFuncTask.length > 0) {
+        for (const runningFuncTaskItem of runningFuncTask) {
+            if (!runningFuncTaskItem) break;
+            if (terminate) {
+                runningFuncTaskItem.taskExecution.terminate()
+            } else {
+                // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
+                // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
+                process.kill(runningFuncTaskItem.processId);
+            }
+        }
+        if (buildPath) {
+            runningFuncTaskMap.delete(workspaceFolder, buildPath);
+        }
+    }
+
+    if (killAll) {
         runningFuncTaskMap.delete(workspaceFolder);
     }
 }
@@ -71,8 +164,8 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
 export async function getFuncPortFromTaskOrProject(context: IActionContext, funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
     try {
         // First, check the task itself
-        if (funcTask && typeof funcTask.definition.command === 'string') {
-            const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+        if (funcTask && funcTask.execution instanceof vscode.ShellExecution) {
+            const match = funcTask.execution?.commandLine?.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
             if (match) {
                 return match[1];
             }
@@ -101,4 +194,8 @@ export async function getFuncPortFromTaskOrProject(context: IActionContext, func
 
     // Finally, fall back to the default port
     return defaultFuncPort;
+}
+
+function normalizePath(fsPath: string): string {
+    return vscode.Uri.parse(path.normalize(fsPath).replace(/^(\/|\\)+|(\/|\\)+$/g, '')).fsPath;
 }

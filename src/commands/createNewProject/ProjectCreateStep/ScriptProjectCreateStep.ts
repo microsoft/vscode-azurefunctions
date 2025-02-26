@@ -11,7 +11,6 @@ import { FuncVersion } from '../../../FuncVersion';
 import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { type IHostJsonV1, type IHostJsonV2 } from '../../../funcConfig/host';
 import { type ILocalSettingsJson } from '../../../funcConfig/local.settings';
-import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
@@ -44,12 +43,6 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             if (functionsWorkerRuntime) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
-            }
-
-            // feature flag needs to be enabled to use multiple entry points
-            if (isNodeV4Plus(context) || context.templateSchemaVersion === TemplateSchemaVersion.v2) {
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                this.localSettingsJson.Values!["AzureWebJobsFeatureFlags"] = "EnableWorkerIndexing";
             }
 
             await AzExtFsExtra.writeJSON(localSettingsJsonPath, this.localSettingsJson);

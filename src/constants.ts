@@ -161,7 +161,6 @@ export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
 export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
-export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
 
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).
@@ -208,3 +207,6 @@ export enum EventGridExecuteFunctionEntryPoint {
 
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
+
+export const DurableTaskProvider: string = 'Microsoft.DurableTask';
+export const DurableTaskSchedulersResourceType: string = 'schedulers';

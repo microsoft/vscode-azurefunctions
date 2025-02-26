@@ -5,14 +5,12 @@
 
 import { type Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
-import { runWithInputs, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import { DialogResponses, ProjectLanguage, createFunctionAppAdvanced, deleteFunctionApp, getRandomHexString, registerOnActionStartHandler } from '../../extension.bundle';
+import { DialogResponses, createFunctionAppAdvanced, deleteFunctionApp, getRandomHexString } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
-import { runWithFuncSetting } from '../runWithSetting';
-import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
-import { resourceGroupsToDelete, subscriptionContext, testClient } from './global.nightly.test';
+import { getRotatingLocation } from './getRotatingValue';
+import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
 suite('Function App Operations', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
@@ -42,7 +40,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: (string | RegExp)[] = [appName, /\.net/i, 'Windows', '$(plus) Create new resource group', rgName, location, 'Consumption', '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
+        const testInputs: (string | RegExp)[] = [appName, 'Consumption', location, /\.net/i, 'Windows', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
@@ -53,7 +51,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: (string | RegExp)[] = [app2Name, /\.net/i, 'Windows', rgName, location, 'Consumption', saName, aiName];
+        const testInputs: (string | RegExp)[] = [app2Name, 'Consumption', location, /\.net/i, 'Windows', rgName, saName, aiName];
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
@@ -61,24 +59,6 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         });
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.ok(createdApp);
-    });
-
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-function-app
-    test('Create - API (deprecated)', async () => {
-        const apiRgName: string = getRandomHexString();
-        resourceGroupsToDelete.push(apiRgName);
-        const apiAppName: string = getRandomHexString();
-        const inputs = [apiAppName, getRotatingNodeVersion(), getRotatingLocation()];
-        const commandId = 'azureFunctions.createFunctionApp';
-
-        await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            await runWithInputs(commandId, inputs, registerOnActionStartHandler, async () => {
-                const actualFuncAppId: string = <string>await vscode.commands.executeCommand(commandId, subscriptionContext.subscriptionId, apiRgName);
-                const site: Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
-                assert.ok(site);
-                assert.equal(actualFuncAppId, site.id);
-            });
-        });
     });
 
     test('Delete', async () => {

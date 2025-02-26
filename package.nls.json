@@ -81,7 +81,7 @@
     "azureFunctions.showDeprecatedStacks": "Show deprecated runtime stacks when creating a Function App in Azure. WARNING: These stacks may be removed at any time and may not be available in all regions.",
     "azureFunctions.showExplorer": "Show or hide the Azure Functions Explorer",
     "azureFunctions.showExtensionsCsprojWarning": "Show a warning when an Azure Functions project was detected that has mismatched \"extensions.csproj\" configuration.",
-    "%azureFunctions.showFlexEventGridWarning%": "Show a warning when deploying a Azure Blob Storage Trigger (using Event Grid) to a Flex Consumption Function App.",
+    "azureFunctions.showFlexEventGridWarning": "Show a warning when deploying a Azure Blob Storage Trigger (using Event Grid) to a Flex Consumption Function App.",
     "azureFunctions.showHiddenStacks": "Show hidden runtime stacks when creating a Function App in Azure. WARNING: These stacks may be in preview or may not be available in all regions.",
     "azureFunctions.showMultiCoreToolsWarning": "Show a warning if multiple installs of Azure Functions Core Tools are detected.",
     "azureFunctions.showProjectWarning": "Show a warning when an Azure Functions project was detected that has not been initialized for use in VS Code.",
@@ -109,6 +109,7 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
+    "azureFunctions.showMarkdownPreview": "Enables showing the markdown preview after creating a new PythonV2 template",
     "azureFunctions.eventGrid.sendMockRequest": "Save and execute...",
     "azureFunctions.walkthrough.functionsStart.create.description": "If you're just getting started, you will need to create an Azure Functions project. Follow along with the [Visual Studio Code developer guide](https://aka.ms/functions-getstarted-vscode) for step-by-step instructions.\n[Create New Project](command:azureFunctions.createNewProject)",
     "azureFunctions.walkthrough.functionsStart.create.title": "Create a new Azure Functions project",
@@ -117,5 +118,16 @@
     "azureFunctions.walkthrough.functionsStart.initialize.title": "Initialize an existing project",
     "azureFunctions.walkthrough.functionsStart.scenarios.description": "Learn how you can use Azure Functions to build event-driven systems.\n\nIf you're just getting started with Azure Functions, you can [learn about the anatomy of an Azure Functions application](https://aka.ms/functions-getstarted-devguide).",
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
-    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions"
+    "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
+
+    "azureFunctions.durableTaskScheduler.copySchedulerConnectionString": "Copy Connection String",
+    "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Endpoint",
+    "azureFunctions.durableTaskScheduler.createScheduler": "Create Durable Task Scheduler...",
+    "azureFunctions.durableTaskScheduler.createScheduler.detail": "For long-running and reliable workflows.",
+    "azureFunctions.durableTaskScheduler.createTaskHub": "Create Task Hub...",
+    "azureFunctions.durableTaskScheduler.deleteScheduler": "Delete Scheduler...",
+    "azureFunctions.durableTaskScheduler.deleteTaskHub": "Delete Task Hub...",
+    "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
+
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
 }

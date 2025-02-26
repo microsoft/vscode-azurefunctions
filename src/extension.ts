@@ -8,7 +8,7 @@
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
-import { AzExtResourceType } from '@microsoft/vscode-azureresources-api';
+import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
@@ -17,6 +17,7 @@ import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFr
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
+import { startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
@@ -28,6 +29,7 @@ import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
+import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
@@ -36,6 +38,8 @@ import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigO
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
+import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
+import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -71,7 +75,15 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
         registerReportIssueCommand('azureFunctions.reportIssue');
 
-        registerCommands();
+        const schedulerClient = new HttpDurableTaskSchedulerClient();
+        const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+
+        registerCommands({
+            dts: {
+                dataBranchProvider,
+                schedulerClient
+            }
+        });
 
         registerFuncHostTaskEvents();
 
@@ -102,6 +114,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
         ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
         ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsLocalResourceProvider());
+
+        const azureResourcesApi = await getAzureResourcesExtensionApi(context, '2.0.0');
+
+        ext.rgApiV2 = azureResourcesApi;
+
+        azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, dataBranchProvider);
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
@@ -111,7 +129,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         uploadAppSettings: uploadAppSettingsFromApi,
         listLocalProjects: listLocalProjects,
         listLocalFunctions: listLocalFunctions,
-        apiVersion: '1.9.0'
+        isFuncCoreToolsInstalled: async (message: string) => {
+            return await callWithTelemetryAndErrorHandling('azureFunctions.api.isFuncCoreToolsInstalled', async (context: IActionContext) => {
+                return await validateFuncCoreToolsInstalled(context, message, undefined);
+            });
+        },
+        startFuncProcess: startFuncProcessFromApi,
+        apiVersion: '1.10.0'
     }]);
 }
 

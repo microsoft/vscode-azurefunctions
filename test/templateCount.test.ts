@@ -24,27 +24,15 @@ function addSuite(source: TemplateSource | undefined): void {
     suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, () => {
         const cases: TestCase[] = [
             { language: ProjectLanguage.JavaScript, version: FuncVersion.v1, expectedCount: 8 },
-            { language: ProjectLanguage.JavaScript, version: FuncVersion.v2, expectedCount: 14 },
-            { language: ProjectLanguage.JavaScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.JavaScript, version: FuncVersion.v4, expectedCount: 17 },
+            { language: ProjectLanguage.JavaScript, version: FuncVersion.v4, expectedCount: 18 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v1, expectedCount: 12 },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v2, expectedCount: 11 },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 13, projectTemplateKey: 'netcoreapp3.1' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net6.0' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net6.0-isolated' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 11, projectTemplateKey: 'net7.0-isolated' },
-            { language: ProjectLanguage.Python, version: FuncVersion.v2, expectedCount: 12 },
-            { language: ProjectLanguage.Python, version: FuncVersion.v3, expectedCount: 12 },
-            { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v2, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 17 },
-            { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
-            { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
-            { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 15 },
-            { language: ProjectLanguage.Java, version: FuncVersion.v2, expectedCount: 4 },
-            // https://github.com/microsoft/vscode-azurefunctions/issues/1605
-            // { language: ProjectLanguage.Java, version: FuncVersion.v3, expectedCount: 4}]
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 15, projectTemplateKey: 'net6.0' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net6.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net7.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net8.0-isolated' },
+            { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 15 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 18 },
+            { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 16 },
             { language: ProjectLanguage.Ballerina, version: FuncVersion.v4, expectedCount: 5 }
         ];
 

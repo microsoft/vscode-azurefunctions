@@ -5,11 +5,9 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { durableUtils, FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, type TemplateSource } from '../../extension.bundle';
+import { durableUtils, FuncVersion, ProjectLanguage, type TemplateSource } from '../../extension.bundle';
 import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
-import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -42,11 +40,9 @@ class CSharpFunctionTester extends FunctionTesterBase {
 }
 
 for (const source of backupLatestTemplateSources) {
-    addSuite(FuncVersion.v2, 'netcoreapp2.1', source);
-    addSuite(FuncVersion.v3, 'netcoreapp3.1', source);
-    addSuite(FuncVersion.v4, 'net6.0', source, true);
-    addSuite(FuncVersion.v4, 'net6.0', source, false);
     addSuite(FuncVersion.v4, 'net7.0', source, true);
+    addSuite(FuncVersion.v4, 'net8.0', source, true);
+    addSuite(FuncVersion.v4, 'net9.0', source, true);
 }
 
 function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {
@@ -159,7 +155,23 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'samples-workitems/name'
             ],
             skip: !isIsolated
-        }
+        },
+        {
+            functionName: 'SqlInputBindingIsolated',
+            inputs: [
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'TABLE'
+            ]
+        },
+        {
+            functionName: 'SqlOutputBindingIsolated',
+            inputs: [
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'TABLE'
+            ]
+        },
     ];
 
     const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
@@ -173,25 +185,5 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
         timeoutMS: 60 * 1000,
         isLongRunning: isLongRunningVersion(version),
         suppressParallel: true, // lots of errors like "The process cannot access the file because it is being used by another process" 😢
-        addTests: () => {
-            if (version === FuncVersion.v2) {
-                // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
-                test('createFunction API (deprecated)', async () => {
-                    // Intentionally testing IoTHub trigger since a partner team plans to use that
-                    const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
-                    const functionName: string = 'createFunctionApi';
-                    const namespace: string = 'TestCompany.TestFunction';
-                    const iotPath: string = 'messages/events';
-                    const connection: string = 'IoTHub_Setting';
-                    await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
-                        await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
-                            // Intentionally testing weird casing
-                            await vscode.commands.executeCommand('azureFunctions.createFunction', tester.projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
-                        });
-                    });
-                    await tester.validateFunction(tester.projectPath, functionName, [namespace, iotPath, connection]);
-                });
-            }
-        }
     });
 }

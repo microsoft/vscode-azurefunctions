@@ -12,12 +12,13 @@ import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
 export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
-    const framework: string = await getFramework(context, workingDirectory);
-    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
+    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
         workingDirectory,
         'dotnet',
+        '--roll-forward',
+        'Major',
         cpUtils.wrapArgInQuotes(jsonDllPath),
         '--templateDir',
         cpUtils.wrapArgInQuotes(getDotnetTemplateDir(context, version, projTemplateKey)),
@@ -61,7 +62,7 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
         }
 
         // Prioritize "LTS", then "Current", then "Preview"
-        const netVersions: string[] = ['6.0', '7.0', '8.0'];
+        const netVersions: string[] = ['6.0', '7.0', '8.0', '9.0'];
         const semVersions: SemVer[] = netVersions.map(v => semVerCoerce(v) as SemVer);
 
         let pickedVersion: SemVer | undefined;

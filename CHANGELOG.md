@@ -1,5 +1,63 @@
 # Change Log
 
+## 1.16.2 - 2025-02-10
+
+### Added
+* [[4351]](https://github.com/microsoft/vscode-azurefunctions/pull/4351) Default flex consumption for basic creation
+* [[4358]](https://github.com/microsoft/vscode-azurefunctions/pull/4358) SqlBinding triggers to verified list
+* [[4359]](https://github.com/microsoft/vscode-azurefunctions/pull/4359) Set `publicBlobAccess` to false for created storage accounts
+* [[4361]](https://github.com/microsoft/vscode-azurefunctions/pull/4361) Add basic support for Durable Task Scheduler resources
+* [[4370]](https://github.com/microsoft/vscode-azurefunctions/pull/4370) Adds a number of commands related to the management of Durable Task Scheduler resources under preview flag
+
+## 1.16.1 - 2024-11-13
+
+### Fixes
+* [[4333]](https://github.com/microsoft/vscode-azurefunctions/pull/4333) Fixes .NET debugging with multiple `.csproj` files
+
+## 1.16.0 - 2024-11-11
+
+### Added
+* [[4292]](https://github.com/microsoft/vscode-azurefunctions/pull/4292) Create a setting to suppress readme tabs from opening for Python V2 templates
+* [[4299]](https://github.com/microsoft/vscode-azurefunctions/pull/4299) Expose API commands to start a func task and to check if CLI tools are installed
+* [[4298]](https://github.com/microsoft/vscode-azurefunctions/pull/4298) Add .NET 9.0 to list of runtimes and update backup templates
+
+### Changed
+* [[4286]](https://github.com/microsoft/vscode-azurefunctions/pull/4286) Exclude backup templates from credential scanning
+* [[4291]](https://github.com/microsoft/vscode-azurefunctions/pull/4291) Use app insight connection string instead of aiKey
+* [[4293]](https://github.com/microsoft/vscode-azurefunctions/pull/4293) Use vscode.git API to initialize new workspace
+* [[4297]](https://github.com/microsoft/vscode-azurefunctions/pull/4297) For v2 templates, use `index.json` for template versioning and construct the URL ourselves
+
+### Engineering
+* [[4264]](https://github.com/microsoft/vscode-azurefunctions/pull/4264) Improvements to error masking
+* [[4295]](https://github.com/microsoft/vscode-azurefunctions/pull/4295) Ensure `templateSchemaVersion` is set even if prompt is skipped
+* [[4314]](https://github.com/microsoft/vscode-azurefunctions/pull/4314) Use `--roll-forward Major` flag to make `.dll` JSON CLI tool runtime agnostic
+* [[4320]](https://github.com/microsoft/vscode-azurefunctions/pull/4320) Create a `RunningAzureFunctions` class to handle multiple function tasks in one workspace
+
+**Full Changelog**: https://github.com/microsoft/vscode-azurefunctions/compare/v1.15.4...v1.16.0
+
+## 1.15.4 - 2024-09-12
+### Engineering
+* [[4256]](https://github.com/microsoft/vscode-azurefunctions/pull/4256) Upgrade packages for additional improvements to telemetry
+* [[4247]](https://github.com/microsoft/vscode-azurefunctions/pull/4247) [[4266]](https://github.com/microsoft/vscode-azurefunctions/pull/4266) Update release pipeline to support signing
+
+## 1.15.3 - 2024-08-23
+### Added
+* [[4239]](https://github.com/microsoft/vscode-azurefunctions/pull/4239) Use a list task for the cache that is used for all resolving
+
+### Removed
+* [[4243]](https://github.com/microsoft/vscode-azurefunctions/pull/4243) Remove `EnableWorkerIndexing` feature flag
+
+### Engineering
+* [[4241]](https://github.com/microsoft/vscode-azurefunctions/pull/4241) Improve telemetry and performance
+
+## 1.15.2 - 2024-08-08
+
+### Engineering
+* [[4165]](https://github.com/microsoft/vscode-azurefunctions/pull/4165) Show multiple runtime matches for `targetFramework` when creating from Functions API
+* [[4195]](https://github.com/microsoft/vscode-azurefunctions/pull/4195) Enable end-to-end Azure tests and add more tests
+* [[4215]](https://github.com/microsoft/vscode-azurefunctions/pull/4215) Update backup templates
+* [[4200]](https://github.com/microsoft/vscode-azurefunctions/pull/4200) Upgrade `@azure/arm-appservice` to enable flex consumption SKU support
+
 ## 1.15.1 - 2024-06-19
 
 ### Changed

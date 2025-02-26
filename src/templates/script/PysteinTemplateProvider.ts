@@ -6,7 +6,6 @@
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
-import { type IBundleMetadata } from '../../funcConfig/host';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
 import { verifyTemplateIsV2 } from '../../utils/templateVersionUtils';
@@ -33,8 +32,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     protected _language: string;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(context, bundleMetadata, latestTemplateVersion);
+        const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(latestTemplateVersion);
         const language = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const urls: string[] = [release.userPrompts ?? release.bindings, resourcesUrl, release.functions];

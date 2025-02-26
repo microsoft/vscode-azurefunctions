@@ -39,12 +39,14 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
         }
 
         context.newSiteStack = result as FullFunctionAppStack;
-        if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
-            context.newSiteOS = WebsiteOS.windows;
-        } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
-            context.newSiteOS = WebsiteOS.linux;
-        } else if (!context.advancedCreation) {
-            context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
+        if (!context.newSiteOS) {
+            if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
+                context.newSiteOS = WebsiteOS.windows;
+            } else if (!context.newSiteStack.minorVersion.stackSettings.windowsRuntimeSettings) {
+                context.newSiteOS = WebsiteOS.linux;
+            } else if (!context.advancedCreation) {
+                context.newSiteOS = <WebsiteOS>context.newSiteStack.stack.preferredOs;
+            }
         }
 
         if (isFlex) {

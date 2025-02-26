@@ -3,72 +3,64 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelInput, NodeModelVersion } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
 }
 
 const testCases: CreateProjectTestCase[] = [
-    { ...getCSharpValidateOptions('netcoreapp2.1', FuncVersion.v2) },
-    { ...getCSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
+    // C# tests
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
     { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
-    { ...getFSharpValidateOptions('netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
-    { ...getFSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], isHiddenLanguage: true },
+    { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
+    // .NET Script tests
+    { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
+    { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
+    // Node tests
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
+    // PowerShell tests
+    { ...getPowerShellValidateOptions(FuncVersion.v4) },
+    // Custom language tests
+    { ...getCustomValidateOptions(FuncVersion.v4) }
 ];
 
-// Test cases that are the same for both v2 and v3
-for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
-    testCases.push(
-        { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version), inputs: ['Model V3'] },
-        { ...getTypeScriptValidateOptions({ version }), inputs: ['Model V3'] },
-        { ...getPowerShellValidateOptions(version) },
-        { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
-        { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
-    );
 
-    // test python v1 model
-    testCases.push({
-        ...getPythonValidateOptions('.venv', version),
-        inputs: [/Model V1/i, TestInput.UseDefaultValue]
-    });
+/* Temporarily disable Java and Ballerina tests until we can install Ballerina on the new pipelines
+    https://github.com/microsoft/vscode-azurefunctions/issues/4210
 
-    const appName: string = 'javaApp';
-    const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
-    if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
-        javaBaseInputs.unshift(/8/);
-    }
+const appName: string = 'javaApp';
+const javaBaseInputs: (TestInput | string | RegExp)[] = [/8/, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
 
-    testCases.push({
-        ...getJavaValidateOptions(appName, JavaBuildTool.gradle, version),
-        inputs: javaBaseInputs.concat(/Gradle/i, /skip for now/i),
-        description: JavaBuildTool.gradle
-    });
 
-    testCases.push({
-        ...getJavaValidateOptions(appName, JavaBuildTool.maven, version),
-        inputs: javaBaseInputs.concat(/Maven/i),
-        description: JavaBuildTool.maven
-    });
-    /* Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
-    const ballerinaBaseInputs: (TestInput | string | RegExp)[] = [/JVM/i];
+testCases.push({
+    ...getJavaValidateOptions(appName, JavaBuildTool.gradle, FuncVersion.v4),
+    inputs: javaBaseInputs.concat(/Gradle/i, /skip for now/i),
+    description: JavaBuildTool.gradle
+});
 
-    testCases.push({
-        ...getBallerinaValidateOptions(version),
-        inputs: ballerinaBaseInputs,
-        description: 'ballerina'
-    });
-    */
-}
+testCases.push({
+    ...getJavaValidateOptions(appName, JavaBuildTool.maven, FuncVersion.v4),
+    inputs: javaBaseInputs.concat(/Maven/i),
+    description: JavaBuildTool.maven
+});
+const ballerinaBaseInputs: (TestInput | string | RegExp)[] = [/JVM/i];
 
-testCases.push({ ...getCustomValidateOptions(FuncVersion.v3) });
+testCases.push({
+    ...getBallerinaValidateOptions(version),
+    inputs: ballerinaBaseInputs,
+    description: 'ballerina'
+});
+*/
 
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
@@ -76,6 +68,9 @@ for (const testCase of testCases) {
         let title = `${testCase.language} ${testCase.version}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;
+        }
+        if (testCase.languageModelVersion) {
+            title += ` (Model v${testCase.languageModelVersion})`
         }
         title += ` (${source})`;
 

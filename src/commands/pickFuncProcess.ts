@@ -4,30 +4,82 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
-import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
-import { ProcessDataFlag, getWindowsProcessTree, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
+
+export async function startFuncProcessFromApi(
+    buildPath: string,
+    args: string[],
+    env: { [key: string]: string }
+): Promise<{ processId: string; success: boolean; error: string }> {
+    const result = {
+        processId: '',
+        success: false,
+        error: ''
+    };
+
+    let funcHostStartCmd: string = 'func host start';
+    if (args) {
+        funcHostStartCmd += ` ${args.join(' ')}`;
+    }
+
+    await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
+        try {
+            let workspaceFolder: vscode.WorkspaceFolder | undefined = buildPathToWorkspaceFolderMap.get(buildPath);
+
+            if (workspaceFolder === undefined) {
+                workspaceFolder = {
+                    uri: vscode.Uri.parse(buildPath),
+                    name: buildPath,
+                    index: -1
+                }
+            }
+
+            await waitForPrevFuncTaskToStop(workspaceFolder);
+
+            buildPathToWorkspaceFolderMap.set(buildPath, workspaceFolder);
+
+            const funcTask = new vscode.Task({ type: `func  ${buildPath}` },
+                workspaceFolder,
+                hostStartTaskName,
+                `func`,
+                new vscode.ShellExecution(funcHostStartCmd, {
+                    cwd: buildPath,
+                    env
+                }));
+
+            // funcTask.execution?.options.cwd to get build path for later reference
+            const taskInfo = await startFuncTask(context, workspaceFolder, buildPath, funcTask);
+            result.processId = await pickChildProcess(taskInfo);
+            result.success = true;
+        } catch (err) {
+            const pError = parseError(err);
+            result.error = pError.message;
+        }
+    });
+
+    return result
+}
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
     if (!result.shouldContinue) {
         throw new UserCancelledError('preDebugValidate');
     }
-
-    await waitForPrevFuncTaskToStop(result.workspace);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
@@ -40,12 +92,14 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
-    const taskInfo = await startFuncTask(context, result.workspace, funcTask);
+    const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
+    await waitForPrevFuncTaskToStop(result.workspace, buildPath);
+    const taskInfo = await startFuncTask(context, result.workspace, buildPath, funcTask);
     return await pickChildProcess(taskInfo);
 }
 
-async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    stopFuncTaskIfRunning(workspaceFolder);
+async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder, buildPath?: string): Promise<void> {
+    stopFuncTaskIfRunning(workspaceFolder, buildPath);
 
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
@@ -58,7 +112,7 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<IRunningFuncTask> {
+async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, buildPath: string, funcTask: vscode.Task): Promise<IRunningFuncTask> {
     const settingKey: string = 'pickProcessTimeout';
     const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
     const timeoutInSeconds: number = Number(settingValue);
@@ -91,7 +145,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                 throw taskError;
             }
 
-            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
+            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
                 for (const scheme of ['http', 'https']) {
                     const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
