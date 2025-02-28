@@ -501,7 +501,7 @@
                 },
                 {
                     "command": "azureFunctions.convertRemoteConnections",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettingItem.*azFunc/i",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /(applicationSettings|applicationSettingItem).*azFunc/i",
                     "group": "1@4"
                 },
                 {

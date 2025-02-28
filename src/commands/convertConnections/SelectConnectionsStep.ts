@@ -69,7 +69,7 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
 
             if (localSettings.Values) {
                 for (const [key, value] of Object.entries(localSettings.Values)) {
-                    if (convertibleSetting(key, value)) {
+                    if (!convertibleSetting(key, value)) {
                         continue;
                     }
 
@@ -95,7 +95,7 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
             const appSettings: StringDictionary = await client.listApplicationSettings();
             if (appSettings.properties) {
                 for (const [key, value] of Object.entries(appSettings.properties)) {
-                    if (convertibleSetting(key, value)) {
+                    if (!convertibleSetting(key, value)) {
                         continue;
                     }
 

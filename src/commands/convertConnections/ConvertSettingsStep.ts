@@ -27,7 +27,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         originalValue: connection.name
                     });
 
-                    // Add role assignments to context
                     context.roles?.push({
                         scopeId: await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`),
                         roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
@@ -49,7 +48,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         }
                     );
 
-                    // TODO: test these roles
                     const scope = await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`)
                     context.roles?.push(
                         {
@@ -73,7 +71,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         originalValue: connection.name
                     });
 
-                    // TODO: test these roles
                     const scope = await getScopeHelper(context, cosmosDbAccountName, `resourceType eq  'Microsoft.DocumentDB/databaseAccounts'`);
                     context.roles?.push(
                         {
@@ -96,7 +93,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         originalValue: connection.name
                     });
 
-                    // TODO: test these roles
                     const scope = await getScopeHelper(context, eventHubNamespace, `resourceType eq  'Microsoft.EventHub/Namespaces'`);
                     context.roles?.push(
                         {
@@ -119,7 +115,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         originalValue: connection.name
                     });
 
-                    // TODO: test these roles
                     const scope = await getScopeHelper(context, serviceBusNamespace, `resourceType eq  'Microsoft.ServiceBus/Namespaces'`);
                     context.roles?.push(
                         {

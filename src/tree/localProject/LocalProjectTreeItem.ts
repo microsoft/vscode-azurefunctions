@@ -87,7 +87,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
                     }
                     if (localSettings.Values) {
                         for (const [key, value] of Object.entries(localSettings.Values)) {
-                            if (convertibleSetting(key, value)) {
+                            if (!convertibleSetting(key, value)) {
                                 continue;
                             }
 
