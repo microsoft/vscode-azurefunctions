@@ -14,6 +14,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
     private _oneSubscription: boolean = false;
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.subscription = (await context.ui.showQuickPick(this._picks, { placeHolder: l10n.t("Select a subscription") })).data;
+        context.subscriptionId = context.subscription.subscriptionId;
     }
 
     public shouldPrompt(_: IFuncDeployContext): boolean {

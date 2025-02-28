@@ -153,7 +153,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         let appSettings: NameValuePair[] = [];
         if (context.managedIdentity) {
             appSettings.push({
-                name: `${ConnectionKey.Storage}__accountName`,
                 value: context.newStorageAccountName ?? context.storageAccount?.name
             });
         } else {
