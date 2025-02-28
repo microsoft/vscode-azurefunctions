@@ -30,17 +30,9 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     // Add role assignments to context
                     context.roles?.push({
                         scopeId: await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`),
-                        roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner.name),
-                        roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.name
-                    })
-
-                    context.activityChildren?.push(
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.storageBlobDataOwner.roleName} created for ${storageAccountName}`),
-                            iconPath: activitySuccessIcon
-                        })
-                    );
+                        roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
+                        roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.roleName
+                    });
                 } else if (connection.name.includes('STORAGE')) {
                     const storageAccountName = connection.value.split(';')[1].split('=')[1];
 
@@ -62,26 +54,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     context.roles?.push(
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner.name),
-                            roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
+                            roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.roleName
                         },
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageQueueDataContributor.name),
-                            roleDefinitionName: CommonRoleDefinitions.storageQueueDataContributor.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageQueueDataContributor),
+                            roleDefinitionName: CommonRoleDefinitions.storageQueueDataContributor.roleName
                         }
-                    )
-                    context.activityChildren?.push(
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.storageBlobDataOwner.roleName} created for ${storageAccountName}`),
-                            iconPath: activitySuccessIcon
-                        }),
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.storageQueueDataContributor.roleName} created for ${storageAccountName}`),
-                            iconPath: activitySuccessIcon
-                        })
                     );
                 } else if (connection.name.includes('DOCUMENTDB')) {
                     const cosmosDbAccountURI = connection.value.split(';')[0].split('=')[1];
@@ -98,27 +78,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     context.roles?.push(
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.cosmosDBAccountReader.name),
-                            roleDefinitionName: CommonRoleDefinitions.cosmosDBAccountReader.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.cosmosDBAccountReader),
+                            roleDefinitionName: CommonRoleDefinitions.cosmosDBAccountReader.roleName
                         },
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.documentDBAccountContributor.name),
-                            roleDefinitionName: CommonRoleDefinitions.documentDBAccountContributor.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.documentDBAccountContributor),
+                            roleDefinitionName: CommonRoleDefinitions.documentDBAccountContributor.roleName
                         }
-                    )
-
-                    context.activityChildren?.push(
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.cosmosDBAccountReader.roleName} created for ${cosmosDbAccountName}`),
-                            iconPath: activitySuccessIcon
-                        }),
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.documentDBAccountContributor.roleName} created for ${cosmosDbAccountName}`),
-                            iconPath: activitySuccessIcon
-                        })
                     );
                 } else if (connection.name.includes('EVENTHUB')) {
                     const eventHubNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
@@ -134,27 +101,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     context.roles?.push(
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureEventHubsDataOwner.name),
-                            roleDefinitionName: CommonRoleDefinitions.azureEventHubsDataOwner.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureEventHubsDataOwner),
+                            roleDefinitionName: CommonRoleDefinitions.azureEventHubsDataOwner.roleName
                         },
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureEventHubsDataReceiver.name),
-                            roleDefinitionName: CommonRoleDefinitions.azureEventHubsDataReceiver.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureEventHubsDataReceiver),
+                            roleDefinitionName: CommonRoleDefinitions.azureEventHubsDataReceiver.roleName
                         }
-                    );
-
-                    context.activityChildren?.push(
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.azureEventHubsDataOwner.roleName} created for ${eventHubNamespace}`),
-                            iconPath: activitySuccessIcon
-                        }),
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.azureEventHubsDataReceiver.roleName} created for ${eventHubNamespace}`),
-                            iconPath: activitySuccessIcon
-                        })
                     );
                 } else if (connection.name.includes('SERVICEBUS')) {
                     const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
@@ -170,27 +124,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     context.roles?.push(
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureServiceBusDataReceiver.name),
-                            roleDefinitionName: CommonRoleDefinitions.azureServiceBusDataReceiver.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureServiceBusDataReceiver),
+                            roleDefinitionName: CommonRoleDefinitions.azureServiceBusDataReceiver.roleName
                         },
                         {
                             scopeId: scope,
-                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureServiceBusDataOwner.name),
-                            roleDefinitionName: CommonRoleDefinitions.azureServiceBusDataOwner.name
+                            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.azureServiceBusDataOwner),
+                            roleDefinitionName: CommonRoleDefinitions.azureServiceBusDataOwner.roleName
                         }
-                    );
-
-                    context.activityChildren?.push(
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.azureServiceBusDataReceiver.roleName} created for ${serviceBusNamespace}`),
-                            iconPath: activitySuccessIcon
-                        }),
-                        new GenericTreeItem(undefined, {
-                            contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                            label: localize('roleAssigned', `Role Assignment ${CommonRoleDefinitions.azureServiceBusDataOwner.roleName} created for ${serviceBusNamespace}`),
-                            iconPath: activitySuccessIcon
-                        })
                     );
                 }
             }
@@ -205,16 +146,20 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 if (localSettings.Values) {
                     for (const connection of context.convertedConnections) {
                         localSettings.Values[connection.name] = connection.value;
-                        delete localSettings.Values[nonNullProp(connection, 'originalValue')];
+                        if (localSettings.Values[nonNullProp(connection, 'originalValue')]) {
+                            delete localSettings.Values[nonNullProp(connection, 'originalValue')];
+                            context.activityChildren?.push(
+                                new GenericTreeItem(undefined, {
+                                    contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                                    label: localize('deletedSetting', `Deleted local setting "${connection.originalValue}"`),
+                                    iconPath: activitySuccessIcon
+                                })
+                            )
+                        }
                         context.activityChildren?.push(
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('deletedSetting', `Local setting "${connection.originalValue}" deleted`),
-                                iconPath: activitySuccessIcon
-                            }),
-                            new GenericTreeItem(undefined, {
-                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('addedSetting', `Local setting "${connection.name}" added`),
+                                label: localize('addedSetting', `Added Local setting "${connection.name}"`),
                                 iconPath: activitySuccessIcon
                             })
                         );
@@ -235,12 +180,12 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         context.activityChildren?.push(
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('deletedSetting', `App setting "${connection.originalValue}" deleted`),
+                                label: localize('deletedSetting', `Deleted app setting "${connection.originalValue}"`),
                                 iconPath: activitySuccessIcon
                             }),
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('addedSetting', `App setting "${connection.name}" added`),
+                                label: localize('addedSetting', `Added app setting "${connection.name}" `),
                                 iconPath: activitySuccessIcon
                             })
                         );
@@ -266,7 +211,5 @@ async function getScopeHelper(context: IConvertConnectionsContext, accountName: 
         }
     }
 
-    // If no resource is found default to the subscription scope
-    // TODO: see if this is something we should do? Or should we throw an error if the resource is not found?
-    return `/subscriptions/${context.subscriptionId}`;
+    throw new Error(localize('noResourceFound', `No resource found with name "${accountName}" in subscription "${context.subscriptionDisplayName}"`));
 }

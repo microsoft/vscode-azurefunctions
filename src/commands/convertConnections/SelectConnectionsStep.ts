@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
+import { convertibleSetting } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtFsExtra, AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -27,11 +28,21 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
         } else {
             picks = await this.getRemoteQuickPics(context);
         }
-        context.connections = (await context.ui.showQuickPick(picks, {
-            placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
-            suppressPersistence: true,
-            canPickMany: true // todo: if there are no connections, we don't want to allow the user to pick multiple
-        })).map(item => item.data);
+
+        if (picks.length === 0) {
+            const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found in local settings');
+            (await context.ui.showQuickPick(picks, {
+                placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
+                suppressPersistence: true,
+                noPicksMessage: noItemFoundMessage
+            }));
+        } else {
+            context.connections = (await context.ui.showQuickPick(picks, {
+                placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
+                suppressPersistence: true,
+                canPickMany: true,
+            })).map(item => item.data);
+        }
     }
 
     public shouldPrompt(context: IConvertConnectionsContext): boolean {
@@ -44,7 +55,6 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
         const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
         context.localSettingsPath = localSettingsPath;
-
 
         if (await AzExtFsExtra.pathExists(localSettingsPath)) {
             let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
@@ -59,32 +69,19 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
 
             if (localSettings.Values) {
                 for (const [key, value] of Object.entries(localSettings.Values)) {
-                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key === ('AzureWebJobsStorage')) {
-                        if (value === 'UseDevelopmentStorage=true' || value === '') {
-                            continue;
-                        }
-
-                        picks.push({
-                            label: key,
-                            data: {
-                                name: key,
-                                value: value
-                            }
-                        });
+                    if (convertibleSetting(key, value)) {
+                        continue;
                     }
+
+                    picks.push({
+                        label: key,
+                        data: {
+                            name: key,
+                            value: value
+                        }
+                    });
                 }
             }
-        }
-
-        if (picks.length === 0) {
-            const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found in local settings');
-            picks.push({
-                label: noItemFoundMessage,
-                data: {
-                    name: noItemFoundMessage,
-                    value: '',
-                }
-            });
         }
 
         return picks;
@@ -98,29 +95,18 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
             const appSettings: StringDictionary = await client.listApplicationSettings();
             if (appSettings.properties) {
                 for (const [key, value] of Object.entries(appSettings.properties)) {
-                    if (key.includes('STORAGE') || key.includes('DOCUMENTDB') || key.includes('EVENTHUB') || key.includes('SERVICEBUS') || key.includes('AzureWebJobsStorage')) {
-                        if (key === 'AzureWebJobsStorage' && (value === 'UseDevelopmentStorage=true' || value === '')) {
-                            continue;
-                        }
+                    if (convertibleSetting(key, value)) {
+                        continue;
+                    }
 
-                        picks.push({
-                            label: key,
-                            data: {
-                                name: key,
-                                value: value
-                            }
-                        });
-                    }
+                    picks.push({
+                        label: key,
+                        data: {
+                            name: key,
+                            value: value
+                        }
+                    });
                 }
-            } else {
-                const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found');
-                picks.push({
-                    label: noItemFoundMessage,
-                    data: {
-                        name: noItemFoundMessage,
-                        value: '',
-                    }
-                });
             }
         }
 

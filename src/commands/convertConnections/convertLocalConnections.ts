@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
+import { AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
@@ -14,8 +14,8 @@ import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
 import { SelectConnectionsStep, type Connection } from "./SelectConnectionsStep";
 
 export async function convertLocalConnections(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
-    const connections: Connection[] = []
-    if (node) {
+    const connections: Connection[] = [];
+    if (node instanceof AppSettingTreeItem) {
         connections.push({ name: node.id, value: node.value })
         await node.runWithTemporaryDescription(context, localize('converting', 'Converting...'), async () => {
             await convertLocalConnectionsInternal(context, connections);
@@ -57,4 +57,7 @@ export async function convertLocalConnectionsInternal(context: IActionContext, c
 
     await wizard.prompt();
     await wizard.execute();
+
+    const message: string = localize('setConnectionsProperty', 'Successfully converted local connections in order to use identity based connections you may need to set the connection property within your trigger.');
+    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true },);
 }

@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { type AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../localize";
@@ -13,7 +14,7 @@ import { ConvertSettingsStep } from "./ConvertSettingsStep";
 import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
 import { SelectConnectionsStep, type Connection } from "./SelectConnectionsStep";
 
-export async function convertRemoteConnections(context: IActionContext, node?: SlotTreeItem): Promise<void> {
+export async function convertRemoteConnections(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
     const connections: Connection[] = []
     if (node) {
         await node.runWithTemporaryDescription(context, localize('converting', 'Converting...'), async () => {
@@ -24,7 +25,7 @@ export async function convertRemoteConnections(context: IActionContext, node?: S
     }
 }
 
-export async function convertRemoteConnectionsInternal(context: IActionContext, connections?: Connection[], functionApp?: SlotTreeItem): Promise<void> {
+export async function convertRemoteConnectionsInternal(context: IActionContext, connections?: Connection[], node?: AppSettingTreeItem): Promise<void> {
     const wizardContext: IActionContext & Partial<IConvertConnectionsContext> = {
         ...context,
         local: false,
@@ -41,7 +42,7 @@ export async function convertRemoteConnectionsInternal(context: IActionContext, 
     const executeSteps: AzureWizardExecuteStep<IConvertConnectionsContext>[] = [];
 
 
-    wizardContext.functionapp = functionApp ? functionApp : await pickFunctionApp(wizardContext)
+    wizardContext.functionapp = node?.parent.parent as SlotTreeItem ?? await pickFunctionApp(wizardContext)
 
     promptSteps.push(new SelectConnectionsStep(), new UserAssignedIdentityListStep());
     executeSteps.push(new ConvertSettingsStep(), new RoleAssignmentExecuteStep(() => wizardContext.roles))
@@ -55,4 +56,6 @@ export async function convertRemoteConnectionsInternal(context: IActionContext, 
     await wizard.prompt();
     await wizard.execute();
 
+    const message: string = localize('setConnectionsProperty', 'Successfully converted remote connections in order to use identity based connections you may need to set the connection property within your trigger.');
+    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true },);
 }

@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type IResourceGroupWizardContext, type Roles } from "@microsoft/vscode-azext-azureutils";
+import { type IResourceGroupWizardContext, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type ExecuteActivityContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { type Connection } from "./SelectConnectionsStep";
@@ -13,6 +13,6 @@ export interface IConvertConnectionsContext extends ExecuteActivityContext, IRes
     functionapp?: SlotTreeItem;
     connections?: Connection[];
     convertedConnections?: Connection[];
-    roles?: Roles[];
+    roles?: Role[];
     localSettingsPath?: string;
 }
