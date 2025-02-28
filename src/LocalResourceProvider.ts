@@ -18,7 +18,6 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
 
     public async provideResources(parent: AzExtParentTreeItem): Promise<AzExtTreeItem[] | null | undefined> {
         const children: AzExtTreeItem[] = [];
-
         Disposable.from(...this._projectDisposables).dispose();
         this._projectDisposables = [];
 
@@ -26,7 +25,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
         let hasLocalProject = false;
 
         for (const project of localProjects.initializedProjects) {
-            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, project as LocalProjectInternal);
+            const treeItem: LocalProjectTreeItem = await LocalProjectTreeItem.createLocalProjectTreeItem(parent, project as LocalProjectInternal);
             this._projectDisposables.push(treeItem);
             children.push(treeItem);
         }
