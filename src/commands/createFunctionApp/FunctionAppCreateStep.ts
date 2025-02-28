@@ -56,6 +56,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = maskUserInfo(parseError(error).message, []);
             }
         }
+
         showSiteCreated(site, context);
     }
 
@@ -146,7 +147,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 value: storageConnectionString
             }
         ];
-
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');

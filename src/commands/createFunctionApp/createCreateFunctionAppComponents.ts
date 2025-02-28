@@ -96,6 +96,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         promptSteps.push(new AppInsightsListStep());
     }
 
+
     const storageProvider = 'Microsoft.Storage';
     LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
 
