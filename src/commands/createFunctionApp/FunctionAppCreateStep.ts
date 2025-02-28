@@ -140,7 +140,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         let newSiteConfig: SiteConfig = {};
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-
         let appSettings: NameValuePair[] = [
             {
                 name: ConnectionKey.Storage,
