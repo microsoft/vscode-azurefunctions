@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, DomainNameLabelScope, LogAnalyticsCreateStep, SiteDomainNameLabelScopeStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, type INewStorageAccountDefaults } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
@@ -51,6 +51,16 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     await detectDockerfile(context);
 
+    // Start: SiteNameStep pre-requisites
+    LocationListStep.addStep(wizardContext, promptSteps);
+    promptSteps.push(new SiteDomainNameLabelScopeStep());
+    if (!context.advancedCreation) {
+        wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
+    } else {
+        promptSteps.push(new ResourceGroupListStep());
+    }
+    // End: SiteNameStep pre-requisites
+
     promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
     if (context.dockerfilePath) {
@@ -64,7 +74,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     }
 
     if (!wizardContext.advancedCreation) {
-        LocationListStep.addStep(wizardContext, promptSteps);
         wizardContext.useConsumptionPlan = true;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
@@ -76,7 +85,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
             executeSteps.push(new LogAnalyticsCreateStep());
         }
     } else {
-        promptSteps.push(new ResourceGroupListStep());
         promptSteps.push(new StorageAccountListStep(
             storageAccountCreateOptions,
             {
@@ -132,6 +140,7 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
     promptSteps.push(new FunctionAppHostingPlanStep());
+    // Todo: Investigate this customlocationliststep
     CustomLocationListStep.addStep(wizardContext, promptSteps);
 
     promptSteps.push(new FunctionAppStackStep());
