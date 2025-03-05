@@ -6,6 +6,7 @@
 import { AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { type MessageItem } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -58,6 +59,7 @@ export async function convertLocalConnectionsInternal(context: IActionContext, c
     await wizard.prompt();
     await wizard.execute();
 
+    const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
     const message: string = localize('setConnectionsProperty', 'Successfully converted local connections in order to use identity based connections you may need to set the connection property within your trigger.');
-    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true },);
+    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }

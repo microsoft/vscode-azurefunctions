@@ -6,6 +6,7 @@
 import { createResourceClient } from "@microsoft/vscode-azext-azureappservice";
 import { CommonRoleDefinitions, createRoleId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ext } from "../../extensionVariables";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
@@ -21,12 +22,23 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
             for (const connection of context.connections) {
                 if (connection.name.includes('AzureWebJobsStorage')) {
                     const storageAccountName = connection.value.split(';')[1].split('=')[1];
-                    context.convertedConnections?.push({
-                        name: 'AzureWebJobsStorage__accountName',
-                        value: storageAccountName,
-                        originalValue: connection.name
-                    });
-
+                    context.convertedConnections?.push(
+                        {
+                            name: 'AzureWebJobsStorage__blobServiceUri',
+                            value: storageAccountName,
+                            originalValue: connection.name
+                        },
+                        {
+                            name: 'AzureWebJobsStorage__queueServiceUri',
+                            value: storageAccountName,
+                            originalValue: connection.name
+                        },
+                        {
+                            name: 'AzureWebJobsStorage__tableServiceUri',
+                            value: storageAccountName,
+                            originalValue: connection.name
+                        }
+                    );
                     context.roles?.push({
                         scopeId: await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`),
                         roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
@@ -110,7 +122,7 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
                     context.convertedConnections?.push({
-                        name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
+                        name: 'ServiceBusConnection__fullyQualifiedNamespace',
                         value: `${serviceBusNamespace}.servicebus.windows.net`,
                         originalValue: connection.name
                     });
@@ -146,7 +158,7 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                             context.activityChildren?.push(
                                 new GenericTreeItem(undefined, {
                                     contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                    label: localize('deletedSetting', `Deleted local setting "${connection.originalValue}"`),
+                                    label: localize('deletedSetting', `Delete local setting "${connection.originalValue}"`),
                                     iconPath: activitySuccessIcon
                                 })
                             )
@@ -154,12 +166,13 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         context.activityChildren?.push(
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('addedSetting', `Added Local setting "${connection.name}"`),
+                                label: localize('addedSetting', `Add Local setting "${connection.name}"`),
                                 iconPath: activitySuccessIcon
                             })
                         );
                     }
                     await AzExtFsExtra.writeJSON(nonNullProp(context, 'localSettingsPath'), localSettings);
+                    await ext.rgApi.workspaceResourceTree.refresh(context);
                 }
             } else {
                 if (context.functionapp) {
@@ -175,17 +188,19 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         context.activityChildren?.push(
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('deletedSetting', `Deleted app setting "${connection.originalValue}"`),
+                                label: localize('deletedSetting', `Delete app setting "${connection.originalValue}"`),
                                 iconPath: activitySuccessIcon
                             }),
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('addedSetting', `Added app setting "${connection.name}" `),
+                                label: localize('addedSetting', `Add app setting "${connection.name}" `),
                                 iconPath: activitySuccessIcon
                             })
                         );
                     }
+                    //may need to add settings to include the clientId and configuration properties
                     await client.updateApplicationSettings({ properties: remoteSettings.properties });
+                    await ext.rgApi.tree.refresh(context);
                 }
             }
         }

@@ -6,6 +6,7 @@
 import { type AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { type MessageItem } from "vscode";
 import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -56,6 +57,7 @@ export async function convertRemoteConnectionsInternal(context: IActionContext, 
     await wizard.prompt();
     await wizard.execute();
 
+    const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
     const message: string = localize('setConnectionsProperty', 'Successfully converted remote connections in order to use identity based connections you may need to set the connection property within your trigger.');
-    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true },);
+    await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }
