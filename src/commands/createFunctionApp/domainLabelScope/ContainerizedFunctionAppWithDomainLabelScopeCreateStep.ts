@@ -19,6 +19,8 @@ import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 import { showSiteCreated } from "../showSiteCreated";
 import { type SitePayload } from "./types";
 
+// Todo: Should be consolidated into ContainerizedFunctionAppCreateStep once the SDK supports the required api version
+
 export class ContainerizedFunctionAppWithDomainLabelScopeCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
