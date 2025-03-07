@@ -4,25 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipeline';
 import { BlobServiceClient } from '@azure/storage-blob';
-import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, maskUserInfo, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
+import { createWebSiteClient, DomainNameLabelScope, ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, maskUserInfo, nonNullProp, nonNullValueAndProp, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { type Progress } from 'vscode';
-import { FuncVersion, getMajorVersion } from '../../FuncVersion';
-import { ConnectionKey, ProjectLanguage, contentConnectionStringKey, contentShareKey, extensionVersionKey, runFromPackageKey, webProvider } from '../../constants';
+import { ConnectionKey, contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
-import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
+import { type SitePayload } from './domainLabelScope/types';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
 import { type Sku } from './stacks/models/FlexSkuModel';
-import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
+import { type FunctionAppRuntimeSettings } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
@@ -64,38 +64,29 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return !context.site;
     }
 
-    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
-        const location = await LocationListStep.getLocation(context, webProvider);
-        const site: Site = {
-            name: context.newSiteName,
-            kind: getSiteKind(context),
-            location: nonNullProp(location, 'name'),
-            serverFarmId: context.plan?.id,
-            clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context, stack),
-            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
-        };
-
-        if (context.customLocation) {
-            this.addCustomLocationProperties(site, context.customLocation);
+    async createFunctionApp(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
+        let site: Site;
+        if (context.newSiteDomainNameLabelScope === DomainNameLabelScope.Global) {
+            site = await this.createSite(context, rgName, siteName, stack);
+        } else {
+            site = await this.createSiteWithDomainLabelScope(context, rgName, siteName, stack);
         }
 
-        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
-        if (context.plan?.sku?.family) {
-            const isNotFree = context.plan.sku.family.toLowerCase() !== 'f';
-            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
-            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
-            if (isNotFree && isNotElasticPremium && isNotConsumption) {
-                nonNullProp(site, 'siteConfig').alwaysOn = true;
-            }
+        if (context.newFlexSku) {
+            const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
+            await tryCreateStorageContainer(site, storageConnectionString);
         }
 
         return site;
     }
 
-    private addCustomLocationProperties(site: Site, customLocation: CustomLocation): void {
-        nonNullProp(site, 'siteConfig').alwaysOn = true;
-        site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
+    // #region createSite
+    async createSite(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
+        const client: WebSiteManagementClient = await createWebSiteClient(context);
+        const site: Site = context.newFlexSku ?
+            await this.getNewFlexSite(context, context.newFlexSku) :
+            await this.getNewSite(context, stack);
+        return await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site);
     }
 
     private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
@@ -135,6 +126,146 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         return site;
     }
+
+    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
+        const location = await LocationListStep.getLocation(context, webProvider);
+        const site: Site = {
+            name: context.newSiteName,
+            kind: getSiteKind(context),
+            location: nonNullProp(location, 'name'),
+            serverFarmId: context.plan?.id,
+            clientAffinityEnabled: false,
+            siteConfig: await this.getNewSiteConfig(context, stack),
+            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+        };
+
+        if (context.customLocation) {
+            this.addCustomLocationProperties(site, context.customLocation);
+        }
+
+        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
+        if (context.plan?.sku?.family) {
+            const isNotFree = context.plan.sku.family.toLowerCase() !== 'f';
+            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
+            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
+            if (isNotFree && isNotElasticPremium && isNotConsumption) {
+                nonNullProp(site, 'siteConfig').alwaysOn = true;
+            }
+        }
+
+        return site;
+    }
+
+    private addCustomLocationProperties(site: Site, customLocation: CustomLocation): void {
+        nonNullProp(site, 'siteConfig').alwaysOn = true;
+        site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
+    }
+    // #endregion
+
+    // #region createSiteWithDomainLabelScope
+    async createSiteWithDomainLabelScope(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
+        const sitePayload: SitePayload = context.newFlexSku ?
+            await this.getFlexSiteWithDomainNameLabelScope(context, context.newFlexSku) :
+            await this.getNewSiteWithDomainLabelScope(context, stack);
+
+        // The SDK does not currently support this updated api version, so we should make the call to the endpoint manually until the SDK gets updated
+        const authToken = (await context.credentials.getToken() as { token?: string }).token;
+        const options: AzExtRequestPrepareOptions = {
+            url: `${context.environment.resourceManagerEndpointUrl}subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=2024-04-01`,
+            method: 'PUT',
+            headers: createHttpHeaders({
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            }),
+            body: JSON.stringify(sitePayload),
+        };
+
+        const client = await createGenericClient(context, undefined);
+        // We don't care about storing the response here because the manual response returned is different from the SDK formatting that our code expects.
+        // The stored site should come from the SDK instead.
+        await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
+
+        const sdkClient: WebSiteManagementClient = await createWebSiteClient(context);
+        return await sdkClient.webApps.get(rgName, siteName);
+    }
+
+    private async getFlexSiteWithDomainNameLabelScope(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<SitePayload> {
+        const location = await LocationListStep.getLocation(context, webProvider);
+        const sitePayload: SitePayload = {
+            name: context.newSiteName,
+            kind: getSiteKind(context),
+            location: nonNullProp(location, 'name'),
+            properties: {
+                autoGeneratedDomainNameLabelScope: context.newSiteDomainNameLabelScope,
+                serverFarmId: context.plan?.id,
+                clientAffinityEnabled: false,
+                siteConfig: await this.getNewSiteConfig(context),
+                functionAppConfig: {
+                    deployment: {
+                        storage: {
+                            type: 'blobContainer',
+                            value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
+                            authentication: {
+                                userAssignedIdentityResourceId: undefined,
+                                type: 'StorageAccountConnectionString',
+                                storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+                            }
+                        }
+                    },
+                    runtime: {
+                        name: sku.functionAppConfigProperties.runtime.name,
+                        version: sku.functionAppConfigProperties.runtime.version
+                    },
+                    scaleAndConcurrency: {
+                        maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
+                        instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
+                        alwaysReady: [],
+                        triggers: undefined
+                    },
+                },
+            },
+        };
+
+        return sitePayload;
+    }
+
+    private async getNewSiteWithDomainLabelScope(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SitePayload> {
+        const location = await LocationListStep.getLocation(context, webProvider);
+        const sitePayload: SitePayload = {
+            name: context.newSiteName,
+            kind: getSiteKind(context),
+            location: nonNullProp(location, 'name'),
+            properties: {
+                autoGeneratedDomainNameLabelScope: context.newSiteDomainNameLabelScope,
+                serverFarmId: context.plan?.id,
+                clientAffinityEnabled: false,
+                reserved: context.newSiteOS === WebsiteOS.linux,  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+                siteConfig: await this.getNewSiteConfig(context, stack),
+            },
+        };
+
+        if (context.customLocation) {
+            this.addCustomLocationPropertiesToSitePayload(sitePayload, context.customLocation);
+        }
+
+        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
+        if (context.plan?.sku?.family) {
+            const isNotFree = context.plan.sku.family.toLowerCase() !== 'f';
+            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
+            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
+            if (isNotFree && isNotElasticPremium && isNotConsumption) {
+                nonNullValueAndProp(sitePayload.properties, 'siteConfig').alwaysOn = true;
+            }
+        }
+
+        return sitePayload;
+    }
+
+    private addCustomLocationPropertiesToSitePayload(sitePayload: SitePayload, customLocation: CustomLocation): void {
+        nonNullValueAndProp(sitePayload.properties, 'siteConfig').alwaysOn = true;
+        sitePayload.extendedLocation = { name: customLocation.id, type: 'customLocation' };
+    }
+    // #endregion
 
     private async getNewSiteConfig(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<SiteConfig> {
         let newSiteConfig: SiteConfig = {};
@@ -217,21 +348,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         newSiteConfig.appSettings = appSettings;
         return newSiteConfig;
-    }
-
-    async createFunctionApp(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
-        const client: WebSiteManagementClient = await createWebSiteClient(context);
-        const site = context.newFlexSku ?
-            await this.getNewFlexSite(context, context.newFlexSku) :
-            await this.getNewSite(context, stack);
-        const result = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site);
-
-        if (context.newFlexSku) {
-            const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-            await tryCreateStorageContainer(result, storageConnectionString);
-        }
-
-        return result;
     }
 }
 

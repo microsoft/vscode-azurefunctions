@@ -47,7 +47,7 @@ export interface FunctionAppConfigPayload {
     scaleAndConcurrency?: {
         instanceMemoryMB?: number;
         maximumInstanceCount?: number;
-        alwaysReady: { name?: string, instanceCount?: number }[];
+        alwaysReady?: { name?: string, instanceCount?: number }[];
         triggers?: {
             http?: {
                 perInstanceConcurrency?: number;

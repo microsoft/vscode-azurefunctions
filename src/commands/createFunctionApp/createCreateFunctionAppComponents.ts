@@ -19,8 +19,6 @@ import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
 import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
 import { DeployWorkspaceProjectStep } from "./containerImage/DeployWorkspaceProjectStep";
 import { detectDockerfile } from "./containerImage/detectDockerfile";
-import { ContainerizedFunctionAppWithDomainLabelScopeCreateStep } from "./domainLabelScope/ContainerizedFunctionAppWithDomainLabelScopeCreateStep";
-import { FunctionAppWithDomainLabelScopeCreateStep } from "./domainLabelScope/FunctionAppWithDomainLabelScopeCreateStep";
 import { FunctionAppStackStep } from "./stacks/FunctionAppStackStep";
 
 export async function createCreateFunctionAppComponents(context: ICreateFunctionAppContext,
@@ -56,7 +54,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     // #region SiteNameStep pre-requisites
     LocationListStep.addStep(wizardContext, promptSteps);
     promptSteps.push(new SiteDomainNameLabelScopeStep());
-    if (!context.advancedCreation) {
+    if (!wizardContext.advancedCreation) {
         wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
     } else {
         promptSteps.push(new ResourceGroupListStep());
@@ -66,7 +64,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
     if (context.dockerfilePath) {
-        const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard(wizardContext);
+        const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
         promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
         executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
     } else {
@@ -155,26 +153,17 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
         wizardContext.newSiteOS = WebsiteOS.windows;
     }
 
-    if (wizardContext.newSiteDomainNameLabelScope === DomainNameLabelScope.Global) {
-        executeSteps.push(new FunctionAppCreateStep());
-    } else {
-        executeSteps.push(new FunctionAppWithDomainLabelScopeCreateStep());
-    }
+    executeSteps.push(new FunctionAppCreateStep());
 
     return { promptSteps, executeSteps };
 }
 
-async function createContainerizedFunctionAppWizard(wizardContext: IFunctionAppWizardContext): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
+async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[], executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] }> {
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
     executeSteps.push(new DeployWorkspaceProjectStep());
-
-    if (wizardContext.newSiteDomainNameLabelScope === DomainNameLabelScope.Global) {
-        executeSteps.push(new ContainerizedFunctionAppCreateStep());
-    } else {
-        executeSteps.push(new ContainerizedFunctionAppWithDomainLabelScopeCreateStep());
-    }
+    executeSteps.push(new ContainerizedFunctionAppCreateStep());
 
     return { promptSteps, executeSteps };
 }
