@@ -23,6 +23,7 @@ export interface SitePropertiesPayload {
     clientAffinityEnabled?: boolean;
     reserved?: boolean;
     serverFarmId?: string;
+    managedEnvironmentId?: string;
     siteConfig?: SiteConfig;
     functionAppConfig?: FunctionAppConfigPayload;
 }
