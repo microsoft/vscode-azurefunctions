@@ -5,12 +5,13 @@
 
 import { createResourceClient } from "@microsoft/vscode-azext-azureappservice";
 import { CommonRoleDefinitions, createRoleId, uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
+import { type Connection } from "./SelectConnectionsStep";
 
 export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnectionsContext> {
     public priority: number = 100;
@@ -25,19 +26,20 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     context.convertedConnections?.push(
                         {
                             name: 'AzureWebJobsStorage__blobServiceUri',
-                            value: storageAccountName,
+                            value: `https://${storageAccountName}.blob.core.windows.net`,
                             originalValue: connection.name
                         },
                         {
                             name: 'AzureWebJobsStorage__queueServiceUri',
-                            value: storageAccountName,
+                            value: `https://${storageAccountName}.queue.core.windows.net`,
                             originalValue: connection.name
                         },
                         {
                             name: 'AzureWebJobsStorage__tableServiceUri',
-                            value: storageAccountName,
+                            value: `https://${storageAccountName}.table.core.windows.net`,
                             originalValue: connection.name
-                        }
+                        },
+                        ...getClientIdAndCredentialProperties(context, storageAccountName)
                     );
                     context.roles?.push({
                         scopeId: await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`),
@@ -57,7 +59,13 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                             name: `${storageAccountName}__queueServiceUri`,
                             value: `https://${storageAccountName}.queue.core.windows.net`,
                             originalValue: connection.name
-                        }
+                        },
+                        {
+                            name: 'AzureWebJobsStorage__tableServiceUri',
+                            value: `https://${storageAccountName}.table.core.windows.net`,
+                            originalValue: connection.name
+                        },
+                        ...getClientIdAndCredentialProperties(context, storageAccountName)
                     );
 
                     const scope = await getScopeHelper(context, storageAccountName, `resourceType eq 'Microsoft.Storage/storageAccounts'`)
@@ -77,11 +85,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     const cosmosDbAccountURI = connection.value.split(';')[0].split('=')[1];
                     const cosmosDbAccountName = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
-                    context.convertedConnections?.push({
-                        name: `${cosmosDbAccountName}__accountEndpoint`,
-                        value: cosmosDbAccountURI,
-                        originalValue: connection.name
-                    });
+                    context.convertedConnections?.push(
+                        {
+                            name: `${cosmosDbAccountName}__accountEndpoint`,
+                            value: cosmosDbAccountURI,
+                            originalValue: connection.name
+                        },
+                        ...getClientIdAndCredentialProperties(context, cosmosDbAccountName)
+                    );
 
                     const scope = await getScopeHelper(context, cosmosDbAccountName, `resourceType eq  'Microsoft.DocumentDB/databaseAccounts'`);
                     context.roles?.push(
@@ -99,11 +110,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 } else if (connection.name.includes('EVENTHUB')) {
                     const eventHubNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
-                    context.convertedConnections?.push({
-                        name: `${eventHubNamespace}__fullyQualifiedNamespace`,
-                        value: `${eventHubNamespace}.servicebus.windows.net`,
-                        originalValue: connection.name
-                    });
+                    context.convertedConnections?.push(
+                        {
+                            name: `${eventHubNamespace}__fullyQualifiedNamespace`,
+                            value: `${eventHubNamespace}.servicebus.windows.net`,
+                            originalValue: connection.name
+                        },
+                        ...getClientIdAndCredentialProperties(context, eventHubNamespace)
+                    );
 
                     const scope = await getScopeHelper(context, eventHubNamespace, `resourceType eq  'Microsoft.EventHub/Namespaces'`);
                     context.roles?.push(
@@ -121,11 +135,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 } else if (connection.name.includes('SERVICEBUS')) {
                     const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
-                    context.convertedConnections?.push({
-                        name: 'ServiceBusConnection__fullyQualifiedNamespace',
-                        value: `${serviceBusNamespace}.servicebus.windows.net`,
-                        originalValue: connection.name
-                    });
+                    context.convertedConnections?.push(
+                        {
+                            name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
+                            value: `${serviceBusNamespace}.servicebus.windows.net`,
+                            originalValue: connection.name
+                        },
+                        ...getClientIdAndCredentialProperties(context, serviceBusNamespace)
+                    );
 
                     const scope = await getScopeHelper(context, serviceBusNamespace, `resourceType eq  'Microsoft.ServiceBus/Namespaces'`);
                     context.roles?.push(
@@ -153,7 +170,7 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 if (localSettings.Values) {
                     for (const connection of context.convertedConnections) {
                         localSettings.Values[connection.name] = connection.value;
-                        if (localSettings.Values[nonNullProp(connection, 'originalValue')]) {
+                        if (connection.originalValue && localSettings.Values[connection.originalValue]) {
                             delete localSettings.Values[nonNullProp(connection, 'originalValue')];
                             context.activityChildren?.push(
                                 new GenericTreeItem(undefined, {
@@ -222,4 +239,20 @@ async function getScopeHelper(context: IConvertConnectionsContext, accountName: 
     }
 
     throw new Error(localize('noResourceFound', `No resource found with name "${accountName}" in subscription "${context.subscriptionDisplayName}"`));
+}
+
+function getClientIdAndCredentialProperties(context: IConvertConnectionsContext, connectionName: string): Connection[] {
+    const clientIdAndConfigurationProperties: Connection[] = [];
+    clientIdAndConfigurationProperties.push(
+        {
+            name: `${connectionName}__clientId`,
+            value: nonNullValueAndProp(context.managedIdentity, 'clientId')
+        },
+        {
+            name: `${connectionName}__credential`,
+            value: 'managedIdentity'
+        }
+    );
+    return clientIdAndConfigurationProperties;
+
 }
