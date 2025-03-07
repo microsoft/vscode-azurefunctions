@@ -51,7 +51,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     await detectDockerfile(context);
 
-    // Start: SiteNameStep pre-requisites
+    // #region SiteNameStep pre-requisites
     LocationListStep.addStep(wizardContext, promptSteps);
     promptSteps.push(new SiteDomainNameLabelScopeStep());
     if (!context.advancedCreation) {
@@ -59,7 +59,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     } else {
         promptSteps.push(new ResourceGroupListStep());
     }
-    // End: SiteNameStep pre-requisites
+    // #endregion
 
     promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
