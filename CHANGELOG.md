@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.16.3 - 2025-03-10
+
+### Changed
+* [[4397](https://github.com/microsoft/vscode-azureappservice/pull/4397)] Automatically collect subscription and resource information for telemetry. [How to disable telemetry reporting](https://code.visualstudio.com/docs/supporting/FAQ#_how-to-disable-telemetry-reporting)
+* [[4400](https://github.com/microsoft/vscode-azureappservice/pull/4400)] Require VS Code version 1.95.0 (October 2024) or greater
+
 ## 1.16.2 - 2025-02-10
 
 ### Added
