@@ -860,6 +860,14 @@
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                    "when": "never"
                 }
             ],
             "editor/context": [
