@@ -6,6 +6,10 @@
 import { type SiteConfig } from "@azure/arm-appservice";
 import { type DomainNameLabelScope } from "@microsoft/vscode-azext-azureappservice";
 
+// The types in this file were put together because of the need to make a manual call to the API endpoint.
+// They are intended to be temporary because the App Service SDK does not currently support the required API version we need.
+// In the future, we expect to be able to remove these types and use the updated SDK instead.
+
 // https://learn.microsoft.com/en-us/azure/templates/microsoft.web/sites?pivots=deployment-language-bicep#resource-format
 export interface SitePayload {
     name?: string;

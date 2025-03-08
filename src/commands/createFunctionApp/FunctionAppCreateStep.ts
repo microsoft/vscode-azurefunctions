@@ -18,7 +18,7 @@ import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
-import { type SitePayload } from './domainLabelScope/types';
+import { type SitePayload } from './domainLabelScopeTypes';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
 import { type Sku } from './stacks/models/FlexSkuModel';

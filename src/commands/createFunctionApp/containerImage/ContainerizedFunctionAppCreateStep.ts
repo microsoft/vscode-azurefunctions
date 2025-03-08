@@ -15,7 +15,7 @@ import { webProvider } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
-import { type SitePayload } from "../domainLabelScope/types";
+import { type SitePayload } from "../domainLabelScopeTypes";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 import { showSiteCreated } from "../showSiteCreated";
 
