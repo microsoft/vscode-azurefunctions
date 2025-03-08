@@ -978,17 +978,17 @@
                     "azureFunctions.durableTaskScheduler.emulatorRegistry": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorRegistry%",
-                        "default": "durabletasks.azurecr.io"
+                        "default": "mcr.microsoft.com"
                     },
                     "azureFunctions.durableTaskScheduler.emulatorImage": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorImage%",
-                        "default": "durable-task-scheduler/emulator"
+                        "default": "dts/dts-emulator"
                     },
                     "azureFunctions.durableTaskScheduler.emulatorTag": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorTag%",
-                        "default": "latest-linux-amd64"
+                        "default": "v0.0.4"
                     }
                 }
             },

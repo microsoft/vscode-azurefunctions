@@ -53,10 +53,18 @@ export class DockerDurableTaskSchedulerEmulatorClient extends Disposable impleme
     readonly onEmulatorsChanged: Event<void> = this.onEmulatorsChangedEmitter.event;
 
     async disposeAsync(): Promise<void> {
-        for (const id of this.localEmulatorIds) {
-            await this.dockerClient.stopContainer(id);
-            await this.dockerClient.removeContainer(id);
-        }
+
+        // NOTE: Stopping containers may take more time than allowed during disposal.
+        //       Hence, it's done in parallel in the hope that the stop commands are
+        //       at least issued before VS Code is shutdown.
+
+        const tasks = Array.from(this.localEmulatorIds).map(
+            async (id) => {
+                await this.dockerClient.stopContainer(id);
+                await this.dockerClient.removeContainer(id);
+            });
+
+        await Promise.all(tasks);
 
         this.localEmulatorIds.clear();
 
