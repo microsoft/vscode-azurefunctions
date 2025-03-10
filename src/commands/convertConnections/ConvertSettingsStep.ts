@@ -27,17 +27,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         {
                             name: 'AzureWebJobsStorage__blobServiceUri',
                             value: `https://${storageAccountName}.blob.core.windows.net`,
-                            originalValue: connection.name
                         },
                         {
                             name: 'AzureWebJobsStorage__queueServiceUri',
                             value: `https://${storageAccountName}.queue.core.windows.net`,
-                            originalValue: connection.name
                         },
                         {
                             name: 'AzureWebJobsStorage__tableServiceUri',
                             value: `https://${storageAccountName}.table.core.windows.net`,
-                            originalValue: connection.name
                         },
                         ...getClientIdAndCredentialProperties(context, storageAccountName)
                     );
@@ -53,17 +50,14 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         {
                             name: `${storageAccountName}__blobServiceUri`,
                             value: `https://${storageAccountName}.blob.core.windows.net`,
-                            originalValue: connection.name
                         },
                         {
                             name: `${storageAccountName}__queueServiceUri`,
                             value: `https://${storageAccountName}.queue.core.windows.net`,
-                            originalValue: connection.name
                         },
                         {
                             name: 'AzureWebJobsStorage__tableServiceUri',
                             value: `https://${storageAccountName}.table.core.windows.net`,
-                            originalValue: connection.name
                         },
                         ...getClientIdAndCredentialProperties(context, storageAccountName)
                     );
@@ -89,7 +83,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         {
                             name: `${cosmosDbAccountName}__accountEndpoint`,
                             value: cosmosDbAccountURI,
-                            originalValue: connection.name
                         },
                         ...getClientIdAndCredentialProperties(context, cosmosDbAccountName)
                     );
@@ -114,7 +107,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         {
                             name: `${eventHubNamespace}__fullyQualifiedNamespace`,
                             value: `${eventHubNamespace}.servicebus.windows.net`,
-                            originalValue: connection.name
                         },
                         ...getClientIdAndCredentialProperties(context, eventHubNamespace)
                     );
@@ -139,7 +131,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                         {
                             name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
                             value: `${serviceBusNamespace}.servicebus.windows.net`,
-                            originalValue: connection.name
                         },
                         ...getClientIdAndCredentialProperties(context, serviceBusNamespace)
                     );
@@ -170,16 +161,6 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                 if (localSettings.Values) {
                     for (const connection of context.convertedConnections) {
                         localSettings.Values[connection.name] = connection.value;
-                        if (connection.originalValue && localSettings.Values[connection.originalValue]) {
-                            delete localSettings.Values[nonNullProp(connection, 'originalValue')];
-                            context.activityChildren?.push(
-                                new GenericTreeItem(undefined, {
-                                    contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                    label: localize('deletedSetting', `Delete local setting "${connection.originalValue}"`),
-                                    iconPath: activitySuccessIcon
-                                })
-                            )
-                        }
                         context.activityChildren?.push(
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
@@ -198,16 +179,10 @@ export class ConvertSettingsStep extends AzureWizardExecuteStep<IConvertConnecti
                     for (const connection of context.convertedConnections) {
                         if (remoteSettings.properties) {
                             remoteSettings.properties[connection.name] = connection.value;
-                            delete remoteSettings.properties[nonNullProp(connection, 'originalValue')];
                         } else {
                             await client.updateApplicationSettings({ properties: { [connection.name]: connection.value } });
                         }
                         context.activityChildren?.push(
-                            new GenericTreeItem(undefined, {
-                                contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                                label: localize('deletedSetting', `Delete app setting "${connection.originalValue}"`),
-                                iconPath: activitySuccessIcon
-                            }),
                             new GenericTreeItem(undefined, {
                                 contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
                                 label: localize('addedSetting', `Add app setting "${connection.name}" `),
@@ -243,16 +218,19 @@ async function getScopeHelper(context: IConvertConnectionsContext, accountName: 
 
 function getClientIdAndCredentialProperties(context: IConvertConnectionsContext, connectionName: string): Connection[] {
     const clientIdAndConfigurationProperties: Connection[] = [];
-    clientIdAndConfigurationProperties.push(
-        {
-            name: `${connectionName}__clientId`,
-            value: nonNullValueAndProp(context.managedIdentity, 'clientId')
-        },
-        {
-            name: `${connectionName}__credential`,
-            value: 'managedIdentity'
-        }
-    );
+    if (!context.local) {
+        clientIdAndConfigurationProperties.push(
+            {
+                name: `${connectionName}__clientId`,
+                value: nonNullValueAndProp(context.managedIdentity, 'clientId')
+            },
+            {
+                name: `${connectionName}__credential`,
+                value: 'managedIdentity'
+            }
+        );
+    }
+
     return clientIdAndConfigurationProperties;
 
 }

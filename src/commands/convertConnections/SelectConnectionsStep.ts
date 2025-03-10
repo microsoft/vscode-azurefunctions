@@ -17,7 +17,6 @@ import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
 export interface Connection {
     name: string;
     value: string;
-    originalValue?: string;
 }
 
 export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnectionsContext> {
