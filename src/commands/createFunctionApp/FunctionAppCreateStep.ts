@@ -17,6 +17,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
+import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
@@ -118,6 +119,15 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             siteConfig: await this.getNewSiteConfig(context)
         };
 
+        let identity: Identity | undefined = undefined;
+        if (context.managedIdentity) {
+            const userAssignedIdentities = {};
+            userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
+                { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
+            identity = { type: 'UserAssigned', userAssignedIdentities }
+        }
+
+        site.identity = identity;
         site.functionAppConfig = {
             deployment: {
                 storage: {
@@ -152,10 +162,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         let appSettings: NameValuePair[] = [];
         if (context.managedIdentity) {
-            appSettings.push({
-                name: `${ConnectionKey.Storage}__accountName`,
-                value: context.newStorageAccountName ?? context.storageAccount?.name
-            });
+            appSettings.push(...createAzureWebJobsStorageManagedIdentitySettings(context));
         } else {
             appSettings.push({
                 name: ConnectionKey.Storage,
