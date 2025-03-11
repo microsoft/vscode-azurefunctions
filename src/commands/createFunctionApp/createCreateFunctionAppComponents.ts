@@ -56,17 +56,9 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         LocationListStep.addStep(wizardContext, promptSteps);
     } else {
         CustomLocationListStep.addStep(wizardContext, promptSteps);
-    }
-
-    promptSteps.push(new SiteDomainNameLabelScopeStep());
-    if (!wizardContext.advancedCreation) {
-        wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
-    } else {
         promptSteps.push(new ResourceGroupListStep());
     }
     // #endregion
-
-    promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
     if (context.dockerfilePath) {
         const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
@@ -144,6 +136,12 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
+    promptSteps.push(new SiteDomainNameLabelScopeStep());
+    if (!wizardContext.advancedCreation) {
+        wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
+    }
+
+    promptSteps.push(new SiteNameStep("functionApp"));
     promptSteps.push(new FunctionAppHostingPlanStep());
     promptSteps.push(new FunctionAppStackStep());
 
@@ -164,6 +162,7 @@ async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: Az
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
+    promptSteps.push(new SiteNameStep("containerizedFunctionApp"));
     executeSteps.push(new DeployWorkspaceProjectStep());
     executeSteps.push(new ContainerizedFunctionAppCreateStep());
 
