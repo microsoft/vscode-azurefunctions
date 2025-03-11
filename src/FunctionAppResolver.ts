@@ -11,6 +11,7 @@ type Site20231201 = Site & { isFlex?: boolean };
 export class FunctionAppResolver implements AppResourceResolver {
     private siteCacheLastUpdated = 0;
     private siteCache: Map<string, Site20231201> = new Map<string, Site20231201>();
+    private siteNameCounter: Map<string, number> = new Map<string, number>();
     private listFunctionAppsTask: Promise<void> | undefined;
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
@@ -21,8 +22,14 @@ export class FunctionAppResolver implements AppResourceResolver {
                 this.siteCacheLastUpdated = Date.now();
                 this.listFunctionAppsTask = new Promise((resolve, reject) => {
                     this.siteCache.clear();
+                    this.siteNameCounter.clear();
+
                     uiUtils.listAllIterator(client.webApps.list()).then((sites) => {
                         for (const site of sites) {
+                            const siteName: string = nonNullProp(site, 'name');
+                            const count: number = (this.siteNameCounter.get(siteName) ?? 0) + 1;
+
+                            this.siteNameCounter.set(siteName, count);
                             this.siteCache.set(nonNullProp(site, 'id').toLowerCase(), site);
                         }
                         resolve();
@@ -47,7 +54,11 @@ export class FunctionAppResolver implements AppResourceResolver {
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
 
-            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site));
+            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site), {
+                // Multiple sites with the same name could be displayed as long as they are in different locations
+                // To help distinguish these apps for our users, lookahead and determine if the location should be provided for duplicated site names
+                showLocationAsTreeItemDescription: (this.siteNameCounter.get(nonNullValueAndProp(site, 'name')) ?? 1) > 1,
+            });
         });
     }
 
