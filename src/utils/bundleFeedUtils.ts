@@ -68,7 +68,7 @@ export namespace bundleFeedUtils {
 
     export async function getReleaseV2(templateVersion: string): Promise<ITemplatesReleaseV2> {
         // build the url ourselves because the index-v2.json file is no longer publishing version updates for v2 templates
-        const functionsCdn: string = 'https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/';
+        const functionsCdn: string = 'https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/';
         return {
             functions: `${functionsCdn}${templateVersion}/StaticContent/v2/templates/templates.json`,
             bindings: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
@@ -113,10 +113,10 @@ export namespace bundleFeedUtils {
         let url: string;
         const templateProvider = ext.templateProvider.get(context);
         if (!envVarUri && bundleId === defaultBundleId && templateProvider.templateSource !== TemplateSource.Staging) {
-            url = 'https://aka.ms/AA66i2x';
+            url = 'https://aka.ms/bundleFeedUtilsV2';
         } else {
-            const suffix: string = templateProvider.templateSource === TemplateSource.Staging ? 'staging' : '';
-            const baseUrl: string = envVarUri || `https://functionscdn${suffix}.azureedge.net/public`;
+            const suffix: string = templateProvider.templateSource === TemplateSource.Staging ? '-staging' : '';
+            const baseUrl: string = envVarUri || `https://cdn${suffix}.functions.azure.com/public`;
             url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
         }
 
