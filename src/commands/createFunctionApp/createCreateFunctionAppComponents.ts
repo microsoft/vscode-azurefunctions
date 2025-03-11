@@ -52,7 +52,12 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     await detectDockerfile(context);
 
     // #region SiteNameStep pre-requisites
-    LocationListStep.addStep(wizardContext, promptSteps);
+    if (!context.advancedCreation) {
+        LocationListStep.addStep(wizardContext, promptSteps);
+    } else {
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
+    }
+
     promptSteps.push(new SiteDomainNameLabelScopeStep());
     if (!wizardContext.advancedCreation) {
         wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
@@ -140,9 +145,6 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
     promptSteps.push(new FunctionAppHostingPlanStep());
-    // Todo: Investigate this customlocationliststep
-    CustomLocationListStep.addStep(wizardContext, promptSteps);
-
     promptSteps.push(new FunctionAppStackStep());
 
     if (wizardContext.advancedCreation) {
