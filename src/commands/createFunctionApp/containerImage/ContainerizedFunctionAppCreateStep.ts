@@ -102,9 +102,10 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
     // #region createSiteWithDomainLabelScope
     async createSiteWithDomainLabelScope(context: IFunctionAppWizardContext, sdkClient: WebSiteManagementClient, rgName: string, siteName: string): Promise<Site> {
         // The SDK does not currently support this updated api version, so we should make the call to the endpoint manually until the SDK gets updated
+        const apiVersion = '2024-04-01';
         const authToken = (await context.credentials.getToken() as { token?: string }).token;
         const options: AzExtRequestPrepareOptions = {
-            url: `${context.environment.resourceManagerEndpointUrl}subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=2024-04-01`,
+            url: `${context.environment.resourceManagerEndpointUrl}subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=${apiVersion}`,
             method: 'PUT',
             headers: createHttpHeaders({
                 'Content-Type': 'application/json',
