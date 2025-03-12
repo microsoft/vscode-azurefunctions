@@ -18,8 +18,12 @@ import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runW
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
+import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
+import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
@@ -28,8 +32,6 @@ import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
-import { convertLocalConnections } from './convertConnections/convertLocalConnections';
-import { convertRemoteConnections } from './convertConnections/convertRemoteConnections';
 import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
@@ -46,6 +48,13 @@ import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
+import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
+import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
+import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
+import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
+import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
+import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
+import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
 import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
@@ -65,15 +74,6 @@ import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
-import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
-import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHub';
-import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
-import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
-import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
-import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
-import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
 
 export function registerCommands(
     services: {
@@ -168,8 +168,8 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => {
         ext.outputChannel.show();
     });
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.convertLocalConnections', convertLocalConnections);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.convertRemoteConnections', convertRemoteConnections);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.addLocalMIConnections', addLocalMIConnections);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.addRemoteMIConnections', addRemoteMIConnections);
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);

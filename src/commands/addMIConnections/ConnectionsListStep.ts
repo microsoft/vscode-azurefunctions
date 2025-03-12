@@ -5,52 +5,55 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { convertibleSetting } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { decryptLocalSettings } from "../appSettings/localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "../appSettings/localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
-import { type IConvertConnectionsContext } from "./IConvertConnectionsContext";
+import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
 
 export interface Connection {
     name: string;
     value: string;
 }
 
-export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnectionsContext> {
-    public async prompt(context: IConvertConnectionsContext): Promise<void> {
-        let picks: IAzureQuickPickItem<Connection>[];
-        if (context.local) {
-            picks = await this.getLocalQuickPics(context);
-        } else {
-            picks = await this.getRemoteQuickPics(context);
-        }
+export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnectionsContext> {
+    public async prompt(context: IAddMIConnectionsContext): Promise<void> {
+        const picks = await this.getPicks(context);
 
         if (picks.length === 0) {
             const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found in local settings');
             (await context.ui.showQuickPick(picks, {
-                placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
+                placeHolder: localize('selectConnections', 'Select the connections you want to add managed identity support for'),
                 suppressPersistence: true,
                 noPicksMessage: noItemFoundMessage
             }));
         } else {
             context.connections = (await context.ui.showQuickPick(picks, {
-                placeHolder: localize('selectConnections', 'Select the connections you want to convert'),
+                placeHolder: localize('selectConnections', 'Select the connections you want to add managed identity support for'),
                 suppressPersistence: true,
                 canPickMany: true,
             })).map(item => item.data);
         }
     }
 
-    public shouldPrompt(context: IConvertConnectionsContext): boolean {
+    public shouldPrompt(context: IAddMIConnectionsContext): boolean {
         return !context.connections || context.connections.length === 0;
     }
 
-    private async getLocalQuickPics(context: IConvertConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getPicks(context: IAddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
+        if (context.functionapp) {
+            return this.getRemoteQuickPicks(context);
+        } else {
+            return this.getLocalQuickPicks(context);
+        }
+    }
+
+    private async getLocalQuickPicks(context: IAddMIConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
         const picks: IAzureQuickPickItem<Connection>[] = [];
-        const message: string = localize('selectLocalSettings', 'Select the local settings to convert.');
+        const message: string = localize('selectLocalSettings', 'Select the local settings to add identity settings for.');
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
         const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
         context.localSettingsPath = localSettingsPath;
@@ -86,26 +89,24 @@ export class SelectConnectionsStep extends AzureWizardPromptStep<IConvertConnect
         return picks;
     }
 
-    private async getRemoteQuickPics(context: IConvertConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getRemoteQuickPicks(context: IAddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
         const picks: IAzureQuickPickItem<Connection>[] = [];
 
-        if (context.functionapp) {
-            const client = await context.functionapp?.site.createClient(context);
-            const appSettings: StringDictionary = await client.listApplicationSettings();
-            if (appSettings.properties) {
-                for (const [key, value] of Object.entries(appSettings.properties)) {
-                    if (!convertibleSetting(key, value)) {
-                        continue;
-                    }
-
-                    picks.push({
-                        label: key,
-                        data: {
-                            name: key,
-                            value: value
-                        }
-                    });
+        const client = await nonNullValue(context.functionapp?.site.createClient(context));
+        const appSettings: StringDictionary = await client.listApplicationSettings();
+        if (appSettings.properties) {
+            for (const [key, value] of Object.entries(appSettings.properties)) {
+                if (!convertibleSetting(key, value)) {
+                    continue;
                 }
+
+                picks.push({
+                    label: key,
+                    data: {
+                        name: key,
+                        value: value
+                    }
+                });
             }
         }
 

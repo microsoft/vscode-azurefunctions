@@ -157,13 +157,13 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.convertLocalConnections",
-                "title": "%azureFunctions.convertLocalConnections%",
+                "command": "azureFunctions.addLocalMIConnections",
+                "title": "%azureFunctions.addLocalMIConnections%",
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.convertRemoteConnections",
-                "title": "%azureFunctions.convertRemoteConnections%",
+                "command": "azureFunctions.addRemoteMIConnections",
+                "title": "%azureFunctions.addRemoteMIConnections%",
                 "category": "Azure Functions"
             },
             {
@@ -495,12 +495,12 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureFunctions.convertLocalConnections",
+                    "command": "azureFunctions.addLocalMIConnections",
                     "when": "view == azureWorkspace && viewItem =~ /(azFuncLocalProject.*convert|applicationSettingItem.*localSettings)/i",
                     "group": "1@3"
                 },
                 {
-                    "command": "azureFunctions.convertRemoteConnections",
+                    "command": "azureFunctions.addRemoteMIConnections",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /(applicationSettings|applicationSettingItem).*azFunc.*convert/i",
                     "group": "1@4"
                 },
@@ -1366,7 +1366,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^3.3.1",
         "@microsoft/vscode-azext-azureappsettings": "file:../vscode-azuretools/appsettings/microsoft-vscode-azext-azureappsettings-0.2.2.tgz",
-        "@microsoft/vscode-azext-azureutils": "file:../vscode-azuretools/azure/microsoft-vscode-azext-azureutils-3.1.4.tgz",
+        "@microsoft/vscode-azext-azureutils": "^3.1.5",
         "@microsoft/vscode-azext-serviceconnector": "^0.1.3",
         "@microsoft/vscode-azext-utils": "^2.5.7",
         "@microsoft/vscode-azureresources-api": "^2.0.4",

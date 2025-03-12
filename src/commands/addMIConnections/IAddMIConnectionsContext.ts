@@ -6,13 +6,12 @@
 import { type IResourceGroupWizardContext, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type ExecuteActivityContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
-import { type Connection } from "./SelectConnectionsStep";
+import { type Connection } from "./ConnectionsListStep";
 
-export interface IConvertConnectionsContext extends ExecuteActivityContext, IResourceGroupWizardContext, ISubscriptionActionContext {
-    local: boolean;
+export interface IAddMIConnectionsContext extends ExecuteActivityContext, IResourceGroupWizardContext, ISubscriptionActionContext {
     functionapp?: SlotTreeItem;
     connections?: Connection[];
-    convertedConnections?: Connection[];
+    connectionsToAdd?: Connection[];
     roles?: Role[];
     localSettingsPath?: string;
 }
