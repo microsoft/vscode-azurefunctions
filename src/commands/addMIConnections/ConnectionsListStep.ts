@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
-import { convertibleSetting } from "@microsoft/vscode-azext-azureappsettings";
+import { isSettingConvertible } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtFsExtra, AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -71,7 +71,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
 
             if (localSettings.Values) {
                 for (const [key, value] of Object.entries(localSettings.Values)) {
-                    if (!convertibleSetting(key, value)) {
+                    if (!isSettingConvertible(key, value)) {
                         continue;
                     }
 
@@ -96,7 +96,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
         const appSettings: StringDictionary = await client.listApplicationSettings();
         if (appSettings.properties) {
             for (const [key, value] of Object.entries(appSettings.properties)) {
-                if (!convertibleSetting(key, value)) {
+                if (!isSettingConvertible(key, value)) {
                     continue;
                 }
 

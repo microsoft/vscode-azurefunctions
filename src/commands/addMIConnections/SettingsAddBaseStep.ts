@@ -52,7 +52,7 @@ async function getScopeHelper(context: IAddMIConnectionsContext, accountName: st
 
 
 function addRole(context: IAddMIConnectionsContext, scope: string, roleDefinition: typeof CommonRoleDefinitions[keyof typeof CommonRoleDefinitions]): void {
-    // only assign roles if adding remote settings
+    // Only assign roles if adding remote settings
     if (context.functionapp) {
         const role = {
             scopeId: scope,
@@ -85,6 +85,7 @@ async function addStorageConnectionsAndRoles(context: IAddMIConnectionsContext, 
         );
         const scope = await getScopeHelper(context, storageAccountName, 'Microsoft.Storage/storageAccounts')
         addRole(context, scope, CommonRoleDefinitions.storageBlobDataOwner);
+        addRole(context, scope, CommonRoleDefinitions.storageQueueDataContributor);
     } catch (e) {
         throw new Error(localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value));
     }
@@ -94,7 +95,6 @@ async function addStorageConnectionsAndRoles(context: IAddMIConnectionsContext, 
 async function addDocumentConnectionsAndRoles(context: IAddMIConnectionsContext, connection: Connection) {
     // DocumentDB connection strings are of format: AccountEndpoint=https://<accountName>.documents.azure.com:443/;AccountKey=<accountKey>;
     try {
-
         const cosmosDbAccountURI = connection.value.split(';')[0].split('=')[1];
         const cosmosDbAccountName = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
@@ -105,11 +105,6 @@ async function addDocumentConnectionsAndRoles(context: IAddMIConnectionsContext,
             },
             ...getClientIdAndCredentialProperties(context, cosmosDbAccountName)
         );
-
-        const scope = await getScopeHelper(context, cosmosDbAccountName, 'Microsoft.DocumentDB/databaseAccounts');
-
-        addRole(context, scope, CommonRoleDefinitions.cosmosDBAccountReader);
-        addRole(context, scope, CommonRoleDefinitions.documentDBAccountContributor);
     } catch (e) {
         throw new Error(localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value));
     }
@@ -161,7 +156,7 @@ async function addServiceBusConnectionsAndRoles(context: IAddMIConnectionsContex
 
 function getClientIdAndCredentialProperties(context: IAddMIConnectionsContext, connectionName: string): Connection[] {
     const clientIdAndConfigurationProperties: Connection[] = [];
-    //only add these properties if adding remote settings
+    // Only add these properties if adding remote settings
     if (context.functionapp) {
         clientIdAndConfigurationProperties.push(
             {

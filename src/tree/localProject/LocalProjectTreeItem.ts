@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, convertibleSetting } from '@microsoft/vscode-azext-azureappsettings';
+import { AppSettingsTreeItem, isSettingConvertible } from '@microsoft/vscode-azext-azureappsettings';
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -87,7 +87,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
                     }
                     if (localSettings.Values) {
                         for (const [key, value] of Object.entries(localSettings.Values)) {
-                            if (!convertibleSetting(key, value)) {
+                            if (!isSettingConvertible(key, value)) {
                                 continue;
                             }
 
