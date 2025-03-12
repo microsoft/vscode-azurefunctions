@@ -11,12 +11,12 @@ import { EnableSystemIdentityAssignStep } from "./EnableSystemIdentityStep";
 import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContext";
 
 export async function enableSystemIdentity(context: IActionContext, node: SystemIdentityTreeItemBase): Promise<undefined> {
-    const grandparentNode = node.parent.parent;
-    const title: string = localize('enabling', 'Enabled system assigned identity for "{0}".', grandparentNode.site.fullName);
+    const slotTreeItem = node.parent.parent;
+    const title: string = localize('enabling', 'Enable system assigned identity for "{0}".', slotTreeItem.site.fullName);
 
     const wizardContext: ManagedIdentityAssignContext & ExecuteActivityContext = Object.assign(context, {
-        site: grandparentNode.site,
-        ...grandparentNode.site.subscription,
+        site: slotTreeItem.site,
+        ...slotTreeItem.site.subscription,
         ...(await createActivityContext()),
         activityTitle: title
     });
@@ -28,5 +28,5 @@ export async function enableSystemIdentity(context: IActionContext, node: System
         await wizard.execute();
     });
 
-    void grandparentNode.refresh(context)
+    void slotTreeItem.refresh(context)
 }
