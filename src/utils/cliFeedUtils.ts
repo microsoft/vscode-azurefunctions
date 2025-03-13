@@ -11,7 +11,7 @@ import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
-    const funcCliFeedV4Url: string = 'https://aka.ms/AAbbk68';
+    const funcCliFeedV4Url: string = 'https://aka.ms/funcCliFeedV4';
 
     interface ICliFeed {
         tags: {

@@ -8,7 +8,7 @@ import * as path from 'path';
 import { ext } from '../extensionVariables';
 
 export namespace treeUtils {
-    export function getIconPath(iconName: string): TreeItemIconPath {
+    export function getIconPath(iconName: string): string {
         return path.join(getResourcesPath(), `${iconName}.svg`);
     }
 
