@@ -5,44 +5,23 @@
 
 import { type Identity } from '@azure/arm-resources';
 import { createManagedServiceIdentityClient, createRoleDefinitionsItems, RoleDefinitionsTreeItem, type RoleDefinitionsItem } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, GenericTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { ThemeIcon } from 'vscode';
+import { AzExtParentTreeItem, AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { type ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
 
-export abstract class SystemIdentityTreeItemBase extends AzExtParentTreeItem {
+export type SystemIdentityTreeItemBase = SystemIdentityTreeItem | DisabledIdentityTreeItem;
+export function createSystemIdentityTreeItem(parent: ManagedIdentityTreeItem): SystemIdentityTreeItem | DisabledIdentityTreeItem {
+    if (!parent.parent.site.rawSite.identity?.type?.includes('SystemAssigned')) {
+        return new DisabledIdentityTreeItem(parent);
+    } else {
+        return new SystemIdentityTreeItem(parent, parent.parent.site.rawSite.identity);
+    }
+}
+class SystemIdentityTreeItem extends AzExtParentTreeItem {
+    public readonly identity: Identity;
     public readonly parent: ManagedIdentityTreeItem;
     public static contextValue: string = 'systemIdentity';
     public state: string;
-
-    public constructor(parent: ManagedIdentityTreeItem) {
-        super(parent);
-        this.parent = parent;
-    }
-
-    public static create(parent: ManagedIdentityTreeItem): SystemIdentityTreeItem | DisabledIdentityTreeItem {
-        if (!parent.parent.site.rawSite.identity?.type?.includes('SystemAssigned')) {
-            return new DisabledIdentityTreeItem(parent);
-        } else {
-            return new SystemIdentityTreeItem(parent, parent.parent.site.rawSite.identity);
-        }
-    }
-
-    public get id(): string {
-        return `${this.parent.id}/${this.state}`
-    }
-
-    public get label(): string {
-        return localize('systemIdentity', 'System Assigned');
-    }
-
-    public get contextValue(): string {
-        return SystemIdentityTreeItem.contextValue + '/' + this.state;
-    }
-}
-
-class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
-    public readonly identity: Identity;
 
     public constructor(parent: ManagedIdentityTreeItem, identity: Identity) {
         super(parent);
@@ -64,10 +43,23 @@ class SystemIdentityTreeItem extends SystemIdentityTreeItemBase {
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
+
+    public get id(): string {
+        return `${this.parent.id}/${this.state}`
+    }
+
+    public get label(): string {
+        return localize('systemIdentity', 'System Assigned');
+    }
+
+    public get contextValue(): string {
+        return SystemIdentityTreeItem.contextValue + '/' + this.state;
+    }
 }
-const rightClickToEnable: string = localize('disabled', 'System assigned identity is disabled. Right-click to enable.');
-class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
+class DisabledIdentityTreeItem extends AzExtTreeItem {
     public readonly parent: ManagedIdentityTreeItem;
+    public static contextValue: string = 'systemIdentity';
+    public state: string;
 
     public constructor(parent: ManagedIdentityTreeItem) {
         super(parent);
@@ -79,21 +71,19 @@ class DisabledIdentityTreeItem extends SystemIdentityTreeItemBase {
         return localize('disabled', 'Disabled');
     }
 
-    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const disabledTreeItem = new GenericTreeItem(this, {
-            label: rightClickToEnable,
-            contextValue: 'disabled',
-            iconPath: new ThemeIcon('gear')
-        });
-
-        return [disabledTreeItem];
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
     public get tooltip(): string {
-        return rightClickToEnable;
+        return localize('disabled', 'System assigned identity is disabled. Right-click to enable.');
+    }
+
+    public get id(): string {
+        return `${this.parent.id}/${this.state}`
+    }
+
+    public get label(): string {
+        return localize('systemIdentity', 'System Assigned');
+    }
+
+    public get contextValue(): string {
+        return SystemIdentityTreeItem.contextValue + '/' + this.state;
     }
 }

@@ -8,7 +8,7 @@ import { AzExtParentTreeItem, createContextValue, type AzExtTreeItem, type IActi
 import { ThemeIcon } from 'vscode';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../SlotTreeItem';
-import { SystemIdentityTreeItemBase } from './SystemIdentityTreeItemBase';
+import { createSystemIdentityTreeItem } from './SystemIdentityTreeItemBase';
 import { UserAssignedIdentitiesTreeItem } from './UserAssignedIdentitiesTreeItem';
 
 export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
@@ -43,7 +43,7 @@ export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const systemIdentitiesTreeItem: AzExtTreeItem = SystemIdentityTreeItemBase.create(this);
+        const systemIdentitiesTreeItem: AzExtTreeItem = createSystemIdentityTreeItem(this);
         const userAssignedIdentitiesTreeItem = new UserAssignedIdentitiesTreeItem(this.parent);
         const children: AzExtTreeItem[] = [systemIdentitiesTreeItem, userAssignedIdentitiesTreeItem];
         return children;
