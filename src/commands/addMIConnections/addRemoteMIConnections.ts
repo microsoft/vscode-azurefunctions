@@ -66,6 +66,6 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
     await context.ui.showWarningMessage(localize('rolesWillBeAssignedMessage', 'This command will assign a managed identity and roles would you like to continue?'), { modal: true }, continueOn);
     await wizard.execute();
 
-    const message: string = localize('setConnectionsProperty', 'Successfully added remote connections in order to use identity connections you may need to set the connection property within your trigger.');
+    const message: string = localize('setConnectionsProperty', 'Successfully added remote connections in order to use identity connections your application may require additional permisssions based on your code. You also may need to modify the connection property within your trigger.');
     await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }
