@@ -4,10 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type MessageItem } from "vscode";
-import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { createActivityContext } from "../../utils/activityUtils";
 import { ConnectionsListStep, type Connection } from "./ConnectionsListStep";
@@ -42,12 +40,7 @@ export async function addLocalMIConnectionsInternal(context: IActionContext, con
     const promptSteps: AzureWizardPromptStep<IAddMIConnectionsContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAddMIConnectionsContext>[] = [];
 
-    const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-    if (subscriptionPromptStep) {
-        promptSteps.push(subscriptionPromptStep);
-    }
-
-    promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep())
+    promptSteps.push(new ConnectionsListStep())
     executeSteps.push(new SettingsAddBaseStep(), new LocalSettingsAddStep());
 
     const wizard: AzureWizard<IAddMIConnectionsContext> = new AzureWizard(wizardContext, {
