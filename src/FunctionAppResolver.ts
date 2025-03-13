@@ -2,6 +2,7 @@ import { type Site } from "@azure/arm-appservice";
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, nonNullValueAndProp, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
+import { getGlobalSetting } from "../extension.bundle";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createWebSiteClient } from "./utils/azureClients";
@@ -54,10 +55,11 @@ export class FunctionAppResolver implements AppResourceResolver {
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
 
+            const groupBy: string | undefined = getGlobalSetting<string>('groupBy', 'azureResourceGroups');
             return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, nonNullValue(site), {
                 // Multiple sites with the same name could be displayed as long as they are in different locations
                 // To help distinguish these apps for our users, lookahead and determine if the location should be provided for duplicated site names
-                showLocationAsTreeItemDescription: (this.siteNameCounter.get(nonNullValueAndProp(site, 'name')) ?? 1) > 1,
+                showLocationAsTreeItemDescription: groupBy !== 'location' && (this.siteNameCounter.get(nonNullValueAndProp(site, 'name')) ?? 1) > 1,
             });
         });
     }
