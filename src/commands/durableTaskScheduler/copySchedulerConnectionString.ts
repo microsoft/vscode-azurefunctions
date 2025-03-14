@@ -16,16 +16,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             throw new Error(localize('noSchedulerSelectedErrorMessage', 'No scheduler was selected.'));
         }
 
-        const schedulerJson = await schedulerClient.getScheduler(
-            scheduler.subscription,
-            scheduler.resourceGroup,
-            scheduler.name);
-
-        if (!schedulerJson) {
-            throw new Error(localize('schedulerNotFoundErrorMessage', 'Scheduler does not exist.'));
-        }
-
-        const { endpoint } = schedulerJson.properties;
+        const { endpointUrl } = scheduler;
 
         const noAuthentication: QuickPickItem = {
             detail: localize('noAuthenticationDetail', 'No credentials will be used.'),
@@ -59,7 +50,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
                 placeHolder: localize('authenticationTypePlaceholder', 'Select the credentials to be used to connect to the scheduler')
             });
 
-        let connectionString = `Endpoint=${endpoint};Authentication=`
+        let connectionString = `Endpoint=${endpointUrl};Authentication=`
 
         if (result === noAuthentication) {
             connectionString += 'None';

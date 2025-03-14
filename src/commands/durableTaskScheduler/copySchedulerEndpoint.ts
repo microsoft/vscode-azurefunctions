@@ -4,32 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
-import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
 import { localize } from "../../localize";
 import { ext } from "../../extensionVariables";
 import { env } from "vscode";
+import { type DurableTaskSchedulerEndpointModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerEndpointModel";
 
-export function copySchedulerEndpointCommandFactory(schedulerClient: DurableTaskSchedulerClient) {
-    return async (_: IActionContext, scheduler: DurableTaskSchedulerResourceModel | undefined): Promise<void> => {
+export function copySchedulerEndpointCommandFactory() {
+    return async (_: IActionContext, scheduler: DurableTaskSchedulerEndpointModel | undefined): Promise<void> => {
         if (!scheduler) {
             throw new Error(localize('noSchedulerSelectedErrorMessage', 'No scheduler was selected.'));
         }
 
-        const schedulerJson = await schedulerClient.getScheduler(
-            scheduler.subscription,
-            scheduler.resourceGroup,
-            scheduler.name);
+        const { endpointUrl } = scheduler;
 
-        if (!schedulerJson) {
-            throw new Error(localize('schedulerNotFoundErrorMessage', 'Scheduler does not exist.'));
-        }
-
-        const { endpoint } = schedulerJson.properties;
-
-        await env.clipboard.writeText(endpoint);
+        await env.clipboard.writeText(endpointUrl.toString());
 
         ext.outputChannel.show();
-        ext.outputChannel.appendLog(localize('schedulerEndpointCopiedMessage', 'Endpoint copied to clipboard: {0}', endpoint));
+        ext.outputChannel.appendLog(localize('schedulerEndpointCopiedMessage', 'Endpoint copied to clipboard: {0}', endpointUrl.toString()));
     }
 }
