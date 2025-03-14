@@ -5,9 +5,8 @@
 
 import { type AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type MessageItem } from "vscode";
-import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -45,11 +44,10 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
     const executeSteps: AzureWizardExecuteStep<IAddMIConnectionsContext>[] = [];
 
     wizardContext.functionapp = node?.parent.parent as SlotTreeItem ?? await pickFunctionApp(wizardContext)
-    if (!wizardContext.subscriptionId) {
-        const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-        if (subscriptionPromptStep) {
-            promptSteps.push(subscriptionPromptStep);
-        }
+    if (!wizardContext.environment) {
+        wizardContext.credentials = wizardContext.functionapp.subscription.credentials;
+        wizardContext.environment = wizardContext.functionapp.subscription.environment;
+        wizardContext.subscriptionId = wizardContext.functionapp.subscription.subscriptionId;
     }
 
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
