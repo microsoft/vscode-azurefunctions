@@ -28,42 +28,51 @@ export class ShellContainerClient implements ContainerClient {
     private readonly factory = new CodeContainerClient.ShellStreamCommandRunnerFactory({});
 
     async getContainers(): Promise<DockerContainer[]> {
-        const commandRunner = this.factory.getCommandRunner();
+        return await this.withErrorHandling(
+            async () => {
+                const commandRunner = this.factory.getCommandRunner();
 
-        const containers = await commandRunner(this.dockerClient.listContainers({ running: true }));
+                const containers = await commandRunner(this.dockerClient.listContainers({ running: true }));
 
-        return containers.map(
-            container =>
-            ({
-                id: container.id,
-                image: container.image.image as string,
-                name: container.name,
-                ports: container.ports.reduce(
-                    (previous, port) => {
-                        previous[port.containerPort] = port.hostPort;
+                return containers.map(
+                    container =>
+                        ({
+                            id: container.id,
+                            image: container.image.image as string,
+                            name: container.name,
+                            ports: container.ports.reduce(
+                                (previous, port) => {
+                                    previous[port.containerPort] = port.hostPort;
 
-                        return previous;
-                    },
-                    {})
-            }));
+                                    return previous;
+                                },
+                                {})
+                        }));
+            });
     }
 
     async removeContainer(id: string): Promise<void> {
-        const commandRunner = this.factory.getCommandRunner();
+        await this.withErrorHandling(
+            async () => {
+                const commandRunner = this.factory.getCommandRunner();
 
-        await commandRunner(this.dockerClient.removeContainers({
-            containers: [id]
-        }));
+                return await commandRunner(this.dockerClient.removeContainers({
+                    containers: [id]
+                }));
+            });
     }
 
     async runContainer(image: string): Promise<string> {
-        const commandRunner = this.factory.getCommandRunner();
+        const id = await this.withErrorHandling(
+            async () => {
+                const commandRunner = this.factory.getCommandRunner();
 
-        const id = await commandRunner(this.dockerClient.runContainer({
-            detached: true,
-            imageRef: image,
-            publishAllPorts: true
-        }));
+                return await commandRunner(this.dockerClient.runContainer({
+                    detached: true,
+                    imageRef: image,
+                    publishAllPorts: true
+                }));
+            });
 
         if (!id) {
             throw new Error(localize('startContainerFailed', 'Unable to start the container.'));
@@ -73,10 +82,22 @@ export class ShellContainerClient implements ContainerClient {
     }
 
     async stopContainer(id: string): Promise<void> {
-        const commandRunner = this.factory.getCommandRunner();
+        await this.withErrorHandling(
+            async () => {
+                const commandRunner = this.factory.getCommandRunner();
 
-        await commandRunner(this.dockerClient.stopContainers({
-            container: [id]
-        }));
+                await commandRunner(this.dockerClient.stopContainers({
+                    container: [id]
+                }));
+            });
+    }
+
+    private async withErrorHandling<T = void>(command: () => Promise<T>): Promise<T> {
+        try {
+            return await command();
+        }
+        catch (error) {
+            throw new Error(localize('containerRuntimeError', 'Unable to perform container command. Is a container runtime installed and running?'));
+        }
     }
 }
