@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
+import { AppSettingsTreeItem, AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type MessageItem } from "vscode";
@@ -16,19 +16,23 @@ import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
 import { RemoteSettingsAddStep } from "./RemoteSettingsAddStep";
 import { SettingsAddBaseStep } from "./SettingsAddBaseStep";
 
-export async function addRemoteMIConnections(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
+export async function addRemoteMIConnections(context: IActionContext, node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
     const connections: Connection[] = []
-    if (node) {
+    if (node instanceof AppSettingTreeItem) {
         connections.push({ name: node.id, value: node.value });
         await node.parent.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
             await addRemoteMIConnectionsInternal(context, connections, node);
+        });
+    } else if (node instanceof AppSettingsTreeItem) {
+        await node.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
+            await addRemoteMIConnectionsInternal(context, undefined, node);
         });
     } else {
         await addRemoteMIConnectionsInternal(context);
     }
 }
 
-export async function addRemoteMIConnectionsInternal(context: IActionContext, connections?: Connection[], node?: AppSettingTreeItem): Promise<void> {
+export async function addRemoteMIConnectionsInternal(context: IActionContext, connections?: Connection[], node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
     const wizardContext: IActionContext & Partial<IAddMIConnectionsContext> = {
         ...context,
         ...await createActivityContext()
@@ -42,8 +46,12 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
 
     const promptSteps: AzureWizardPromptStep<IAddMIConnectionsContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAddMIConnectionsContext>[] = [];
+    if (node instanceof AppSettingTreeItem) {
+        wizardContext.functionapp = node?.parent.parent as SlotTreeItem
+    } else {
+        wizardContext.functionapp = node?.parent as SlotTreeItem ?? await pickFunctionApp(wizardContext)
+    }
 
-    wizardContext.functionapp = node?.parent.parent as SlotTreeItem ?? await pickFunctionApp(wizardContext)
     if (!wizardContext.environment) {
         wizardContext.credentials = wizardContext.functionapp.subscription.credentials;
         wizardContext.environment = wizardContext.functionapp.subscription.environment;
