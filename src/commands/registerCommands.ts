@@ -72,11 +72,16 @@ import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteSche
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
 import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
+import { startEmulatorCommandFactory } from './durableTaskScheduler/startEmulator';
+import { stopEmulatorCommandFactory } from './durableTaskScheduler/stopEmulator';
+import { type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { copyEmulatorConnectionStringCommandFactory } from './durableTaskScheduler/copyEmulatorConnectionString';
 
 export function registerCommands(
     services: {
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
+            emulatorClient: DurableTaskSchedulerEmulatorClient,
             schedulerClient: DurableTaskSchedulerClient
         }
     }): void {
@@ -170,11 +175,14 @@ export function registerCommands(
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
 
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copyEmulatorConnectionString', copyEmulatorConnectionStringCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory(services.dts.schedulerClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerEndpoint', copySchedulerEndpointCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createScheduler', createSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.createTaskHub', createTaskHubCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteScheduler', deleteSchedulerCommandFactory(services.dts.dataBranchProvider, services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.deleteTaskHub', deleteTaskHubCommandFactory(services.dts.schedulerClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.startEmulator', startEmulatorCommandFactory(services.dts.emulatorClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.stopEmulator', stopEmulatorCommandFactory(services.dts.emulatorClient));
 }

@@ -5,7 +5,7 @@
 
 import { type AzureResource, type AzureResourceBranchDataProvider } from "@microsoft/vscode-azureresources-api";
 import { EventEmitter, type ProviderResult, type TreeItem } from "vscode";
-import { type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
 import { DurableTaskSchedulerResourceModel } from "./DurableTaskSchedulerResourceModel";
 
@@ -21,9 +21,20 @@ export class DurableTaskSchedulerDataBranchProvider implements AzureResourceBran
         return element.getChildren();
     }
 
-    getResourceItem(element: AzureResource): DurableTaskSchedulerResourceModel | Thenable<DurableTaskSchedulerResourceModel> {
+    async getResourceItem(azureResource: AzureResource): Promise<DurableTaskSchedulerResourceModel> {
+
+        let schedulerResource: DurableTaskSchedulerResource | undefined;
+
+        if (azureResource.resourceGroup) {
+            schedulerResource = await this.schedulerClient.getScheduler(
+                azureResource.subscription,
+                azureResource.resourceGroup,
+                azureResource.name);
+        }
+
         return new DurableTaskSchedulerResourceModel(
-            element,
+            azureResource,
+            schedulerResource,
             this.schedulerClient,
             model => this.onDidChangeTreeDataEventEmitter.fire(model));
     }
