@@ -29,7 +29,7 @@ let downloadLink;
 async function getFuncLink() {
     const client = new msRest.ServiceClient();
     const cliFeed = (await client.sendRequest({ method: 'GET', url: 'https://aka.ms/V00v5v' }));
-    console.log(`Func cli feed status code: ${cliFeed}`);
+    console.log(`Func cli feed status code: ${JSON.stringify(cliFeed)}`);
     const cliFeedParsedBody = cliFeed.parsedBody;
     const version = cliFeedParsedBody.tags['v4-prerelease'].release;
     console.log(`Func cli feed version: ${version}`);
