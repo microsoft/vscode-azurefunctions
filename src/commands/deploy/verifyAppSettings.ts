@@ -5,7 +5,8 @@
 
 import { type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { isSettingConvertible } from '@microsoft/vscode-azext-azureappsettings';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
@@ -15,11 +16,13 @@ import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { getLocalSettingsFileNoPrompt } from '../appSettings/localSettings/getLocalSettingsFile';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
+type ConnectionSetting = { name: string, value: string, type: 'ConnectionString' | 'ManagedIdentity' | 'Emulator' };
 
 export async function verifyAppSettings(options: {
     context: IActionContext,
@@ -35,6 +38,10 @@ export async function verifyAppSettings(options: {
     const { context, node, projectPath, version, language, bools, durableStorageType } = options;
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
+    const localSettingsPath = await getLocalSettingsFileNoPrompt(context, projectPath);
+    const localSettings = await AzExtFsExtra.readJSON(localSettingsPath);
+    const localConnectionSettings = await getConnectionSettings(context, localSettings.Values);
+    const remoteConnectionSettings = await getConnectionSettings(context, appSettings.properties);
     if (appSettings.properties) {
         const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
@@ -51,6 +58,11 @@ export async function verifyAppSettings(options: {
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
 
+        // we should check to see if the user has any connections set up in the remotely, and keep track of that 'nothing|emulator|connectionstring|identity
+        // if the user has connections set up in the portal, we should prompt them to connect to a service
+        const updatedIdentityConnection: boolean = await verifyAndUpdateIdentityConnections(context, appSettings.properties);
+
+        // TODO: change behavior here about updating the app settings according to remote/local setting chart
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             try {
@@ -62,6 +74,79 @@ export async function verifyAppSettings(options: {
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
             await node.appSettingsTreeItem?.refresh(context);
         }
+    }
+}
+function checkForConnectionSettings(context: IActionContext & Partial<ISetConnectionSettingContext>,
+    property: { [propertyName: string]: string }): ConnectionSetting | undefined {
+    if (isSettingConvertible(property.propertyName, property.value)) {
+        // if the setting is convertible, we can assume it's a connection string
+        return {
+            name: property.propertyName,
+            value: property.value,
+            type: 'ConnectionString'
+        };
+    }
+
+    return undefined;
+}
+function checkForManagedIdentitySettings(context: IActionContext & Partial<ISetConnectionSettingContext>,
+    property: { [propertyName: string]: string }): ConnectionSetting | undefined {
+
+    if (property.propertyName.includes('__accountName') || property.propertyName.includes('__blobServiceUri') ||
+        property.propertyName.includes('__queueServiceUri') || property.propertyName.includes('__tableServiceUri') ||
+        property.propertyName.includes('__accountEndpoint') || property.propertyName.includes('__fullyQualifiedNamespace')) {
+        return {
+            name: property.propertyName,
+            value: property.value,
+            type: 'ManagedIdentity'
+        };
+    }
+
+    return undefined;
+}
+
+async function getConnectionSettings(context: IActionContext & Partial<ISetConnectionSettingContext>,
+    properties: StringDictionary): Promise<ConnectionSetting[]> {
+    /**
+     * first check if we have any connections settings in the local settings
+     * This would be any isSettingConvertible setting, basically
+     * We also have to check for any managed identity settings
+     * **/
+    const settings: ConnectionSetting[] = [];
+    for (const [key, value] of Object.entries(properties)) {
+        // these are connection strings
+
+        const property = { propertyName: key, value: value };
+        const connectionSetting = checkForManagedIdentitySettings(context, property) ?? checkForConnectionSettings(context, property);
+        if (connectionSetting) {
+            settings.push(connectionSetting);
+        }
+
+    }
+
+    return settings;
+}
+
+export function compareLocalAndRemoteSettings(context: IActionContext & Partial<ISetConnectionSettingContext>, localSettings: ConnectionSetting[], remoteSettings: ConnectionSetting[]): boolean {
+    const updated: boolean = false;
+    for (const localSetting of localSettings) {
+        if (localSetting.type === 'Emulator') {
+            // first, is the local setting an emulator?
+            // compare to the remote setting to see if it exists; if it does, don't do anything
+            // if there is nothing there (or its also an emulator), then we should prompt them to update to connect to a service
+        } else if (localSetting.type === 'ConnectionString') {
+            // next, if the local setting is a connection string,
+            // if the remote has no settings, prompt to ask them to update to a identity-based connection
+            // if yes, then convert the connection string to a managed identity connection string
+            // if the remote has a matching connection string, then let it be
+            // if the remote has a matching mi connection, then ignore the connection string and let it be
+        } else if (localSetting.type === 'ManagedIdentity') {
+            // if there is no remote setting, then go through assigning identity/roles
+            // if the remote setting is a connection string, then we should prompt to ask them to update to managed identity
+            // if the managed identity is different from the remote setting, then we should prompt to ask them to switch managed identity settings
+        }
+
+        return updated;
     }
 }
 
