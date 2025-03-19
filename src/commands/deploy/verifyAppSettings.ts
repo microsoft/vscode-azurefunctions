@@ -131,7 +131,7 @@ export function compareLocalAndRemoteSettings(context: IActionContext & Partial<
     const updated: boolean = false;
     for (const localSetting of localSettings) {
         if (localSetting.type === 'Emulator') {
-            // first, is the local setting an emulator?
+
             // compare to the remote setting to see if it exists; if it does, don't do anything
             // if there is nothing there (or its also an emulator), then we should prompt them to update to connect to a service
         } else if (localSetting.type === 'ConnectionString') {
