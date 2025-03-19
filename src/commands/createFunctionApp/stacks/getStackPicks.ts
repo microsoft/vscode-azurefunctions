@@ -179,16 +179,16 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
     return context._stacks;
 }
 
-async function getFlexStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
+async function getFlexStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }, location?: string): Promise<FunctionAppStack[]> {
     const client: ServiceClient = await createGenericClient(context, context);
-    const location = await LocationListStep.getLocation(context);
+    location = location ?? (await LocationListStep.getLocation(context)).name;
     const flexFunctionAppStacks: FunctionAppStack[] = [];
     const stacks = ['dotnet', 'java', 'node', 'powershell', 'python'];
     if (!context._stacks) {
         const getFlexStack = async (stack: string) => {
             const result: AzExtPipelineResponse = await client.sendRequest(createPipelineRequest({
                 method: 'GET',
-                url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location.name}/functionAppStacks`, {
+                url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location}/functionAppStacks`, {
                     'api-version': '2023-12-01',
                     stack,
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
@@ -286,40 +286,42 @@ export async function shouldShowEolWarning(context: IFunctionAppWizardContext, s
     let endOfLife: Date | undefined;
 
     if (isFlex) {
-        stackVersion = site.functionAppConfig?.runtime?.name;
-        runtime = site.functionAppConfig?.runtime?.version;
-    }
-
-    if (linux) {
+        runtime = site.functionAppConfig?.runtime?.name;
+        stackVersion = site.functionAppConfig?.runtime?.version;
+        endOfLifeDate = await getFilteredStackEOL(context, nonNullValue(stackVersion), nonNullValue(runtime), true, site.location);
+    } else if (linux) {
         const linuxFxVersion = site.siteConfig?.linuxFxVersion;
-        endOfLifeDate = await getFilteredStackEOLLinux(context, nonNullValue(linuxFxVersion))
+        endOfLifeDate = await getFilteredStackEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
+        if (endOfLifeDate) {
+            endOfLife = new Date(endOfLifeDate);
+        }
     } else {
         if (site.siteConfig) {
             if (site.siteConfig.netFrameworkVersion) {
                 runtime = 'dotnet';
                 stackVersion = site.siteConfig.netFrameworkVersion;
-                endOfLifeDate = await getFilteredStackEOLWindows(context, nonNullValue(stackVersion), runtime)
+                endOfLifeDate = await getFilteredStackEOL(context, nonNullValue(stackVersion), runtime)
                 if (endOfLifeDate) {
                     endOfLife = new Date(endOfLifeDate)
                 }
             } else if (site.siteConfig.javaVersion) {
                 runtime = 'java';
                 stackVersion = site.siteConfig.javaVersion;
-                endOfLifeDate = await getFilteredStackEOLWindows(context, nonNullValue(stackVersion), runtime)
+                endOfLifeDate = await getFilteredStackEOL(context, nonNullValue(stackVersion), runtime)
                 if (endOfLifeDate) {
                     endOfLife = new Date(endOfLifeDate)
                 }
             } else if (site.siteConfig.powerShellVersion) {
                 runtime = 'powershell';
                 stackVersion = site.siteConfig.powerShellVersion;
-                endOfLifeDate = await getFilteredStackEOLWindows(context, nonNullValue(stackVersion), runtime)
+                endOfLifeDate = await getFilteredStackEOL(context, nonNullValue(stackVersion), runtime)
                 if (endOfLifeDate) {
                     endOfLife = new Date(endOfLifeDate)
                 }
             } else if (site.siteConfig.appSettings && site.siteConfig.appSettings.some(a => a.name === 'WEBSITE_NODE_DEFAULT_VERSION')) {
                 runtime = 'node';
                 stackVersion = site.siteConfig.appSettings.find(a => a.name === 'WEBSITE_NODE_DEFAULT_VERSION')?.value;
-                endOfLifeDate = await getFilteredStackEOLWindows(context, nonNullValue(stackVersion), runtime)
+                endOfLifeDate = await getFilteredStackEOL(context, nonNullValue(stackVersion), runtime)
                 if (endOfLifeDate) {
                     endOfLife = new Date(endOfLifeDate)
                 }
@@ -334,17 +336,18 @@ export async function shouldShowEolWarning(context: IFunctionAppWizardContext, s
     return false;
 }
 
-async function getFilteredStackEOLWindows(context: IFunctionAppWizardContext, version: string, runtime: string): Promise<string | undefined> {
-    const stacks = (await getStacks(context)).filter(s => runtime === s.value);
-    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === version));
+async function getFilteredStackEOL(context: IFunctionAppWizardContext, version: string, runtime: string, isFlex?: boolean, location?: string): Promise<string | undefined> {
+    const stacks = isFlex ? (await getFlexStacks(context, location)).filter(s => runtime === s.value) : (await getStacks(context)).filter(s => runtime === s.value);
+    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === version));
     return versionFilteredStacks[0].minorVersions[0].stackSettings.linuxRuntimeSettings?.endOfLifeDate;
 }
 
-async function getFilteredStackEOLLinux(context: IFunctionAppWizardContext, linuxFxVersion: string): Promise<string | undefined> {
+async function getFilteredStackEOLLinuxFxVersion(context: IFunctionAppWizardContext, linuxFxVersion: string): Promise<string | undefined> {
     const stacks = (await getStacks(context)).filter(s =>
         s.majorVersions.some(mv =>
             mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion)
         )
     );
-    return stacks[0].majorVersions[0].minorVersions[0].stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
+    return versionFilteredStacks[0].minorVersions[0].stackSettings.linuxRuntimeSettings?.endOfLifeDate;
 }

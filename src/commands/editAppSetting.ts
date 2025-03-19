@@ -8,7 +8,7 @@ import { type MessageItem } from 'vscode';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
+import { isResolvedFunctionApp } from '../tree/ResolvedFunctionAppResource';
 import { type IFunctionAppWizardContext } from './createFunctionApp/IFunctionAppWizardContext';
 import { shouldShowEolWarning } from './createFunctionApp/stacks/getStackPicks';
 
@@ -22,9 +22,9 @@ export async function editAppSetting(context: IFunctionAppWizardContext, node?: 
     const parent = node.parent.parent;
 
 
-    if (isResolvedFunction(parent)) {
+    if (isResolvedFunctionApp(parent)) {
         const client = await node.parent.clientProvider.createClient(context);
-        if (await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux)) { //Todo: add check for flex
+        if (await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex)) { //Todo: add check for flex
             const message = localize('eolWarning', 'Upgrade to latest available version as this version has reached end-of-life on and is no longer supported.'); //Todo: place holder
             const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
             await context.ui.showWarningMessage(message, { modal: true }, continueOn);
@@ -32,8 +32,3 @@ export async function editAppSetting(context: IFunctionAppWizardContext, node?: 
     }
     await node.edit(context);
 }
-
-export function isResolvedFunction(ti: unknown): ti is ResolvedFunctionAppResource {
-    return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
-}
-
