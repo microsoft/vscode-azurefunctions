@@ -47,9 +47,9 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
 
 
     await wizard.prompt();
+    wizardContext.activityTitle = localize('assigning', 'Assign user assigned identity to "{0}"', wizardContext.site?.fullName);
     await node.runWithTemporaryDescription(context, localize('enabling', 'Assigning identity...'), async () => {
         await wizard.execute();
-        wizardContext.activityTitle = localize('assigning', 'Assign user assigned identity "{1}" for "{0}"', wizardContext.site?.fullName, wizardContext.managedIdentity?.name);
     });
 
     void node.refresh(context)
