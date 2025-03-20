@@ -3,9 +3,9 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, AppSettingTreeItem } from "@microsoft/vscode-azext-azureappsettings";
+import { AppSettingTreeItem, type AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, nonNullProp, type AzureWizardExecuteStep, type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { type MessageItem } from "vscode";
 import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
@@ -16,24 +16,27 @@ import { ConnectionsListStep, type Connection } from "./ConnectionsListStep";
 import { RemoteSettingsAddStep } from "./RemoteSettingsAddStep";
 import { SettingsAddBaseStep } from "./SettingsAddBaseStep";
 
-export async function addRemoteMIConnections(context: IActionContext, node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
-    const connections: Connection[] = []
-    if (node instanceof AppSettingTreeItem) {
-        connections.push({ name: node.id, value: node.value });
-        await node.parent.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
-            await addRemoteMIConnectionsInternal(context, connections, node);
-        });
-    } else if (node instanceof AppSettingsTreeItem) {
-        await node.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
-            await addRemoteMIConnectionsInternal(context, undefined, node);
-        });
+export async function addRemoteMIConnections(context: AddMIConnectionsContext, node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
+    const connections: Connection[] = [];
+    if (!node) {
+        context.functionapp = await pickFunctionApp(context);
+        await addRemoteMIConnectionsInternal(context, connections);
     } else {
-        await addRemoteMIConnectionsInternal(context);
+        if (node instanceof AppSettingTreeItem) {
+            context.functionapp = node?.parent.parent as SlotTreeItem;
+            connections.push({ name: node.id, value: node.value });
+            node = node.parent;
+        } else {
+            context.functionapp = node?.parent as SlotTreeItem
+        }
+        await node.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
+            await addRemoteMIConnectionsInternal(context, connections);
+        });
     }
 }
 
-export async function addRemoteMIConnectionsInternal(context: IActionContext, connections?: Connection[], node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
-    const wizardContext: IActionContext & Partial<AddMIConnectionsContext> = {
+export async function addRemoteMIConnectionsInternal(context: AddMIConnectionsContext, connections?: Connection[]): Promise<void> {
+    const wizardContext: AddMIConnectionsContext = {
         ...context,
         ...await createActivityContext()
     };
@@ -46,16 +49,11 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
 
     const promptSteps: AzureWizardPromptStep<AddMIConnectionsContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<AddMIConnectionsContext>[] = [];
-    if (node instanceof AppSettingTreeItem) {
-        wizardContext.functionapp = node?.parent.parent as SlotTreeItem
-    } else {
-        wizardContext.functionapp = node?.parent as SlotTreeItem ?? await pickFunctionApp(wizardContext)
-    }
 
     if (!wizardContext.environment) {
-        wizardContext.credentials = wizardContext.functionapp.subscription.credentials;
-        wizardContext.environment = wizardContext.functionapp.subscription.environment;
-        wizardContext.subscriptionId = wizardContext.functionapp.subscription.subscriptionId;
+        wizardContext.credentials = nonNullProp(wizardContext, 'functionapp').subscription.credentials;
+        wizardContext.environment = nonNullProp(wizardContext, 'functionapp').subscription.environment;
+        wizardContext.subscriptionId = nonNullProp(wizardContext, 'functionapp').subscription.subscriptionId;
     }
 
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
