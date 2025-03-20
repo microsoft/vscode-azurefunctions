@@ -12,15 +12,15 @@ import { localize } from "../../localize";
 import { decryptLocalSettings } from "../appSettings/localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "../appSettings/localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
 export interface Connection {
     name: string;
     value: string;
 }
 
-export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnectionsContext> {
-    public async prompt(context: IAddMIConnectionsContext): Promise<void> {
+export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsContext> {
+    public async prompt(context: AddMIConnectionsContext): Promise<void> {
         const picks = await this.getPicks(context);
 
         if (picks.length === 0) {
@@ -39,11 +39,11 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
         }
     }
 
-    public shouldPrompt(context: IAddMIConnectionsContext): boolean {
+    public shouldPrompt(context: AddMIConnectionsContext): boolean {
         return !context.connections || context.connections.length === 0;
     }
 
-    private async getPicks(context: IAddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getPicks(context: AddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
         if (context.functionapp) {
             return this.getRemoteQuickPicks(context);
         } else {
@@ -51,24 +51,14 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
         }
     }
 
-    private async getLocalQuickPicks(context: IAddMIConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getLocalQuickPicks(context: AddMIConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
         const picks: IAzureQuickPickItem<Connection>[] = [];
         const message: string = localize('selectLocalSettings', 'Select the local settings to add identity settings for.');
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
-        const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
         context.localSettingsPath = localSettingsPath;
 
         if (await AzExtFsExtra.pathExists(localSettingsPath)) {
-            let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
-            if (localSettings.IsEncrypted) {
-                await decryptLocalSettings(context, localSettingsUri);
-                try {
-                    localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
-                } finally {
-                    await encryptLocalSettings(context, localSettingsUri);
-                }
-            }
-
+            const localSettings = await getLocalSettingsJson(context, localSettingsPath);
             if (localSettings.Values) {
                 for (const [key, value] of Object.entries(localSettings.Values)) {
                     if (!isSettingConvertible(key, value)) {
@@ -89,7 +79,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
         return picks;
     }
 
-    private async getRemoteQuickPicks(context: IAddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
+    private async getRemoteQuickPicks(context: AddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
         const picks: IAzureQuickPickItem<Connection>[] = [];
 
         const client = await nonNullValue(context.functionapp?.site.createClient(context));
@@ -112,4 +102,19 @@ export class ConnectionsListStep extends AzureWizardPromptStep<IAddMIConnections
 
         return picks;
     }
+}
+
+export async function getLocalSettingsJson(context: AddMIConnectionsContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
+    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
+    if (localSettings.IsEncrypted) {
+        await decryptLocalSettings(context, localSettingsUri);
+        try {
+            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+        } finally {
+            await encryptLocalSettings(context, localSettingsUri);
+        }
+    }
+
+    return localSettings;
 }

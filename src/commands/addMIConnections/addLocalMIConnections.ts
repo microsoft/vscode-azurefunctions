@@ -8,8 +8,8 @@ import { AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, t
 import { type MessageItem } from "vscode";
 import { localize } from "../../localize";
 import { createActivityContext } from "../../utils/activityUtils";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 import { ConnectionsListStep, type Connection } from "./ConnectionsListStep";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
 import { LocalSettingsAddStep } from "./LocalSettingsAddStep";
 import { SettingsAddBaseStep } from "./SettingsAddBaseStep";
 
@@ -26,7 +26,7 @@ export async function addLocalMIConnections(context: IActionContext, node?: AppS
 }
 
 export async function addLocalMIConnectionsInternal(context: IActionContext, connections?: Connection[]): Promise<void> {
-    const wizardContext: IActionContext & Partial<IAddMIConnectionsContext> = {
+    const wizardContext: IActionContext & Partial<AddMIConnectionsContext> = {
         ...context,
         ...await createActivityContext()
     };
@@ -37,13 +37,10 @@ export async function addLocalMIConnectionsInternal(context: IActionContext, con
 
     const title: string = localize('addLocalMIConnectionsInternal', 'Add Identity-Based Connections to Local Project');
 
-    const promptSteps: AzureWizardPromptStep<IAddMIConnectionsContext>[] = [];
-    const executeSteps: AzureWizardExecuteStep<IAddMIConnectionsContext>[] = [];
+    const promptSteps: AzureWizardPromptStep<AddMIConnectionsContext>[] = [new ConnectionsListStep()];
+    const executeSteps: AzureWizardExecuteStep<AddMIConnectionsContext>[] = [new SettingsAddBaseStep(), new LocalSettingsAddStep()];
 
-    promptSteps.push(new ConnectionsListStep())
-    executeSteps.push(new SettingsAddBaseStep(), new LocalSettingsAddStep());
-
-    const wizard: AzureWizard<IAddMIConnectionsContext> = new AzureWizard(wizardContext, {
+    const wizard: AzureWizard<AddMIConnectionsContext> = new AzureWizard(wizardContext, {
         title,
         promptSteps,
         executeSteps
@@ -53,6 +50,6 @@ export async function addLocalMIConnectionsInternal(context: IActionContext, con
     await wizard.execute();
 
     const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-    const message: string = localize('setConnectionsProperty', 'Successfully added local connections in order to use identity based connections you may need to set the connection property within your trigger.'); //Todo: edit this message
+    const message: string = localize('setConnectionsProperty', 'Successfully added local connections. In order to use identity based connections, you may need to set the connection properties within your trigger.');
     await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }

@@ -5,22 +5,22 @@
 
 import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
-import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
+import { getLocalSettingsJson } from "./ConnectionsListStep";
 
-export class LocalSettingsAddStep extends AzureWizardExecuteStep<IAddMIConnectionsContext> {
+export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
     public priority: number = 125;
 
-    public async execute(context: IAddMIConnectionsContext): Promise<void> {
+    public async execute(context: AddMIConnectionsContext): Promise<void> {
         // If right clicking on a connection we will have the connections to convert but not the local settings path
         if (!context.localSettingsPath) {
             const message: string = localize('selectLocalSettings', 'Select the local settings file to add connections to.');
             context.localSettingsPath = await getLocalSettingsFile(context, message);
         }
 
-        const localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(nonNullProp(context, 'localSettingsPath'));
+        const localSettings = await getLocalSettingsJson(context, context.localSettingsPath);
         if (localSettings.Values) {
             for (const connection of nonNullProp(context, 'connectionsToAdd')) {
                 localSettings.Values[connection.name] = connection.value;
@@ -36,7 +36,7 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<IAddMIConnectio
             await ext.rgApi.workspaceResourceTree.refresh(context);
         }
     }
-    public shouldExecute(context: IAddMIConnectionsContext): boolean {
+    public shouldExecute(context: AddMIConnectionsContext): boolean {
         return !context.functionapp && !!context.connections
     }
 }

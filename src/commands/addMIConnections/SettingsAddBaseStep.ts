@@ -7,13 +7,13 @@ import { createResourceClient } from "@microsoft/vscode-azext-azureappservice";
 import { CommonRoleDefinitions, createRoleId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardExecuteStep, nonNullProp, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../localize";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 import { type Connection } from "./ConnectionsListStep";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
 
-export class SettingsAddBaseStep extends AzureWizardExecuteStep<IAddMIConnectionsContext> {
+export class SettingsAddBaseStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
     public priority: number = 100;
 
-    public async execute(context: IAddMIConnectionsContext): Promise<void> {
+    public async execute(context: AddMIConnectionsContext): Promise<void> {
         context.roles = [];
         context.connectionsToAdd = [];
         for (const connection of nonNullProp(context, 'connections')) {
@@ -31,12 +31,12 @@ export class SettingsAddBaseStep extends AzureWizardExecuteStep<IAddMIConnection
         }
     }
 
-    public shouldExecute(context: IAddMIConnectionsContext): boolean {
+    public shouldExecute(context: AddMIConnectionsContext): boolean {
         return !!context.connections;
     }
 }
 
-async function getScopeHelper(context: IAddMIConnectionsContext, accountName: string, filter: string): Promise<string> {
+async function getScopeHelper(context: AddMIConnectionsContext, accountName: string, filter: string): Promise<string> {
     const client = await createResourceClient(context);
     const resources = await uiUtils.listAllIterator(client.resources.list({ filter: `resourceType eq '${filter}'` }));
 
@@ -49,22 +49,17 @@ async function getScopeHelper(context: IAddMIConnectionsContext, accountName: st
     throw new Error(localize('noResourceFound', `No resource found with name "{0}" in subscription "{1}"`, accountName, context.subscriptionDisplayName));
 }
 
+function addRole(context: AddMIConnectionsContext, scope: string, roleDefinition: typeof CommonRoleDefinitions[keyof typeof CommonRoleDefinitions]): void {
+    const role = {
+        scopeId: scope,
+        roleDefinitionId: createRoleId(context.subscriptionId, roleDefinition),
+        roleDefinitionName: roleDefinition.roleName
+    };
 
-
-function addRole(context: IAddMIConnectionsContext, scope: string, roleDefinition: typeof CommonRoleDefinitions[keyof typeof CommonRoleDefinitions]): void {
-    // Only assign roles if adding remote settings
-    if (context.functionapp) {
-        const role = {
-            scopeId: scope,
-            roleDefinitionId: createRoleId(context.subscriptionId, roleDefinition),
-            roleDefinitionName: roleDefinition.roleName
-        };
-
-        context.roles?.push(role);
-    }
+    context.roles?.push(role);
 }
 
-async function addStorageConnectionsAndRoles(context: IAddMIConnectionsContext, connection: Connection, webJobsStorage?: boolean) {
+async function addStorageConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection, webJobsStorage?: boolean) {
     // Storage connection strings are of format: DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=accountKey;EndpointSuffix=core.windows.net
     try {
         const storageAccountName = connection.value.split(';')[1].split('=')[1];
@@ -81,18 +76,20 @@ async function addStorageConnectionsAndRoles(context: IAddMIConnectionsContext, 
                 name: webJobsStorage ? 'AzureWebJobsStorage__tableServiceUri' : `${storageAccountName}__tableServiceUri`,
                 value: `https://${storageAccountName}.table.core.windows.net`,
             },
-            ...getClientIdAndCredentialProperties(context, webJobsStorage ? 'AzureWebJobsStorage' : storageAccountName)
+            ...getClientIdAndCredentialPropertiesForRemote(context, webJobsStorage ? 'AzureWebJobsStorage' : storageAccountName)
         );
-        const scope = await getScopeHelper(context, storageAccountName, 'Microsoft.Storage/storageAccounts')
-        addRole(context, scope, CommonRoleDefinitions.storageBlobDataOwner);
-        addRole(context, scope, CommonRoleDefinitions.storageQueueDataContributor);
+        if (context.functionapp) {
+            const scope = await getScopeHelper(context, storageAccountName, 'Microsoft.Storage/storageAccounts')
+            addRole(context, scope, CommonRoleDefinitions.storageBlobDataOwner);
+            addRole(context, scope, CommonRoleDefinitions.storageQueueDataContributor);
+        }
     } catch (e) {
         throw new Error(localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value));
     }
 
 }
 
-async function addDocumentConnectionsAndRoles(context: IAddMIConnectionsContext, connection: Connection) {
+async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // DocumentDB connection strings are of format: AccountEndpoint=https://<accountName>.documents.azure.com:443/;AccountKey=<accountKey>;
     try {
         const cosmosDbAccountURI = connection.value.split(';')[0].split('=')[1];
@@ -103,14 +100,14 @@ async function addDocumentConnectionsAndRoles(context: IAddMIConnectionsContext,
                 name: `${cosmosDbAccountName}__accountEndpoint`,
                 value: cosmosDbAccountURI,
             },
-            ...getClientIdAndCredentialProperties(context, cosmosDbAccountName)
+            ...getClientIdAndCredentialPropertiesForRemote(context, cosmosDbAccountName)
         );
     } catch (e) {
         throw new Error(localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value));
     }
 }
 
-async function addEventHubConnectionsAndRoles(context: IAddMIConnectionsContext, connection: Connection) {
+async function addEventHubConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // EventHub connection strings are of format: Endpoint=sb://<eventHubNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
     try {
 
@@ -121,19 +118,19 @@ async function addEventHubConnectionsAndRoles(context: IAddMIConnectionsContext,
                 name: `${eventHubNamespace}__fullyQualifiedNamespace`,
                 value: `${eventHubNamespace}.servicebus.windows.net`,
             },
-            ...getClientIdAndCredentialProperties(context, eventHubNamespace)
+            ...getClientIdAndCredentialPropertiesForRemote(context, eventHubNamespace)
         );
-
-        const scope = await getScopeHelper(context, eventHubNamespace, 'Microsoft.EventHub/Namespaces');
-
-        addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataOwner);
-        addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataReceiver);
+        if (context.functionapp) {
+            const scope = await getScopeHelper(context, eventHubNamespace, 'Microsoft.EventHub/Namespaces');
+            addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataOwner);
+            addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataReceiver);
+        }
     } catch (e) {
         throw new Error(localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value));
     }
 }
 
-async function addServiceBusConnectionsAndRoles(context: IAddMIConnectionsContext, connection: Connection) {
+async function addServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // ServiceBus connection strings are of format: Endpoint=sb://<serviceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
     try {
         const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
@@ -143,18 +140,19 @@ async function addServiceBusConnectionsAndRoles(context: IAddMIConnectionsContex
                 name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
                 value: `${serviceBusNamespace}.servicebus.windows.net`,
             },
-            ...getClientIdAndCredentialProperties(context, serviceBusNamespace)
+            ...getClientIdAndCredentialPropertiesForRemote(context, serviceBusNamespace)
         );
-
-        const scope = await getScopeHelper(context, serviceBusNamespace, 'Microsoft.ServiceBus/Namespaces');
-        addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
-        addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
+        if (context.functionapp) {
+            const scope = await getScopeHelper(context, serviceBusNamespace, 'Microsoft.ServiceBus/Namespaces');
+            addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
+            addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
+        }
     } catch (e) {
         throw new Error(localize('invalidServiceBusConnectionString', 'Unexpected ServiceBus connection string format: {0}', connection.value));
     }
 }
 
-function getClientIdAndCredentialProperties(context: IAddMIConnectionsContext, connectionName: string): Connection[] {
+function getClientIdAndCredentialPropertiesForRemote(context: AddMIConnectionsContext, connectionName: string): Connection[] {
     const clientIdAndConfigurationProperties: Connection[] = [];
     // Only add these properties if adding remote settings
     if (context.functionapp) {

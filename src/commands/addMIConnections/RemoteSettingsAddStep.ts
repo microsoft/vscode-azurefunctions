@@ -6,24 +6,21 @@
 import { activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
-export class RemoteSettingsAddStep extends AzureWizardExecuteStep<IAddMIConnectionsContext> {
+export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
     public priority: number = 110;
 
-    public async execute(context: IAddMIConnectionsContext): Promise<void> {
-        if (!context.functionapp) {
-            throw new Error(localize('functionAppNotFound', 'Function app not found.'));
+    public async execute(context: AddMIConnectionsContext): Promise<void> {
+        const client = await nonNullProp(context, 'functionapp').site.createClient(context);
+        const remoteSettings = await client.listApplicationSettings();
+        const properties = remoteSettings.properties || {};
+        for (const connection of nonNullProp(context, 'connectionsToAdd')) {
+            properties[connection.name] = connection.value;
         }
 
-        const client = await context.functionapp?.site.createClient(context);
-        const remoteSettings = await client.listApplicationSettings();
+        await client.updateApplicationSettings({ properties });
         for (const connection of nonNullProp(context, 'connectionsToAdd')) {
-            if (remoteSettings.properties) {
-                remoteSettings.properties[connection.name] = connection.value;
-            } else {
-                await client.updateApplicationSettings({ properties: { [connection.name]: connection.value } });
-            }
             context.activityChildren?.push(
                 new GenericTreeItem(undefined, {
                     contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
@@ -32,12 +29,10 @@ export class RemoteSettingsAddStep extends AzureWizardExecuteStep<IAddMIConnecti
                 })
             );
         }
-
-        await client.updateApplicationSettings({ properties: remoteSettings.properties });
         await ext.rgApi.tree.refresh(context);
     }
 
-    public shouldExecute(context: IAddMIConnectionsContext): boolean {
+    public shouldExecute(context: AddMIConnectionsContext): boolean {
         return !!context.functionapp && !!context.connections;
     }
 }

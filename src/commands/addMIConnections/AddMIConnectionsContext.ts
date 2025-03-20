@@ -8,7 +8,7 @@ import { type ExecuteActivityContext, type ISubscriptionActionContext } from "@m
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { type Connection } from "./ConnectionsListStep";
 
-export interface IAddMIConnectionsContext extends ExecuteActivityContext, IResourceGroupWizardContext, ISubscriptionActionContext {
+export interface AddMIConnectionsContext extends ExecuteActivityContext, IResourceGroupWizardContext, ISubscriptionActionContext {
     functionapp?: SlotTreeItem;
     connections?: Connection[];
     connectionsToAdd?: Connection[];

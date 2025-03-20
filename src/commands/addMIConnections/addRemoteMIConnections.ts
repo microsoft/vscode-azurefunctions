@@ -11,8 +11,8 @@ import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
 import { pickFunctionApp } from "../../utils/pickFunctionApp";
+import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 import { ConnectionsListStep, type Connection } from "./ConnectionsListStep";
-import { type IAddMIConnectionsContext } from "./IAddMIConnectionsContext";
 import { RemoteSettingsAddStep } from "./RemoteSettingsAddStep";
 import { SettingsAddBaseStep } from "./SettingsAddBaseStep";
 
@@ -33,7 +33,7 @@ export async function addRemoteMIConnections(context: IActionContext, node?: App
 }
 
 export async function addRemoteMIConnectionsInternal(context: IActionContext, connections?: Connection[], node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
-    const wizardContext: IActionContext & Partial<IAddMIConnectionsContext> = {
+    const wizardContext: IActionContext & Partial<AddMIConnectionsContext> = {
         ...context,
         ...await createActivityContext()
     };
@@ -44,8 +44,8 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
 
     const title: string = localize('addRemoteConnections', 'Add Function App Identity Connections');
 
-    const promptSteps: AzureWizardPromptStep<IAddMIConnectionsContext>[] = [];
-    const executeSteps: AzureWizardExecuteStep<IAddMIConnectionsContext>[] = [];
+    const promptSteps: AzureWizardPromptStep<AddMIConnectionsContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<AddMIConnectionsContext>[] = [];
     if (node instanceof AppSettingTreeItem) {
         wizardContext.functionapp = node?.parent.parent as SlotTreeItem
     } else {
@@ -61,7 +61,7 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
     executeSteps.push(new SettingsAddBaseStep(), new RemoteSettingsAddStep(), new RoleAssignmentExecuteStep(() => wizardContext.roles))
 
-    const wizard: AzureWizard<IAddMIConnectionsContext> = new AzureWizard(wizardContext, {
+    const wizard: AzureWizard<AddMIConnectionsContext> = new AzureWizard(wizardContext, {
         title,
         promptSteps,
         executeSteps
@@ -72,6 +72,6 @@ export async function addRemoteMIConnectionsInternal(context: IActionContext, co
     await context.ui.showWarningMessage(localize('rolesWillBeAssignedMessage', 'This command will assign a managed identity and roles would you like to continue?'), { modal: true }, continueOn);
     await wizard.execute();
 
-    const message: string = localize('setConnectionsProperty', 'Successfully added remote connections in order to use identity connections your application may require additional permisssions based on your code. You also may need to modify the connection property within your trigger.');
+    const message: string = localize('setConnectionsProperty', 'Successfully added remote connections. In order to use identity connections, your application may require additional permissions based on your code. You also may need to modify the connection property within your trigger.');
     await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }
