@@ -24,7 +24,10 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
         site: node.site,
-        resourceGroup: { location: node.site.location, name: node.site.resourceGroup },// we only need these two properties from the resource group
+        resourceGroup: {
+            name: node.site.resourceGroup,
+            location: node.site.location,
+        }, // we only need these two properties from the resource group
         ...node.subscription,
         ...(await createActivityContext())
     }

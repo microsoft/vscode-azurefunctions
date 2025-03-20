@@ -17,6 +17,7 @@ export function createSystemIdentityTreeItem(parent: ManagedIdentityTreeItem): S
         return new SystemIdentityTreeItem(parent, parent.parent.site.rawSite.identity);
     }
 }
+
 class SystemIdentityTreeItem extends AzExtParentTreeItem {
     public readonly identity: Identity;
     public readonly parent: ManagedIdentityTreeItem;
@@ -56,6 +57,7 @@ class SystemIdentityTreeItem extends AzExtParentTreeItem {
         return SystemIdentityTreeItem.contextValue + '/' + this.state;
     }
 }
+
 class DisabledIdentityTreeItem extends AzExtTreeItem {
     public readonly parent: ManagedIdentityTreeItem;
     public static contextValue: string = 'systemIdentity';
