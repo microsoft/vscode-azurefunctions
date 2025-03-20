@@ -2,7 +2,7 @@
 
 ### Bundle feed
 
-The templates come from the extension [bundle feed](https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json) under the `templates.v2` property.
+The templates come from the extension [bundle feed](https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json) under the `templates.v2` property.
 The extension looks at the `bundleVersions` to determine what the latest version is. It then uses the three properties `functions`, `userPrompts`, and `resources` to retrieve the jsons used to parse the templates.
 
 **NOTE: For v1, we use `bindings` instead of `userPrompts`**
