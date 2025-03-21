@@ -13,6 +13,7 @@ import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionT
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
 import { nonNullValue } from '../../utils/nonNull';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
+import { type StacksWizardContext } from '../createFunctionApp/stacks/StacksWizardContext';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
@@ -33,7 +34,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
 
     // Don't wait
     void window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
-        await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: StacksWizardContext) => {
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             postDeployContext.valuesToMask.push(...context.valuesToMask);
             context.telemetry.eventVersion = 2;

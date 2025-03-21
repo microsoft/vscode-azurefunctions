@@ -13,12 +13,15 @@ import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
+import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 import type * as api from '../../vscode-azurefunctions.api';
+import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
+import { getEOLMessage, shouldShowEolWarning } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
+export async function downloadAppSettings(context: IFunctionAppWizardContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
             filter: functionFilter,
@@ -26,7 +29,16 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
         });
     }
 
+    const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
+    if (isResolvedFunctionApp(parent)) {
+        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
+            const message: string = getEOLMessage(eolWarning);
+            const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
+            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
+        }
+    }
     await node.runWithTemporaryDescription(context, localize('downloading', 'Downloading...'), async () => {
         await downloadAppSettingsInternal(context, client);
     });

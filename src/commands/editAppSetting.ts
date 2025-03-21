@@ -10,7 +10,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isResolvedFunctionApp } from '../tree/ResolvedFunctionAppResource';
 import { type IFunctionAppWizardContext } from './createFunctionApp/IFunctionAppWizardContext';
-import { shouldShowEolWarning } from './createFunctionApp/stacks/getStackPicks';
+import { getEOLMessage, shouldShowEolWarning } from './createFunctionApp/stacks/getStackPicks';
 
 export async function editAppSetting(context: IFunctionAppWizardContext, node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
@@ -21,11 +21,11 @@ export async function editAppSetting(context: IFunctionAppWizardContext, node?: 
     }
     const parent = node.parent.parent;
 
-
     if (isResolvedFunctionApp(parent)) {
         const client = await node.parent.clientProvider.createClient(context);
-        if (await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex)) { //Todo: add check for flex
-            const message = localize('eolWarning', 'Upgrade to latest available version as this version has reached end-of-life on and is no longer supported.'); //Todo: place holder
+        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
+            const message: string = getEOLMessage(eolWarning);
             const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
             await context.ui.showWarningMessage(message, { modal: true }, continueOn);
         }

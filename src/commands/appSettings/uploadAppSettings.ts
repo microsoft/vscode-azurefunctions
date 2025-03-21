@@ -13,12 +13,15 @@ import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
+import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 import type * as api from '../../vscode-azurefunctions.api';
+import { getEOLMessage, shouldShowEolWarning } from "../createFunctionApp/stacks/getStackPicks";
+import { type StacksWizardContext } from "../createFunctionApp/stacks/StacksWizardContext";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
+export async function uploadAppSettings(context: StacksWizardContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
@@ -27,7 +30,16 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
         });
     }
 
+    const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
+    if (isResolvedFunctionApp(parent)) {
+        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
+            const message: string = getEOLMessage(eolWarning);
+            const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
+            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
+        }
+    }
     await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
         await uploadAppSettingsInternal(context, client, workspaceFolder, exclude);
     });

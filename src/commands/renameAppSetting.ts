@@ -4,11 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingTreeItem } from '@microsoft/vscode-azext-azureappsettings';
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
+import { isResolvedFunctionApp } from '../tree/ResolvedFunctionAppResource';
+import { type IFunctionAppWizardContext } from './createFunctionApp/IFunctionAppWizardContext';
+import { getEOLMessage, shouldShowEolWarning } from './createFunctionApp/stacks/getStackPicks';
 
-export async function renameAppSetting(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
+export async function renameAppSetting(context: IFunctionAppWizardContext, node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingTreeItem>(context, {
             filter: functionFilter,
@@ -16,5 +20,16 @@ export async function renameAppSetting(context: IActionContext, node?: AppSettin
         });
     }
 
+    const parent = node.parent.parent;
+
+    if (isResolvedFunctionApp(parent)) {
+        const client = await node.parent.clientProvider.createClient(context);
+        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
+            const message: string = getEOLMessage(eolWarning);
+            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
+        }
+    }
     await node.rename(context);
 }
