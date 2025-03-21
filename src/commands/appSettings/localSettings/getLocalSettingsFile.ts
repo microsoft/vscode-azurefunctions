@@ -32,8 +32,8 @@ export async function getLocalSettingsFile(context: IActionContext, message: str
     });
 }
 
-export async function getLocalSettingsFileNoPrompt(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder): Promise<string | undefined> {
-    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder);
+export async function tryGetLocalSettingsFileNoPrompt(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder | string | undefined): Promise<string | undefined> {
+    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder ?? '');
     if (projectPath) {
         const localSettingsFile: string = path.join(projectPath, localSettingsFileName);
         if (await AzExtFsExtra.pathExists(localSettingsFile)) {
