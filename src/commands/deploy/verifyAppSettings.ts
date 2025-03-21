@@ -52,10 +52,6 @@ export async function verifyAppSettings(options: {
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
 
-        // we should check to see if the user has any connections set up in the remotely, and keep track of that 'nothing|emulator|connectionstring|identity
-        // if the user has connections set up in the portal, we should prompt them to connect to a service
-
-        // TODO: change behavior here about updating the app settings according to remote/local setting chart
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             try {
