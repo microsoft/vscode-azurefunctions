@@ -8,41 +8,40 @@ import { isSettingConvertible } from '@microsoft/vscode-azext-azureappsettings';
 import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localEventHubsEmulatorConnectionRegExp, localStorageEmulatorConnectionString } from "../../constants";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
+import { localize } from "../../localize";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
-import { getLocalSettingsFileNoPrompt } from "../appSettings/localSettings/getLocalSettingsFile";
+import { tryGetLocalSettingsFileNoPrompt } from "../appSettings/localSettings/getLocalSettingsFile";
 
 type ConnectionSetting = { name: string, value: string, type: 'ConnectionString' | 'ManagedIdentity' | 'Emulator' };
 
-export async function verifyConnectionSettings(context: IActionContext, appSettings: StringDictionary, node: SlotTreeItem): Promise<void> {
-    const localSettingsPath = await getLocalSettingsFileNoPrompt(context, projectPath);
-    const localSettings: ILocalSettingsJson = await AzExtFsExtra.readJSON(localSettingsPath);
-    const localConnectionSettings = await getConnectionSettings(context, localSettings.Values);
-    const remoteConnectionSettings = await getConnectionSettings(context, appSettings.properties);
+export async function getWarningsForConnectionSettings(context: IActionContext,
+    options: {
+        appSettings: StringDictionary,
+        node: SlotTreeItem,
+        projectPath: string | undefined
+    }): Promise<string | undefined> {
 
-    // we should check to see if the user has an emulator connection in the local settings
-    if (localConnectionSettings.some(setting => setting.type === 'Emulator')) {
-        if (!remoteConnectionSettings.some(setting => setting.type === 'ConnectionString' || setting.type === 'ManagedIdentity')) {
-            // if they have anything in remote, ignore the emulator setting
-            return;
-        }
-        // if they have nothing in remote, prompt them to connect to a service
-
-    }
+    const localSettingsPath = await tryGetLocalSettingsFileNoPrompt(context, options.projectPath);
+    const localSettings: ILocalSettingsJson = localSettingsPath ? await AzExtFsExtra.readJSON(localSettingsPath) : { Values: {} };
+    const localConnectionSettings = await getConnectionSettings(localSettings.Values ?? {});
+    const remoteConnectionSettings = await getConnectionSettings(options.appSettings?.properties ?? {});
 
     if (localConnectionSettings.some(setting => setting.type === 'ManagedIdentity')) {
-        if (!node.site.rawSite.identity ||
-            node.site.rawSite.identity.type === 'None') {
-            // if they have anything in remote, ignore the managed identity setting
-            return;
+        if (!options.node.site.rawSite.identity ||
+            options.node.site.rawSite.identity.type === 'None') {
+            // if they have nothing in remote, warn them to connect a managed identity
+            return localize('configureManagedIdentityWarning',
+                'Your app is not connected to a managed identity. To ensure access, please configure a managed identity. Without it, your application may encounter authorization issues.');
         }
-        // if they have nothing in remote, prompt them to connect a managed identitye
     }
 
     if (localConnectionSettings.some(setting => setting.type === 'ConnectionString') || remoteConnectionSettings.some(setting => setting.type === 'ConnectionString')) {
-        // warn user against insecure connection strings
+        // if they have connection strings, warn them about insecure connections but don't try to convert them
+        return localize('connectionStringWarning',
+            'Your app may be using connection strings for authentication. This may expose sensitive credentials and lead to security vulnerabilities. Consider using managed identities to enhance security.')
     }
 
-    // if they connection strings, warn them about insecure connections but don't try to convert them
+    return;
 }
 
 function checkForConnectionSettings(property: { [propertyName: string]: string }): ConnectionSetting | undefined {
@@ -88,7 +87,7 @@ function checkForEmulatorSettings(property: { [propertyName: string]: string }):
 async function getConnectionSettings(properties: StringDictionary): Promise<ConnectionSetting[]> {
     const settings: ConnectionSetting[] = [];
     for (const [key, value] of Object.entries(properties)) {
-        const property = { propertyName: key, value: value };
+        const property = { propertyName: key, value: value as string };
         const connectionSetting = checkForManagedIdentitySettings(property) ?? checkForConnectionSettings(property) ?? checkForEmulatorSettings(property);
         if (connectionSetting) {
             settings.push(connectionSetting);

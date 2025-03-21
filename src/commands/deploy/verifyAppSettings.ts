@@ -29,12 +29,13 @@ export async function verifyAppSettings(options: {
     language: ProjectLanguage,
     languageModel: number | undefined,
     bools: VerifyAppSettingBooleans,
-    durableStorageType: DurableBackendValues | undefined
+    durableStorageType: DurableBackendValues | undefined,
+    appSettings: StringDictionary,
 }): Promise<void> {
 
     const { context, node, projectPath, version, language, bools, durableStorageType } = options;
     const client = await node.site.createClient(context);
-    const appSettings: StringDictionary = await client.listApplicationSettings();
+    const appSettings: StringDictionary = options.appSettings;
     if (appSettings.properties) {
         const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);

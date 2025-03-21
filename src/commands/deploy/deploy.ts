@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
+import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, type ExecuteActivityContext, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
@@ -27,6 +27,7 @@ import { validateEventHubsConnection } from '../appSettings/connectionSettings/e
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
+import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
@@ -141,7 +142,18 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await validateSqlDbConnection(context, context.projectPath);
     }
 
-    if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
+    const appSettings: StringDictionary = await client.listApplicationSettings();
+
+    // TODO: need new appservice package to append message to deploy confirmation message
+    const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
+        appSettings,
+        node,
+        projectPath: context.projectPath
+    });
+
+    if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
+        connectionStringWarningMessage) {
+        // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
         await showDeployConfirmation(context, node.site, deployCommandId);
     }
@@ -166,7 +178,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             language,
             languageModel,
             bools: { doRemoteBuild, isConsumption },
-            durableStorageType
+            durableStorageType,
+            appSettings
         });
     }
 

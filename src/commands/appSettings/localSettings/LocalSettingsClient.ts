@@ -11,7 +11,7 @@ import { type ILocalSettingsJson } from "../../../funcConfig/local.settings";
 import { type LocalProjectTreeItem } from "../../../tree/localProject/LocalProjectTreeItem";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
-import { getLocalSettingsFileNoPrompt } from "./getLocalSettingsFile";
+import { tryGetLocalSettingsFileNoPrompt } from "./getLocalSettingsFile";
 
 export class LocalSettingsClientProvider implements AppSettingsClientProvider {
     private _node: LocalProjectTreeItem;
@@ -37,7 +37,7 @@ export class LocalSettingsClient implements IAppSettingsClient {
 
     public async listApplicationSettings(): Promise<StringDictionary> {
         const result = await callWithTelemetryAndErrorHandling<StringDictionary | undefined>('listApplicationSettings', async (context: IActionContext) => {
-            const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, this._node.workspaceFolder);
+            const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, this._node.workspaceFolder);
             if (localSettingsPath === undefined) {
                 return { properties: {} };
             } else {
