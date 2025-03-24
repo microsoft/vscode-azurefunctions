@@ -392,6 +392,17 @@
                 "icon": "$(notebook-execute)"
             },
             {
+                "command": "azureFunctions.assignManagedIdentity",
+                "title": "%azureFunctions.assignManagedIdentity%",
+                "category": "Azure Functions",
+                "icon": "$(add)"
+            },
+            {
+                "command": "azureFunctions.enableSystemIdentity",
+                "title": "%azureFunctions.enableSystemIdentity%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                 "title": "%azureFunctions.durableTaskScheduler.copySchedulerConnectionString%",
                 "category": "Azure Functions"
@@ -727,6 +738,21 @@
                 {
                     "command": "azureResourceGroups.refresh",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.*folder/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.enableSystemIdentity",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /systemIdentity.*disabled/i",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.assignManagedIdentity",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /userAssignedIdentities/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.assignManagedIdentity",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /userAssignedIdentities/",
                     "group": "1@1"
                 },
                 {
@@ -1315,6 +1341,7 @@
         "all": "npm i && npm run lint && npm test"
     },
     "devDependencies": {
+        "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
         "@microsoft/eslint-config-azuretools": "^0.2.2",
         "@microsoft/vscode-azext-dev": "^2.0.2",
@@ -1366,7 +1393,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^3.3.1",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.4",
-        "@microsoft/vscode-azext-azureutils": "^3.1.5",
+        "@microsoft/vscode-azext-azureutils": "^3.1.6",
         "@microsoft/vscode-azext-utils": "^2.6.3",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",
