@@ -23,7 +23,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
             { label: localize('dedicated', 'App Service Plan'), data: [false, false, /^((?!EP|Y|FC).)*$/i] }
         ];
 
-        [context.useConsumptionPlan, context.useFlexConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+        [context.useConsumptionPlan, context.useFlexConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder, learnMoreLink: 'aka.ms/flexconsumption' })).data;
         await setLocationsTask(context);
         if (context.useConsumptionPlan) {
             setConsumptionPlanProperties(context);
