@@ -19,6 +19,7 @@ export type FullFunctionAppStack = {
 };
 
 export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext, ExecuteActivityContext, ICreateFunctionAppContext {
+    useFlexConsumptionPlan?: boolean;
     version: FuncVersion;
     language: string | undefined;
     stackFilter?: string;

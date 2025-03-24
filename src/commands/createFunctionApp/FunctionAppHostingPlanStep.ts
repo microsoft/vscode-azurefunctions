@@ -17,24 +17,20 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
-            { label: localize('flexConsumption', 'Flex Consumption'), data: [false, undefined] },
-            { label: localize('consumption', 'Consumption'), data: [true, undefined] },
+            { label: localize('flexConsumption', 'Flex Consumption'), data: [true, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y|FC).)*$/i] }
         ];
 
-        [context.useConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+        [context.useFlexConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
         await setLocationsTask(context);
-        if (context.useConsumptionPlan) {
-            setConsumptionPlanProperties(context);
-        } else if (!context.useConsumptionPlan && !context.planSkuFamilyFilter) {
-            // if it's not consumption and has no filter, then it's flex consumption
+        if (context.useFlexConsumptionPlan) {
             setFlexConsumptionPlanProperties(context);
         }
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return context.useConsumptionPlan === undefined && context.dockerfilePath === undefined;
+        return context.useFlexConsumptionPlan === undefined && context.dockerfilePath === undefined;
     }
 
     public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
@@ -42,11 +38,6 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
             setFlexConsumptionPlanProperties(context);
         }
     }
-}
-
-export function setConsumptionPlanProperties(context: IFunctionAppWizardContext): void {
-    context.newPlanName = `ASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
-    context.newPlanSku = { name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 };
 }
 
 export function setFlexConsumptionPlanProperties(context: IAppServiceWizardContext): void {
