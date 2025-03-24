@@ -50,6 +50,6 @@ export async function addLocalMIConnectionsInternal(context: IActionContext, con
     await wizard.execute();
 
     const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-    const message: string = localize('setConnectionsProperty', 'Successfully added local connections. In order to use identity based connections, you may need to set the connection properties within your trigger.');
+    const message: string = localize('setConnectionsProperty', 'Successfully added local connections. To use identity-based connections, you may need to configure the connection properties within your trigger.');
     await context.ui.showWarningMessage(message, { learnMoreLink: "https://aka.ms/AAuroke", modal: true }, continueOn);
 }

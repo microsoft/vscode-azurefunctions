@@ -44,11 +44,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
     }
 
     private async getPicks(context: AddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
-        if (context.functionapp) {
-            return this.getRemoteQuickPicks(context);
-        } else {
-            return this.getLocalQuickPicks(context);
-        }
+        return context.functionapp ? this.getRemoteQuickPicks(context) : this.getLocalQuickPicks(context)
     }
 
     private async getLocalQuickPicks(context: AddMIConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {
@@ -57,22 +53,20 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
         context.localSettingsPath = localSettingsPath;
 
-        if (await AzExtFsExtra.pathExists(localSettingsPath)) {
-            const localSettings = await getLocalSettingsJson(context, localSettingsPath);
-            if (localSettings.Values) {
-                for (const [key, value] of Object.entries(localSettings.Values)) {
-                    if (!isSettingConvertible(key, value)) {
-                        continue;
-                    }
-
-                    picks.push({
-                        label: key,
-                        data: {
-                            name: key,
-                            value: value
-                        }
-                    });
+        const localSettings = await getLocalSettingsJson(context, localSettingsPath);
+        if (localSettings.Values) {
+            for (const [key, value] of Object.entries(localSettings.Values)) {
+                if (!isSettingConvertible(key, value)) {
+                    continue;
                 }
+
+                picks.push({
+                    label: key,
+                    data: {
+                        name: key,
+                        value: value
+                    }
+                });
             }
         }
 

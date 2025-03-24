@@ -4,20 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingsTreeItem, isSettingConvertible } from '@microsoft/vscode-azext-azureappsettings';
-import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { LocalSettingsClientProvider } from '../../commands/appSettings/localSettings/LocalSettingsClient';
-import { decryptLocalSettings } from '../../commands/appSettings/localSettings/decryptLocalSettings';
-import { encryptLocalSettings } from '../../commands/appSettings/localSettings/encryptLocalSettings';
 import { getLocalSettingsFileNoPrompt } from '../../commands/appSettings/localSettings/getLocalSettingsFile';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IParsedHostJson } from '../../funcConfig/host';
-import { type ILocalSettingsJson } from '../../funcConfig/local.settings';
+import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
 import { type LocalProjectInternal } from '../../workspace/listLocalProjects';
 import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from '../IProjectTreeItem';
@@ -74,33 +71,21 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         const result = await callWithTelemetryAndErrorHandling<LocalProjectTreeItem>('listApplicationSettings', async (context: IActionContext) => {
             const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, localProject.options.folder);
             if (localSettingsPath) {
-                if (await AzExtFsExtra.pathExists(localSettingsPath)) {
-                    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-                    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
-                    if (localSettings.IsEncrypted) {
-                        await decryptLocalSettings(context, localSettingsUri);
-                        try {
-                            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
-                        } finally {
-                            await encryptLocalSettings(context, localSettingsUri);
+                const localSettings = await getLocalSettingsJson(context, localSettingsPath);
+                if (localSettings.Values) {
+                    for (const [key, value] of Object.entries(localSettings.Values)) {
+                        if (!isSettingConvertible(key, value)) {
+                            continue;
                         }
-                    }
-                    if (localSettings.Values) {
-                        for (const [key, value] of Object.entries(localSettings.Values)) {
-                            if (!isSettingConvertible(key, value)) {
-                                continue;
-                            }
 
-                            this.contextValue = 'azFuncLocalProject;convert';
-                        }
+                        this.contextValue = 'azFuncLocalProject;convert';
                     }
                 }
             }
 
+
             return new LocalProjectTreeItem(parent, localProject);
         });
-
-
         return result ?? new LocalProjectTreeItem(parent, localProject);
     }
 
