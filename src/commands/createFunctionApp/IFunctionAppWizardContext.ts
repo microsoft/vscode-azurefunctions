@@ -24,6 +24,7 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
     durableStorageType?: DurableBackendValues;
+    useFlexConsumptionPlan?: boolean;
 
     // Detected local connection string
     hasAzureStorageConnection?: boolean;

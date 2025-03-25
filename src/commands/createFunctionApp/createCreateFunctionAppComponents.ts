@@ -65,7 +65,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
-        wizardContext.useConsumptionPlan = true;
+        wizardContext.useFlexConsumptionPlan = true;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
