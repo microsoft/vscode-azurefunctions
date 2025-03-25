@@ -44,7 +44,7 @@ suite('Create New Python Project', () => {
         const venvName: string = 'testVenv';
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [modelV2Input] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [] });
         });
     });
 
@@ -54,7 +54,7 @@ suite('Create New Python Project', () => {
         await createTestVenv(projectPath, 'testVenv1');
         await createTestVenv(projectPath, venvName);
         await runWithTestActionContext('createProject', async context => {
-            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [modelV2Input, venvName] });
+            await createAndValidateProject(context, { ...getPythonValidateOptions(venvName, FuncVersion.v4, PythonModelVersion.v2), projectPath, inputs: [venvName] });
         });
     });
 });
