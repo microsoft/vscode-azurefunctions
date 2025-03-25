@@ -20,7 +20,7 @@ suite('Add Binding', () => {
         await cleanTestWorkspace();
         const testWorkspacePath = getTestWorkspaceFolder();
         await runWithTestActionContext('createNewProject', async (context) => {
-            await context.ui.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, /http\s*trigger/i, functionName, 'Anonymous'], async () => {
+            await context.ui.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, /http\s*trigger/i, functionName, /*'Anonymous' JavaScript V4 HttpTrigger doesn't ask this question for some reason */], async () => {
                 await createNewProjectInternal(context, {});
             });
         })
