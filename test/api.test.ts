@@ -11,7 +11,7 @@ import { extensionId, FuncVersion, nonNullValue, ProjectLanguage, registerOnActi
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelInput, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
@@ -28,7 +28,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3], functionName], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 suppressOpenFolder: true,
@@ -55,7 +55,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi2');
 
-        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3]], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,

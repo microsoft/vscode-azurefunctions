@@ -8,7 +8,7 @@ import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelInput, NodeModelVersion } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelVersion } from './validateProject';
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -24,10 +24,8 @@ const testCases: CreateProjectTestCase[] = [
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     // Node tests
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
-    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v3]], languageModelVersion: NodeModelVersion.v3 },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [NodeModelInput[NodeModelVersion.v4]], languageModelVersion: NodeModelVersion.v4 },
+    { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: [], languageModelVersion: NodeModelVersion.v4 },
+    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [], languageModelVersion: NodeModelVersion.v4 },
     // PowerShell tests
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
     // Custom language tests
