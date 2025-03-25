@@ -34,7 +34,10 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 suppressOpenFolder: true,
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
-                functionSettings: { authLevel: 'anonymous' },
+                functionSettings: {
+                    authLevel: 'anonymous',
+                    'azureFunctions.projectLanguageModel': '4'
+                },
                 targetFramework: ['net6.0', 'net7.0', 'net8.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
             });
         });
@@ -60,7 +63,10 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionName,
                 templateId: 'HttpTrigger',
                 languageFilter: /^(Java|Type)Script$/i,
-                functionSettings: { authLevel: 'anonymous' },
+                functionSettings: {
+                    authLevel: 'anonymous',
+                    'azureFunctions.projectLanguageModel': '4'
+                },
                 suppressOpenFolder: true
             });
         });
@@ -85,7 +91,9 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionName,
                 templateId: 'HttpTrigger',
                 languageFilter: /^C\#$/i,
-                functionSettings: { authLevel: 'anonymous' },
+                functionSettings: {
+                    authLevel: 'anonymous'
+                },
                 targetFramework: ['net8.0', 'net7.0', 'net6.0']
             });
         });
