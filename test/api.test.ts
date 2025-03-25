@@ -42,7 +42,6 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder);
         validateOptions.expectedPaths.push(
             path.join(projectSubpath, functionName, 'index.js'),
-            path.join(projectSubpath, functionName, 'function.json'),
             path.join(projectSubpath, 'package.json')
         );
         // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
@@ -68,8 +67,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
 
         const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true);
         validateOptions.expectedPaths.push(
-            path.join(functionName, 'index.js'),
-            path.join(functionName, 'function.json')
+            path.join(functionName, 'index.js')
         );
         await validateProject(folderPath, validateOptions);
     });
