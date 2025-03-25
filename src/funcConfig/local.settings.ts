@@ -66,13 +66,16 @@ export async function setLocalAppSetting(context: IActionContext, functionAppPat
     await AzExtFsExtra.writeJSON(localSettingsPath, settings);
 }
 
-export async function getLocalSettingsJson(context: IActionContext, localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalSettingsJson> {
+export async function getLocalSettingsJson(context: IActionContext, localSettingsPath: string, allowOverwrite: boolean = false, swallowError?: boolean): Promise<ILocalSettingsJson> {
     if (await AzExtFsExtra.pathExists(localSettingsPath)) {
         const data: string = (await AzExtFsExtra.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
                 return parseJson(data);
             } catch (error) {
+                if (swallowError) {
+                    return {} as ILocalSettingsJson;
+                }
                 if (allowOverwrite) {
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);
                     const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };

@@ -5,12 +5,10 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { isSettingConvertible } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import * as vscode from 'vscode';
-import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
+import { AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import type * as vscode from 'vscode';
+import { getLocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
-import { decryptLocalSettings } from "../appSettings/localSettings/decryptLocalSettings";
-import { encryptLocalSettings } from "../appSettings/localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
@@ -55,19 +53,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
 
         const localSettings = await getLocalSettingsJson(context, localSettingsPath);
         if (localSettings.Values) {
-            for (const [key, value] of Object.entries(localSettings.Values)) {
-                if (!isSettingConvertible(key, value)) {
-                    continue;
-                }
-
-                picks.push({
-                    label: key,
-                    data: {
-                        name: key,
-                        value: value
-                    }
-                });
-            }
+            addPicks(localSettings.Values, picks);
         }
 
         return picks;
@@ -79,36 +65,26 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
         const client = await nonNullValue(context.functionapp?.site.createClient(context));
         const appSettings: StringDictionary = await client.listApplicationSettings();
         if (appSettings.properties) {
-            for (const [key, value] of Object.entries(appSettings.properties)) {
-                if (!isSettingConvertible(key, value)) {
-                    continue;
-                }
-
-                picks.push({
-                    label: key,
-                    data: {
-                        name: key,
-                        value: value
-                    }
-                });
-            }
+            addPicks(appSettings.properties, picks);
         }
 
         return picks;
     }
 }
 
-export async function getLocalSettingsJson(context: AddMIConnectionsContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
-    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
-    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-    if (localSettings.IsEncrypted) {
-        await decryptLocalSettings(context, localSettingsUri);
-        try {
-            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
-        } finally {
-            await encryptLocalSettings(context, localSettingsUri);
+function addPicks(settings: { [key: string]: string }, picks: IAzureQuickPickItem<Connection>[]): IAzureQuickPickItem<Connection>[] {
+    for (const [key, value] of Object.entries(settings)) {
+        if (!isSettingConvertible(key, value)) {
+            continue;
         }
-    }
 
-    return localSettings;
+        picks.push({
+            label: key,
+            data: {
+                name: key,
+                value: value
+            }
+        });
+    }
+    return picks;
 }

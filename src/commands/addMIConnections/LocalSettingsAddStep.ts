@@ -5,10 +5,10 @@
 
 import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
+import { getLocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
-import { getLocalSettingsJson } from "./ConnectionsListStep";
 
 export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
     public priority: number = 125;

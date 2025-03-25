@@ -5,11 +5,9 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type AppSettingsClientProvider, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import * as vscode from 'vscode';
-import { type ILocalSettingsJson } from "../../../funcConfig/local.settings";
-import { decryptLocalSettings } from "./decryptLocalSettings";
-import { encryptLocalSettings } from "./encryptLocalSettings";
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
+import type * as vscode from 'vscode';
+import { getLocalSettingsJson, type ILocalSettingsJson } from "../../../funcConfig/local.settings";
 import { getLocalSettingsFileNoPrompt } from "./getLocalSettingsFile";
 
 export class LocalSettingsClientProvider implements AppSettingsClientProvider {
@@ -40,17 +38,7 @@ export class LocalSettingsClient implements IAppSettingsClient {
             if (localSettingsPath === undefined) {
                 return { properties: {} };
             } else {
-                const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-
-                let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
-                if (localSettings.IsEncrypted) {
-                    await decryptLocalSettings(context, localSettingsUri);
-                    try {
-                        localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
-                    } finally {
-                        await encryptLocalSettings(context, localSettingsUri);
-                    }
-                }
+                const localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath, false, true);
                 return { properties: localSettings.Values };
             }
         });
