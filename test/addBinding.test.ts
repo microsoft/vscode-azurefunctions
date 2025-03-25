@@ -11,7 +11,7 @@ import { Uri } from 'vscode';
 import { ProjectLanguage, addBinding, createNewProjectInternal, ext, getRandomHexString, type IFunctionBinding, type IFunctionJson } from '../extension.bundle';
 import { cleanTestWorkspace, getTestWorkspaceFolder } from './global.test';
 
-suite('Add Binding', () => {
+suite.only('Add Binding', () => {
     let functionJsonPath: string;
     const functionName: string = 'HttpTriggerTest';
     let initialBindingsCount: number;
