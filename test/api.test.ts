@@ -11,7 +11,7 @@ import { extensionId, FuncVersion, nonNullValue, ProjectLanguage, registerOnActi
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
@@ -34,15 +34,12 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 suppressOpenFolder: true,
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
-                functionSettings: {
-                    authLevel: 'anonymous',
-                    'azureFunctions.projectLanguageModel': '4'
-                },
+                functionSettings: { authLevel: 'anonymous' },
                 targetFramework: ['net6.0', 'net7.0', 'net8.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder);
+        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder, NodeModelVersion.v4);
         validateOptions.expectedPaths.push(
             path.join(projectSubpath, 'src', 'functions', `${functionName}.js`),
             path.join(projectSubpath, 'package.json')
@@ -63,15 +60,12 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionName,
                 templateId: 'HttpTrigger',
                 languageFilter: /^(Java|Type)Script$/i,
-                functionSettings: {
-                    authLevel: 'anonymous',
-                    'azureFunctions.projectLanguageModel': '4'
-                },
+                functionSettings: { authLevel: 'anonymous' },
                 suppressOpenFolder: true
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true);
+        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4);
         validateOptions.expectedPaths.push(
             path.join('src', 'functions', `${functionName}.js`)
         );
