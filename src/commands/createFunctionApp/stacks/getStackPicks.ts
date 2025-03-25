@@ -73,7 +73,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
                         break;
                 }
 
-                if (shouldShowEolWarningStacks(minorVersion)) {
+                if (shouldShowEolWarning(minorVersion)) {
                     description = localize('endOfLife', `$(extensions-warning-message)`)
                     hasEndOfLife = true;
                 }
@@ -267,7 +267,7 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
     }
 }
 
-export function shouldShowEolWarningStacks(minorVersion?: AppStackMinorVersion<FunctionAppRuntimes>): boolean {
+export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<FunctionAppRuntimes>): boolean {
     const endOfLifeDate = minorVersion?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
     if (endOfLifeDate) {
         const endOfLife = new Date(endOfLifeDate);

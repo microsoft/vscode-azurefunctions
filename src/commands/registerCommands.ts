@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
+import { AppSettingsTreeItem, AppSettingTreeItem, type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsettings';
 import {
     registerCommand,
     registerCommandWithTreeNodeUnwrapping,
@@ -12,15 +12,17 @@ import {
     type AzExtParentTreeItem,
     type AzExtTreeItem,
     type IActionContext,
+    type ISubscriptionActionContext
 } from '@microsoft/vscode-azext-utils';
-import { commands, languages } from 'vscode';
+import { commands, languages, type MessageItem } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { localize } from '../localize';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
+import { isResolvedFunctionApp, ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
@@ -34,6 +36,7 @@ import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
+import { getEolWarningMessages } from './createFunctionApp/stacks/getStackPicks';
 import { createNewProjectFromCommand, createNewProjectInternal } from './createNewProject/createNewProject';
 import { CreateDockerfileProjectStep } from './createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
 import { createSlot } from './createSlot';
@@ -90,14 +93,27 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.add',
-        async (context: IActionContext, node?: AzExtParentTreeItem) =>
-            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node),
-    );
+        async (context: ISubscriptionActionContext, node?: AzExtParentTreeItem) => {
+            if ((isResolvedFunctionApp(node?.parent))) {
+                const client: IAppSettingsClient = await node?.parent.site.createClient(context)
+                const eolWarningMessage = await getEolWarningMessages(context, node?.parent.site.rawSite, client.isLinux, node?.parent.isFlex, client);
+                const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+                await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+            }
+            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node)
+        });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.delete',
-        async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node),
-    );
+        async (context: ISubscriptionActionContext, node?: AzExtTreeItem) => {
+            if ((isResolvedFunctionApp(node?.parent?.parent))) {
+                const client: IAppSettingsClient = await node?.parent?.parent.site.createClient(context)
+                const eolWarningMessage = await getEolWarningMessages(context, node?.parent?.parent.site.rawSite, client.isLinux, node?.parent?.parent.isFlex, client);
+                const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+                await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+            }
+            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node)
+        });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.edit', editAppSetting);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.encrypt', encryptLocalSettings);

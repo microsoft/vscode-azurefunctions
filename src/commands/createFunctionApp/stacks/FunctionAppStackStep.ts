@@ -12,7 +12,7 @@ import { InstanceMemoryMBPromptStep } from '../flex/InstanceMemoryMBPromptStep';
 import { MaximumInstanceCountPromptStep } from '../flex/MaximumInstanceCountPromptStep';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
-import { getStackPicks, shouldShowEolWarningStacks } from './getStackPicks';
+import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionAppWizardContext> {
     public async prompt(context: IFlexFunctionAppWizardContext): Promise<void> {
@@ -60,7 +60,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
 
     public async getSubWizard(context: IFlexFunctionAppWizardContext): Promise<IWizardOptions<IFlexFunctionAppWizardContext>> {
         const promptSteps: AzureWizardPromptStep<IFlexFunctionAppWizardContext>[] = [];
-        if (shouldShowEolWarningStacks(context.newSiteStack?.minorVersion)) {
+        if (shouldShowEolWarning(context.newSiteStack?.minorVersion)) {
             promptSteps.push(new FunctionAppEOLWarningStep());
         }
         if (context.newSiteOS === undefined) {

@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingsTreeItem, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName } from "../../constants";
 import { viewOutput } from "../../constants-nls";
@@ -15,13 +15,12 @@ import { getLocalSettingsJson, type ILocalSettingsJson } from "../../funcConfig/
 import { localize } from "../../localize";
 import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 import type * as api from '../../vscode-azurefunctions.api';
-import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { getEolWarningMessages } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function downloadAppSettings(context: IFunctionAppWizardContext, node?: AppSettingsTreeItem): Promise<void> {
+export async function downloadAppSettings(context: ISubscriptionActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
             filter: functionFilter,
