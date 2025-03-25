@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingsTreeItem, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { viewOutput } from "../../constants-nls";
@@ -15,13 +15,12 @@ import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 import type * as api from '../../vscode-azurefunctions.api';
-import { getEOLMessage, shouldShowEolWarning } from "../createFunctionApp/stacks/getStackPicks";
-import { type StacksWizardContext } from "../createFunctionApp/stacks/StacksWizardContext";
+import { getEolWarningMessages } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function uploadAppSettings(context: StacksWizardContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
+export async function uploadAppSettings(context: ISubscriptionActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
@@ -33,12 +32,9 @@ export async function uploadAppSettings(context: StacksWizardContext, node?: App
     const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
     if (isResolvedFunctionApp(parent)) {
-        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
-        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
-            const message: string = getEOLMessage(eolWarning);
-            const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
-            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
-        }
+        const eolWarningMessage = await getEolWarningMessages(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
+        await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
     }
     await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
         await uploadAppSettingsInternal(context, client, workspaceFolder, exclude);

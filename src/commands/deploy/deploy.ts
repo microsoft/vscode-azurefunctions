@@ -5,10 +5,10 @@
 
 import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, type ExecuteActivityContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, DurableBackend, ProjectLanguage, ScmType, deploySubpathSetting, hostFileName, remoteBuildSetting, type DurableBackendValues } from '../../constants';
+import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, type DurableBackendValues } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -25,6 +25,7 @@ import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
+import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -141,9 +142,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await validateSqlDbConnection(context, context.projectPath);
     }
 
-    if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
+    const subContext = {
+        ...context
+    } as unknown as ISubscriptionActionContext;
+
+    const eolWarningMessage = await getEolWarningMessages(subContext, node.site.rawSite, client.isLinux, isFlexConsumption, client);
+
+    if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) || eolWarningMessage) {
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId);
+        await showDeployConfirmation(context, node.site, deployCommandId, [eolWarningMessage]);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);

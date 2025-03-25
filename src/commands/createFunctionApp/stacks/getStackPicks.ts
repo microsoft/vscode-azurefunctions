@@ -9,7 +9,7 @@ import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsettings';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
 import { funcVersionLink } from '../../../FuncVersion';
@@ -20,7 +20,6 @@ import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IF
 import { backupStacks } from './backupStacks';
 import { type AppStackMinorVersion } from './models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
-import { type StacksWizardContext } from './StacksWizardContext';
 
 export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
     const stacks: FunctionAppStack[] = isFlex ?
@@ -153,7 +152,7 @@ function getPriority(ss: FunctionAppRuntimes): number {
 }
 
 type StacksArmResponse = { value: { properties: FunctionAppStack }[] };
-async function getStacks(context: StacksWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
+async function getStacks(context: ISubscriptionActionContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
     if (!context._stacks) {
         let stacksArmResponse: StacksArmResponse;
         try {
@@ -182,7 +181,7 @@ async function getStacks(context: StacksWizardContext & { _stacks?: FunctionAppS
     return context._stacks;
 }
 
-async function getFlexStacks(context: StacksWizardContext & { _stacks?: FunctionAppStack[] }, location?: string): Promise<FunctionAppStack[]> {
+async function getFlexStacks(context: ISubscriptionActionContext & { _stacks?: FunctionAppStack[] }, location?: string): Promise<FunctionAppStack[]> {
     const client: ServiceClient = await createGenericClient(context, context);
     location = location ?? (await LocationListStep.getLocation(context)).name;
     const flexFunctionAppStacks: FunctionAppStack[] = [];
@@ -278,18 +277,11 @@ export function shouldShowEolWarningStacks(minorVersion?: AppStackMinorVersion<F
     return false
 }
 
-interface EOLWarning {
-    isEOL: boolean;
-    willBeEOL: boolean;
-    displayVersion: string | undefined;
-    endofLifeDate: string | undefined;
-}
-
 /**
  * This function checks the end of life date for stack and returns true if the date is passed or within 6 months from now.
  * This version should only be used when checking stack versions on a function app.
  */
-export async function shouldShowEolWarning(context: StacksWizardContext, site: Site, linux?: boolean, isFlex?: boolean, client?: SiteClient | IAppSettingsClient): Promise<EOLWarning | undefined> {
+export async function getEolWarningMessages(context: ISubscriptionActionContext, site: Site, linux?: boolean, isFlex?: boolean, client?: SiteClient | IAppSettingsClient): Promise<string> {
     let isEOL = false;
     let willBeEOL = false;
     let version: string | undefined;
@@ -328,26 +320,19 @@ export async function shouldShowEolWarning(context: StacksWizardContext, site: S
         const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
         isEOL = displayInfo.endOfLife <= new Date();
         willBeEOL = displayInfo.endOfLife <= sixMonthsFromNow;
-        return {
-            isEOL,
-            willBeEOL,
-            displayVersion: displayInfo.displayVersion,
-            endofLifeDate: displayInfo.endOfLife?.toLocaleDateString()
-        };
+        if (isEOL) {
+            return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+        } else if (willBeEOL) {
+            return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+        } else {
+            return '';
+        }
     }
 
-    return undefined;
+    return '';
 }
 
-export function getEOLMessage(eolWarning: EOLWarning): string {
-    if (eolWarning.isEOL) {
-        return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', eolWarning.displayVersion, eolWarning.endofLifeDate);
-    } else {
-        return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', eolWarning.displayVersion, eolWarning.endofLifeDate);
-    }
-}
-
-async function getEOLDate(context: StacksWizardContext, version: string, runtime: string, isFlex?: boolean, location?: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+async function getEOLDate(context: ISubscriptionActionContext, version: string, runtime: string, isFlex?: boolean, location?: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
     const stacks = isFlex ? (await getFlexStacks(context, location)).filter(s => runtime === s.value) : (await getStacks(context)).filter(s => runtime === s.value);
     const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === version));
     const filteredStack = versionFilteredStacks[0].minorVersions[0];
@@ -366,7 +351,7 @@ async function getEOLDate(context: StacksWizardContext, version: string, runtime
     }
 }
 
-async function getEOLLinuxFxVersion(context: StacksWizardContext, linuxFxVersion: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFxVersion: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
     const stacks = (await getStacks(context)).filter(s =>
         s.majorVersions.some(mv =>
             mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion)

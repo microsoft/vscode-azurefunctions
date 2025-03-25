@@ -16,7 +16,7 @@ import { localize } from "../../localize";
 import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 import type * as api from '../../vscode-azurefunctions.api';
 import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
-import { getEOLMessage, shouldShowEolWarning } from "../createFunctionApp/stacks/getStackPicks";
+import { getEolWarningMessages } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
@@ -32,12 +32,9 @@ export async function downloadAppSettings(context: IFunctionAppWizardContext, no
     const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
     if (isResolvedFunctionApp(parent)) {
-        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
-        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
-            const message: string = getEOLMessage(eolWarning);
-            const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
-            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
-        }
+        const eolWarningMessage = await getEolWarningMessages(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        const continueOn: vscode.MessageItem = { title: localize('continueOn', 'Continue') };
+        await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
     }
     await node.runWithTemporaryDescription(context, localize('downloading', 'Downloading...'), async () => {
         await downloadAppSettingsInternal(context, client);

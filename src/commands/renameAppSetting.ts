@@ -10,7 +10,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isResolvedFunctionApp } from '../tree/ResolvedFunctionAppResource';
 import { type IFunctionAppWizardContext } from './createFunctionApp/IFunctionAppWizardContext';
-import { getEOLMessage, shouldShowEolWarning } from './createFunctionApp/stacks/getStackPicks';
+import { getEolWarningMessages } from './createFunctionApp/stacks/getStackPicks';
 
 export async function renameAppSetting(context: IFunctionAppWizardContext, node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
@@ -24,12 +24,9 @@ export async function renameAppSetting(context: IFunctionAppWizardContext, node?
 
     if (isResolvedFunctionApp(parent)) {
         const client = await node.parent.clientProvider.createClient(context);
-        const eolWarning = await shouldShowEolWarning(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
-        if (eolWarning && (eolWarning.isEOL || eolWarning.willBeEOL)) {
-            const message: string = getEOLMessage(eolWarning);
-            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-            await context.ui.showWarningMessage(message, { modal: true }, continueOn);
-        }
+        const eolWarningMessage = await getEolWarningMessages(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+        await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
     }
     await node.rename(context);
 }
