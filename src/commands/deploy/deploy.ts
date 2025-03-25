@@ -144,18 +144,22 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const appSettings: StringDictionary = await client.listApplicationSettings();
 
-    // TODO: need new appservice package to append message to deploy confirmation message
+    const deploymentWarningMessages: string[] = [];
     const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
         appSettings,
         node,
         projectPath: context.projectPath
     });
 
+    if (connectionStringWarningMessage) {
+        deploymentWarningMessages.push(connectionStringWarningMessage);
+    }
+
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
-        connectionStringWarningMessage) {
+        deploymentWarningMessages.length > 0) {
         // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId);
+        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
