@@ -7,7 +7,7 @@ import { type StringDictionary } from "@azure/arm-appservice";
 import { isSettingConvertible } from "@microsoft/vscode-azext-azureappsettings";
 import { AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import type * as vscode from 'vscode';
-import { getLocalSettingsJson } from "../../funcConfig/local.settings";
+import { getLocalSettingsJsonwithEncryption } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
@@ -51,7 +51,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
         const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
         context.localSettingsPath = localSettingsPath;
 
-        const localSettings = await getLocalSettingsJson(context, localSettingsPath);
+        const localSettings = await getLocalSettingsJsonwithEncryption(context, localSettingsPath);
         if (localSettings.Values) {
             addPicks(localSettings.Values, picks);
         }

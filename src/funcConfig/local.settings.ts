@@ -5,7 +5,9 @@
 
 import { AzExtFsExtra, DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
+import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
+import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
 import { localSettingsFileName, type ConnectionKeyValues } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
@@ -66,16 +68,13 @@ export async function setLocalAppSetting(context: IActionContext, functionAppPat
     await AzExtFsExtra.writeJSON(localSettingsPath, settings);
 }
 
-export async function getLocalSettingsJson(context: IActionContext, localSettingsPath: string, allowOverwrite: boolean = false, swallowError?: boolean): Promise<ILocalSettingsJson> {
+export async function getLocalSettingsJson(context: IActionContext, localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalSettingsJson> {
     if (await AzExtFsExtra.pathExists(localSettingsPath)) {
         const data: string = (await AzExtFsExtra.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
                 return parseJson(data);
             } catch (error) {
-                if (swallowError) {
-                    return {} as ILocalSettingsJson;
-                }
                 if (allowOverwrite) {
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);
                     const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };
@@ -92,4 +91,18 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
     return {
         IsEncrypted: false // Include this by default otherwise the func cli assumes settings are encrypted and fails to run
     };
+}
+
+export async function getLocalSettingsJsonwithEncryption(context: IActionContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
+    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
+    if (localSettings.IsEncrypted) {
+        await decryptLocalSettings(context, localSettingsUri);
+        try {
+            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+        } finally {
+            await encryptLocalSettings(context, localSettingsUri);
+        }
+    }
+    return localSettings;
 }

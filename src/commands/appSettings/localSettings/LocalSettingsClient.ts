@@ -38,7 +38,7 @@ export class LocalSettingsClient implements IAppSettingsClient {
             if (localSettingsPath === undefined) {
                 return { properties: {} };
             } else {
-                const localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath, false, true);
+                const localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath, false);
                 return { properties: localSettings.Values };
             }
         });

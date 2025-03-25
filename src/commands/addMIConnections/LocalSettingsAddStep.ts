@@ -5,7 +5,7 @@
 
 import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
-import { getLocalSettingsJson } from "../../funcConfig/local.settings";
+import { getLocalSettingsJsonwithEncryption } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSettingsFile";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
@@ -20,7 +20,7 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnection
             context.localSettingsPath = await getLocalSettingsFile(context, message);
         }
 
-        const localSettings = await getLocalSettingsJson(context, context.localSettingsPath);
+        const localSettings = await getLocalSettingsJsonwithEncryption(context, context.localSettingsPath);
         if (localSettings.Values) {
             for (const connection of nonNullProp(context, 'connectionsToAdd')) {
                 localSettings.Values[connection.name] = connection.value;

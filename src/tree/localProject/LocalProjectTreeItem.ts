@@ -71,7 +71,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         const result = await callWithTelemetryAndErrorHandling<LocalProjectTreeItem>('listApplicationSettings', async (context: IActionContext) => {
             const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, localProject.options.folder);
             if (localSettingsPath) {
-                const localSettings = await getLocalSettingsJson(context, localSettingsPath, false, true);
+                const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
                 if (localSettings.Values) {
                     for (const [key, value] of Object.entries(localSettings.Values)) {
                         if (!isSettingConvertible(key, value)) {
