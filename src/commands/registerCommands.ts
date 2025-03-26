@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AppSettingTreeItem, AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
+import { AppSettingsTreeItem, AppSettingTreeItem } from '@microsoft/vscode-azext-azureappsettings';
 import {
     registerCommand,
     registerCommandWithTreeNodeUnwrapping,
@@ -12,6 +12,7 @@ import {
     type AzExtParentTreeItem,
     type AzExtTreeItem,
     type IActionContext,
+    type ISubscriptionActionContext
 } from '@microsoft/vscode-azext-utils';
 import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
@@ -34,6 +35,7 @@ import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
+import { showEolWarningIfNecessary } from './createFunctionApp/stacks/getStackPicks';
 import { createNewProjectFromCommand, createNewProjectInternal } from './createNewProject/createNewProject';
 import { CreateDockerfileProjectStep } from './createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
 import { createSlot } from './createSlot';
@@ -90,14 +92,21 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addBinding', addBinding);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.add',
-        async (context: IActionContext, node?: AzExtParentTreeItem) =>
-            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node),
-    );
+        async (context: ISubscriptionActionContext, node?: AzExtParentTreeItem) => {
+            if (node?.parent) {
+                await showEolWarningIfNecessary(context, node?.parent)
+            }
+            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node)
+        });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.delete',
-        async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node),
-    );
+        async (context: ISubscriptionActionContext, node?: AzExtTreeItem) => {
+            if (node?.parent?.parent) {
+                await showEolWarningIfNecessary(context, node?.parent?.parent)
+            }
+            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node)
+        });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.edit', editAppSetting);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.encrypt', encryptLocalSettings);
