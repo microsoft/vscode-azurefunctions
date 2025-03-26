@@ -9,11 +9,13 @@ import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsettings';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
+import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type AzExtParentTreeItem, type IAzureQuickPickItem, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
 import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
 import { funcVersionLink } from '../../../FuncVersion';
 import { localize } from '../../../localize';
+import { isResolvedFunctionApp } from '../../../tree/ResolvedFunctionAppResource';
 import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -278,8 +280,7 @@ export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<Functio
 }
 
 /**
- * This function checks the end of life date for stack and returns true if the date is passed or within 6 months from now.
- * This version should only be used when checking stack versions on a function app.
+ * This function checks the end of life date for stack and returns a message if the stack is end of life or will be end of life in 6 months.
  */
 export async function getEolWarningMessages(context: ISubscriptionActionContext, site: Site, linux?: boolean, isFlex?: boolean, client?: SiteClient | IAppSettingsClient): Promise<string> {
     let isEOL = false;
@@ -330,6 +331,15 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
     }
 
     return '';
+}
+
+export async function showEolWarningIfNecessary(context: ISubscriptionActionContext, parent: AzExtParentTreeItem, client?: IAppSettingsClient) {
+    if (isResolvedFunctionApp(parent)) {
+        client = client ?? await parent.site.createClient(context);
+        const eolWarningMessage = await getEolWarningMessages(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+        await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+    }
 }
 
 async function getEOLDate(context: ISubscriptionActionContext, version: string, runtime: string, isFlex?: boolean, location?: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
