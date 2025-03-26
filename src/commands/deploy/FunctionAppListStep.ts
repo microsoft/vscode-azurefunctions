@@ -35,7 +35,7 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
             }
         });
 
-        qp.unshift({ label: '$(plus) Create new function app', data: undefined });
+        qp.unshift({ label: '$(plus) Create new function app...', data: undefined });
         return qp;
     }
 
