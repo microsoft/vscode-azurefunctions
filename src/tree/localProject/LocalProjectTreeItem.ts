@@ -68,22 +68,10 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     }
 
     static async createLocalProjectTreeItem(parent: AzExtParentTreeItem, localProject: LocalProjectInternal): Promise<LocalProjectTreeItem> {
-        const result = await callWithTelemetryAndErrorHandling<LocalProjectTreeItem>('listApplicationSettings', async (context: IActionContext) => {
-            const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, localProject.options.folder);
-            if (localSettingsPath) {
-                const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
-                if (localSettings.Values) {
-                    for (const [key, value] of Object.entries(localSettings.Values)) {
-                        if (!isSettingConvertible(key, value)) {
-                            continue;
-                        }
-
-                        this.contextValue = 'azFuncLocalProject;convert';
-                    }
-                }
-            }
-
-            return new LocalProjectTreeItem(parent, localProject);
+        const result = await callWithTelemetryAndErrorHandling('createlocalProjectTreeItem', async (context: IActionContext) => {
+            const ti: LocalProjectTreeItem = new LocalProjectTreeItem(parent, localProject);
+            await ti.refresh(context);
+            return ti;
         });
         return result ?? new LocalProjectTreeItem(parent, localProject);
     }
@@ -143,5 +131,21 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
                 await this.refresh(context);
             }
         });
+    }
+
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, this.project.options.folder);
+        if (localSettingsPath) {
+            const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
+            if (localSettings.Values) {
+                for (const [key, value] of Object.entries(localSettings.Values)) {
+                    if (!isSettingConvertible(key, value)) {
+                        continue;
+                    }
+
+                    this.contextValue = 'azFuncLocalProject;convert';
+                }
+            }
+        }
     }
 }

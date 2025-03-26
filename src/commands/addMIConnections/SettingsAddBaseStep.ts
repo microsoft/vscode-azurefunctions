@@ -61,6 +61,9 @@ function addRole(context: AddMIConnectionsContext, scope: string, roleDefinition
 
 async function addStorageConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection, webJobsStorage?: boolean) {
     // Storage connection strings are of format: DefaultEndpointsProtocol=https;AccountName=storageAccountName;AccountKey=accountKey;EndpointSuffix=core.windows.net
+    if (connection.value === '') {
+        throw new Error(localize('emptyStorageConnectionString', 'Storage connection string is empty. Please provide a valid connection string.'));
+    }
     try {
         const storageAccountName = connection.value.split(';')[1].split('=')[1];
         context.connectionsToAdd?.push(
@@ -91,6 +94,9 @@ async function addStorageConnectionsAndRoles(context: AddMIConnectionsContext, c
 
 async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // DocumentDB connection strings are of format: AccountEndpoint=https://<accountName>.documents.azure.com:443/;AccountKey=<accountKey>;
+    if (connection.value === '') {
+        throw new Error(localize('emptyCosmosDBConnectionString', 'Cosmos DB connection string is empty. Please provide a valid connection string.'));
+    }
     try {
         const cosmosDbAccountURI = connection.value.split(';')[0].split('=')[1];
         const cosmosDbAccountName = connection.value.split(';')[0].split('/')[2].split('.')[0];
@@ -109,6 +115,9 @@ async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, 
 
 async function addEventHubConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // EventHub connection strings are of format: Endpoint=sb://<eventHubNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
+    if (connection.value === '') {
+        throw new Error(localize('emptyEventHubConnectionString', 'Event hub connection string is empty. Please provide a valid connection string.'));
+    }
     try {
 
         const eventHubNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
@@ -132,6 +141,9 @@ async function addEventHubConnectionsAndRoles(context: AddMIConnectionsContext, 
 
 async function addServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // ServiceBus connection strings are of format: Endpoint=sb://<serviceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
+    if (connection.value === '') {
+        throw new Error(localize('emptyServiceBusConnectionString', 'Service bus connection string is empty. Please provide a valid connection string.'));
+    }
     try {
         const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 

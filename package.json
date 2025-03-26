@@ -507,7 +507,7 @@
                 },
                 {
                     "command": "azureFunctions.addLocalMIConnections",
-                    "when": "view == azureWorkspace && viewItem =~ /(azFuncLocalProject.*convert|applicationSettingItem.*localSettings)/i",
+                    "when": "view == azureWorkspace && viewItem =~ /(azFuncLocalProject.*convert)|(applicationSettingItem.*convertSetting.*localSettings)|(applicationSettings.*convert.*localSetting)/i",
                     "group": "1@3"
                 },
                 {
