@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AppSettingsTreeItem, AppSettingTreeItem, type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsettings';
+import { AppSettingsTreeItem, AppSettingTreeItem } from '@microsoft/vscode-azext-azureappsettings';
 import {
     registerCommand,
     registerCommandWithTreeNodeUnwrapping,
@@ -14,15 +14,14 @@ import {
     type IActionContext,
     type ISubscriptionActionContext
 } from '@microsoft/vscode-azext-utils';
-import { commands, languages, type MessageItem } from 'vscode';
+import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
-import { localize } from '../localize';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { isResolvedFunctionApp, ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
+import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
@@ -36,7 +35,7 @@ import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunctionFromCommand } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
-import { getEolWarningMessages } from './createFunctionApp/stacks/getStackPicks';
+import { showEolWarningIfNecessary } from './createFunctionApp/stacks/getStackPicks';
 import { createNewProjectFromCommand, createNewProjectInternal } from './createNewProject/createNewProject';
 import { CreateDockerfileProjectStep } from './createNewProject/dockerfileSteps/CreateDockerfileProjectStep';
 import { createSlot } from './createSlot';
@@ -94,11 +93,8 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.add',
         async (context: ISubscriptionActionContext, node?: AzExtParentTreeItem) => {
-            if ((isResolvedFunctionApp(node?.parent))) {
-                const client: IAppSettingsClient = await node?.parent.site.createClient(context)
-                const eolWarningMessage = await getEolWarningMessages(context, node?.parent.site.rawSite, client.isLinux, node?.parent.isFlex, client);
-                const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-                await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+            if (node?.parent) {
+                await showEolWarningIfNecessary(context, node?.parent)
             }
             await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node)
         });
@@ -106,11 +102,8 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.delete',
         async (context: ISubscriptionActionContext, node?: AzExtTreeItem) => {
-            if ((isResolvedFunctionApp(node?.parent?.parent))) {
-                const client: IAppSettingsClient = await node?.parent?.parent.site.createClient(context)
-                const eolWarningMessage = await getEolWarningMessages(context, node?.parent?.parent.site.rawSite, client.isLinux, node?.parent?.parent.isFlex, client);
-                const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-                await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+            if (node?.parent?.parent) {
+                await showEolWarningIfNecessary(context, node?.parent?.parent)
             }
             await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node)
         });

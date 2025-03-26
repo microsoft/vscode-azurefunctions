@@ -279,10 +279,19 @@ export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<Functio
     return false
 }
 
+export interface eolWarningOptions {
+    site: Site;
+    isLinux?: boolean;
+    isFlex?: boolean;
+    client?: SiteClient | IAppSettingsClient;
+    location?: string;
+    version?: string;
+    runtime?: string
+}
 /**
  * This function checks the end of life date for stack and returns a message if the stack is end of life or will be end of life in 6 months.
  */
-export async function getEolWarningMessages(context: ISubscriptionActionContext, site: Site, linux?: boolean, isFlex?: boolean, client?: SiteClient | IAppSettingsClient): Promise<string> {
+export async function getEolWarningMessages(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<string> {
     let isEOL = false;
     let willBeEOL = false;
     let version: string | undefined;
@@ -291,29 +300,52 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
         displayVersion: string | undefined;
     } = { endOfLife: undefined, displayVersion: undefined };
 
-    if (isFlex) {
-        const runtime = site.functionAppConfig?.runtime?.name;
-        version = site.functionAppConfig?.runtime?.version;
-        displayInfo = (await getEOLDate(context, nonNullValue(version), nonNullValue(runtime), true, site.location));
-    } else if (linux) {
-        const linuxFxVersion = site.siteConfig?.linuxFxVersion;
+    if (options.isFlex) {
+        const runtime = options.site.functionAppConfig?.runtime?.name;
+        version = options.site.functionAppConfig?.runtime?.version;
+        displayInfo = (await getEOLDate(context, {
+            site: options.site,
+            version: nonNullValue(version),
+            runtime: nonNullValue(runtime),
+            isFlex: true,
+            location: options.site.location
+        })
+        );
+    } else if (options.isLinux) {
+        const linuxFxVersion = options.site.siteConfig?.linuxFxVersion;
         displayInfo = await getEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
-    } else {
-        if (site.siteConfig) {
-            let appSettings: StringDictionary | undefined;
-            if (client) {
-                appSettings = await client.listApplicationSettings();
-            }
+    } else if (options.site.siteConfig) {
+        if (options.site.siteConfig.netFrameworkVersion && !options.site.siteConfig.powerShellVersion && !options.site.siteConfig.javaVersion) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: options.site.siteConfig.netFrameworkVersion,
+                runtime: 'dotnet'
+            }));
+        } else if (options.site.siteConfig.javaVersion) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: options.site.siteConfig.javaVersion,
+                runtime: 'java'
+            }));
+        } else if (options.site.siteConfig.powerShellVersion) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: options.site.siteConfig.powerShellVersion,
+                runtime: 'powershell'
+            }));
+        }
 
-            if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
-                displayInfo = (await getEOLDate(context, appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'], 'node'));
-            } else if (site.siteConfig.netFrameworkVersion && !site.siteConfig.powerShellVersion && !site.siteConfig.javaVersion) {
-                displayInfo = (await getEOLDate(context, site.siteConfig.netFrameworkVersion, 'dotnet'));
-            } else if (site.siteConfig.javaVersion) {
-                displayInfo = (await getEOLDate(context, site.siteConfig.javaVersion, 'java'));
-            } else if (site.siteConfig.powerShellVersion) {
-                displayInfo = (await getEOLDate(context, site.siteConfig.powerShellVersion, 'powershell'));
-            }
+        // In order to get the node version, we need to check the app settings
+        let appSettings: StringDictionary | undefined;
+        if (options.client) {
+            appSettings = await options.client.listApplicationSettings();
+        }
+        if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
+                runtime: 'node'
+            }));
         }
     }
 
@@ -325,8 +357,6 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
             return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
         } else if (willBeEOL) {
             return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
-        } else {
-            return '';
         }
     }
 
@@ -336,18 +366,27 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
 export async function showEolWarningIfNecessary(context: ISubscriptionActionContext, parent: AzExtParentTreeItem, client?: IAppSettingsClient) {
     if (isResolvedFunctionApp(parent)) {
         client = client ?? await parent.site.createClient(context);
-        const eolWarningMessage = await getEolWarningMessages(context, parent.site.rawSite, client.isLinux, parent.isFlex, client);
+        const eolWarningMessage = await getEolWarningMessages(context, {
+            site: parent.site.rawSite,
+            isLinux: client.isLinux,
+            isFlex: parent.isFlex,
+            client
+        });
         const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
         await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
     }
 }
 
-async function getEOLDate(context: ISubscriptionActionContext, version: string, runtime: string, isFlex?: boolean, location?: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
-    const stacks = isFlex ? (await getFlexStacks(context, location)).filter(s => runtime === s.value) : (await getStacks(context)).filter(s => runtime === s.value);
-    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === version));
+async function getEOLDate(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+    const stacks = options.isFlex ?
+        (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
+        (await getStacks(context)).filter(s => options.runtime === s.value);
+    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
     const filteredStack = versionFilteredStacks[0].minorVersions[0];
     const displayVersion = filteredStack?.displayText;
-    const endOfLifeDate = filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
+    const endOfLifeDate = options.isFlex ?
+        filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
+        filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
     if (endOfLifeDate) {
         const endOfLife = new Date(endOfLifeDate)
         return {

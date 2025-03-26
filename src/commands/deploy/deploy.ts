@@ -146,7 +146,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         ...context
     } as unknown as ISubscriptionActionContext;
 
-    const eolWarningMessage = await getEolWarningMessages(subContext, node.site.rawSite, client.isLinux, isFlexConsumption, client);
+    const eolWarningMessage = await getEolWarningMessages(subContext, {
+        site: node.site.rawSite,
+        isLinux: client.isLinux,
+        isFlex: isFlexConsumption,
+        client
+    });
 
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) || eolWarningMessage) {
         const deployCommandId = 'azureFunctions.deploy';
