@@ -306,7 +306,7 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
         displayInfo = (await getEOLDate(context, {
             site: options.site,
             version: nonNullValue(version),
-            runtime: nonNullValue(runtime),
+            runtime: nonNullValue(runtime) === 'dotnet-isolated' ? 'dotnet' : nonNullValue(runtime),
             isFlex: true,
             location: options.site.location
         })
