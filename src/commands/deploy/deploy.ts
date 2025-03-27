@@ -5,10 +5,10 @@
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, type ExecuteActivityContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, DurableBackend, ProjectLanguage, ScmType, deploySubpathSetting, hostFileName, remoteBuildSetting, type DurableBackendValues } from '../../constants';
+import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, type DurableBackendValues } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -25,6 +25,7 @@ import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
+import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
@@ -153,6 +154,21 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (connectionStringWarningMessage) {
         deploymentWarningMessages.push(connectionStringWarningMessage);
+    }
+
+    const subContext = {
+        ...context
+    } as unknown as ISubscriptionActionContext;
+
+    const eolWarningMessage = await getEolWarningMessages(subContext, {
+        site: node.site.rawSite,
+        isLinux: client.isLinux,
+        isFlex: isFlexConsumption,
+        client
+    });
+
+    if (eolWarningMessage) {
+        deploymentWarningMessages.push(eolWarningMessage);
     }
 
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||

@@ -4,11 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingTreeItem } from '@microsoft/vscode-azext-azureappsettings';
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
+import { type IFunctionAppWizardContext } from './createFunctionApp/IFunctionAppWizardContext';
+import { showEolWarningIfNecessary } from './createFunctionApp/stacks/getStackPicks';
 
-export async function renameAppSetting(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
+export async function renameAppSetting(context: IFunctionAppWizardContext, node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingTreeItem>(context, {
             filter: functionFilter,
@@ -16,5 +18,8 @@ export async function renameAppSetting(context: IActionContext, node?: AppSettin
         });
     }
 
+    const parent = node.parent.parent;
+
+    await showEolWarningIfNecessary(context, nonNullValue(parent))
     await node.rename(context);
 }
