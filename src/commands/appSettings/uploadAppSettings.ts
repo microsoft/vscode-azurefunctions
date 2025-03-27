@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingsTreeItem, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, nonNullValue, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { viewOutput } from "../../constants-nls";
@@ -14,11 +14,12 @@ import { ext } from "../../extensionVariables";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import type * as api from '../../vscode-azurefunctions.api';
+import { showEolWarningIfNecessary } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
+export async function uploadAppSettings(context: ISubscriptionActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
@@ -27,7 +28,9 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
         });
     }
 
+    const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
+    await showEolWarningIfNecessary(context, nonNullValue(parent), client);
     await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
         await uploadAppSettingsInternal(context, client, workspaceFolder, exclude);
     });

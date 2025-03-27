@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingsTreeItem, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
-import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, nonNullValue, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName } from "../../constants";
 import { viewOutput } from "../../constants-nls";
@@ -14,11 +14,12 @@ import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, type ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import type * as api from '../../vscode-azurefunctions.api';
+import { showEolWarningIfNecessary } from "../createFunctionApp/stacks/getStackPicks";
 import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
 import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
 import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
-export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
+export async function downloadAppSettings(context: ISubscriptionActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
             filter: functionFilter,
@@ -26,7 +27,9 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
         });
     }
 
+    const parent = node.parent;
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
+    await showEolWarningIfNecessary(context, nonNullValue(parent), client);
     await node.runWithTemporaryDescription(context, localize('downloading', 'Downloading...'), async () => {
         await downloadAppSettingsInternal(context, client);
     });
