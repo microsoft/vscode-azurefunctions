@@ -196,10 +196,23 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
         } catch (error) {
+            // azurite.azurite Check to see if azurite extension is installed
+            const azuriteExtension = vscode.extensions.getExtension('azurite.azurite');
+            const installOrRun: vscode.MessageItem = azuriteExtension ? { title: localize('runAzurite', 'Run Emulator') } : { title: localize('installAzurite', 'Install Azurite') };
             const message: string = localize('failedToConnectEmulator', 'Failed to verify "{0}" connection specified in "{1}". Is the local emulator installed and running?', ConnectionKey.Storage, localSettingsFileName);
             const learnMoreLink: string = process.platform === 'win32' ? 'https://aka.ms/AA4ym56' : 'https://aka.ms/AA4yef8';
             const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug anyway') };
-            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink, modal: true, stepName: 'failedToConnectEmulator' }, debugAnyway);
+            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink, modal: true, stepName: 'failedToConnectEmulator' }, debugAnyway, installOrRun);
+            if (result === installOrRun) {
+                if (azuriteExtension) {
+                    await vscode.commands.executeCommand('azurite.start_blob');
+                }
+                else {
+                    await vscode.commands.executeCommand('workbench.extensions.installExtension', 'azurite.azurite');
+                }
+                return await validateEmulatorIsRunning(context, projectPath);
+            }
+
             return result === debugAnyway;
         }
     }
