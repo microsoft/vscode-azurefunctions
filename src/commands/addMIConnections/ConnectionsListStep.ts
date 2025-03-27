@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
-import { isSettingConvertible } from "@microsoft/vscode-azext-azureappsettings";
+import { isSettingConnectionString } from "@microsoft/vscode-azext-azureappsettings";
 import { AzureWizardPromptStep, nonNullValue, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import type * as vscode from 'vscode';
 import { getLocalSettingsJsonwithEncryption } from "../../funcConfig/local.settings";
@@ -74,7 +74,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
 
 function addPicks(settings: { [key: string]: string }, picks: IAzureQuickPickItem<Connection>[]): IAzureQuickPickItem<Connection>[] {
     for (const [key, value] of Object.entries(settings)) {
-        if (!isSettingConvertible(key, value)) {
+        if (!isSettingConnectionString(value)) {
             continue;
         }
 
