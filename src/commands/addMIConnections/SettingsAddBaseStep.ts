@@ -19,14 +19,12 @@ export class SettingsAddBaseStep extends AzureWizardExecuteStep<AddMIConnections
         for (const connection of nonNullProp(context, 'connections')) {
             if (connection.name.includes('AzureWebJobsStorage')) {
                 await addStorageConnectionsAndRoles(context, connection, true);
-            } else if (connection.name.includes('STORAGE')) {
+            } else if ((/DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[^;]+;EndpointSuffix=[^;]+/).test(connection.value)) {
                 await addStorageConnectionsAndRoles(context, connection);
-            } else if (connection.name.includes('DOCUMENTDB')) {
+            } else if ((/AccountEndpoint=https:\/\/[^;]+;AccountKey=[^;]+;/).test(connection.value)) {
                 await addDocumentConnectionsAndRoles(context, connection);
-            } else if (connection.name.includes('EVENTHUB')) {
-                await addEventHubConnectionsAndRoles(context, connection);
-            } else if (connection.name.includes('SERVICEBUS')) {
-                await addServiceBusConnectionsAndRoles(context, connection);
+            } else if ((/Endpoint=sb:\/\/[^;]+;SharedAccessKeyName=[^;]+;SharedAccessKey=[^;]+(?:;EntityPath=[^;]+)?/).test(connection.value)) {
+                await addEventHubServiceBusConnectionsAndRoles(context, connection);
             }
         }
     }
@@ -113,56 +111,66 @@ async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, 
     }
 }
 
-async function addEventHubConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
+async function addEventHubServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
     // EventHub connection strings are of format: Endpoint=sb://<eventHubNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
     if (connection.value === '') {
-        throw new Error(localize('emptyEventHubConnectionString', 'Event hub connection string is empty. Please provide a valid connection string.'));
+        throw new Error(localize('emptyEventHubConnectionString', 'Connection string is empty. Please provide a valid connection string.'));
     }
     try {
-
-        const eventHubNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
+        const namespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
         context.connectionsToAdd?.push(
             {
-                name: `${eventHubNamespace}__fullyQualifiedNamespace`,
-                value: `${eventHubNamespace}.servicebus.windows.net`,
+                name: `${namespace}__fullyQualifiedNamespace`,
+                value: `${namespace}.servicebus.windows.net`,
             },
-            ...getClientIdAndCredentialPropertiesForRemote(context, eventHubNamespace)
+            ...getClientIdAndCredentialPropertiesForRemote(context, namespace)
         );
         if (context.functionapp) {
-            const scope = await getScopeHelper(context, eventHubNamespace, 'Microsoft.EventHub/Namespaces');
-            addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataOwner);
-            addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataReceiver);
+            let scope = '';
+            try {
+                scope = await getScopeHelper(context, namespace, 'Microsoft.EventHub/Namespaces');
+            } catch (e) {
+                scope = await getScopeHelper(context, namespace, 'Microsoft.ServiceBus/Namespaces');
+            }
+
+            if (scope.includes('Microsoft.EventHub/Namespaces')) {
+                addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataOwner);
+                addRole(context, scope, CommonRoleDefinitions.azureEventHubsDataReceiver);
+            } else {
+                addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
+                addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
+            }
         }
     } catch (e) {
         throw new Error(localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value));
     }
 }
 
-async function addServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
-    // ServiceBus connection strings are of format: Endpoint=sb://<serviceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
-    if (connection.value === '') {
-        throw new Error(localize('emptyServiceBusConnectionString', 'Service bus connection string is empty. Please provide a valid connection string.'));
-    }
-    try {
-        const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
+// async function addServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
+//     // ServiceBus connection strings are of format: Endpoint=sb://<serviceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
+//     if (connection.value === '') {
+//         throw new Error(localize('emptyServiceBusConnectionString', 'Service bus connection string is empty. Please provide a valid connection string.'));
+//     }
+//     try {
+//         const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
 
-        context.connectionsToAdd?.push(
-            {
-                name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
-                value: `${serviceBusNamespace}.servicebus.windows.net`,
-            },
-            ...getClientIdAndCredentialPropertiesForRemote(context, serviceBusNamespace)
-        );
-        if (context.functionapp) {
-            const scope = await getScopeHelper(context, serviceBusNamespace, 'Microsoft.ServiceBus/Namespaces');
-            addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
-            addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
-        }
-    } catch (e) {
-        throw new Error(localize('invalidServiceBusConnectionString', 'Unexpected ServiceBus connection string format: {0}', connection.value));
-    }
-}
+//         context.connectionsToAdd?.push(
+//             {
+//                 name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
+//                 value: `${serviceBusNamespace}.servicebus.windows.net`,
+//             },
+//             ...getClientIdAndCredentialPropertiesForRemote(context, serviceBusNamespace)
+//         );
+//         if (context.functionapp) {
+//             const scope = await getScopeHelper(context, serviceBusNamespace, 'Microsoft.ServiceBus/Namespaces');
+//             addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
+//             addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
+//         }
+//     } catch (e) {
+//         throw new Error(localize('invalidServiceBusConnectionString', 'Unexpected ServiceBus connection string format: {0}', connection.value));
+//     }
+// }
 
 function getClientIdAndCredentialPropertiesForRemote(context: AddMIConnectionsContext, connectionName: string): Connection[] {
     const clientIdAndConfigurationProperties: Connection[] = [];
