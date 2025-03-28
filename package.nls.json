@@ -22,6 +22,8 @@
     "azureFunctions.createNewProjectWithDockerfile": "Create New Containerized Project...",
     "azureFunctions.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azureFunctions.createSlot": "Create Slot...",
+    "azureFunctions.addLocalMIConnections": "Add Local Project Identity Connections...",
+    "azureFunctions.addRemoteMIConnections": "Add Function App Identity Connections...",
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
     "azureFunctions.deleteSlot": "Delete Slot...",

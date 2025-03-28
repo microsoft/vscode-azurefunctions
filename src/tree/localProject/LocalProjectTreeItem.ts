@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem } from '@microsoft/vscode-azext-azureappsettings';
+import { AppSettingsTreeItem, isSettingConnectionString } from '@microsoft/vscode-azext-azureappsettings';
 import { callWithTelemetryAndErrorHandling, type AzExtParentTreeItem, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { LocalSettingsClientProvider } from '../../commands/appSettings/localSettings/LocalSettingsClient';
+import { tryGetLocalSettingsFileNoPrompt } from '../../commands/appSettings/localSettings/getLocalSettingsFile';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IParsedHostJson } from '../../funcConfig/host';
+import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { onFuncTaskStarted } from '../../funcCoreTools/funcHostTask';
 import { type LocalProjectInternal } from '../../workspace/listLocalProjects';
 import { type ApplicationSettings, type FuncHostRequest, type IProjectTreeItem } from '../IProjectTreeItem';
@@ -60,9 +62,18 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged(scope)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
-        this._localSettingsTreeItem = new AppSettingsTreeItem(this, new LocalSettingsClientProvider(this), ext.prefix, {
+        this._localSettingsTreeItem = new AppSettingsTreeItem(this, new LocalSettingsClientProvider(this.workspaceFolder), ext.prefix, {
             contextValuesToAdd: ['localSettings']
         });
+    }
+
+    static async createLocalProjectTreeItem(parent: AzExtParentTreeItem, localProject: LocalProjectInternal): Promise<LocalProjectTreeItem> {
+        const result = await callWithTelemetryAndErrorHandling('createlocalProjectTreeItem', async (context: IActionContext) => {
+            const ti: LocalProjectTreeItem = new LocalProjectTreeItem(parent, localProject);
+            await ti.refresh(context);
+            return ti;
+        });
+        return result ?? new LocalProjectTreeItem(parent, localProject);
     }
 
     public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
@@ -120,5 +131,21 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
                 await this.refresh(context);
             }
         });
+    }
+
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, this.project.options.folder);
+        if (localSettingsPath) {
+            const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
+            if (localSettings.Values) {
+                for (const value of Object.values(localSettings.Values)) {
+                    if (!isSettingConnectionString(value)) {
+                        continue;
+                    }
+
+                    this.contextValue = 'azFuncLocalProject;convert';
+                }
+            }
+        }
     }
 }

@@ -23,6 +23,8 @@ import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/Du
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
+import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
+import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
 import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
@@ -177,6 +179,8 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => {
         ext.outputChannel.show();
     });
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.addLocalMIConnections', addLocalMIConnections);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.addRemoteMIConnections', addRemoteMIConnections);
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);

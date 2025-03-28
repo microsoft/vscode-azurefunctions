@@ -220,8 +220,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             sourceControl,
             contextValuesToAdd: ['azFunc']
         });
-        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
-            contextValuesToAdd: ['azFunc']
+        this.appSettingsTreeItem = await AppSettingsTreeItem.createAppSettingsTreeItem(context, proxyTree, this.site, ext.prefix, {
+            contextValuesToAdd: ['azFunc'],
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
             site: this.site,

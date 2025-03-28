@@ -157,6 +157,16 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.addLocalMIConnections",
+                "title": "%azureFunctions.addLocalMIConnections%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.addRemoteMIConnections",
+                "title": "%azureFunctions.addRemoteMIConnections%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.copyFunctionUrl",
                 "title": "%azureFunctions.copyFunctionUrl%",
                 "category": "Azure Functions"
@@ -496,6 +506,16 @@
                     "group": "1@2"
                 },
                 {
+                    "command": "azureFunctions.addLocalMIConnections",
+                    "when": "view == azureWorkspace && viewItem =~ /(azFuncLocalProject.*convert)|(applicationSettingItem.*convertSetting.*localSettings)|(applicationSettings.*convert.*localSetting)/i",
+                    "group": "1@3"
+                },
+                {
+                    "command": "azureFunctions.addRemoteMIConnections",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /(applicationSettings.*azFunc.*convert)|(applicationSettingItem.*azFunc.*convertSetting)/i",
+                    "group": "1@4"
+                },
+                {
                     "command": "azureFunctions.browseWebsite",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc(Production|)(Slot|Flex)(?!s)/",
                     "group": "1@2"
@@ -672,7 +692,7 @@
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /applicationSettingItem.*azFunc/",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings)/",
                     "group": "inline"
                 },
                 {
@@ -1372,7 +1392,7 @@
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^3.5.4",
-        "@microsoft/vscode-azext-azureappsettings": "^0.2.3",
+        "@microsoft/vscode-azext-azureappsettings": "^0.2.6",
         "@microsoft/vscode-azext-azureutils": "^3.1.7",
         "@microsoft/vscode-azext-utils": "^2.6.3",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
