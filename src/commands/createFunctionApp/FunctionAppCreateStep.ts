@@ -27,7 +27,7 @@ import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
-    public priority: number = 140;
+    public priority: number = 1000;
 
     public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');

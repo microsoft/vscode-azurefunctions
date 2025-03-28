@@ -8,7 +8,7 @@ import { type AppSettingsClientProvider, type IAppSettingsClient } from "@micros
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import type * as vscode from 'vscode';
 import { getLocalSettingsJson, type ILocalSettingsJson } from "../../../funcConfig/local.settings";
-import { getLocalSettingsFileNoPrompt } from "./getLocalSettingsFile";
+import { tryGetLocalSettingsFileNoPrompt } from "./getLocalSettingsFile";
 
 export class LocalSettingsClientProvider implements AppSettingsClientProvider {
     private _workspaceFolder: vscode.WorkspaceFolder;
@@ -34,7 +34,7 @@ export class LocalSettingsClient implements IAppSettingsClient {
 
     public async listApplicationSettings(): Promise<StringDictionary> {
         const result = await callWithTelemetryAndErrorHandling<StringDictionary | undefined>('listApplicationSettings', async (context: IActionContext) => {
-            const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, this._workspaceFolder);
+            const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, this._workspaceFolder);
             if (localSettingsPath === undefined) {
                 return { properties: {} };
             } else {

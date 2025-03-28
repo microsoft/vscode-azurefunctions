@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
+import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
@@ -28,6 +28,7 @@ import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDa
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
+import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { shouldValidateConnections } from './shouldValidateConnection';
@@ -142,6 +143,19 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await validateSqlDbConnection(context, context.projectPath);
     }
 
+    const appSettings: StringDictionary = await client.listApplicationSettings();
+
+    const deploymentWarningMessages: string[] = [];
+    const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
+        appSettings,
+        node,
+        projectPath: context.projectPath
+    });
+
+    if (connectionStringWarningMessage) {
+        deploymentWarningMessages.push(connectionStringWarningMessage);
+    }
+
     const subContext = {
         ...context
     } as unknown as ISubscriptionActionContext;
@@ -153,9 +167,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         client
     });
 
-    if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) || eolWarningMessage) {
+    if (eolWarningMessage) {
+        deploymentWarningMessages.push(eolWarningMessage);
+    }
+
+    if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
+        deploymentWarningMessages.length > 0) {
+        // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId, [eolWarningMessage]);
+        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
@@ -178,7 +198,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             language,
             languageModel,
             bools: { doRemoteBuild, isConsumption },
-            durableStorageType
+            durableStorageType,
+            appSettings
         });
     }
 

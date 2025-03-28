@@ -9,7 +9,7 @@ import * as path from 'path';
 import { Disposable, type TaskScope, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { LocalSettingsClientProvider } from '../../commands/appSettings/localSettings/LocalSettingsClient';
-import { getLocalSettingsFileNoPrompt } from '../../commands/appSettings/localSettings/getLocalSettingsFile';
+import { tryGetLocalSettingsFileNoPrompt } from '../../commands/appSettings/localSettings/getLocalSettingsFile';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, localSettingsFileName, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -134,7 +134,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     }
 
     public async refreshImpl(context: IActionContext): Promise<void> {
-        const localSettingsPath: string | undefined = await getLocalSettingsFileNoPrompt(context, this.project.options.folder);
+        const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, this.project.options.folder);
         if (localSettingsPath) {
             const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
             if (localSettings.Values) {
