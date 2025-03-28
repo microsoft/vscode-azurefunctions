@@ -11,7 +11,7 @@ import { type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsetting
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
 import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type AzExtParentTreeItem, type IAzureQuickPickItem, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
+import { hiddenStacksSetting, noRuntimeStacksAvailableLabel, stackUpgradeLearnMoreLink } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
 import { funcVersionLink } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -373,7 +373,7 @@ export async function showEolWarningIfNecessary(context: ISubscriptionActionCont
             client
         });
         const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-        await context.ui.showWarningMessage(eolWarningMessage, { modal: true }, continueOn);
+        await context.ui.showWarningMessage(eolWarningMessage, { modal: true, learnMoreLink: stackUpgradeLearnMoreLink }, continueOn);
     }
 }
 
@@ -407,14 +407,14 @@ async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFx
         )
     );
     const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
-    const filteredStack = versionFilteredStacks[0].minorVersions[0];
-    const displayVersion = filteredStack?.displayText;
+    const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion);
+    const displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
     const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
     if (endOfLifeDate) {
         const endOfLife = new Date(endOfLifeDate)
         return {
             endOfLife,
-            displayVersion
+            displayVersion: displayVersion
         }
     }
     return {
