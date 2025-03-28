@@ -1373,7 +1373,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^3.5.4",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.3",
-        "@microsoft/vscode-azext-azureutils": "^3.1.6",
+        "@microsoft/vscode-azext-azureutils": "^3.1.7",
         "@microsoft/vscode-azext-utils": "^2.6.3",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
         "cross-fetch": "^4.0.0",
