@@ -175,11 +175,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         deploymentWarningMessages.length > 0) {
         // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
-<<<<<<< HEAD
-        await showDeployConfirmation(context, node.site, deployCommandId, [eolWarningMessage], `https://aka.ms/FunctionsStackUpgrade`);
-=======
-        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages);
->>>>>>> 7cf49f7106f327da3058139dc207e0d32e81cce9
+        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages, `https://aka.ms/FunctionsStackUpgrade`);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
