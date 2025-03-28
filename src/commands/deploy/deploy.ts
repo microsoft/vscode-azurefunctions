@@ -8,7 +8,7 @@ import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfir
 import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, type DurableBackendValues } from '../../constants';
+import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink, type DurableBackendValues } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -175,7 +175,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         deploymentWarningMessages.length > 0) {
         // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages, `https://aka.ms/FunctionsStackUpgrade`);
+        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages,
+            eolWarningMessage ? stackUpgradeLearnMoreLink : undefined);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
