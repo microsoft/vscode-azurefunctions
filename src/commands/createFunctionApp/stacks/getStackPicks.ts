@@ -414,7 +414,7 @@ async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFx
         const endOfLife = new Date(endOfLifeDate)
         return {
             endOfLife,
-            displayVersion: displayVersion
+            displayVersion
         }
     }
     return {
