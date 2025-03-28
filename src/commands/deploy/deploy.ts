@@ -155,7 +155,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) || eolWarningMessage) {
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId, [eolWarningMessage]);
+        await showDeployConfirmation(context, node.site, deployCommandId, [eolWarningMessage], `https://aka.ms/FunctionsStackUpgrade`);
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
