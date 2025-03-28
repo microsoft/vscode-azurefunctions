@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
-import { isSettingConvertible } from '@microsoft/vscode-azext-azureappsettings';
+import { isSettingConnectionString } from '@microsoft/vscode-azext-azureappsettings';
 import { AzExtFsExtra, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { localEventHubsEmulatorConnectionRegExp, localStorageEmulatorConnectionString } from "../../constants";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -45,7 +45,7 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
 }
 
 function checkForConnectionSettings(property: { [propertyName: string]: string }): ConnectionSetting | undefined {
-    if (isSettingConvertible(property.propertyName, property.value)) {
+    if (isSettingConnectionString(property.value)) {
         // if the setting is convertible, we can assume it's a connection string
         return {
             name: property.propertyName,
