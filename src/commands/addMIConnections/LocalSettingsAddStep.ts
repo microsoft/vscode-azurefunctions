@@ -27,7 +27,7 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnection
                 context.activityChildren?.push(
                     new GenericTreeItem(undefined, {
                         contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
-                        label: localize('addedLocalSetting', 'Add Local setting "{0}"', connection.name),
+                        label: localize('addedLocalSetting', 'Add local setting "{0}"', connection.name),
                         iconPath: activitySuccessIcon
                     })
                 );

@@ -20,17 +20,17 @@ export interface Connection {
 export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsContext> {
     public async prompt(context: AddMIConnectionsContext): Promise<void> {
         const picks = await this.getPicks(context);
-
+        const placeHolder: string = localize('selectConnections', 'Select the connections to add identity settings for.');
         if (picks.length === 0) {
             const noItemFoundMessage: string = localize('noConnectionsFound', 'No connections found in local settings');
             (await context.ui.showQuickPick(picks, {
-                placeHolder: localize('selectConnections', 'Select the connections you want to add managed identity support for'),
+                placeHolder,
                 suppressPersistence: true,
                 noPicksMessage: noItemFoundMessage
             }));
         } else {
             context.connections = (await context.ui.showQuickPick(picks, {
-                placeHolder: localize('selectConnections', 'Select the connections you want to add managed identity support for'),
+                placeHolder,
                 suppressPersistence: true,
                 canPickMany: true,
             })).map(item => item.data);
