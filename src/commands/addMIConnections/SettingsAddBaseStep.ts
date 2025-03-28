@@ -147,31 +147,6 @@ async function addEventHubServiceBusConnectionsAndRoles(context: AddMIConnection
     }
 }
 
-// async function addServiceBusConnectionsAndRoles(context: AddMIConnectionsContext, connection: Connection) {
-//     // ServiceBus connection strings are of format: Endpoint=sb://<serviceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=<sharedAccessKeyName>;SharedAccessKey=<sharedAccessKey>;
-//     if (connection.value === '') {
-//         throw new Error(localize('emptyServiceBusConnectionString', 'Service bus connection string is empty. Please provide a valid connection string.'));
-//     }
-//     try {
-//         const serviceBusNamespace = connection.value.split(';')[0].split('/')[2].split('.')[0];
-
-//         context.connectionsToAdd?.push(
-//             {
-//                 name: `${serviceBusNamespace}__fullyQualifiedNamespace`,
-//                 value: `${serviceBusNamespace}.servicebus.windows.net`,
-//             },
-//             ...getClientIdAndCredentialPropertiesForRemote(context, serviceBusNamespace)
-//         );
-//         if (context.functionapp) {
-//             const scope = await getScopeHelper(context, serviceBusNamespace, 'Microsoft.ServiceBus/Namespaces');
-//             addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataOwner);
-//             addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
-//         }
-//     } catch (e) {
-//         throw new Error(localize('invalidServiceBusConnectionString', 'Unexpected ServiceBus connection string format: {0}', connection.value));
-//     }
-// }
-
 function getClientIdAndCredentialPropertiesForRemote(context: AddMIConnectionsContext, connectionName: string): Connection[] {
     const clientIdAndConfigurationProperties: Connection[] = [];
     // Only add these properties if adding remote settings
