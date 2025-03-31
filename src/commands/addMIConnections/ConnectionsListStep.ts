@@ -41,6 +41,10 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
         return !context.connections || context.connections.length === 0;
     }
 
+    public undo(context: AddMIConnectionsContext): void | Promise<void> {
+        context.connections = [];
+    }
+
     private async getPicks(context: AddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
         return context.functionapp ? this.getRemoteQuickPicks(context) : this.getLocalQuickPicks(context)
     }
