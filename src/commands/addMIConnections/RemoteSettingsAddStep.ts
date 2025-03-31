@@ -9,7 +9,7 @@ import { localize } from "../../localize";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
 export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
-    public priority: number = 110;
+    public priority: number = 160;
 
     public async execute(context: AddMIConnectionsContext): Promise<void> {
         const client = await nonNullProp(context, 'functionapp').site.createClient(context);
