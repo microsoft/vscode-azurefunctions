@@ -372,8 +372,10 @@ export async function showEolWarningIfNecessary(context: ISubscriptionActionCont
             isFlex: parent.isFlex,
             client
         });
-        const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-        await context.ui.showWarningMessage(eolWarningMessage, { modal: true, learnMoreLink: stackUpgradeLearnMoreLink }, continueOn);
+        if (eolWarningMessage) {
+            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+            await context.ui.showWarningMessage(eolWarningMessage, { modal: true, learnMoreLink: stackUpgradeLearnMoreLink }, continueOn);
+        }
     }
 }
 
