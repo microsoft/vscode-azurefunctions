@@ -63,7 +63,7 @@ import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridR
 import { executeFunction } from './executeFunction/executeFunction';
 import { assignManagedIdentity } from './identity/assignManagedIdentity';
 import { enableSystemIdentity } from './identity/enableSystemIdentity';
-import { unassignManagedIdentity } from './identity/unassignManatedIdentity';
+import { unassignManagedIdentity } from './identity/unassignManagedIdentity';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
