@@ -67,7 +67,7 @@ export async function addRemoteMIConnectionsInternal(context: AddMIConnectionsCo
 
     await wizard.prompt();
     const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-    await context.ui.showWarningMessage(localize('rolesWillBeAssignedMessage', 'This command will assign a managed identity and roles would you like to continue?'), { modal: true }, continueOn);
+    await context.ui.showWarningMessage(localize('rolesWillBeAssignedMessage', 'This command will assign a managed identity and roles. Would you like to continue?'), { modal: true }, continueOn);
     await wizard.execute();
 
     const confirm: MessageItem = { title: localize('confirm', 'Confirm') };
