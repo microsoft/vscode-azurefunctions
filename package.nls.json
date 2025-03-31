@@ -10,6 +10,7 @@
     "azureFunctions.appSettings.toggleSlotSetting": "Toggle as Slot Setting",
     "azureFunctions.appSettings.upload": "Upload Local Settings...",
     "azureFunctions.assignManagedIdentity": "Assign Managed Identity to Function App...",
+    "azureFunctions.unassignManagedIdentity": "Unassign Managed Identity from Function App...",
     "azureFunctions.browseWebsite": "Browse Website",
     "azureFunctions.configureDeploymentSource": "Configure Deployment Source...",
     "azureFunctions.connectToGitHub": "Connect to GitHub Repository...",
