@@ -45,7 +45,7 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
 }
 
 function checkForConnectionSettings(property: { [propertyName: string]: string }): ConnectionSetting | undefined {
-    if (isSettingConnectionString(property.value)) {
+    if (isSettingConnectionString(property.key, property.value)) {
         // if the setting is convertible, we can assume it's a connection string
         return {
             name: property.propertyName,

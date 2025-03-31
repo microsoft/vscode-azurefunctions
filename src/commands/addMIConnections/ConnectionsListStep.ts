@@ -74,7 +74,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
 
 function addPicks(settings: { [key: string]: string }, picks: IAzureQuickPickItem<Connection>[]): IAzureQuickPickItem<Connection>[] {
     for (const [key, value] of Object.entries(settings)) {
-        if (!isSettingConnectionString(value)) {
+        if (!isSettingConnectionString(key, value)) {
             continue;
         }
 

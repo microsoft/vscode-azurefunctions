@@ -138,8 +138,8 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         if (localSettingsPath) {
             const localSettings = await getLocalSettingsJson(context, localSettingsPath, false);
             if (localSettings.Values) {
-                for (const value of Object.values(localSettings.Values)) {
-                    if (!isSettingConnectionString(value)) {
+                for (const [key, value] of Object.entries(localSettings.Values)) {
+                    if (!isSettingConnectionString(key, value)) {
                         continue;
                     }
 
