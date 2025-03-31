@@ -11,7 +11,7 @@ import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 import { type Connection } from "./ConnectionsListStep";
 
 export class SettingsAddBaseStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
-    public priority: number = 100;
+    public priority: number = 150;
 
     public async execute(context: AddMIConnectionsContext): Promise<void> {
         context.roles = [];
