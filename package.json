@@ -398,6 +398,11 @@
                 "icon": "$(add)"
             },
             {
+                "command": "azureFunctions.unassignManagedIdentity",
+                "title": "%azureFunctions.unassignManagedIdentity%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.enableSystemIdentity",
                 "title": "%azureFunctions.enableSystemIdentity%",
                 "category": "Azure Functions"
@@ -756,6 +761,11 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.unassignManagedIdentity",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /userAssignedIdentity/",
+                    "group": "1@1"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
                     "group": "3@1"
@@ -868,6 +878,10 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.unassignManagedIdentity",
                     "when": "never"
                 }
             ],

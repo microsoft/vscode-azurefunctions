@@ -11,8 +11,8 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContext";
 
-export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIdentityAssignContext> {
-    public priority: number = 500;
+export class ManagedIdentityUnassignStep extends AzureWizardExecuteStep<ManagedIdentityAssignContext> {
+    public priority: number = 510;
 
     public async execute(context: ManagedIdentityAssignContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const site: ParsedSite = nonNullProp(context, 'site');
@@ -21,23 +21,22 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
         const client = await createWebSiteClient([context, site.subscription]);
 
         const existingIdentity = site.identity || {};
+        const userAssignedIdentities = existingIdentity.userAssignedIdentities || {};
+        delete userAssignedIdentities[id];
+
         const updatedIdentity: ManagedServiceIdentity = {
             ...existingIdentity,
-            // type property is required and may not exist yet
-            type: addUserAssignedType(existingIdentity.type),
+            type: Object.keys(userAssignedIdentities).length === 0 ?
+                removeUserAssignedType(existingIdentity.type) :
+                existingIdentity.type,
             userAssignedIdentities: {
-                ...existingIdentity.userAssignedIdentities,
-                [id]: {
-                    principalId: managedIdentity.principalId,
-                    clientId: managedIdentity.clientId,
-                }
+                ...existingIdentity.userAssignedIdentities
             }
         };
-
         const newSite = site.rawSite;
         newSite.identity = updatedIdentity;
-        const assigning: string = localize('assigning', 'Assigning user assigned identity "{1}" for "{0}"...', site.fullName, managedIdentity.name);
-        const assigned: string = localize('assigned', 'Assigned user assigned identity "{1}" for "{0}".', site.fullName, managedIdentity.name);
+        const assigning: string = localize('assigning', 'Unassigning user assigned identity "{1}" for "{0}"...', site.fullName, managedIdentity.name);
+        const assigned: string = localize('assigned', 'Unassigned user assigned identity "{1}" for "{0}".', site.fullName, managedIdentity.name);
         ext.outputChannel.appendLog(assigning);
 
         await client.webApps.beginCreateOrUpdateAndWait(site.resourceGroup, site.siteName, newSite);
@@ -50,12 +49,14 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
 }
 
-const addUserAssignedType = (type: ManagedServiceIdentityType | undefined): ManagedServiceIdentityType => {
-    if (type?.includes('UserAssigned')) {
-        return type
+const removeUserAssignedType = (type: ManagedServiceIdentityType | undefined): ManagedServiceIdentityType => {
+    if (type === ('UserAssigned')) {
+        return 'None';
+    } else if (type === 'SystemAssigned, UserAssigned') {
+        return 'SystemAssigned';
+    } else if (type === undefined) {
+        return 'None';
     }
-    if (type === 'SystemAssigned') {
-        return 'SystemAssigned, UserAssigned';
-    }
-    return 'UserAssigned';
+
+    return type ?? 'None';
 };
