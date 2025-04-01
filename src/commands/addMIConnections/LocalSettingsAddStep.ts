@@ -11,7 +11,7 @@ import { getLocalSettingsFile } from "../appSettings/localSettings/getLocalSetti
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
 export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
-    public priority: number = 125;
+    public priority: number = 160;
 
     public async execute(context: AddMIConnectionsContext): Promise<void> {
         // If right clicking on a connection we will have the connections to convert but not the local settings path
