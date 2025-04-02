@@ -385,8 +385,8 @@ async function getEOLDate(context: ISubscriptionActionContext, options: eolWarni
             (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
             (await getStacks(context)).filter(s => options.runtime === s.value);
         const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
-        const filteredStack = versionFilteredStacks[0].minorVersions[0];
-        const displayVersion = filteredStack?.displayText;
+        const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version);
+        const displayVersion = nonNullValue(filteredStack?.displayText);
         const endOfLifeDate = options.isFlex ?
             filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
             filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
