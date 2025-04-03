@@ -315,13 +315,7 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
         const linuxFxVersion = options.site.siteConfig?.linuxFxVersion;
         displayInfo = await getEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
     } else if (options.site.siteConfig) {
-        if (options.site.siteConfig.netFrameworkVersion && !options.site.siteConfig.powerShellVersion && !options.site.siteConfig.javaVersion) {
-            displayInfo = (await getEOLDate(context, {
-                site: options.site,
-                version: options.site.siteConfig.netFrameworkVersion,
-                runtime: 'dotnet'
-            }));
-        } else if (options.site.siteConfig.javaVersion) {
+        if (options.site.siteConfig.javaVersion) {
             displayInfo = (await getEOLDate(context, {
                 site: options.site,
                 version: options.site.siteConfig.javaVersion,
@@ -333,19 +327,25 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
                 version: options.site.siteConfig.powerShellVersion,
                 runtime: 'powershell'
             }));
-        }
-
-        // In order to get the node version, we need to check the app settings
-        let appSettings: StringDictionary | undefined;
-        if (options.client) {
-            appSettings = await options.client.listApplicationSettings();
-        }
-        if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
-            displayInfo = (await getEOLDate(context, {
-                site: options.site,
-                version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
-                runtime: 'node'
-            }));
+        } else if (options.site.siteConfig.netFrameworkVersion) {
+            // In order to get the node version, we need to check the app settings
+            let appSettings: StringDictionary | undefined;
+            if (options.client) {
+                appSettings = await options.client.listApplicationSettings();
+            }
+            if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
+                displayInfo = (await getEOLDate(context, {
+                    site: options.site,
+                    version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
+                    runtime: 'node'
+                }));
+            } else {
+                displayInfo = (await getEOLDate(context, {
+                    site: options.site,
+                    version: options.site.siteConfig.netFrameworkVersion,
+                    runtime: 'dotnet'
+                }));
+            }
         }
     }
 
@@ -380,25 +380,32 @@ export async function showEolWarningIfNecessary(context: ISubscriptionActionCont
 }
 
 async function getEOLDate(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
-    const stacks = options.isFlex ?
-        (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
-        (await getStacks(context)).filter(s => options.runtime === s.value);
-    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
-    const filteredStack = versionFilteredStacks[0].minorVersions[0];
-    const displayVersion = filteredStack?.displayText;
-    const endOfLifeDate = options.isFlex ?
-        filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
-        filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
-    if (endOfLifeDate) {
-        const endOfLife = new Date(endOfLifeDate)
+    try {
+        const stacks = options.isFlex ?
+            (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
+            (await getStacks(context)).filter(s => options.runtime === s.value);
+        const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
+        const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version);
+        const displayVersion = nonNullValue(filteredStack?.displayText);
+        const endOfLifeDate = options.isFlex ?
+            filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
+            filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
+        if (endOfLifeDate) {
+            const endOfLife = new Date(endOfLifeDate)
+            return {
+                endOfLife,
+                displayVersion
+            }
+        }
         return {
-            endOfLife,
+            endOfLife: undefined,
             displayVersion
         }
-    }
-    return {
-        endOfLife: undefined,
-        displayVersion
+    } catch {
+        return {
+            endOfLife: undefined,
+            displayVersion: ''
+        }
     }
 }
 
