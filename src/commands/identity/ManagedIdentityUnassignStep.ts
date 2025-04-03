@@ -29,10 +29,11 @@ export class ManagedIdentityUnassignStep extends AzureWizardExecuteStep<ManagedI
             type: Object.keys(userAssignedIdentities).length === 0 ?
                 removeUserAssignedType(existingIdentity.type) :
                 existingIdentity.type,
-            userAssignedIdentities: {
+            userAssignedIdentities: Object.keys(userAssignedIdentities).length === 0 ? undefined : {
                 ...existingIdentity.userAssignedIdentities
             }
         };
+
         const newSite = site.rawSite;
         newSite.identity = updatedIdentity;
         const assigning: string = localize('assigning', 'Unassigning user assigned identity "{1}" for "{0}"...', site.fullName, managedIdentity.name);
