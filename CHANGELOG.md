@@ -1,18 +1,21 @@
 # Change Log
 
-## 1.17.0 - 2025-04-07
+## 1.17.0 - 2025-04-08
+
+### Overview
+This release includes improvements to identity management and deployment validation in Azure Functions, along with enhancements to local development tooling and support for newer programming models. It also introduces user-facing warnings for deprecated runtime stacks and improved platform compatibility.
 
 ### Added
-* [[4382](https://github.com/microsoft/vscode-azurefunctions/pull/4382)] Identity node to Function Apps
-* [[4387](https://github.com/microsoft/vscode-azurefunctions/pull/4387)] Add Local and Remote Identity settings command
-* [[4423](https://github.com/microsoft/vscode-azurefunctions/pull/4423)] Check for connection strings and managed identity settings on deployment
-* [[4428](https://github.com/microsoft/vscode-azurefunctions/pull/4428)] EOL warning when updating/deploying to Function apps running retired stack versions
-* [[4425](https://github.com/microsoft/vscode-azurefunctions/pull/4425)] Legacy to Linux Consumption plan
+* [[4382](https://github.com/microsoft/vscode-azurefunctions/pull/4382)] Add a dedicated **Identity** node to the Azure Functions tree view for easier access and management of managed identities associated with Function Apps.
+* [[4387](https://github.com/microsoft/vscode-azurefunctions/pull/4387)] Introduced **Local and Remote Identity Settings** commands, allowing users to configure managed identity settings directly from VS Code.
+* [[4423](https://github.com/microsoft/vscode-azurefunctions/pull/4423)] Deployment validation now includes checks for **connection strings and managed identity configurations**.
+* [[4428](https://github.com/microsoft/vscode-azurefunctions/pull/4428)] Added **end-of-life (EOL) warnings** when deploying or updating Function Apps that use **retired runtime stack versions** to help users upgrate to secured environments.
 
 ### Changed
-* [[4457](https://github.com/microsoft/vscode-azurefunctions/pull/4457)] Updated node v4 templates
-* [[4427](https://github.com/microsoft/vscode-azurefunctions/pull/4427)] Default programming model languages to newest model
-* [[4431](https://github.com/microsoft/vscode-azurefunctions/pull/4431)] Logic to look for azurite and give the option to install/run it for the user
+* [[4425](https://github.com/microsoft/vscode-azurefunctions/pull/4425)] Marked **Linux Consumption plans** as **Legacy** as it is recommended to use **Flex Consumption** plans
+* [[4457](https://github.com/microsoft/vscode-azurefunctions/pull/4457)] Updated the **Node.js v4 templates** to reflect the latest Azure Functions Core Tools.
+* [[4427](https://github.com/microsoft/vscode-azurefunctions/pull/4427)] Updated default language selections to **use the newest programming model**, streamlining the Function App creation experience. If you need to use the old programming model, you can set the `azureFunctions.allowProgrammingModelSelection` setting to `true`.
+* [[4431](https://github.com/microsoft/vscode-azurefunctions/pull/4431)] Enhanced local development support by detecting the absence of **Azurite**, and prompting users with the option to install or run it automatically.
 
 ## 1.16.3 - 2025-03-10
 
