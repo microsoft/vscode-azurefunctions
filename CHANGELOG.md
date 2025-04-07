@@ -1,5 +1,19 @@
 # Change Log
 
+## 1.17.0 - 2025-04-07
+
+### Added
+* [[4382](https://github.com/microsoft/vscode-azurefunctions/pull/4382)] Identity node to Function Apps
+* [[4387](https://github.com/microsoft/vscode-azurefunctions/pull/4387)] Add Local and Remote Identity settings command
+* [[4423](https://github.com/microsoft/vscode-azurefunctions/pull/4423)] Check for connection strings and managed identity settings on deployment
+* [[4428](https://github.com/microsoft/vscode-azurefunctions/pull/4428)] EOL warning when updating/deploying to Function apps running retired stack versions
+* [[4424](https://github.com/microsoft/vscode-azurefunctions/pull/4425)] Legacy to Linux Consumption plan
+
+### Changed
+* [[4457](https://github.com/microsoft/vscode-azurefunctions/pull/4457)] Updated node v4 templates
+* [[4427](https://github.com/microsoft/vscode-azurefunctions/pull/4427)] Default programming model languages to newest model
+* [[4431](https://github.com/microsoft/vscode-azurefunctions/pull/4431)] Logic to look for azurite and give the option to install/run it for the user
+
 ## 1.16.3 - 2025-03-10
 
 ### Changed
