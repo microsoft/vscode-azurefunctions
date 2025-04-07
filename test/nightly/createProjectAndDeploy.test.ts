@@ -23,16 +23,16 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
-    { title: 'TypeScript', ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
-    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, TestInput.UseDefaultValue /*Confirm Deploy*/], createFunctionInputs: ['Company.Function'] },
     //  Temporarily disable .NET 9 test for now; it seems to break after running clean release (functions)
     // { title: 'C# .NET 9', ...getCSharpValidateOptions('net9.0', FuncVersion.v4), createProjectInputs: [/net.*9/i], deployInputs: [/net.*9/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
-    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/] },
-    { title: 'Python', ...getPythonValidateOptions('.venv', undefined), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v2 },
+    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, TestInput.UseDefaultValue /*Confirm Deploy*/] },
+    { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
