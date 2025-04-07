@@ -7,7 +7,7 @@
 * [[4387](https://github.com/microsoft/vscode-azurefunctions/pull/4387)] Add Local and Remote Identity settings command
 * [[4423](https://github.com/microsoft/vscode-azurefunctions/pull/4423)] Check for connection strings and managed identity settings on deployment
 * [[4428](https://github.com/microsoft/vscode-azurefunctions/pull/4428)] EOL warning when updating/deploying to Function apps running retired stack versions
-* [[4424](https://github.com/microsoft/vscode-azurefunctions/pull/4425)] Legacy to Linux Consumption plan
+* [[4425](https://github.com/microsoft/vscode-azurefunctions/pull/4425)] Legacy to Linux Consumption plan
 
 ### Changed
 * [[4457](https://github.com/microsoft/vscode-azurefunctions/pull/4457)] Updated node v4 templates
