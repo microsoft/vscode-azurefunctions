@@ -1,5 +1,6 @@
 {
     "azureFunctions.addBinding": "Add binding...",
+    "azureFunctions.allowProgrammingModelSelection": "Allow the user to select a programming model when creating a new function project.",
     "azureFunctions.appSettings.add": "Add New Setting...",
     "azureFunctions.appSettings.decrypt": "Decrypt Settings",
     "azureFunctions.appSettings.delete": "Delete Setting...",

@@ -1291,6 +1291,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showMarkdownPreview%",
                         "default": true
+                    },
+                    "azureFunctions.allowProgrammingModelSelection": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.allowProgrammingModelSelection%",
+                        "default": false
                     }
                 }
             }
