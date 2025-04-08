@@ -66,7 +66,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                     },
                     {
                         name: 'FUNCTIONS_EXTENSION_VERSION',
-                        value: context.telemetry.properties.projectRuntime
+                        value: context.version
                     },
                     {
                         name: 'DOCKER_REGISTRY_SERVER_URL',
