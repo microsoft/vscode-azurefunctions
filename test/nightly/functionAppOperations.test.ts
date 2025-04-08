@@ -40,7 +40,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: (string | RegExp)[] = [appName, 'Consumption', location, /\.net/i, 'Windows', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
+        const testInputs: (string | RegExp)[] = [appName, 'Flex Consumption', location, /\.net/i, '4096', '100', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, '$(plus) Create new user assigned identity'];
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
@@ -51,7 +51,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: (string | RegExp)[] = [app2Name, 'Consumption', location, /\.net/i, 'Windows', rgName, saName, aiName];
+        const testInputs: (string | RegExp)[] = [app2Name, 'Flex Consumption', location, /\.net/i, '4096', '100', rgName, saName, aiName, '$(plus) Create new user assigned identity'];
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
