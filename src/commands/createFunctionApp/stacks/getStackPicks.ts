@@ -410,24 +410,31 @@ async function getEOLDate(context: ISubscriptionActionContext, options: eolWarni
 }
 
 async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFxVersion: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
-    const stacks = (await getStacks(context)).filter(s =>
-        s.majorVersions.some(mv =>
-            mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion)
-        )
-    );
-    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
-    const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion);
-    const displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
-    const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
-    if (endOfLifeDate) {
-        const endOfLife = new Date(endOfLifeDate)
+    try {
+        const stacks = (await getStacks(context)).filter(s =>
+            s.majorVersions.some(mv =>
+                mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion)
+            )
+        );
+        const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
+        const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion);
+        const displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
+        const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+        if (endOfLifeDate) {
+            const endOfLife = new Date(endOfLifeDate)
+            return {
+                endOfLife,
+                displayVersion
+            }
+        }
         return {
-            endOfLife,
+            endOfLife: undefined,
             displayVersion
         }
-    }
-    return {
-        endOfLife: undefined,
-        displayVersion
+    } catch {
+        return {
+            endOfLife: undefined,
+            displayVersion: ''
+        }
     }
 }
