@@ -300,64 +300,68 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
         displayVersion: string | undefined;
     } = { endOfLife: undefined, displayVersion: undefined };
 
-    if (options.isFlex) {
-        const runtime = options.site.functionAppConfig?.runtime?.name;
-        version = options.site.functionAppConfig?.runtime?.version;
-        displayInfo = (await getEOLDate(context, {
-            site: options.site,
-            version: nonNullValue(version),
-            runtime: nonNullValue(runtime) === 'dotnet-isolated' ? 'dotnet' : nonNullValue(runtime),
-            isFlex: true,
-            location: options.site.location
-        })
-        );
-    } else if (options.isLinux) {
-        const linuxFxVersion = options.site.siteConfig?.linuxFxVersion;
-        displayInfo = await getEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
-    } else if (options.site.siteConfig) {
-        if (options.site.siteConfig.javaVersion) {
+    try {
+        if (options.isFlex) {
+            const runtime = options.site.functionAppConfig?.runtime?.name;
+            version = options.site.functionAppConfig?.runtime?.version;
             displayInfo = (await getEOLDate(context, {
                 site: options.site,
-                version: options.site.siteConfig.javaVersion,
-                runtime: 'java'
-            }));
-        } else if (options.site.siteConfig.powerShellVersion) {
-            displayInfo = (await getEOLDate(context, {
-                site: options.site,
-                version: options.site.siteConfig.powerShellVersion,
-                runtime: 'powershell'
-            }));
-        } else if (options.site.siteConfig.netFrameworkVersion) {
-            // In order to get the node version, we need to check the app settings
-            let appSettings: StringDictionary | undefined;
-            if (options.client) {
-                appSettings = await options.client.listApplicationSettings();
-            }
-            if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
+                version: nonNullValue(version),
+                runtime: nonNullValue(runtime) === 'dotnet-isolated' ? 'dotnet' : nonNullValue(runtime),
+                isFlex: true,
+                location: options.site.location
+            })
+            );
+        } else if (options.isLinux) {
+            const linuxFxVersion = options.site.siteConfig?.linuxFxVersion;
+            displayInfo = await getEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
+        } else if (options.site.siteConfig) {
+            if (options.site.siteConfig.javaVersion) {
                 displayInfo = (await getEOLDate(context, {
                     site: options.site,
-                    version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
-                    runtime: 'node'
+                    version: options.site.siteConfig.javaVersion,
+                    runtime: 'java'
                 }));
-            } else {
+            } else if (options.site.siteConfig.powerShellVersion) {
                 displayInfo = (await getEOLDate(context, {
                     site: options.site,
-                    version: options.site.siteConfig.netFrameworkVersion,
-                    runtime: 'dotnet'
+                    version: options.site.siteConfig.powerShellVersion,
+                    runtime: 'powershell'
                 }));
+            } else if (options.site.siteConfig.netFrameworkVersion) {
+                // In order to get the node version, we need to check the app settings
+                let appSettings: StringDictionary | undefined;
+                if (options.client) {
+                    appSettings = await options.client.listApplicationSettings();
+                }
+                if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
+                    displayInfo = (await getEOLDate(context, {
+                        site: options.site,
+                        version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
+                        runtime: 'node'
+                    }));
+                } else {
+                    displayInfo = (await getEOLDate(context, {
+                        site: options.site,
+                        version: options.site.siteConfig.netFrameworkVersion,
+                        runtime: 'dotnet'
+                    }));
+                }
             }
         }
-    }
 
-    if (displayInfo.endOfLife) {
-        const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
-        isEOL = displayInfo.endOfLife <= new Date();
-        willBeEOL = displayInfo.endOfLife <= sixMonthsFromNow;
-        if (isEOL) {
-            return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
-        } else if (willBeEOL) {
-            return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+        if (displayInfo.endOfLife) {
+            const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
+            isEOL = displayInfo.endOfLife <= new Date();
+            willBeEOL = displayInfo.endOfLife <= sixMonthsFromNow;
+            if (isEOL) {
+                return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+            } else if (willBeEOL) {
+                return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+            }
         }
+    } catch (error) {
+        // do nothing, we don't want to show an error message if we can't get the EOL date
     }
 
     return '';

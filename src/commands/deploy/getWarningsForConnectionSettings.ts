@@ -20,25 +20,35 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
         node: SlotTreeItem,
         projectPath: string | undefined
     }): Promise<string | undefined> {
-
-    const localSettingsPath = await tryGetLocalSettingsFileNoPrompt(context, options.projectPath);
-    const localSettings: ILocalSettingsJson = localSettingsPath ? await AzExtFsExtra.readJSON(localSettingsPath) : { Values: {} };
-    const localConnectionSettings = await getConnectionSettings(localSettings.Values ?? {});
-    const remoteConnectionSettings = await getConnectionSettings(options.appSettings?.properties ?? {});
-
-    if (localConnectionSettings.some(setting => setting.type === 'ManagedIdentity')) {
-        if (!options.node.site.rawSite.identity ||
-            options.node.site.rawSite.identity.type === 'None') {
-            // if they have nothing in remote, warn them to connect a managed identity
-            return localize('configureManagedIdentityWarning',
-                'Your app is not connected to a managed identity. To ensure access, please configure a managed identity. Without it, your application may encounter authorization issues.');
+    try {
+        const localSettingsPath = await tryGetLocalSettingsFileNoPrompt(context, options.projectPath);
+        let localSettings: ILocalSettingsJson;
+        try {
+            localSettings = localSettingsPath ? await AzExtFsExtra.readJSON(localSettingsPath) : { Values: {} };
+        } catch (err) {
+            // if we can't read the local settings, just assume it's empty
+            localSettings = { Values: {} };
         }
-    }
 
-    if (localConnectionSettings.some(setting => setting.type === 'ConnectionString') || remoteConnectionSettings.some(setting => setting.type === 'ConnectionString')) {
-        // if they have connection strings, warn them about insecure connections but don't try to convert them
-        return localize('connectionStringWarning',
-            'Your app may be using connection strings for authentication. This may expose sensitive credentials and lead to security vulnerabilities. Consider using managed identities to enhance security.')
+        const localConnectionSettings = await getConnectionSettings(localSettings.Values ?? {});
+        const remoteConnectionSettings = await getConnectionSettings(options.appSettings?.properties ?? {});
+
+        if (localConnectionSettings.some(setting => setting.type === 'ManagedIdentity')) {
+            if (!options.node.site.rawSite.identity ||
+                options.node.site.rawSite.identity.type === 'None') {
+                // if they have nothing in remote, warn them to connect a managed identity
+                return localize('configureManagedIdentityWarning',
+                    'Your app is not connected to a managed identity. To ensure access, please configure a managed identity. Without it, your application may encounter authorization issues.');
+            }
+        }
+
+        if (localConnectionSettings.some(setting => setting.type === 'ConnectionString') || remoteConnectionSettings.some(setting => setting.type === 'ConnectionString')) {
+            // if they have connection strings, warn them about insecure connections but don't try to convert them
+            return localize('connectionStringWarning',
+                'Your app may be using connection strings for authentication. This may expose sensitive credentials and lead to security vulnerabilities. Consider using managed identities to enhance security.')
+        }
+    } catch (err) {
+        // if we can't read local or remote settings, don't warn them about anything
     }
 
     return;
