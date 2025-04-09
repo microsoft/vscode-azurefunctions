@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.17.1 - 2025-04-09
+
+### Fixes
+* [[4477]](https://github.com/microsoft/vscode-azurefunctions/pull/4477) Fixes errors on deployment due to checking major stacks
+* [[4479]](https://github.com/microsoft/vscode-azurefunctions/pull/4479) Fixes deployment issues due to errors parsing `local.settings.json`
+
 ## 1.17.0 - 2025-04-08
 
 ### Overview
