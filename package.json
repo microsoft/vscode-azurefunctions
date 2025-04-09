@@ -422,17 +422,20 @@
             {
                 "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                 "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "icon": "$(dashboard)"
             },
             {
                 "command": "azureFunctions.durableTaskScheduler.startEmulator",
                 "title": "%azureFunctions.durableTaskScheduler.startEmulator%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "icon": "$(debug-start)"
             },
             {
                 "command": "azureFunctions.durableTaskScheduler.stopEmulator",
                 "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "icon": "$(debug-stop)"
             }
         ],
         "submenus": [
@@ -768,14 +771,29 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHubDashboard/",
+                    "group": "inline"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.startEmulator",
                     "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulators/",
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulators/",
+                    "group": "inline"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.stopEmulator",
                     "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "group": "inline"
                 }
             ],
             "explorer/context": [
