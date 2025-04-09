@@ -380,36 +380,35 @@ export async function showEolWarningIfNecessary(context: ISubscriptionActionCont
 }
 
 async function getEOLDate(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+    let endOfLife: Date | undefined = undefined;
+    let displayVersion: string = '';
     try {
         const stacks = options.isFlex ?
             (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
             (await getStacks(context)).filter(s => options.runtime === s.value);
         const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
         const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version);
-        const displayVersion = nonNullValue(filteredStack?.displayText);
+        displayVersion = nonNullValue(filteredStack?.displayText);
         const endOfLifeDate = options.isFlex ?
             filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
             filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
         if (endOfLifeDate) {
-            const endOfLife = new Date(endOfLifeDate)
-            return {
-                endOfLife,
-                displayVersion
-            }
+            endOfLife = new Date(endOfLifeDate)
         }
-        return {
-            endOfLife: undefined,
-            displayVersion
-        }
-    } catch {
-        return {
-            endOfLife: undefined,
-            displayVersion: ''
-        }
+    } catch (error) {
+        // No need to handle the error here
     }
+
+    return {
+        endOfLife,
+        displayVersion
+    }
+
 }
 
 async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFxVersion: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+    let endOfLife: Date | undefined = undefined;
+    let displayVersion: string = '';
     try {
         const stacks = (await getStacks(context)).filter(s =>
             s.majorVersions.some(mv =>
@@ -418,23 +417,17 @@ async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFx
         );
         const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
         const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion);
-        const displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
+        displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
         const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
         if (endOfLifeDate) {
-            const endOfLife = new Date(endOfLifeDate)
-            return {
-                endOfLife,
-                displayVersion
-            }
+            endOfLife = new Date(endOfLifeDate)
         }
-        return {
-            endOfLife: undefined,
-            displayVersion
-        }
-    } catch {
-        return {
-            endOfLife: undefined,
-            displayVersion: ''
-        }
+    } catch (error) {
+        // No need to handle the error here
+    }
+
+    return {
+        endOfLife,
+        displayVersion
     }
 }
