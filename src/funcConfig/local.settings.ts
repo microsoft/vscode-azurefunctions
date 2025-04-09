@@ -5,7 +5,9 @@
 
 import { AzExtFsExtra, DialogResponses, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
+import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
+import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
 import { localSettingsFileName, type ConnectionKeyValues } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
@@ -89,4 +91,18 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
     return {
         IsEncrypted: false // Include this by default otherwise the func cli assumes settings are encrypted and fails to run
     };
+}
+
+export async function getLocalSettingsJsonwithEncryption(context: IActionContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
+    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
+    if (localSettings.IsEncrypted) {
+        await decryptLocalSettings(context, localSettingsUri);
+        try {
+            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+        } finally {
+            await encryptLocalSettings(context, localSettingsUri);
+        }
+    }
+    return localSettings;
 }

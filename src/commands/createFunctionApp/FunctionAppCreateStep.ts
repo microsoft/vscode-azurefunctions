@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
@@ -16,6 +17,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
+import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
@@ -25,7 +27,7 @@ import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
-    public priority: number = 140;
+    public priority: number = 1000;
 
     public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
@@ -56,7 +58,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = maskUserInfo(parseError(error).message, []);
             }
         }
-
         showSiteCreated(site, context);
     }
 
@@ -65,16 +66,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
     }
 
     private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
-        const location = await LocationListStep.getLocation(context, webProvider);
-        const site: Site = {
-            name: context.newSiteName,
-            kind: getSiteKind(context),
-            location: nonNullProp(location, 'name'),
-            serverFarmId: context.plan?.id,
-            clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context, stack),
-            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
-        };
+        const site: Site = await this.createNewSite(context, stack);
+        site.reserved = context.newSiteOS === WebsiteOS.linux;  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
 
         if (context.customLocation) {
             this.addCustomLocationProperties(site, context.customLocation);
@@ -99,16 +92,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
     }
 
     private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
-        const location = await LocationListStep.getLocation(context, webProvider);
-        const site: Site = {
-            name: context.newSiteName,
-            kind: getSiteKind(context),
-            location: nonNullProp(location, 'name'),
-            serverFarmId: context.plan?.id,
-            clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context)
-        };
-
+        const site: Site = await this.createNewSite(context);
         site.functionAppConfig = {
             deployment: {
                 storage: {
@@ -136,16 +120,42 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return site;
     }
 
+    private async createNewSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
+        const location = await LocationListStep.getLocation(context, webProvider);
+        let identity: Identity | undefined = undefined;
+        if (context.managedIdentity) {
+            const userAssignedIdentities = {};
+            userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
+                { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
+            identity = { type: 'UserAssigned', userAssignedIdentities }
+        }
+
+        return {
+            name: context.newSiteName,
+            kind: getSiteKind(context),
+            location: nonNullProp(location, 'name'),
+            serverFarmId: context.plan?.id,
+            clientAffinityEnabled: false,
+            siteConfig: await this.getNewSiteConfig(context, stack),
+            identity
+        };
+    }
+
     private async getNewSiteConfig(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<SiteConfig> {
         let newSiteConfig: SiteConfig = {};
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-        let appSettings: NameValuePair[] = [
-            {
+
+        let appSettings: NameValuePair[] = [];
+        if (context.managedIdentity) {
+            appSettings.push(...createAzureWebJobsStorageManagedIdentitySettings(context));
+        } else {
+            appSettings.push({
                 name: ConnectionKey.Storage,
                 value: storageConnectionString
-            }
-        ];
+            });
+        }
+
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
@@ -254,19 +264,25 @@ function getSiteKind(context: IAppServiceWizardContext): string {
 
 // storage container is needed for flex deployment, but it is not created automatically
 async function tryCreateStorageContainer(site: Site, storageConnectionString: string): Promise<void> {
-    const blobClient = BlobServiceClient.fromConnectionString(storageConnectionString);
-    const containerUrl: string | undefined = site.functionAppConfig?.deployment?.storage?.value;
-    if (containerUrl) {
-        const containerName = containerUrl.split('/').pop();
-        if (containerName) {
-            const client = blobClient.getContainerClient(containerName);
-            if (!await client.exists()) {
-                await blobClient.createContainer(containerName);
-            } else {
-                ext.outputChannel.appendLog(localize('deploymentStorageExists', 'Deployment storage container "{0}" already exists.', containerName));
-                return;
+    try {
+        const blobClient = BlobServiceClient.fromConnectionString(storageConnectionString);
+        const containerUrl: string | undefined = site.functionAppConfig?.deployment?.storage?.value;
+        if (containerUrl) {
+            const containerName = containerUrl.split('/').pop();
+            if (containerName) {
+                const client = blobClient.getContainerClient(containerName);
+                if (!await client.exists()) {
+                    await blobClient.createContainer(containerName);
+                } else {
+                    ext.outputChannel.appendLog(localize('deploymentStorageExists', 'Deployment storage container "{0}" already exists.', containerName));
+                    return;
+                }
             }
         }
+    } catch (error) {
+        // ignore error, we will show a warning in the output channel
+        const parsedError = parseError(error);
+        ext.outputChannel.appendLog(localize('failedToCreateDeploymentStorage', 'Failed to create deployment storage container. {0}', parsedError.message));
     }
 
     ext.outputChannel.appendLog(localize('noDeploymentStorage', 'No deployment storage specified in function app.'));

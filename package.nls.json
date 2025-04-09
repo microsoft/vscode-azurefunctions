@@ -1,5 +1,6 @@
 {
     "azureFunctions.addBinding": "Add binding...",
+    "azureFunctions.allowProgrammingModelSelection": "Allow the user to select a programming model when creating a new function project.",
     "azureFunctions.appSettings.add": "Add New Setting...",
     "azureFunctions.appSettings.decrypt": "Decrypt Settings",
     "azureFunctions.appSettings.delete": "Delete Setting...",
@@ -9,6 +10,8 @@
     "azureFunctions.appSettings.rename": "Rename Setting...",
     "azureFunctions.appSettings.toggleSlotSetting": "Toggle as Slot Setting",
     "azureFunctions.appSettings.upload": "Upload Local Settings...",
+    "azureFunctions.assignManagedIdentity": "Assign Managed Identity to Function App...",
+    "azureFunctions.unassignManagedIdentity": "Unassign Managed Identity from Function App...",
     "azureFunctions.browseWebsite": "Browse Website",
     "azureFunctions.configureDeploymentSource": "Configure Deployment Source...",
     "azureFunctions.connectToGitHub": "Connect to GitHub Repository...",
@@ -21,6 +24,8 @@
     "azureFunctions.createNewProjectWithDockerfile": "Create New Containerized Project...",
     "azureFunctions.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azureFunctions.createSlot": "Create Slot...",
+    "azureFunctions.addLocalMIConnections": "Add Local Project Identity Connections...",
+    "azureFunctions.addRemoteMIConnections": "Add Function App Identity Connections...",
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
     "azureFunctions.deleteSlot": "Delete Slot...",
@@ -36,6 +41,7 @@
     "azureFunctions.enableJavaRemoteDebugging": "Enable remote debugging for Java Functions Apps running on Windows. (experimental)",
     "azureFunctions.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureFunctions.enableRemoteDebugging": "Enable remote debugging for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported. (experimental)",
+    "azureFunctions.enableSystemIdentity": "Enable System Assigned Identity",
     "azureFunctions.endOfLifeWarning": "Show a warning when creating Function Apps with stacks within 6 months of their end of life.",
     "azureFunctions.executeFunction": "Execute Function Now...",
     "azureFunctions.funcCliPath": "The path to the 'func' executable to use for debug and deploy tasks. For example, set it to 'node_modules/.bin/func' if using the func cli installed as a local npm package.",
@@ -119,7 +125,6 @@
     "azureFunctions.walkthrough.functionsStart.scenarios.description": "Learn how you can use Azure Functions to build event-driven systems.\n\nIf you're just getting started with Azure Functions, you can [learn about the anatomy of an Azure Functions application](https://aka.ms/functions-getstarted-devguide).",
     "azureFunctions.walkthrough.functionsStart.scenarios.title": "Explore common scenarios",
     "azureFunctions.walkthrough.functionsStart.title": "Get Started with Azure Functions",
-
     "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString": "Copy Connection String",
     "azureFunctions.durableTaskScheduler.copySchedulerConnectionString": "Copy Connection String",
     "azureFunctions.durableTaskScheduler.copySchedulerEndpoint": "Copy Endpoint",
@@ -131,9 +136,9 @@
     "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
     "azureFunctions.durableTaskScheduler.startEmulator": "Start Durable Task Emulator",
     "azureFunctions.durableTaskScheduler.stopEmulator": "Stop Emulator",
-
     "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features",
     "azureFunctions.durableTaskScheduler.emulatorRegistry": "The registry of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorImage": "The name of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image."
+    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features"
 }

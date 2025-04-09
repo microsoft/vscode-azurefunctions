@@ -11,7 +11,7 @@ import { extensionId, FuncVersion, nonNullValue, ProjectLanguage, registerOnActi
 // eslint-disable-next-line no-restricted-imports
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelInput, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
@@ -28,7 +28,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3], functionName], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 suppressOpenFolder: true,
@@ -39,10 +39,9 @@ suite(`AzureFunctionsExtensionApi`, () => {
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder);
+        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder, NodeModelVersion.v4);
         validateOptions.expectedPaths.push(
-            path.join(projectSubpath, functionName, 'index.js'),
-            path.join(projectSubpath, functionName, 'function.json'),
+            path.join(projectSubpath, 'src', 'functions', `${functionName}.js`),
             path.join(projectSubpath, 'package.json')
         );
         // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
@@ -55,7 +54,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi2');
 
-        await runWithInputs('api.createFunction', [language, NodeModelInput[NodeModelVersion.v3]], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -66,10 +65,9 @@ suite(`AzureFunctionsExtensionApi`, () => {
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true);
+        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4);
         validateOptions.expectedPaths.push(
-            path.join(functionName, 'index.js'),
-            path.join(functionName, 'function.json')
+            path.join('src', 'functions', `${functionName}.js`)
         );
         await validateProject(folderPath, validateOptions);
     });
@@ -87,7 +85,9 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionName,
                 templateId: 'HttpTrigger',
                 languageFilter: /^C\#$/i,
-                functionSettings: { authLevel: 'anonymous' },
+                functionSettings: {
+                    authLevel: 'anonymous'
+                },
                 targetFramework: ['net8.0', 'net7.0', 'net6.0']
             });
         });

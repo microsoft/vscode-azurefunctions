@@ -10,10 +10,10 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, ProjectLanguage, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomAlphanumericString, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { ProjectLanguage, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomAlphanumericString, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { NodeModelInput, NodeModelVersion, PythonModelInput, PythonModelVersion, defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { NodeModelVersion, PythonModelVersion, defaultTestFuncVersion, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -21,21 +21,21 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
     title: string;
     buildMachineOsToSkip?: NodeJS.Platform | NodeJS.Platform[];
 }
+const confirmDeploy = 'Deploy';
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript (Model V3)', ...getJavaScriptValidateOptions(true), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v3 },
-    { title: 'JavaScript (Model V4)', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
-    { title: 'TypeScript (Model V3)', ...getTypeScriptValidateOptions(), createProjectInputs: [NodeModelInput[NodeModelVersion.v3]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v3 },
-    { title: 'TypeScript (Model V4)', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), createProjectInputs: [NodeModelInput[NodeModelVersion.v4]], deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
-    { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
+    // Temporarily disable .NET 8 tests due to Encountered an error (InternalServerError) from host runtime error.
+    // { title: 'C# .NET 8', ...getCSharpValidateOptions('net8.0', FuncVersion.v4), createProjectInputs: [/net.*8/i], deployInputs: [/net.*8/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], createFunctionInputs: ['Company.Function'] },
     //  Temporarily disable .NET 9 test for now; it seems to break after running clean release (functions)
     // { title: 'C# .NET 9', ...getCSharpValidateOptions('net9.0', FuncVersion.v4), createProjectInputs: [/net.*9/i], deployInputs: [/net.*9/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
-    { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/] },
-    { title: 'Python (Model V1)', ...getPythonValidateOptions('.venv'), createProjectInputs: [PythonModelInput[PythonModelVersion.v1], /py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v1 },
-    { title: 'Python (Model V2)', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [PythonModelInput[PythonModelVersion.v2], /py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], languageModelVersion: PythonModelVersion.v2 },
+    // Temporarily disable PowerShell tests due to Encountered an error (InternalServerError) from host runtime error.
+    // { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy] },
+    { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];

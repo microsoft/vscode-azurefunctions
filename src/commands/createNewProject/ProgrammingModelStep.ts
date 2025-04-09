@@ -8,6 +8,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { recommendedDescription } from '../../constants-nls';
 import { localize } from '../../localize';
 import { getTemplateVersionFromLanguageAndModel } from '../../utils/templateVersionUtils';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
@@ -59,6 +60,8 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
         // auto-select the default model if there is only one
         if (this._options.models.length === 1) {
             context.languageModel = this._options.models[0].data;
+        } else if (this._options.defaultModel !== undefined && !getWorkspaceSetting("allowProgrammingModelSelection")) {
+            context.languageModel = this._options.defaultModel;
         }
     }
 

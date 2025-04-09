@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -88,21 +88,22 @@ export async function selectWorkspaceFile(context: IActionContext, placeHolder: 
 
 export async function selectWorkspaceItem(context: IActionContext, placeHolder: string, options: vscode.OpenDialogOptions, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
     let folder: IAzureQuickPickItem<string | undefined> | undefined;
+    const folderPicks: IAzureQuickPickItem<string | undefined>[] = [];
     if (vscode.workspace.workspaceFolders) {
-        const folderPicks: IAzureQuickPickItem<string | undefined>[] = await Promise.all(vscode.workspace.workspaceFolders.map(async (f: vscode.WorkspaceFolder) => {
+        for (const f of vscode.workspace.workspaceFolders) {
             let subpath: string | undefined;
             if (getSubPath) {
                 subpath = await getSubPath(f);
             }
 
             const fsPath: string = subpath ? path.join(f.uri.fsPath, subpath) : f.uri.fsPath;
-            return { label: path.basename(fsPath), description: fsPath, data: fsPath };
-        }));
-
+            if (await AzExtFsExtra.pathExists(fsPath)) {
+                folderPicks.push({ label: path.basename(fsPath), description: fsPath, data: fsPath });
+            }
+        }
         folderPicks.push({ label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined });
         folder = await context.ui.showQuickPick(folderPicks, { placeHolder });
     }
-
     return folder && folder.data ? folder.data : (await context.ui.showOpenDialog(options))[0].fsPath;
 }
 

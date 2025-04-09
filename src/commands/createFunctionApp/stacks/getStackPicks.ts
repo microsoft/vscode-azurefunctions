@@ -3,14 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type Site, type StringDictionary } from '@azure/arm-appservice';
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
+import { type SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { type IAppSettingsClient } from '@microsoft/vscode-azext-azureappsettings';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
-import { maskUserInfo, openUrl, parseError, type AgentQuickPickItem, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { funcVersionLink } from '../../../FuncVersion';
-import { hiddenStacksSetting, noRuntimeStacksAvailableLabel } from '../../../constants';
+import { maskUserInfo, nonNullValue, openUrl, parseError, type AgentQuickPickItem, type AzExtParentTreeItem, type IAzureQuickPickItem, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
+import { type MessageItem } from 'vscode';
+import { hiddenStacksSetting, noRuntimeStacksAvailableLabel, stackUpgradeLearnMoreLink } from '../../../constants';
 import { previewDescription } from '../../../constants-nls';
+import { funcVersionLink } from '../../../FuncVersion';
 import { localize } from '../../../localize';
+import { isResolvedFunctionApp } from '../../../tree/ResolvedFunctionAppResource';
 import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -149,7 +154,7 @@ function getPriority(ss: FunctionAppRuntimes): number {
 }
 
 type StacksArmResponse = { value: { properties: FunctionAppStack }[] };
-async function getStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
+async function getStacks(context: ISubscriptionActionContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
     if (!context._stacks) {
         let stacksArmResponse: StacksArmResponse;
         try {
@@ -178,16 +183,16 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
     return context._stacks;
 }
 
-async function getFlexStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
+async function getFlexStacks(context: ISubscriptionActionContext & { _stacks?: FunctionAppStack[] }, location?: string): Promise<FunctionAppStack[]> {
     const client: ServiceClient = await createGenericClient(context, context);
-    const location = await LocationListStep.getLocation(context);
+    location = location ?? (await LocationListStep.getLocation(context)).name;
     const flexFunctionAppStacks: FunctionAppStack[] = [];
     const stacks = ['dotnet', 'java', 'node', 'powershell', 'python'];
     if (!context._stacks) {
         const getFlexStack = async (stack: string) => {
             const result: AzExtPipelineResponse = await client.sendRequest(createPipelineRequest({
                 method: 'GET',
-                url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location.name}/functionAppStacks`, {
+                url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location}/functionAppStacks`, {
                     'api-version': '2023-12-01',
                     stack,
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
@@ -272,4 +277,157 @@ export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<Functio
         return endOfLife <= sixMonthsFromNow;
     }
     return false
+}
+
+export interface eolWarningOptions {
+    site: Site;
+    isLinux?: boolean;
+    isFlex?: boolean;
+    client?: SiteClient | IAppSettingsClient;
+    location?: string;
+    version?: string;
+    runtime?: string
+}
+/**
+ * This function checks the end of life date for stack and returns a message if the stack is end of life or will be end of life in 6 months.
+ */
+export async function getEolWarningMessages(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<string> {
+    let isEOL = false;
+    let willBeEOL = false;
+    let version: string | undefined;
+    let displayInfo: {
+        endOfLife: Date | undefined;
+        displayVersion: string | undefined;
+    } = { endOfLife: undefined, displayVersion: undefined };
+
+    if (options.isFlex) {
+        const runtime = options.site.functionAppConfig?.runtime?.name;
+        version = options.site.functionAppConfig?.runtime?.version;
+        displayInfo = (await getEOLDate(context, {
+            site: options.site,
+            version: nonNullValue(version),
+            runtime: nonNullValue(runtime) === 'dotnet-isolated' ? 'dotnet' : nonNullValue(runtime),
+            isFlex: true,
+            location: options.site.location
+        })
+        );
+    } else if (options.isLinux) {
+        const linuxFxVersion = options.site.siteConfig?.linuxFxVersion;
+        displayInfo = await getEOLLinuxFxVersion(context, nonNullValue(linuxFxVersion));
+    } else if (options.site.siteConfig) {
+        if (options.site.siteConfig.javaVersion) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: options.site.siteConfig.javaVersion,
+                runtime: 'java'
+            }));
+        } else if (options.site.siteConfig.powerShellVersion) {
+            displayInfo = (await getEOLDate(context, {
+                site: options.site,
+                version: options.site.siteConfig.powerShellVersion,
+                runtime: 'powershell'
+            }));
+        } else if (options.site.siteConfig.netFrameworkVersion) {
+            // In order to get the node version, we need to check the app settings
+            let appSettings: StringDictionary | undefined;
+            if (options.client) {
+                appSettings = await options.client.listApplicationSettings();
+            }
+            if (appSettings && appSettings.properties && appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION']) {
+                displayInfo = (await getEOLDate(context, {
+                    site: options.site,
+                    version: appSettings.properties['WEBSITE_NODE_DEFAULT_VERSION'],
+                    runtime: 'node'
+                }));
+            } else {
+                displayInfo = (await getEOLDate(context, {
+                    site: options.site,
+                    version: options.site.siteConfig.netFrameworkVersion,
+                    runtime: 'dotnet'
+                }));
+            }
+        }
+    }
+
+    if (displayInfo.endOfLife) {
+        const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
+        isEOL = displayInfo.endOfLife <= new Date();
+        willBeEOL = displayInfo.endOfLife <= sixMonthsFromNow;
+        if (isEOL) {
+            return localize('eolWarning', 'Upgrade to the latest available version as version {0} has reached end-of-life on {1} and is no longer supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+        } else if (willBeEOL) {
+            return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
+        }
+    }
+
+    return '';
+}
+
+export async function showEolWarningIfNecessary(context: ISubscriptionActionContext, parent: AzExtParentTreeItem, client?: IAppSettingsClient) {
+    if (isResolvedFunctionApp(parent)) {
+        client = client ?? await parent.site.createClient(context);
+        const eolWarningMessage = await getEolWarningMessages(context, {
+            site: parent.site.rawSite,
+            isLinux: client.isLinux,
+            isFlex: parent.isFlex,
+            client
+        });
+        if (eolWarningMessage) {
+            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+            await context.ui.showWarningMessage(eolWarningMessage, { modal: true, learnMoreLink: stackUpgradeLearnMoreLink }, continueOn);
+        }
+    }
+}
+
+async function getEOLDate(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+    try {
+        const stacks = options.isFlex ?
+            (await getFlexStacks(context, options.location)).filter(s => options.runtime === s.value) :
+            (await getStacks(context)).filter(s => options.runtime === s.value);
+        const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version));
+        const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => options.isFlex ? minor.stackSettings.linuxRuntimeSettings?.runtimeVersion : minor.stackSettings.windowsRuntimeSettings?.runtimeVersion === options.version);
+        const displayVersion = nonNullValue(filteredStack?.displayText);
+        const endOfLifeDate = options.isFlex ?
+            filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
+            filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
+        if (endOfLifeDate) {
+            const endOfLife = new Date(endOfLifeDate)
+            return {
+                endOfLife,
+                displayVersion
+            }
+        }
+        return {
+            endOfLife: undefined,
+            displayVersion
+        }
+    } catch {
+        return {
+            endOfLife: undefined,
+            displayVersion: ''
+        }
+    }
+}
+
+async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFxVersion: string): Promise<{ endOfLife: Date | undefined, displayVersion: string }> {
+    const stacks = (await getStacks(context)).filter(s =>
+        s.majorVersions.some(mv =>
+            mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion)
+        )
+    );
+    const versionFilteredStacks = stacks[0].majorVersions.filter(mv => mv.minorVersions.some(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion));
+    const filteredStack = versionFilteredStacks[0].minorVersions.find(minor => minor.stackSettings.linuxRuntimeSettings?.runtimeVersion === linuxFxVersion);
+    const displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
+    const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+    if (endOfLifeDate) {
+        const endOfLife = new Date(endOfLifeDate)
+        return {
+            endOfLife,
+            displayVersion
+        }
+    }
+    return {
+        endOfLife: undefined,
+        displayVersion
+    }
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
-import { LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, type INewStorageAccountDefaults } from "@microsoft/vscode-azext-azureutils";
+import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, UserAssignedIdentityCreateStep, UserAssignedIdentityListStep, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
 import { funcVersionSetting } from "../../constants";
@@ -65,12 +65,13 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
-        wizardContext.useConsumptionPlan = true;
+        wizardContext.useFlexConsumptionPlan = true;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
         executeSteps.push(new AppInsightsCreateStep());
+        executeSteps.push(new UserAssignedIdentityCreateStep());
         if (!context.dockerfilePath) {
             executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new LogAnalyticsCreateStep());
@@ -94,9 +95,18 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
             }
         ));
         promptSteps.push(new AppInsightsListStep());
+        promptSteps.push(new UserAssignedIdentityListStep());
     }
 
+    executeSteps.push(new RoleAssignmentExecuteStep(() => {
+        const role: Role = {
+            scopeId: wizardContext?.storageAccount?.id,
+            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
+            roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.roleName
+        };
 
+        return [role];
+    }));
     const storageProvider = 'Microsoft.Storage';
     LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
 

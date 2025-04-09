@@ -180,6 +180,7 @@ const pythonV1Model: IAzureQuickPickItem<number | undefined> = { data: undefined
 
 export const pythonModels = [pythonV2Model, pythonV1Model];
 export const pythonLearnMoreLink = 'https://aka.ms/AAmlyrc';
+export const stackUpgradeLearnMoreLink = 'https://aka.ms/FunctionsStackUpgrade';
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {

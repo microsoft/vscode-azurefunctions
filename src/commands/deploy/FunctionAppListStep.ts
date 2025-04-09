@@ -17,7 +17,7 @@ import { type IFuncDeployContext } from "./deploy";
 export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContext> {
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.site = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder: vscode.l10n.t("Select a function app") })).data;
-        context.telemetry.properties.resourceId = context.site?.id;
+        context.telemetry.properties.resourceId = context.site?.id ? new vscode.TelemetryTrustedValue(context.site?.id) : undefined;
     }
 
     public shouldPrompt(context: IFuncDeployContext): boolean {
@@ -35,7 +35,7 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
             }
         });
 
-        qp.unshift({ label: '$(plus) Create new function app', data: undefined });
+        qp.unshift({ label: '$(plus) Create new function app...', data: undefined });
         return qp;
     }
 
