@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { openUrl, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type DurableTaskHubResourceModel } from "../../tree/durableTaskScheduler/DurableTaskHubResourceModel";
 import { localize } from '../../localize';
+import { type DurableTaskSchedulerDashboardModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDashboardModel";
 
-export async function openTaskHubDashboard(_: IActionContext, taskHub: DurableTaskHubResourceModel | undefined): Promise<void> {
+export async function openTaskHubDashboard(_: IActionContext, taskHub: DurableTaskSchedulerDashboardModel | undefined): Promise<void> {
     if (!taskHub) {
         throw new Error(localize('noTaskHubSelectedErrorMessage', 'No task hub was selected.'));
     }
