@@ -27,6 +27,7 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
         if (this._picks.length === 1) {
             this._oneSubscription = true;
             context.subscription = this._picks[0].data;
+            context.telemetry.properties.subscriptionId = context.subscription.subscriptionId;
         }
     }
 
