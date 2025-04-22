@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { ParsedSite, createSlot } from '@microsoft/vscode-azext-azureappservice';
+import { createSlot } from '@microsoft/vscode-azext-azureappservice';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, type AzExtTreeItem, type IActionContext, type ICreateChildImplContext, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { showSiteCreated } from '../commands/createFunctionApp/showSiteCreated';
 import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
 import { treeUtils } from '../utils/treeUtils';
@@ -64,8 +63,6 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
         const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
-        const parsedSite = new ParsedSite(newSite, this.subscription);
-        showSiteCreated(parsedSite, context);
         return new SlotTreeItem(this, new ResolvedFunctionAppResource(this.subscription, newSite));
     }
 }
