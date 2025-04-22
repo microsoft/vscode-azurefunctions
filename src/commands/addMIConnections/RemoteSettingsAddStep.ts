@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createUniversallyUniqueContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
@@ -21,11 +21,13 @@ export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectio
 
         await client.updateApplicationSettings({ properties });
         for (const connection of nonNullProp(context, 'connectionsToAdd')) {
+            // TODO: Convert to use createSuccessOutput
             context.activityChildren?.push(
-                new GenericTreeItem(undefined, {
+                new ActivityChildItem({
                     contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
                     label: localize('addedAppSetting', 'Add app setting "{0}"', connection.name),
-                    iconPath: activitySuccessIcon
+                    iconPath: activitySuccessIcon,
+                    activityType: ActivityChildType.Success
                 })
             );
         }

@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createUniversallyUniqueContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJsonwithEncryption } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
@@ -24,11 +24,13 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnection
         if (localSettings.Values) {
             for (const connection of nonNullProp(context, 'connectionsToAdd')) {
                 localSettings.Values[connection.name] = connection.value;
+                // TODO: Convert to use createSuccessOutput
                 context.activityChildren?.push(
-                    new GenericTreeItem(undefined, {
+                    new ActivityChildItem({
                         contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
                         label: localize('addedLocalSetting', 'Add local setting "{0}"', connection.name),
-                        iconPath: activitySuccessIcon
+                        iconPath: activitySuccessIcon,
+                        activityType: ActivityChildType.Success
                     })
                 );
             }
