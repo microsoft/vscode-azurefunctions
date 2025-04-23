@@ -94,6 +94,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     });
 
     await wizard.prompt();
+    wizardContext.activityTitle = localize('creatingProject', 'Create new {0} project in "{1}"', wizardContext.language, wizardContext.projectPath);
     await wizard.execute();
 
     await ext.rgApi.workspaceResourceTree.refresh(context);

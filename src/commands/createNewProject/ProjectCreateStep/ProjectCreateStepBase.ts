@@ -3,27 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
 
-export abstract class ProjectCreateStepBase extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
+export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;
     public stepName: string = 'ProjectCreateStepBase';
-    public getTreeItemLabel(context: IProjectWizardContext): string {
-        return localize('creatingProject', 'Create new {0} project in "{1}"', context.language, context.projectPath);
-    }
-    public getOutputLogSuccess(context: IProjectWizardContext): string {
-        return localize('createdProject', 'Succesfully created new {0} project in "{1}".', context.language, context.projectPath);
-    }
-    public getOutputLogFail(context: IProjectWizardContext): string {
-        return localize('failedToCreateProject', 'Failed to create new {0} project in "{1}".', context.language, context.projectPath);
-    }
-    public getOutputLogProgress(context: IProjectWizardContext): string {
-        return localize('creatingProject', 'Creating new {0} project in "{1}"...', context.language, context.projectPath);
-    }
 
     public abstract executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 

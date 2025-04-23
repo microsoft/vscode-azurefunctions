@@ -9,6 +9,7 @@ import { JobType, type ParsedJob } from '../../templates/script/parseScriptTempl
 import { assertTemplateIsV2 } from '../../utils/templateVersionUtils';
 import { isFunctionProject } from '../createNewProject/verifyIsProject';
 import { type FunctionV2WizardContext, type IFunctionWizardContext } from './IFunctionWizardContext';
+import { JobNameExecuteStep } from './actionStepsV2/JobNameExecuteStep';
 import { actionStepFactory } from './actionStepsV2/actionStepFactory';
 import { promptStepFactory } from './promptStepsV2/promptStepFactory';
 
@@ -34,7 +35,7 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
             });
 
             const executeSteps: AzureWizardExecuteStep<FunctionV2WizardContext>[] = [];
-            context.activityTitle = context.job.name;
+            executeSteps.push(new JobNameExecuteStep(context.job.name));
             context.job.parsedActions.map((pa, index) => {
                 // add index to increment the priority number; start at 500 so other execute steps can be injected
                 executeSteps.push(actionStepFactory(pa, index + 1 + 500));
