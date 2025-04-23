@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
@@ -16,8 +16,21 @@ export interface IConnection {
     connectionString: string;
 }
 
-export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 200;
+    stepName = 'azureConnectionCreateStepBase';
+    public getTreeItemLabel(_context: T): string {
+        return localize('azureConnection', 'Add connection string');
+    }
+    public getOutputLogSuccess(_context: T): string {
+        return localize('azureConnectionSuccess', 'Successfully added connection string.');
+    }
+    public getOutputLogFail(_context: T): string {
+        return localize('azureConnectionFail', 'Failed to add connection string.');
+    }
+    public getOutputLogProgress(_context: T): string {
+        return localize('addingConnectionString', 'Adding connection string...');
+    }
 
     private readonly _setting: IBindingSetting | ParsedInput;
     private readonly _resourceType: string;

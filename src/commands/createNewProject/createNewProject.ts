@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { window } from 'vscode';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -12,6 +11,7 @@ import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreTools
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
+import { createActivityContext } from '../../utils/activityUtils';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import type * as api from '../../vscode-azurefunctions.api';
 import { type IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
@@ -53,7 +53,19 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, undefined) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
-    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version), projectTemplateKey });
+    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(
+        context,
+        options,
+        {
+            language,
+            version: tryParseFuncVersion(version),
+            projectTemplateKey
+        },
+        await createActivityContext()
+    );
+
+    wizardContext.activityChildren = [];
+
     const optionalExecuteStep = options.executeStep;
 
     if (optionalExecuteStep instanceof CreateDockerfileProjectStep) {
@@ -85,6 +97,4 @@ export async function createNewProjectInternal(context: IActionContext, options:
     await wizard.execute();
 
     await ext.rgApi.workspaceResourceTree.refresh(context);
-    // don't wait
-    void window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
 }

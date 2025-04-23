@@ -16,6 +16,7 @@ const ballerinaPackageTaskLabel: string = convertToFunctionsTaskLabel('package')
 
 export class BallerinaInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = ballerinaPackageTaskLabel;
+    stepName: string = 'BallerinaInitVSCodeStep';
 
     private _debugSubpath: string = "target/azure_functions";
 

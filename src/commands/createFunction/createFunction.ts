@@ -8,7 +8,9 @@ import { type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { localize } from '../../localize';
 import { type LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
+import { createActivityContext } from '../../utils/activityUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { getContainingWorkspace, getRootWorkspaceFolder } from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -72,7 +74,10 @@ export async function createFunctionInternal(context: IActionContext, options: a
     const hasDurableStorage: boolean = await durableUtils.verifyHasDurableStorage(language, projectPath);
 
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
-    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey, hasDurableStorage, templateSchemaVersion });
+    const wizardContext: IFunctionWizardContext = Object.assign(context, options, await createActivityContext(),
+        { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey, hasDurableStorage, templateSchemaVersion });
+    wizardContext.activityChildren = [];
+
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new FunctionListStep({
             templateId: options.templateId,
@@ -81,5 +86,6 @@ export async function createFunctionInternal(context: IActionContext, options: a
         })]
     });
     await wizard.prompt();
+    wizardContext.activityTitle = localize('creatingFunction', 'Create function');
     await wizard.execute();
 }
