@@ -76,6 +76,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
     const wizardContext: IFunctionWizardContext = Object.assign(context, options, await createActivityContext(),
         { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey, hasDurableStorage, templateSchemaVersion });
+    wizardContext.activityTitle = localize('creatingFunction', 'Create function');
     wizardContext.activityChildren = [];
 
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
@@ -86,6 +87,5 @@ export async function createFunctionInternal(context: IActionContext, options: a
         })]
     });
     await wizard.prompt();
-    wizardContext.activityTitle = localize('creatingFunction', 'Create function');
     await wizard.execute();
 }
