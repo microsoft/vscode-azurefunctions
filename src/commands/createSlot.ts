@@ -8,7 +8,6 @@ import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { type SlotTreeItem } from '../tree/SlotTreeItem';
 import { SlotsTreeItem } from '../tree/SlotsTreeItem';
-import { type ISiteCreatedOptions } from './createFunctionApp/showSiteCreated';
 
 export async function createSlot(context: IActionContext, node?: SlotsTreeItem): Promise<string> {
     if (!node) {
@@ -18,7 +17,6 @@ export async function createSlot(context: IActionContext, node?: SlotsTreeItem):
         });
     }
 
-    (<ISiteCreatedOptions>context).showCreatedNotification = true;
     const slotNode: SlotTreeItem = await node.createChild(context);
     return slotNode.fullId;
 }

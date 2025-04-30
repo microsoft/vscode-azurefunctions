@@ -18,6 +18,7 @@ import { InitVSCodeStepBase } from './InitVSCodeStepBase';
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
 export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
+    stepName: string = 'ScriptInitVSCodeStep';
     protected useFuncExtensionsInstall: boolean = false;
 
     protected getTasks(language: ProjectLanguage): TaskDefinition[] {

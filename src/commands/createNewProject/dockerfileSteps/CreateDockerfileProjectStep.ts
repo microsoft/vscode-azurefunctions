@@ -3,12 +3,26 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
+import { AzureWizardExecuteStepWithActivityOutput, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
+import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 import { type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 
-export class CreateDockerfileProjectStep extends AzureWizardExecuteStep<IFunctionWizardContext>{
+export class CreateDockerfileProjectStep extends AzureWizardExecuteStepWithActivityOutput<IFunctionWizardContext> {
+    stepName: string = "CreateDockerfileProjectStep";
+    protected getTreeItemLabel(context: IFunctionWizardContext): string {
+        return localize('createDockerfileProject', 'Create Dockerfile project in "{0}"', nonNullValueAndProp(context, 'projectPath'));
+    }
+    protected getOutputLogSuccess(context: IFunctionWizardContext): string {
+        return localize('createDockerfileProjectSuccess', 'Successfully created Dockerfile project in "{0}"', nonNullValueAndProp(context, 'projectPath'));
+    }
+    protected getOutputLogFail(context: IFunctionWizardContext): string {
+        return localize('createDockerfileProjectFail', 'Failed to create Dockerfile project in "{0}"', nonNullValueAndProp(context, 'projectPath'));
+    }
+    protected getOutputLogProgress(context: IFunctionWizardContext): string {
+        return localize('creatingDockerfileProject', 'Creating Dockerfile project in "{0}..."', nonNullValueAndProp(context, 'projectPath'));
+    }
     public priority: number = 100;
 
     public async execute(context: IFunctionWizardContext): Promise<void> {

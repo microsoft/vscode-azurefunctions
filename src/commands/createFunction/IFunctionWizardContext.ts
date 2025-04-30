@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { type ExecuteActivityContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { type DurableBackendValues } from "../../constants";
 import { type BindingSettingValue } from "../../funcConfig/function";
 import { type IBindingSetting } from "../../templates/IBindingTemplate";
@@ -11,7 +11,7 @@ import { type FunctionTemplateBase } from "../../templates/IFunctionTemplate";
 import { type ParsedInput, type ParsedJob } from "../../templates/script/parseScriptTemplatesV2";
 import { type IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
 
-export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext {
+export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext, ExecuteActivityContext {
     functionTemplate?: FunctionTemplateBase;
     functionName?: string;
 

@@ -19,6 +19,7 @@ import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 const javaPackageTaskLabel: string = convertToFunctionsTaskLabel('package');
 
 export class JavaInitVSCodeStep extends InitVSCodeStepBase {
+    stepName: string = 'JavaInitVSCodeStep';
     protected preDeployTask: string = javaPackageTaskLabel;
 
     private _debugSubpath: string;

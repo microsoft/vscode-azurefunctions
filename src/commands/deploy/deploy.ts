@@ -220,8 +220,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
                 ext.outputChannel.appendLog(noSubpathWarning);
             }
-
-            await innerDeploy(node.site, deployFsPath, context);
+            const deployContext = Object.assign(context, await createActivityContext());
+            deployContext.activityChildren = [];
+            await innerDeploy(node.site, deployFsPath, deployContext);
         }
     );
 

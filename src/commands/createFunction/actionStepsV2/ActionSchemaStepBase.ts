@@ -12,6 +12,7 @@ export abstract class ActionSchemaStepBase<T extends FunctionV2WizardContext> ex
         super();
     }
 
+    public stepName = `${this.action.name}ActionSchemaStep`;
     public async execute(context: T): Promise<void> {
         try {
             await this.executeAction(context);

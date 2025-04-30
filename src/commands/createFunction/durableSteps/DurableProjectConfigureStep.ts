@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName } from '../../../constants';
@@ -15,13 +15,24 @@ import { localize } from '../../../localize';
 import { durableUtils } from '../../../utils/durableUtils';
 import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
-export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
+    protected getTreeItemLabel(_context: T): string {
+        return localize('configuringDurableProject', 'Configure durable project settings');
+    }
+    protected getOutputLogSuccess(_context: T): string {
+        return localize('configuredDurableProject', 'Successfully configured durable project settings.');
+    }
+    protected getOutputLogFail(_context: T): string {
+        return localize('failedToConfigureDurableProject', 'Failed to configure durable project settings.');
+    }
+    protected getOutputLogProgress(_context: T): string {
+        return localize('configuringDurableProject', 'Configuring durable project settings...');
+    }
+    protected preDeployTask: string = 'funcHostStart';
+    public stepName: string = 'DurableProjectConfigureStep';
     public priority: number = 225;
 
-    public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const configuring: string = localize('configuringDurableProject', 'Configuring durable project settings...');
-        progress.report({ message: configuring });
-
+    public async execute(context: T, _progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         await this.configureHostAndLocalSettingsJson(context);
         await durableUtils.tryInstallDurableDependencies(context);
     }

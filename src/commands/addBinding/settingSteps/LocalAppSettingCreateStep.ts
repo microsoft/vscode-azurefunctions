@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { localSettingsFileName } from '../../../constants';
 import { setLocalAppSetting } from '../../../funcConfig/local.settings';
@@ -14,8 +14,21 @@ import { nonNullProp, nonNullValue } from '../../../utils/nonNull';
 import { getBindingSetting, setBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { type IBindingWizardContext } from '../IBindingWizardContext';
 
-export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IBindingWizardContext> {
+export class LocalAppSettingCreateStep extends AzureWizardExecuteStepWithActivityOutput<IBindingWizardContext> {
     public priority: number = 210;
+    stepName = 'localAppSettingCreateStep';
+    public getTreeItemLabel(_context: IBindingWizardContext): string {
+        return localize('localAppSetting', 'Update {0}', localSettingsFileName);
+    }
+    public getOutputLogSuccess(_context: IBindingWizardContext): string {
+        return localize('localAppSettingSuccess', 'Successfully updated {0}.', localSettingsFileName);
+    }
+    public getOutputLogFail(_context: IBindingWizardContext): string {
+        return localize('localAppSettingFail', 'Failed to update {0}.', localSettingsFileName);
+    }
+    public getOutputLogProgress(_context: IBindingWizardContext): string {
+        return localize('updatingLocalSettings', 'Updating {0}...', localSettingsFileName);
+    }
 
     private readonly _setting: IBindingSetting | ParsedInput;
     private readonly _valueKey: string;
@@ -26,8 +39,7 @@ export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IBindingWi
         this._valueKey = valueKey;
     }
 
-    public async execute(context: IBindingWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        progress.report({ message: localize('updatingLocalSettings', 'Updating {0}...', localSettingsFileName) });
+    public async execute(context: IBindingWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const appSettingName = String(nonNullValue(getBindingSetting(context, this._setting), this._setting.name));
         await setLocalAppSetting(context, context.projectPath, appSettingName, nonNullProp(context, this._valueKey as keyof IBindingWizardContext) as string);
         // if the binding isn't already set then a new one was created
