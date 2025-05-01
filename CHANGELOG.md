@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.17.2 - 2025-05-01
+
+### Fixes
+* [[2738]](https://github.com/microsoft/vscode-azureappservice/pull/2738) Incomplete telemetry data capture in specific scenarios.
+
 ## 1.17.1 - 2025-04-09
 
 ### Fixes
