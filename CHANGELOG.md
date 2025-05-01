@@ -3,7 +3,7 @@
 ## 1.17.2 - 2025-05-01
 
 ### Fixes
-* [[4494]](https://github.com/microsoft/vscode-azurefunctions/pull/4494) Fixes function triggres not appearing under the "Functions" node in the remote view after deploying
+* [[4494]](https://github.com/microsoft/vscode-azurefunctions/pull/4494) Fixes function triggers not appearing under the "Functions" node in the remote view after deploying
 * [[4493]](https://github.com/microsoft/vscode-azurefunctions/pull/4493) Incomplete telemetry data capture in specific scenarios.
 
 ## 1.17.1 - 2025-04-09
