@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItem, ActivityChildType, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
@@ -26,7 +26,7 @@ export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectio
             // TODO: Convert to use createSuccessOutput
             context.activityChildren?.push(
                 new ActivityChildItem({
-                    contextValue: createContextValue([this.stepName]),
+                    contextValue: createContextValue([this.stepName, activitySuccessContext]),
                     label: localize('addedAppSetting', 'Add app setting "{0}"', connection.name),
                     iconPath: activitySuccessIcon,
                     activityType: ActivityChildType.Success

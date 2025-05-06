@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItem, ActivityChildType, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzExtFsExtra, AzureWizardExecuteStep, createContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJsonwithEncryption } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
@@ -29,7 +29,7 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnection
                 // TODO: Convert to use createSuccessOutput
                 context.activityChildren?.push(
                     new ActivityChildItem({
-                        contextValue: createContextValue([this.stepName]),
+                        contextValue: createContextValue([this.stepName, activitySuccessContext]),
                         label: localize('addedLocalSetting', 'Add local setting "{0}"', connection.name),
                         iconPath: activitySuccessIcon,
                         activityType: ActivityChildType.Success
