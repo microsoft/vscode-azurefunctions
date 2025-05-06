@@ -29,7 +29,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
     stepName: string = 'createFunctionAppStep';
     public priority: number = 1000;
 
-    public async execute(context: IFlexFunctionAppWizardContext, _progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+    public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
         const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
 
@@ -38,6 +38,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         context.telemetry.properties.newSiteMajorVersion = stack.majorVersion.value;
         context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
         context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
+
+        const message: string = localize('creatingFuncApp', 'Creating function app "{0}"...', context.newSiteName);
+        progress.report({ message });
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
@@ -241,19 +244,19 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
 
     protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Create new function app "{0}"', siteName);
+        return localize('creatingNewApp', 'Create function app "{0}"', siteName);
     }
     protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('createdNewApp', 'Successfully created new function app "{0}".', siteName);
+        return localize('createdNewApp', 'Successfully created function app "{0}".', siteName);
     }
     protected getOutputLogFail(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('failedToCreateNewApp', 'Failed to create new function app "{0}".', siteName);
+        return localize('failedToCreateNewApp', 'Failed to create function app "{0}".', siteName);
     }
     protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Creating new function app "{0}"...', siteName);
+        return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
 }
 
