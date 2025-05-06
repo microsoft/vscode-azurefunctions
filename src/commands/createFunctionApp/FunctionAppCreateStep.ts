@@ -8,7 +8,7 @@ import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, maskUserInfo, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput, maskUserInfo, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { type Progress } from 'vscode';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -22,11 +22,11 @@ import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
-import { showSiteCreated } from './showSiteCreated';
 import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
-export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
+export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOutput<IFunctionAppWizardContext> {
+    stepName: string = 'createFunctionAppStep';
     public priority: number = 1000;
 
     public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
@@ -39,8 +39,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
         context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
 
-        const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
-        ext.outputChannel.appendLog(message);
+        const message: string = localize('creatingFuncApp', 'Creating function app "{0}"...', context.newSiteName);
         progress.report({ message });
 
         const siteName: string = nonNullProp(context, 'newSiteName');
@@ -58,7 +57,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = maskUserInfo(parseError(error).message, []);
             }
         }
-        showSiteCreated(site, context);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
@@ -248,6 +246,23 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         return result;
+    }
+
+    protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Create function app "{0}"', siteName);
+    }
+    protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('createdNewApp', 'Successfully created function app "{0}".', siteName);
+    }
+    protected getOutputLogFail(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('failedToCreateNewApp', 'Failed to create function app "{0}".', siteName);
+    }
+    protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
 }
 

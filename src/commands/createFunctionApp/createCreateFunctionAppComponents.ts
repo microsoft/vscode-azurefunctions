@@ -40,6 +40,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         ...(await createActivityContext())
     });
 
+    wizardContext.activityChildren = [];
+
     const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IFunctionAppWizardContext>[] = [];
 

@@ -11,35 +11,28 @@ import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-uti
 import { type AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { type Progress } from "vscode";
 import { webProvider } from "../../../constants";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { createWebSiteClient } from "../../../utils/azureClients";
 import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
-import { showSiteCreated } from "../showSiteCreated";
 
 export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
-        ext.outputChannel.appendLog(message);
-        progress.report({ message });
-
         if (!context.deployWorkspaceResult?.registryLoginServer || !context.deployWorkspaceResult?.imageName) {
             throw new Error(localize('failToCreateApp', 'Failed to create function app. There was an error creating the necessary container resources.'));
         }
+
+        const message: string = localize('creatingNewApp', 'Creating function app "{0}"...', context.newSiteName);
+        progress.report({ message });
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
         const client: WebSiteManagementClient = await createWebSiteClient(context);
         context.site = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context));
         context.activityResult = context.site as AppResource;
-
-        const containerSite = Object.assign(context.site, { defaultHostUrl: `https://${context.site.defaultHostName}`, fullName: context.site.name, isSlot: false });
-
         await pingContainerizedFunctionApp(context, client, context.site);
-        showSiteCreated(containerSite, context);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
@@ -83,6 +76,23 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                 ]
             }
         }
+    }
+
+    protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Create function app "{0}"', siteName);
+    }
+    protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('createdNewApp', 'Successfully created function app "{0}".', siteName);
+    }
+    protected getOutputLogFail(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('failedToCreateNewApp', 'Failed to create function app "{0}".', siteName);
+    }
+    protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
 }
 
