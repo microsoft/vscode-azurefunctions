@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type FunctionsDeploymentStorageAuthentication, type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
@@ -96,11 +96,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                 storage: {
                     type: 'blobContainer',
                     value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
-                    authentication: {
-                        userAssignedIdentityResourceId: undefined,
-                        type: 'StorageAccountConnectionString',
-                        storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-                    }
+                    authentication: createDeploymentStorageAuthentication(context)
                 }
             },
             runtime: {
@@ -116,6 +112,15 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         }
 
         return site;
+
+        function createDeploymentStorageAuthentication(context: IFlexFunctionAppWizardContext): FunctionsDeploymentStorageAuthentication {
+            const hasManagedIdentity: boolean = !!context.managedIdentity;
+            return {
+                userAssignedIdentityResourceId: hasManagedIdentity ? context.managedIdentity?.id : undefined,
+                type: hasManagedIdentity ? 'UserAssignedIdentity' : 'StorageAccountConnectionString',
+                storageAccountConnectionStringName: hasManagedIdentity ? undefined : 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
+            };
+        }
     }
 
     private async createNewSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
@@ -190,7 +195,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                 name: contentShareKey,
                 value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
-        } else if (isFlex) {
+            // only add this setting for flex apps, if we're not using managed identity
+        } else if (isFlex && !context.managedIdentity) {
             appSettings.push({
                 name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
                 value: storageConnectionString
