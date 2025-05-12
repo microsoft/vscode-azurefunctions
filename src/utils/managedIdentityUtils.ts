@@ -30,7 +30,7 @@ export function createAzureWebJobsStorageManagedIdentitySettings(context: IFunct
         });
         appSettings.push({
             name: `${ConnectionKey.Storage}__credential`,
-            value: 'managedIdentity'
+            value: 'managedidentity'
         });
     }
 
