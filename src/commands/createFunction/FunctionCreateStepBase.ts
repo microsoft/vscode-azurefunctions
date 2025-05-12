@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
 import { hostFileName } from '../../constants';
@@ -35,9 +35,25 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     }
 }
 
-export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 220;
-
+    public stepName: string = 'FunctionCreateStepBase';
+    public getTreeItemLabel(context: T): string {
+        const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
+        return localize('creatingFunction', 'Create new {0} "{1}"', template.name, context.functionName);
+    }
+    public getOutputLogSuccess(context: T): string {
+        const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
+        return localize('createdFunction', 'Successfully created new {0} "{1}".', template.name, context.functionName);
+    }
+    public getOutputLogFail(context: T): string {
+        const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
+        return localize('failedToCreateFunction', 'Failed to create new {0} "{1}".', template.name, context.functionName);
+    }
+    public getOutputLogProgress(context: T): string {
+        const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
+        return localize('creatingFunction', 'Creating new {0} "{1}"...', template.name, context.functionName);
+    }
     /**
      * Returns the full path to the new function file
      */

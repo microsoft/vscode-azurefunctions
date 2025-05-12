@@ -11,6 +11,7 @@ import { type IProjectWizardContext } from '../IProjectWizardContext';
 
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;
+    public stepName: string = 'ProjectCreateStepBase';
 
     public abstract executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 

@@ -11,6 +11,7 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
 import { type LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
+import { createActivityContext } from "../../utils/activityUtils";
 import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
@@ -55,7 +56,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
     }
 
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
-    const wizardContext: IBindingWizardContext = Object.assign(context, { functionJsonPath, workspacePath, projectPath, workspaceFolder, language, version, projectTemplateKey });
+    const wizardContext: IBindingWizardContext = Object.assign(context, await createActivityContext(), { functionJsonPath, workspacePath, projectPath, workspaceFolder, language, version, projectTemplateKey });
     const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
     await wizard.prompt();
     await wizard.execute();

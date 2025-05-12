@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
@@ -19,11 +19,23 @@ import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { getTasks, getTasksVersion, tasksVersion, updateTasks, updateTasksVersion, type ITask, type ITasksJson } from '../../../vsCodeConfig/tasks';
 import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
-export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
+export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
     public priority: number = 20;
 
     protected preDeployTask?: string;
     protected settings: ISettingToAdd[] = [];
+    protected getTreeItemLabel(context: IProjectWizardContext): string {
+        return localize('initVSCode', 'Initialize {0} project for VS Code', context.language);
+    }
+    protected getOutputLogSuccess(context: IProjectWizardContext): string {
+        return localize('initVSCodeSuccess', 'Successfully initialized {0} project for VS Code.', context.language);
+    }
+    protected getOutputLogFail(context: IProjectWizardContext): string {
+        return localize('initVSCodeFail', 'Failed to initialize {0} project for VS Code', context.language);
+    }
+    protected getOutputLogProgress(context: IProjectWizardContext): string {
+        return localize('initializingVSCode', 'Initializing {0} project for VS Code...', context.language);
+    }
 
     public async execute(context: IProjectWizardContext): Promise<void> {
         await this.executeCore(context);
