@@ -19,11 +19,7 @@ import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
-<<<<<<< HEAD
-    public async execute(context: IFunctionAppWizardContext, _progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-=======
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
->>>>>>> 673a96cf33ae9a9c16bdd1d12a4b7611832f65ef
         if (!context.deployWorkspaceResult?.registryLoginServer || !context.deployWorkspaceResult?.imageName) {
             throw new Error(localize('failToCreateApp', 'Failed to create function app. There was an error creating the necessary container resources.'));
         }
