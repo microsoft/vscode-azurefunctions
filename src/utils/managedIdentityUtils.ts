@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair } from "@azure/arm-appservice";
+import { nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { type IFunctionAppWizardContext } from "../commands/createFunctionApp/IFunctionAppWizardContext";
 import { ConnectionKey } from "../constants";
 
@@ -22,6 +23,14 @@ export function createAzureWebJobsStorageManagedIdentitySettings(context: IFunct
         appSettings.push({
             name: `${ConnectionKey.Storage}__tableServiceUri`,
             value: `https://${storageAccountName}.table.core.windows.net`
+        });
+        appSettings.push({
+            name: `${ConnectionKey.Storage}__clientId`,
+            value: nonNullValueAndProp(context.managedIdentity, 'clientId')
+        });
+        appSettings.push({
+            name: `${ConnectionKey.Storage}__credential`,
+            value: 'managedIdentity'
         });
     }
 

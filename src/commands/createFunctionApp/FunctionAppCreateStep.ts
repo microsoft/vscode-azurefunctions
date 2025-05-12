@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type FunctionsDeploymentStorageAuthentication, type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type Identity } from '@azure/arm-resources';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
@@ -29,7 +29,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
     stepName: string = 'createFunctionAppStep';
     public priority: number = 1000;
 
-    public async execute(context: IFlexFunctionAppWizardContext, _progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+    public async execute(context: IFlexFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
         const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
 
@@ -38,6 +38,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         context.telemetry.properties.newSiteMajorVersion = stack.majorVersion.value;
         context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
         context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
+
+        const message: string = localize('creatingFuncApp', 'Creating function app "{0}"...', context.newSiteName);
+        progress.report({ message });
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
@@ -93,11 +96,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                 storage: {
                     type: 'blobContainer',
                     value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
-                    authentication: {
-                        userAssignedIdentityResourceId: undefined,
-                        type: 'StorageAccountConnectionString',
-                        storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
-                    }
+                    authentication: createDeploymentStorageAuthentication(context)
                 }
             },
             runtime: {
@@ -113,6 +112,15 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         }
 
         return site;
+
+        function createDeploymentStorageAuthentication(context: IFlexFunctionAppWizardContext): FunctionsDeploymentStorageAuthentication {
+            const hasManagedIdentity: boolean = !!context.managedIdentity;
+            return {
+                userAssignedIdentityResourceId: hasManagedIdentity ? context.managedIdentity?.id : undefined,
+                type: hasManagedIdentity ? 'UserAssignedIdentity' : 'StorageAccountConnectionString',
+                storageAccountConnectionStringName: hasManagedIdentity ? undefined : 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
+            };
+        }
     }
 
     private async createNewSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
@@ -187,7 +195,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                 name: contentShareKey,
                 value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
-        } else if (isFlex) {
+            // only add this setting for flex apps, if we're not using managed identity
+        } else if (isFlex && !context.managedIdentity) {
             appSettings.push({
                 name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
                 value: storageConnectionString
@@ -241,19 +250,19 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
 
     protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Create new function app "{0}"', siteName);
+        return localize('creatingNewApp', 'Create function app "{0}"', siteName);
     }
     protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('createdNewApp', 'Successfully created new function app "{0}".', siteName);
+        return localize('createdNewApp', 'Successfully created function app "{0}".', siteName);
     }
     protected getOutputLogFail(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('failedToCreateNewApp', 'Failed to create new function app "{0}".', siteName);
+        return localize('failedToCreateNewApp', 'Failed to create function app "{0}".', siteName);
     }
     protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Creating new function app "{0}"...', siteName);
+        return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
 }
 

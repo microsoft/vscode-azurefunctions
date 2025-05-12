@@ -3,18 +3,20 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createUniversallyUniqueContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 
 export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectionsContext> {
     public priority: number = 160;
+    public stepName: string = 'remoteSettingsAddStep';
 
     public async execute(context: AddMIConnectionsContext): Promise<void> {
         const client = await nonNullProp(context, 'functionapp').site.createClient(context);
         const remoteSettings = await client.listApplicationSettings();
         const properties = remoteSettings.properties || {};
+        // // Potentially split this up into multiple execute steps to allow for better progress reporting
         for (const connection of nonNullProp(context, 'connectionsToAdd')) {
             properties[connection.name] = connection.value;
         }
@@ -24,7 +26,7 @@ export class RemoteSettingsAddStep extends AzureWizardExecuteStep<AddMIConnectio
             // TODO: Convert to use createSuccessOutput
             context.activityChildren?.push(
                 new ActivityChildItem({
-                    contextValue: createUniversallyUniqueContextValue(['useExistingResourceGroupInfoItem', activitySuccessContext]),
+                    contextValue: createContextValue([this.stepName, activitySuccessContext]),
                     label: localize('addedAppSetting', 'Add app setting "{0}"', connection.name),
                     iconPath: activitySuccessIcon,
                     activityType: ActivityChildType.Success
