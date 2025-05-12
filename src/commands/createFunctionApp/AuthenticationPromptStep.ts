@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardPromptStep, type IAzureQuickPickOptions, type IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickOptions, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { type QuickPickItem } from "vscode";
 
+import { UserAssignedIdentityCreateStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { localize } from "../../localize";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 
@@ -16,28 +16,36 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
         super();
     }
 
-    public async prompt(wizardContext: T): Promise<void> {
+    public async prompt(context: T): Promise<void> {
         const options: IAzureQuickPickOptions = { placeHolder: 'Select resource authentication type', id: `AuthenticationPromptStep` };
-        this._useManagedIdentity = (await wizardContext.ui.showQuickPick(this.getQuickPicks(wizardContext), options)).label === 'Managed identity';
+        this._useManagedIdentity = (await context.ui.showQuickPick(this.getQuickPicks(context), options)).label === 'Managed identity';
     }
 
-    public shouldPrompt(wizardContext: T): boolean {
+    public shouldPrompt(context: T): boolean {
         // don't need to prompt if the user has already selected a managed identity
-        return !wizardContext.managedIdentity;
+        return !context.managedIdentity;
     }
 
-    public async getSubWizard(_wizardContext: T): Promise<IWizardOptions<T> | undefined> {
+    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
         if (this._useManagedIdentity) {
+            const promptSteps: AzureWizardPromptStep<T>[] = [];
+            const executeSteps: AzureWizardExecuteStep<T>[] = [];
+            if (context.advancedCreation) {
+                promptSteps.push(new UserAssignedIdentityListStep());
+            } else {
+                executeSteps.push(new UserAssignedIdentityCreateStep());
+            }
+
             return {
-                promptSteps: [new UserAssignedIdentityListStep()],
-                executeSteps: [],
+                promptSteps,
+                executeSteps
             }
         }
 
         return undefined;
     }
 
-    private getQuickPicks(_wizardContext: T): QuickPickItem[] {
+    private getQuickPicks(_context: T): QuickPickItem[] {
         return [
             {
                 label: localize('secrets', 'Secrets'),

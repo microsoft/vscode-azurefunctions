@@ -104,8 +104,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     executeSteps.push(new RoleAssignmentExecuteStep(() => {
         const role: Role = {
             scopeId: wizardContext?.storageAccount?.id,
-            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
-            roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.roleName
+            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataContributor),
+            roleDefinitionName: CommonRoleDefinitions.storageBlobDataContributor.roleName
         };
 
         return [role];
