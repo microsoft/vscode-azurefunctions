@@ -6,6 +6,8 @@
 import { UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardPromptStep, type IAzureQuickPickOptions, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { type QuickPickItem } from "vscode";
+
+import { localize } from "../../localize";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 
 export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> extends AzureWizardPromptStep<T> {
@@ -35,14 +37,15 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
         return undefined;
     }
 
-    private async getQuickPicks(_wizardContext: T): Promise<QuickPickItem[]> {
+    private getQuickPicks(_wizardContext: T): QuickPickItem[] {
         return [
             {
-                label: 'Secrets',
+                label: localize('secrets', 'Secrets'),
+                detail: localize('secretsDetails', 'Uses storage connection strings which may be insecure and expose sensitive credentials.')
             },
             {
-                label: 'Managed identity',
-                detail: 'For best security practice, use managed idenity authentication when available (some resources may only use secrets).',
+                label: localize('managedIdentity', 'Managed identity'),
+                detail: localize('managedIdentityDetails', 'For best security practice, use managed identity authentication when available.'),
             },
         ]
     }
