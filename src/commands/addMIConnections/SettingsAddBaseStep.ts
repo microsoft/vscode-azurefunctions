@@ -158,7 +158,7 @@ function getClientIdAndCredentialPropertiesForRemote(context: AddMIConnectionsCo
             },
             {
                 name: `${connectionName}__credential`,
-                value: 'managedIdentity'
+                value: 'managedidentity'
             }
         );
     }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
-import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, UserAssignedIdentityCreateStep, UserAssignedIdentityListStep, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
+import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, UserAssignedIdentityListStep, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
 import { funcVersionSetting } from "../../constants";
@@ -12,6 +12,7 @@ import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersi
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from "../../vsCodeConfig/settings";
+import { AuthenticationPromptStep } from "./AuthenticationPromptStep";
 import { FunctionAppCreateStep } from "./FunctionAppCreateStep";
 import { FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
@@ -64,6 +65,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         promptSteps.push(...functionAppWizard.promptSteps);
         executeSteps.push(...functionAppWizard.executeSteps);
     }
+    promptSteps.push(new AuthenticationPromptStep());
 
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
@@ -73,7 +75,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         executeSteps.push(new ResourceGroupCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
         executeSteps.push(new AppInsightsCreateStep());
-        executeSteps.push(new UserAssignedIdentityCreateStep());
         if (!context.dockerfilePath) {
             executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new LogAnalyticsCreateStep());
@@ -103,8 +104,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     executeSteps.push(new RoleAssignmentExecuteStep(() => {
         const role: Role = {
             scopeId: wizardContext?.storageAccount?.id,
-            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataOwner),
-            roleDefinitionName: CommonRoleDefinitions.storageBlobDataOwner.roleName
+            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataContributor),
+            roleDefinitionName: CommonRoleDefinitions.storageBlobDataContributor.roleName
         };
 
         return [role];

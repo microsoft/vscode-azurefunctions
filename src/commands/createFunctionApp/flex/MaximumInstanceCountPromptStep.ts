@@ -24,6 +24,13 @@ export class MaximumInstanceCountPromptStep extends AzureWizardPromptStep<IFlexF
         return !context.newFlexMaximumInstanceCount;
     }
 
+    public configureBeforePrompt(context: IFlexFunctionAppWizardContext): void | Promise<void> {
+        // use default maximum instance count if not using advanced creation
+        if (!context.advancedCreation) {
+            context.newFlexMaximumInstanceCount = context.newFlexSku?.maximumInstanceCount.defaultValue;
+        }
+    }
+
     private validateInput(flexSku: Sku, val: string): string | undefined {
         const num = Number(val);
 
