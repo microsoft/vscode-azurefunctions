@@ -5,10 +5,11 @@
 
 import { type FunctionsDeploymentStorageAuthentication, type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type Identity } from '@azure/arm-resources';
+import { type StorageAccount } from '@azure/arm-storage';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStepWithActivityOutput, maskUserInfo, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput, maskUserInfo, nonNullProp, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { type Progress } from 'vscode';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -18,7 +19,6 @@ import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
-import { nonNullProp } from '../../utils/nonNull';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
@@ -241,8 +241,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         const result = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site);
 
         if (context.newFlexSku) {
-            const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
-            await tryCreateStorageContainer(result, storageConnectionString);
+            if (context.storageAccount) {
+                await tryCreateStorageContainer(context, result, context.storageAccount);
+            }
         }
 
         return result;
@@ -284,16 +285,28 @@ function getSiteKind(context: IAppServiceWizardContext): string {
 }
 
 // storage container is needed for flex deployment, but it is not created automatically
-async function tryCreateStorageContainer(site: Site, storageConnectionString: string): Promise<void> {
+async function tryCreateStorageContainer(context: IFlexFunctionAppWizardContext, site: Site, storageAccount: StorageAccount): Promise<void> {
+    let client: BlobServiceClient;
     try {
-        const blobClient = BlobServiceClient.fromConnectionString(storageConnectionString);
+        const token = await context.createCredentialsForScopes(['https://storage.azure.com/.default'])
+        const primaryEndpoint = nonNullProp(storageAccount, 'primaryEndpoints');
+        client = new BlobServiceClient(nonNullProp(primaryEndpoint, 'blob'), token);
+        await client.getProperties(); // Trigger a request to validate the token
+    } catch (error) {
+        const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
+        client = BlobServiceClient.fromConnectionString(storageConnectionString);
+        await client.getProperties(); // Trigger a request to validate the key
+    }
+
+    try {
         const containerUrl: string | undefined = site.functionAppConfig?.deployment?.storage?.value;
         if (containerUrl) {
             const containerName = containerUrl.split('/').pop();
             if (containerName) {
-                const client = blobClient.getContainerClient(containerName);
-                if (!await client.exists()) {
-                    await blobClient.createContainer(containerName);
+                const containerClient = client.getContainerClient(containerName);
+                if (!await containerClient.exists()) {
+                    await client.createContainer(containerName);
+                    return
                 } else {
                     ext.outputChannel.appendLog(localize('deploymentStorageExists', 'Deployment storage container "{0}" already exists.', containerName));
                     return;
