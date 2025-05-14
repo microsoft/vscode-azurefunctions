@@ -7,7 +7,7 @@ import { type WorkspaceResourceModel } from "@microsoft/vscode-azureresources-ap
 import { type ProviderResult, type TreeItem } from "vscode";
 
 export interface DurableTaskSchedulerWorkspaceResourceModel extends WorkspaceResourceModel {
-    getChildren(): ProviderResult<DurableTaskSchedulerWorkspaceResourceModel[]>;
+    getChildren?(): ProviderResult<DurableTaskSchedulerWorkspaceResourceModel[]>;
 
     getTreeItem(): TreeItem | Thenable<TreeItem>;
 }

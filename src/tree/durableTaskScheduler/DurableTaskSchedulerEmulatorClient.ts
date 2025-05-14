@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, type Event, EventEmitter, Uri, workspace } from "vscode";
+import { Disposable, type Event, EventEmitter, Uri } from "vscode";
 import { type ContainerClient } from "./ContainerClient";
+import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
 
 export interface DurableTaskSchedulerEmulator {
     dashboardEndpoint: Uri;
@@ -29,12 +30,10 @@ interface ImageFullTag {
 }
 
 function getEmulatorFullTag(): ImageFullTag {
-    const configuration = workspace.getConfiguration('azureFunctions');
-
     // NOTE: Defaults should be specified in package.json.
-    const registry = configuration.get<string>('durableTaskScheduler.emulatorRegistry') as string;
-    const image = configuration.get<string>('durableTaskScheduler.emulatorImage') as string;
-    const tag = configuration.get<string>('durableTaskScheduler.emulatorTag') as string;
+    const registry = getWorkspaceSetting<string>('durableTaskScheduler.emulatorRegistry') as string;
+    const image = getWorkspaceSetting<string>('durableTaskScheduler.emulatorImage') as string;
+    const tag = getWorkspaceSetting<string>('durableTaskScheduler.emulatorTag') as string;
 
     return {
         registry,

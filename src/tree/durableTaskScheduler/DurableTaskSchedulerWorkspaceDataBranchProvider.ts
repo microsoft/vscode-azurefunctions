@@ -27,7 +27,7 @@ export class DurableTaskSchedulerWorkspaceDataBranchProvider extends Disposable 
     }
 
     getChildren(element: DurableTaskSchedulerWorkspaceResourceModel): ProviderResult<DurableTaskSchedulerWorkspaceResourceModel[]> {
-        return element.getChildren();
+        return element.getChildren?.() ?? [];
     }
 
     getResourceItem(_: WorkspaceResource): DurableTaskSchedulerWorkspaceResourceModel | Thenable<DurableTaskSchedulerWorkspaceResourceModel> {

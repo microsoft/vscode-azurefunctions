@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ProviderResult, TreeItem, Uri } from "vscode";
+import { TreeItem, Uri } from "vscode";
 import { type DurableTaskSchedulerWorkspaceResourceModel } from "./DurableTaskSchedulerWorkspaceResourceModel";
 import { treeUtils } from "../../utils/treeUtils";
 import { type DurableTaskSchedulerDashboardModel } from "./DurableTaskSchedulerDashboardModel";
@@ -14,14 +14,10 @@ export class DurableTaskSchedulerTaskHubWorkspaceResourceModel implements Durabl
         private readonly dashboardEndpoint: Uri) {
     }
 
-    getChildren(): ProviderResult<DurableTaskSchedulerWorkspaceResourceModel[]> {
-        return [];
-    }
-
     getTreeItem(): TreeItem | Thenable<TreeItem> {
         const treeItem = new TreeItem(this.name);
 
-        treeItem.contextValue = 'azFunc.dts.emulatorTaskHub azFunc.dts.taskHubDashboard';
+        treeItem.contextValue = 'azFunc.dts.emulatorTaskHub;azFunc.dts.taskHubDashboard';
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
 
         return treeItem;

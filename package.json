@@ -833,7 +833,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.startEmulator",
-                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulators/",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulators/",
                     "group": "1@1"
                 },
                 {
@@ -933,10 +933,6 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
                     "when": "never"
                 },
                 {
@@ -1074,7 +1070,7 @@
                     "azureFunctions.durableTaskScheduler.emulatorTag": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorTag%",
-                        "default": "v0.0.4"
+                        "default": "latest"
                     }
                 }
             },

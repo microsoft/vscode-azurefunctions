@@ -53,8 +53,6 @@ export class DurableTaskSchedulerEmulatorsWorkspaceResourceModel implements Dura
         this.getEmulatorsTask ??= this.emulatorClient.getEmulators();
 
         try {
-            await this.getEmulatorsTask;
-
             const emulators = await this.getEmulatorsTask;
 
             if (emulators.length) {

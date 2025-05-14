@@ -25,7 +25,7 @@ export class DurableTaskSchedulerEmulatorWorkspaceResourceModel implements Durab
     getTreeItem(): TreeItem | Thenable<TreeItem> {
         const treeItem = new TreeItem(this.emulator.name, TreeItemCollapsibleState.Expanded);
 
-        treeItem.contextValue = 'azFunc.dts.emulatorInstance azFunc.dts.schedulerEndpoint';
+        treeItem.contextValue = 'azFunc.dts.emulatorInstance;azFunc.dts.schedulerEndpoint';
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
         treeItem.id = this.emulator.id;
 

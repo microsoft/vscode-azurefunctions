@@ -60,7 +60,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel, D
         const treeItem = new TreeItem(this.name)
 
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
-        treeItem.contextValue = 'azFunc.dts.taskHub  azFunc.dts.taskHubDashboard';
+        treeItem.contextValue = 'azFunc.dts.taskHub;azFunc.dts.taskHubDashboard';
 
         const json = await this.schedulerClient.getSchedulerTaskHub(
             this.scheduler.subscription,

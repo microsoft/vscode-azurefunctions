@@ -9,7 +9,7 @@ import { type DurableTaskSchedulerEmulatorClient } from "../../tree/durableTaskS
 import { localize } from "../../localize";
 
 export function stopEmulatorCommandFactory(emulatorClient: DurableTaskSchedulerEmulatorClient) {
-    return async (__: IActionContext, emulator: DurableTaskSchedulerEmulatorWorkspaceResourceModel | undefined) => {
+    return async (_: IActionContext, emulator: DurableTaskSchedulerEmulatorWorkspaceResourceModel | undefined) => {
         if (!emulator) {
             throw new Error(localize('noEmulatorSelected', 'No emulator was selected.'));
         }

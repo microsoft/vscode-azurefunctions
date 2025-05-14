@@ -40,7 +40,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     async getTreeItem(): Promise<TreeItem> {
         const treeItem = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = 'azFunc.dts.scheduler azFunc.dts.schedulerEndpoint';
+        treeItem.contextValue = 'azFunc.dts.scheduler;azFunc.dts.schedulerEndpoint';
 
         if (this.schedulerResource?.properties.provisioningState !== 'Succeeded') {
             treeItem.description = localize('schedulerDescription', '({0})', this.schedulerResource?.properties.provisioningState ?? 'Deleted');
