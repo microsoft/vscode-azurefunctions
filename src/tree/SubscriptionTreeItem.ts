@@ -99,6 +99,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         // if the providers aren't registered yet, await it here because it is required by this point
         await registerProvidersTask;
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
+        // only disable shared key access if the user is using a managed identity and a flex consumption plan since other app service plans
+        // and containerized function still rely on connection strings
         wizardContext.disableSharedKeyAccess = wizardContext.useManagedIdentity && wizardContext.useFlexConsumptionPlan;
         await wizard.execute();
 
