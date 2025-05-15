@@ -11,14 +11,13 @@ import { localize } from "../../localize";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 
 export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> extends AzureWizardPromptStep<T> {
-    private _useManagedIdentity: boolean = false;
     public constructor() {
         super();
     }
 
     public async prompt(context: T): Promise<void> {
         const options: IAzureQuickPickOptions = { placeHolder: 'Select resource authentication type', id: `AuthenticationPromptStep` };
-        this._useManagedIdentity = (await context.ui.showQuickPick(this.getQuickPicks(context), options)).label === 'Managed identity';
+        context.useManagedIdentity = (await context.ui.showQuickPick(this.getQuickPicks(context), options)).label === 'Managed identity';
     }
 
     public shouldPrompt(context: T): boolean {
@@ -27,7 +26,7 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
-        if (this._useManagedIdentity) {
+        if (context.useManagedIdentity) {
             const promptSteps: AzureWizardPromptStep<T>[] = [];
             const executeSteps: AzureWizardExecuteStep<T>[] = [];
             if (context.advancedCreation) {

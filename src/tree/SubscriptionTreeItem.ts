@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, parseError, type AzExtTreeItem, type IActionContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { type WorkspaceFolder } from 'vscode';
+import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { createCreateFunctionAppComponents } from '../commands/createFunctionApp/createCreateFunctionAppComponents';
 import { projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
@@ -87,7 +87,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const registerProvidersTask = registerProviders(context, subscription);
         const { wizardContext, promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, subscription.subscription, language)
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
-        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, {
+        const wizard: AzureWizard<IFunctionAppWizardContext> = new AzureWizard(wizardContext, {
             promptSteps,
             executeSteps,
             title,
@@ -99,6 +99,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         // if the providers aren't registered yet, await it here because it is required by this point
         await registerProvidersTask;
         wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
+        // only disable shared key access if the user is using a managed identity and a flex consumption plan since other app service plans
+        // and containerized function still rely on connection strings
+        wizardContext.disableSharedKeyAccess = wizardContext.useManagedIdentity && wizardContext.useFlexConsumptionPlan;
         await wizard.execute();
 
         let node: SlotTreeItem | ContainerTreeItem;
