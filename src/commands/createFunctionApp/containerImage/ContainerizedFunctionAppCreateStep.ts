@@ -7,7 +7,7 @@ import { type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
 import { type ServiceClient } from "@azure/core-client";
 import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
 import { LocationListStep, createGenericClient } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardExecuteStep, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzureWizardExecuteStepWithActivityOutput, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { type AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { type Progress } from "vscode";
 import { webProvider } from "../../../constants";
@@ -16,15 +16,33 @@ import { createWebSiteClient } from "../../../utils/azureClients";
 import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 
-export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
+export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOutput<IFunctionAppWizardContext> {
+    public stepName: string = 'containerizedFunctionAppCreateStep';
     public priority: number = 140;
+
+    protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Create containerized function app "{0}"', siteName);
+    }
+    protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('createdNewApp', 'Successfully created containerized function app "{0}".', siteName);
+    }
+    protected getOutputLogFail(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('failedToCreateNewApp', 'Failed to create containerized function app "{0}".', siteName);
+    }
+    protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        return localize('creatingNewApp', 'Creating containerized function app "{0}"...', siteName);
+    }
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         if (!context.deployWorkspaceResult?.registryLoginServer || !context.deployWorkspaceResult?.imageName) {
-            throw new Error(localize('failToCreateApp', 'Failed to create function app. There was an error creating the necessary container resources.'));
+            throw new Error(localize('failToCreateApp', 'Failed to create containerized function app. There was an error creating the necessary container resources.'));
         }
 
-        const message: string = localize('creatingNewApp', 'Creating function app "{0}"...', context.newSiteName);
+        const message: string = localize('creatingNewApp', 'Creating containerized function app "{0}"...', context.newSiteName);
         progress.report({ message });
 
         const siteName: string = nonNullProp(context, 'newSiteName');
@@ -76,23 +94,6 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStep<I
                 ]
             }
         }
-    }
-
-    protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
-        const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Create function app "{0}"', siteName);
-    }
-    protected getOutputLogSuccess(context: IFunctionAppWizardContext): string {
-        const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('createdNewApp', 'Successfully created function app "{0}".', siteName);
-    }
-    protected getOutputLogFail(context: IFunctionAppWizardContext): string {
-        const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('failedToCreateNewApp', 'Failed to create function app "{0}".', siteName);
-    }
-    protected getOutputLogProgress(context: IFunctionAppWizardContext): string {
-        const siteName: string = nonNullProp(context, 'newSiteName');
-        return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
 }
 
