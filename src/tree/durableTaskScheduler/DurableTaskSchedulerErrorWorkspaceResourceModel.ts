@@ -3,16 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ProviderResult, ThemeIcon, TreeItem } from "vscode";
+import { ThemeIcon, TreeItem } from "vscode";
 import { type DurableTaskSchedulerWorkspaceResourceModel } from "./DurableTaskSchedulerWorkspaceResourceModel";
 
 export class DurableTaskSchedulerErrorWorkspaceResourceModel implements DurableTaskSchedulerWorkspaceResourceModel {
     constructor(
         private readonly error: string) {
-    }
-
-    getChildren(): ProviderResult<DurableTaskSchedulerWorkspaceResourceModel[]> {
-        return [];
     }
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {

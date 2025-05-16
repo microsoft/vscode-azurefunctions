@@ -788,7 +788,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
-                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
                     "group": "3@1"
                 },
                 {
@@ -838,17 +838,17 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.startEmulator",
-                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulators/",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulators/",
                     "group": "inline"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.stopEmulator",
-                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.stopEmulator",
-                    "when": "view =~ /(azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
                     "group": "inline"
                 }
             ],
