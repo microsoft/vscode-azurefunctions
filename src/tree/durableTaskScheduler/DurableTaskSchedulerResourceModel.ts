@@ -5,7 +5,7 @@
 
 import { type ViewPropertiesModel, type AzureResource, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
-import { type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
 import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { localize } from '../../localize';
@@ -14,6 +14,7 @@ import * as retry from 'p-retry';
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModel, AzureResourceModel {
     public constructor(
         private readonly resource: AzureResource,
+        private readonly schedulerResource: DurableTaskSchedulerResource | undefined,
         private readonly schedulerClient: DurableTaskSchedulerClient,
         private readonly refreshModel: (model: DurableTaskSchedulerModel | undefined) => void) {
     }
@@ -39,17 +40,10 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
     async getTreeItem(): Promise<TreeItem> {
         const treeItem = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = 'azFunc.dts.scheduler';
+        treeItem.contextValue = 'azFunc.dts.scheduler;azFunc.dts.schedulerEndpoint';
 
-        if (this.resource.resourceGroup) {
-            const json = await this.schedulerClient.getScheduler(
-                this.resource.subscription,
-                this.resource.resourceGroup,
-                this.resource.name);
-
-            if (json?.properties.provisioningState !== 'Succeeded') {
-                treeItem.description = localize('schedulerDescription', '({0})', json?.properties.provisioningState ?? 'Deleted');
-            }
+        if (this.schedulerResource?.properties.provisioningState !== 'Succeeded') {
+            treeItem.description = localize('schedulerDescription', '({0})', this.schedulerResource?.properties.provisioningState ?? 'Deleted');
         }
 
         return treeItem;
@@ -72,6 +66,8 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 
         return this.resource.resourceGroup;
     }
+
+    get endpointUrl() { return this.schedulerResource?.properties.endpoint; }
 
     get subscription() { return this.resource.subscription; }
 
