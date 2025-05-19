@@ -69,7 +69,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
-        wizardContext.useFlexConsumptionPlan = true;
+        // if the user is deploying to a container app, do not use a flex consumption plan
+        wizardContext.useFlexConsumptionPlan = true && !context.dockerfilePath;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
