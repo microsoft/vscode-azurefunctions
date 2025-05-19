@@ -14,7 +14,7 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 ## Create your first serverless app
 
-1. Select the button to create a new project in the Azure Functions explorer
+1. Select the button to create a new project in the Azure Resources explorer
 
     ![createNewProject](resources/readme/createFunction.png)
 
@@ -36,7 +36,7 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 1. If you do not have the [Azure Functions Core Tools](https://aka.ms/Dqur4e) installed, you will be automatically prompted to install. Follow the specified instructions, or skip to the "Deploy" step if you would rather deploy without running locally.
     > TIP: The "Terminal" panel should pop up automatically and you know your project is running if you see output
-1. Expand your _local project_ in the Azure Functions explorer to copy your function's url
+1. Expand your _local project_ in the Azure Workspace explorer to copy your function's url
 
     ![debug2](resources/readme/copyFunctionUrl.png)
 
@@ -49,7 +49,7 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Deploy to Azure
 
-1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Functions explorer
+1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer
     >  If you don't already have an Azure Account, click "Create a Free Azure Account"
 1. Select the 'plus' button to open the "Create Resource" menu
 
@@ -74,7 +74,7 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
     ![Deploy to Function App](resources/readme/deploy/deploy.png)
 
-1. Once deployment is complete, expand your _subscription_ in the Azure Functions explorer to copy your deployed function's url
+1. Once deployment is complete, expand your _subscription_ in the Azure Resources explorer to copy your deployed function's url
 
     ![deploy3](resources/readme/deploy/copyFunctionUrl.png)
 
