@@ -85,7 +85,6 @@
     "azureFunctions.showDeployConfirmation": "Ask for confirmation before deploying to a Function App in Azure (deploying will overwrite any previous deployment and cannot be undone).",
     "azureFunctions.showDeploySubpathWarning": "Show a warning when the \"deploySubpath\" setting does not match the selected folder for deploying.",
     "azureFunctions.showDeprecatedStacks": "Show deprecated runtime stacks when creating a Function App in Azure. WARNING: These stacks may be removed at any time and may not be available in all regions.",
-    "azureFunctions.showExplorer": "Show or hide the Azure Functions Explorer",
     "azureFunctions.showExtensionsCsprojWarning": "Show a warning when an Azure Functions project was detected that has mismatched \"extensions.csproj\" configuration.",
     "azureFunctions.showFlexEventGridWarning": "Show a warning when deploying a Azure Blob Storage Trigger (using Event Grid) to a Flex Consumption Function App.",
     "azureFunctions.showHiddenStacks": "Show hidden runtime stacks when creating a Function App in Azure. WARNING: These stacks may be in preview or may not be available in all regions.",

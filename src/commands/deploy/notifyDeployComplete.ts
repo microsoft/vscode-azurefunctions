@@ -93,7 +93,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItem):
 
     if (functions.find(f => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && !f.isAnonymous)) {
         hasHttpTriggers = true;
-        ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'), logOptions);
+        ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Resources explorer.'), logOptions);
     }
 
     if (!hasHttpTriggers) {
