@@ -1003,11 +1003,6 @@
             {
                 "title": "Azure Functions",
                 "properties": {
-                    "azureFunctions.showExplorer": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "%azureFunctions.showExplorer%"
-                    },
                     "azureFunctions.templateFilter": {
                         "scope": "resource",
                         "type": "string",
