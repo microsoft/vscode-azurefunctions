@@ -1,5 +1,21 @@
 # Change Log
 
+## 1.17.3 - 2025-05-19
+
+### Added
+* [[4487](https://github.com/microsoft/vscode-azurefunctions/pull/4487)] Upgrade to latest version of the Azure Activity Log (v2).  Now shows live progress on each activity child with timers.
+* [[4500](https://github.com/microsoft/vscode-azurefunctions/pull/4500)] Add a step to **prompt about app authentication type** to allow users to opt out of `Managed Identities`
+* [[4517](https://github.com/microsoft/vscode-azurefunctions/pull/4517)] Add **Python 3.12** to the list of supported versions.
+
+### Changed
+* [[4519](https://github.com/microsoft/vscode-azurefunctions/pull/4519)] Remove references to **"Azure Functions explorer"** in UI/strings.
+* [[4506](https://github.com/microsoft/vscode-azurefunctions/pull/4506)] Use **OAuth2 tokens** when creating blob container to improve managed identity reliability.
+
+### Fixed
+* [[4494](https://github.com/microsoft/vscode-azurefunctions/pull/4494)] Configure **Flex Consumption** `functionAppConfig` deployments for **User Assigned Managed Identity**.
+* [[4498](https://github.com/microsoft/vscode-azurefunctions/pull/4498)] Add required **app settings** for managed identity and trigger keys.
+* [[4520](https://github.com/microsoft/vscode-azurefunctions/pull/4520)] Fix minor text by adding period to **"Enabled system assigned identity"** message.
+
 ## 1.17.2 - 2025-05-01
 
 ### Fixes
