@@ -36,7 +36,9 @@ export async function getSupportedPythonVersions(context: IActionContext, funcVe
         ['3.0.2245', '3.8'],
         ['3.0.3216', '3.9'],
         ['4.0.4915', '3.10'],
-        ['4.0.5348', '3.11']
+        ['4.0.5348', '3.11'],
+        // not sure if this is the minimum version, but I confirmed that 4.0.7030 works with Python 3.12
+        ['4.0.7030', '3.12'],
     ];
 
     for (const [minFuncVersion, pyVersion] of versionInfo) {
