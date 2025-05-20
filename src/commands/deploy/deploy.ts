@@ -222,6 +222,13 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             }
             const deployContext = Object.assign(context, await createActivityContext());
             deployContext.activityChildren = [];
+            
+            // Use a different activity title for slot deployments
+            if (_expectedContextValue instanceof RegExp && 
+                String(_expectedContextValue).includes(String(ResolvedFunctionAppResource.pickSlotContextValue))) {
+                deployContext.activityTitle = localize('deploySlot', 'Deploy to slot "{0}"', node.site.fullName);
+            }
+            
             await innerDeploy(node.site, deployFsPath, deployContext);
         }
     );
