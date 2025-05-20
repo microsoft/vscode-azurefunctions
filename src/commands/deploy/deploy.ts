@@ -224,8 +224,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             deployContext.activityChildren = [];
             
             // Use a different activity title for slot deployments
-            if (_expectedContextValue instanceof RegExp && 
-                String(_expectedContextValue).includes(String(ResolvedFunctionAppResource.pickSlotContextValue))) {
+            // Check both the expected context value and that the node is actually a slot
+            if ((_expectedContextValue instanceof RegExp && 
+                 String(_expectedContextValue).includes(String(ResolvedFunctionAppResource.pickSlotContextValue))) || 
+                node.site.isSlot) {
                 deployContext.activityTitle = localize('deploySlot', 'Deploy to slot "{0}"', node.site.fullName);
             }
             
