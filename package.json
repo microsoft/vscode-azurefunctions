@@ -58,6 +58,9 @@
                 "branches": [
                     {
                         "type": "func"
+                    },
+                    {
+                        "type": "DurableTaskSchedulerEmulator"
                     }
                 ],
                 "resources": true
@@ -408,6 +411,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
+                "title": "%azureFunctions.durableTaskScheduler.copyEmulatorConnectionString%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                 "title": "%azureFunctions.durableTaskScheduler.copySchedulerConnectionString%",
                 "category": "Azure Functions"
@@ -440,7 +448,20 @@
             {
                 "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
                 "title": "%azureFunctions.durableTaskScheduler.openTaskHubDashboard%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "icon": "$(dashboard)"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                "title": "%azureFunctions.durableTaskScheduler.startEmulator%",
+                "category": "Azure Functions",
+                "icon": "$(debug-start)"
+            },
+            {
+                "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
+                "category": "Azure Functions",
+                "icon": "$(debug-stop)"
             }
         ],
         "submenus": [
@@ -766,13 +787,18 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "group": "3@1"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                     "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerEndpoint",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.scheduler/",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.schedulerEndpoint/",
                     "group": "3@2"
                 },
                 {
@@ -797,8 +823,33 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHub/",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHubDashboard/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "view =~ /(azureResourceGroups|azureWorkspace|azureFocusView)/ && viewItem =~ /azFunc.dts.taskHubDashboard/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulators/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.startEmulator",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulators/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
+                    "when": "view == azureWorkspace && viewItem =~ /azFunc.dts.emulatorInstance/",
+                    "group": "inline"
                 }
             ],
             "explorer/context": [
@@ -853,6 +904,10 @@
                     "when": "never"
                 },
                 {
+                    "command": "azureFunctions.durableTaskScheduler.copyEmulatorConnectionString",
+                    "when": "never"
+                },
+                {
                     "command": "azureFunctions.durableTaskScheduler.copySchedulerConnectionString",
                     "when": "never"
                 },
@@ -878,6 +933,10 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.openTaskHubDashboard",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.durableTaskScheduler.stopEmulator",
                     "when": "never"
                 },
                 {
@@ -997,6 +1056,21 @@
                         "type": "boolean",
                         "default": false,
                         "description": "%azureFunctions.durableTaskScheduler.enablePreviewFeatures%"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorRegistry": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorRegistry%",
+                        "default": "mcr.microsoft.com"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorImage": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorImage%",
+                        "default": "dts/dts-emulator"
+                    },
+                    "azureFunctions.durableTaskScheduler.emulatorTag": {
+                        "type": "string",
+                        "description": "%azureFunctions.durableTaskScheduler.emulatorTag%",
+                        "default": "latest"
                     }
                 }
             },
@@ -1390,6 +1464,7 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vscode-azurekudu": "^0.2.0",
+        "vscode-jsonrpc": "^8.2.1",
         "webpack": "^5.96.1",
         "webpack-cli": "^4.6.0"
     },
@@ -1410,6 +1485,7 @@
         "@microsoft/vscode-azext-azureutils": "^3.3.3",
         "@microsoft/vscode-azext-utils": "^3.1.1",
         "@microsoft/vscode-azureresources-api": "^2.0.4",
+        "@microsoft/vscode-container-client": "^0.1.2",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",

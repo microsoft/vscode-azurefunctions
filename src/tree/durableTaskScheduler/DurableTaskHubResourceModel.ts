@@ -10,8 +10,9 @@ import { type ProviderResult, TreeItem, Uri } from "vscode";
 import { treeUtils } from "../../utils/treeUtils";
 import { localize } from '../../localize';
 import { type DurableTaskSchedulerResourceModel } from "./DurableTaskSchedulerResourceModel";
+import { type DurableTaskSchedulerDashboardModel } from "./DurableTaskSchedulerDashboardModel";
 
-export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
+export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel, DurableTaskSchedulerDashboardModel {
     constructor(
         public readonly scheduler: DurableTaskSchedulerResourceModel,
         private readonly resource: DurableTaskHubResource,
@@ -59,7 +60,7 @@ export class DurableTaskHubResourceModel implements DurableTaskSchedulerModel {
         const treeItem = new TreeItem(this.name)
 
         treeItem.iconPath = treeUtils.getIconPath('durableTaskScheduler/DurableTaskScheduler');
-        treeItem.contextValue = 'azFunc.dts.taskHub';
+        treeItem.contextValue = 'azFunc.dts.taskHub;azFunc.dts.taskHubDashboard';
 
         const json = await this.schedulerClient.getSchedulerTaskHub(
             this.scheduler.subscription,
