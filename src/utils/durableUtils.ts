@@ -24,6 +24,8 @@ export namespace durableUtils {
     export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
     export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.DurableTask.DurableTask.AzureFunctions';
+    export const dotnetIsolatedDTSPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged';
     export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
@@ -158,6 +160,11 @@ export namespace durableUtils {
                 isDotnetIsolated ?
                     packageNames.push(dotnetIsolatedDfNetheritePackage) :
                     packageNames.push(dotnetInProcDfNetheritePackage);
+                break;
+            case DurableBackend.DTS:
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDTSPackage) :
+                    packageNames.push(dotnetInProcDTSPackage);
                 break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?

@@ -78,7 +78,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 hostJson.extensions.durableTask = durableUtils.getDefaultDTSTaskConfig();
                 // Non- .NET projects require a special preview extension bundle to work properly
                 // Todo: Remove once this functionality is out of preview
-                if (context.language !== ProjectLanguage.CSharp) {
+                if (context.language !== ProjectLanguage.CSharp && context.language !== ProjectLanguage.FSharp) {
                     hostJson.extensionBundle ??= {};
                     hostJson.extensionBundle.id = 'Microsoft.Azure.Functions.ExtensionBundle.Preview';
                     hostJson.extensionBundle.version = '[4.29.0, 5.0.0)';
