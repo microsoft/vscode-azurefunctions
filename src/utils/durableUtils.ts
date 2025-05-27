@@ -10,7 +10,7 @@ import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName, type DurableBackendValues } from "../constants";
 import { ext } from "../extensionVariables";
-import { type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
+import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { dotnetUtils } from "./dotnetUtils";
@@ -215,15 +215,25 @@ export namespace durableUtils {
         };
     }
 
-    export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
+    export function getDefaultNetheriteTaskConfig(hubName: string = ''): INetheriteTaskJson {
         return {
-            hubName: hubName || '',
+            hubName,
             useGracefulShutdown: true,
             storageProvider: {
                 type: DurableBackend.Netherite,
                 partitionCount: 12,
                 StorageConnectionName: ConnectionKey.Storage,
                 EventHubsConnectionName: ConnectionKey.EventHubs,
+            }
+        };
+    }
+
+    export function getDefaultDTSTaskConfig(hubName: string = '%TASKHUB_NAME%'): IDTSTaskJson {
+        return {
+            hubName,
+            storageProvider: {
+                type: DurableBackend.DTS,
+                connectionStringName: ConnectionKey.DTS,
             }
         };
     }

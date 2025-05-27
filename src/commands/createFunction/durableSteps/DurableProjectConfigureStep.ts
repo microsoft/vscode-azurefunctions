@@ -57,6 +57,8 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 }
             });
 
+            // Todo: We should probably throw a non-blocking error here with custom fail state logic
+
             return;
         }
 
@@ -71,6 +73,11 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
             case DurableBackend.Netherite:
                 hostJson.extensions.durableTask = durableUtils.getDefaultNetheriteTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, '', MismatchBehavior.Overwrite);
+                break;
+            case DurableBackend.DTS:
+                hostJson.extensions.durableTask = durableUtils.getDefaultDTSTaskConfig();
+                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTSHub, 'default', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = durableUtils.getDefaultSqlTaskConfig();
