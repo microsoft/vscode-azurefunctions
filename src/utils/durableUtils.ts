@@ -64,6 +64,8 @@ export namespace durableUtils {
         switch (hostStorageType) {
             case DurableBackend.Netherite:
                 return DurableBackend.Netherite;
+            case DurableBackend.DTS:
+                return DurableBackend.DTS;
             case DurableBackend.SQL:
                 return DurableBackend.SQL;
             case DurableBackend.Storage:
