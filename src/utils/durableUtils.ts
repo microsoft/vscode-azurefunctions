@@ -228,9 +228,9 @@ export namespace durableUtils {
         };
     }
 
-    export function getDefaultDTSTaskConfig(hubName: string = '%TASKHUB_NAME%'): IDTSTaskJson {
+    export function getDefaultDTSTaskConfig(): IDTSTaskJson {
         return {
-            hubName,
+            hubName: '%TASKHUB_NAME%',
             storageProvider: {
                 type: DurableBackend.DTS,
                 connectionStringName: ConnectionKey.DTS,
