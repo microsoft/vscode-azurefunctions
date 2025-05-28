@@ -9,6 +9,7 @@ import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SubscriptionTreeItem, type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { type ContainerTreeItem } from '../../tree/containerizedFunctionApp/ContainerTreeItem';
+import { getRootWorkspaceFolder, isMultiRootWorkspace } from '../../utils/workspace';
 
 function isSubscription(item?: AzExtParentTreeItem): boolean {
     try {
@@ -35,6 +36,10 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     }
 
     context.newResourceGroupName = newResourceGroupName;
+    if (!isMultiRootWorkspace()) {
+        // only set the workspace if we're not doing in a multiroot project
+        context.workspaceFolder = await getRootWorkspaceFolder();
+    }
 
     const funcAppNode: SlotTreeItem | ContainerTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
 

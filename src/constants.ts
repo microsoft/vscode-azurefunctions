@@ -120,7 +120,8 @@ export enum ConnectionType {
 export enum DurableBackend {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
-    SQL = "mssql"
+    SQL = "mssql",
+    DTS = "azureManaged"
 }
 
 export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];

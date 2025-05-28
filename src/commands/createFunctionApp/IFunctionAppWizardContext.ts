@@ -31,6 +31,7 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     hasAzureStorageConnection?: boolean;
     hasEventHubsConnection?: boolean;
     hasSqlDbConnection?: boolean;
+    hasDurableTaskScheduler?: boolean;
 }
 
 export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {
