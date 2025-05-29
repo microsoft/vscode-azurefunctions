@@ -34,7 +34,7 @@ export interface IHostJsonV2 {
     };
 }
 
-export type IDurableTaskJson = IStorageTaskJson | INetheriteTaskJson | ISqlTaskJson;
+export type IDurableTaskJson = IStorageTaskJson | INetheriteTaskJson | IDTSTaskJson | ISqlTaskJson;
 
 export interface IStorageTaskJson {
     storageProvider?: {
@@ -50,6 +50,14 @@ export interface INetheriteTaskJson {
         partitionCount?: number;
         StorageConnectionName?: string;
         EventHubsConnectionName?: string;
+    }
+}
+
+export interface IDTSTaskJson {
+    hubName?: string;
+    storageProvider?: {
+        type?: DurableBackend.DTS;
+        connectionStringName?: string;
     }
 }
 

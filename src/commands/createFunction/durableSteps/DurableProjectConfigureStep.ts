@@ -6,7 +6,7 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { type Progress } from 'vscode';
-import { ConnectionKey, DurableBackend, hostFileName } from '../../../constants';
+import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
 import { viewOutput } from '../../../constants-nls';
 import { ext } from '../../../extensionVariables';
 import { type IHostJsonV2 } from '../../../funcConfig/host';
@@ -57,6 +57,8 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 }
             });
 
+            // Todo: We should probably throw a non-blocking error here with custom fail state logic
+
             return;
         }
 
@@ -71,6 +73,19 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
             case DurableBackend.Netherite:
                 hostJson.extensions.durableTask = durableUtils.getDefaultNetheriteTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, '', MismatchBehavior.Overwrite);
+                break;
+            case DurableBackend.DTS:
+                hostJson.extensions.durableTask = durableUtils.getDefaultDTSTaskConfig();
+                // Non- .NET projects require a special preview extension bundle to work properly
+                // Todo: Remove once this functionality is out of preview
+                if (context.language !== ProjectLanguage.CSharp && context.language !== ProjectLanguage.FSharp) {
+                    hostJson.extensionBundle = {
+                        id: 'Microsoft.Azure.Functions.ExtensionBundle.Preview',
+                        version: '[4.29.0, 5.0.0)',
+                    };
+                }
+                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTSHub, 'default', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = durableUtils.getDefaultSqlTaskConfig();

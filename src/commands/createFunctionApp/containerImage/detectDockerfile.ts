@@ -13,7 +13,8 @@ import { isFunctionProject } from '../../createNewProject/verifyIsProject';
 import path = require('path');
 
 export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<void> {
-    if (vscode.workspace.workspaceFolders) {
+    // don't overwrite the workspace folder on the context if it's already set
+    if (vscode.workspace.workspaceFolders && !context.workspaceFolder) {
         context.workspaceFolder = vscode.workspace.workspaceFolders[0];
         const workspacePath = context.workspaceFolder.uri.fsPath;
         let dockerfilePath: string = workspacePath
