@@ -58,7 +58,6 @@ export interface IDTSTaskJson {
     storageProvider?: {
         type?: DurableBackend.DTS;
         connectionStringName?: string;
-        StorageConnectionName?: string;
     }
 }
 
