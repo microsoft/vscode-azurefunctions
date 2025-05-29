@@ -10,7 +10,7 @@ import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName, type DurableBackendValues } from "../constants";
 import { ext } from "../extensionVariables";
-import { type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
+import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { dotnetUtils } from "./dotnetUtils";
@@ -24,6 +24,8 @@ export namespace durableUtils {
     export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
     export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.DurableTask.DurableTask.AzureFunctions';
+    export const dotnetIsolatedDTSPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged';
     export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
@@ -62,6 +64,8 @@ export namespace durableUtils {
         switch (hostStorageType) {
             case DurableBackend.Netherite:
                 return DurableBackend.Netherite;
+            case DurableBackend.DTS:
+                return DurableBackend.DTS;
             case DurableBackend.SQL:
                 return DurableBackend.SQL;
             case DurableBackend.DTS:
@@ -161,6 +165,11 @@ export namespace durableUtils {
                     packageNames.push(dotnetIsolatedDfNetheritePackage) :
                     packageNames.push(dotnetInProcDfNetheritePackage);
                 break;
+            case DurableBackend.DTS:
+                isDotnetIsolated ?
+                    packageNames.push(dotnetIsolatedDTSPackage) :
+                    packageNames.push(dotnetInProcDTSPackage);
+                break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?
                     packageNames.push(dotnetIsolatedDfSqlPackage) :
@@ -217,15 +226,25 @@ export namespace durableUtils {
         };
     }
 
-    export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
+    export function getDefaultNetheriteTaskConfig(hubName: string = ''): INetheriteTaskJson {
         return {
-            hubName: hubName || '',
+            hubName,
             useGracefulShutdown: true,
             storageProvider: {
                 type: DurableBackend.Netherite,
                 partitionCount: 12,
                 StorageConnectionName: ConnectionKey.Storage,
                 EventHubsConnectionName: ConnectionKey.EventHubs,
+            }
+        };
+    }
+
+    export function getDefaultDTSTaskConfig(): IDTSTaskJson {
+        return {
+            hubName: '%TASKHUB_NAME%',
+            storageProvider: {
+                type: DurableBackend.DTS,
+                connectionStringName: ConnectionKey.DTS,
             }
         };
     }
