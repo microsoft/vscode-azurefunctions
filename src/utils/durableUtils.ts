@@ -68,8 +68,6 @@ export namespace durableUtils {
                 return DurableBackend.DTS;
             case DurableBackend.SQL:
                 return DurableBackend.SQL;
-            case DurableBackend.DTS:
-                return DurableBackend.DTS;
             case DurableBackend.Storage:
             default:
                 // New DF's will use the more specific type 'DurableBackend.Storage', but legacy implementations may return this value as 'undefined'
