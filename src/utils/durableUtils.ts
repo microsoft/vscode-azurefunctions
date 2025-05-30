@@ -164,6 +164,7 @@ export namespace durableUtils {
                     packages.push({ name: dotnetInProcDfNetheritePackage });
                 break;
             case DurableBackend.DTS:
+                // Todo: Remove prerelease flag once this functionality is out of preview
                 isDotnetIsolated ?
                     packages.push({ name: dotnetIsolatedDTSPackage, prerelease: true }) :
                     packages.push({ name: dotnetInProcDTSPackage, prerelease: true });
