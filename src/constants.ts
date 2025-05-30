@@ -150,7 +150,6 @@ export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
-// Replaced legacy values: 'MemoryF' & 'Memory'
 export const localEventHubsEmulatorConnectionString: string = 'SingleHost';
 export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionString}|MemoryF|Memory`);
 
