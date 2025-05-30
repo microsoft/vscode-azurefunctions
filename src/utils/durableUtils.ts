@@ -24,9 +24,9 @@ export namespace durableUtils {
     export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
     export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
-    export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.DurableTask.DurableTask.AzureFunctions';
+    export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask.AzureManaged';
     export const dotnetIsolatedDTSPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged';
-    export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
 
@@ -154,44 +154,45 @@ export namespace durableUtils {
     }
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
-        const packageNames: string[] = [];
+        const packages: { name: string; prerelease?: boolean }[] = [];
         const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
                 isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDfNetheritePackage) :
-                    packageNames.push(dotnetInProcDfNetheritePackage);
+                    packages.push({ name: dotnetIsolatedDfNetheritePackage }) :
+                    packages.push({ name: dotnetInProcDfNetheritePackage });
                 break;
             case DurableBackend.DTS:
                 isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDTSPackage) :
-                    packageNames.push(dotnetInProcDTSPackage);
+                    packages.push({ name: dotnetIsolatedDTSPackage, prerelease: true }) :
+                    packages.push({ name: dotnetInProcDTSPackage, prerelease: true });
                 break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDfSqlPackage) :
-                    packageNames.push(dotnetInProcDfSqlPackage);
+                    packages.push({ name: dotnetIsolatedDfSqlPackage }) :
+                    packages.push({ name: dotnetInProcDfSqlPackage });
                 break;
             case DurableBackend.Storage:
             default:
         }
 
-        /*
-         * https://github.com/microsoft/vscode-azurefunctions/issues/3599
-         * Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
-         * otherwise, error appears when running with sql backend
-         */
+        // Although the templates should incorporate this package already, it is often included with an out-dated version
+        // which can cause issues right out of the gate if the package isn't updated
         if (!isDotnetIsolated) {
-            packageNames.push(dotnetInProcDfBasePackage);
+            packages.push({ name: dotnetInProcDfBasePackage });
         }
 
         const failedPackages: string[] = [];
-        for (const packageName of packageNames) {
+        for (const p of packages) {
             try {
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
+                const packageArgs: string[] = [p.name];
+                if (p.prerelease) {
+                    packageArgs.push('--prerelease');
+                }
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', ...packageArgs);
             } catch {
-                failedPackages.push(packageName);
+                failedPackages.push(p.name);
             }
         }
 
