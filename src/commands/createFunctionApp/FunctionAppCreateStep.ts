@@ -6,22 +6,22 @@
 import { type FunctionsDeploymentStorageAuthentication, type NameValuePair, type Site, type SiteConfig, type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type Identity } from '@azure/arm-resources';
 import { type StorageAccount } from '@azure/arm-storage';
+import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipeline';
 import { BlobServiceClient } from '@azure/storage-blob';
-import { ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStepWithActivityOutput, maskUserInfo, nonNullProp, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
-import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
+import { createWebSiteClient, DomainNameLabelScope, ParsedSite, WebsiteOS, type CustomLocation, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStepWithActivityOutput, maskUserInfo, nonNullProp, nonNullValueAndProp, parseError, randomUtils } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
-import { ConnectionKey, ProjectLanguage, contentConnectionStringKey, contentShareKey, extensionVersionKey, runFromPackageKey, webProvider } from '../../constants';
+import { ConnectionKey, contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
 import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
+import { type FunctionAppConfigPayload, type SitePayload } from './domainNameLabelScopeTypes';
 import { type Sku } from './stacks/models/FlexSkuModel';
 import { type FunctionAppRuntimeSettings, } from './stacks/models/FunctionAppStackModel';
 
@@ -46,7 +46,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
 
         context.site = await this.createFunctionApp(context, rgName, siteName, stack);
-        context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
         if (!site.isLinux) { // not supported on linux
@@ -63,8 +62,40 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         return !context.site;
     }
 
-    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
-        const site: Site = await this.createNewSite(context, stack);
+    async createFunctionApp(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
+        let site: Site;
+        if (context.newSiteDomainNameLabelScope === DomainNameLabelScope.Global) {
+            site = await this.createSite(context, rgName, siteName, stack);
+        } else {
+            site = await this.createSiteWithDomainLabelScope(context, rgName, siteName, stack);
+        }
+
+        if (context.newFlexSku) {
+            if (context.storageAccount) {
+                await tryCreateStorageContainer(context, site, context.storageAccount);
+            }
+        }
+
+        return site;
+    }
+
+    // #region createSite
+    private async createSite(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack?: FullFunctionAppStack): Promise<Site> {
+        const client: WebSiteManagementClient = await createWebSiteClient(context);
+        const site: Site = context.newFlexSku ?
+            await this.getNewFlexSite(context, context.newFlexSku) :
+            await this.getNewSite(context, stack);
+        return await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site)
+    }
+
+    private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
+        const site: Site = await this.getNewBaseSite(context);
+        site.functionAppConfig = this.getNewFlexFunctionAppConfig(context, sku);
+        return site;
+    }
+
+    private async getNewSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
+        const site: Site = await this.getNewBaseSite(context, stack);
         site.reserved = context.newSiteOS === WebsiteOS.linux;  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
 
         if (context.customLocation) {
@@ -88,42 +119,95 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         nonNullProp(site, 'siteConfig').alwaysOn = true;
         site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
+    // #endregion
 
-    private async getNewFlexSite(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<Site> {
-        const site: Site = await this.createNewSite(context);
-        site.functionAppConfig = {
-            deployment: {
-                storage: {
-                    type: 'blobContainer',
-                    value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
-                    authentication: createDeploymentStorageAuthentication(context)
-                }
-            },
-            runtime: {
-                name: sku.functionAppConfigProperties.runtime.name,
-                version: sku.functionAppConfigProperties.runtime.version
-            },
-            scaleAndConcurrency: {
-                maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
-                alwaysReady: [],
-                triggers: undefined
-            },
-        }
+    // #region createSiteWithDomainLabelScope
+    private async createSiteWithDomainLabelScope(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack?: FullFunctionAppStack): Promise<Site> {
+        const sitePayload: SitePayload = context.newFlexSku ?
+            await this.getNewFlexSiteWithDomainLabelScope(context, context.newFlexSku) :
+            await this.getNewSiteWithDomainLabelScope(context, stack);
 
-        return site;
+        // The SDK does not currently support this updated api version, so we should make the call to the endpoint manually until the SDK gets updated
+        const apiVersion = '2024-04-01';
+        const authToken = (await context.credentials.getToken() as { token?: string }).token;
+        const options: AzExtRequestPrepareOptions = {
+            url: `${context.environment.resourceManagerEndpointUrl}subscriptions/${context.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Web/sites/${siteName}?api-version=${apiVersion}`,
+            method: 'PUT',
+            headers: createHttpHeaders({
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            }),
+            body: JSON.stringify(sitePayload),
+        };
 
-        function createDeploymentStorageAuthentication(context: IFlexFunctionAppWizardContext): FunctionsDeploymentStorageAuthentication {
-            const hasManagedIdentity: boolean = !!context.managedIdentity;
-            return {
-                userAssignedIdentityResourceId: hasManagedIdentity ? context.managedIdentity?.id : undefined,
-                type: hasManagedIdentity ? 'UserAssignedIdentity' : 'StorageAccountConnectionString',
-                storageAccountConnectionStringName: hasManagedIdentity ? undefined : 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
-            };
-        }
+        const client = await createGenericClient(context, undefined);
+        // We don't care about storing the response here because the manual response returned is different from the SDK formatting that our code expects.
+        // The stored site should come from the SDK instead.
+        await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
+
+        const sdkClient: WebSiteManagementClient = await createWebSiteClient(context);
+        return await sdkClient.webApps.get(rgName, siteName);
     }
 
-    private async createNewSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
+    private async getNewFlexSiteWithDomainLabelScope(context: IFlexFunctionAppWizardContext, sku: Sku): Promise<SitePayload> {
+        const baseSite: Site = await this.getNewBaseSite(context);
+        const sitePayload: SitePayload = {
+            name: baseSite.name,
+            kind: baseSite.kind,
+            location: baseSite.location,
+            identity: baseSite.identity,
+            properties: {
+                autoGeneratedDomainNameLabelScope: context.newSiteDomainNameLabelScope,
+                serverFarmId: baseSite.serverFarmId,
+                clientAffinityEnabled: baseSite.clientAffinityEnabled,
+                siteConfig: baseSite.siteConfig,
+                functionAppConfig: this.getNewFlexFunctionAppConfig(context, sku),
+            },
+        };
+        return sitePayload;
+    }
+
+    private async getNewSiteWithDomainLabelScope(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<SitePayload> {
+        const baseSite: Site = await this.getNewBaseSite(context, stack);
+        const sitePayload: SitePayload = {
+            name: baseSite.name,
+            kind: baseSite.kind,
+            location: baseSite.location,
+            identity: baseSite.identity,
+            properties: {
+                autoGeneratedDomainNameLabelScope: context.newSiteDomainNameLabelScope,
+                serverFarmId: baseSite.serverFarmId,
+                clientAffinityEnabled: baseSite.clientAffinityEnabled,
+                reserved: context.newSiteOS === WebsiteOS.linux,  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+                siteConfig: baseSite.siteConfig,
+            },
+        };
+
+        if (context.customLocation) {
+            this.addCustomLocationPropertiesToSitePayload(sitePayload, context.customLocation);
+        }
+
+        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
+        if (context.plan?.sku?.family) {
+            const isNotFree = context.plan.sku.family.toLowerCase() !== 'f';
+            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
+            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
+            if (isNotFree && isNotElasticPremium && isNotConsumption) {
+                nonNullValueAndProp(sitePayload.properties, 'siteConfig').alwaysOn = true;
+            }
+        }
+
+        return sitePayload;
+    }
+
+    private addCustomLocationPropertiesToSitePayload(sitePayload: SitePayload, customLocation: CustomLocation): void {
+        nonNullValueAndProp(sitePayload.properties, 'siteConfig').alwaysOn = true;
+        sitePayload.extendedLocation = { name: customLocation.id, type: 'customLocation' };
+    }
+    // #endregion
+
+    // #region common
+    private async getNewBaseSite(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
         let identity: Identity | undefined = undefined;
         if (context.managedIdentity) {
@@ -139,14 +223,13 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             location: nonNullProp(location, 'name'),
             serverFarmId: context.plan?.id,
             clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context, stack),
+            siteConfig: await this.getNewBaseSiteConfig(context, stack),
             identity
         };
     }
 
-    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<SiteConfig> {
+    private async getNewBaseSiteConfig(context: IFunctionAppWizardContext, stack?: FullFunctionAppStack): Promise<SiteConfig> {
         let newSiteConfig: SiteConfig = {};
-
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
         let appSettings: NameValuePair[] = [];
@@ -158,7 +241,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                 value: storageConnectionString
             });
         }
-
 
         if (stack) {
             const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
@@ -233,22 +315,39 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         return newSiteConfig;
     }
 
-    async createFunctionApp(context: IFlexFunctionAppWizardContext, rgName: string, siteName: string, stack: FullFunctionAppStack): Promise<Site> {
-        const client: WebSiteManagementClient = await createWebSiteClient(context);
-        const site = context.newFlexSku ?
-            await this.getNewFlexSite(context, context.newFlexSku) :
-            await this.getNewSite(context, stack);
-        const result = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, site);
-
-        if (context.newFlexSku) {
-            if (context.storageAccount) {
-                await tryCreateStorageContainer(context, result, context.storageAccount);
-            }
-        }
-
-        return result;
+    private getNewFlexFunctionAppConfig(context: IFlexFunctionAppWizardContext, sku: Sku): FunctionAppConfigPayload {
+        return {
+            deployment: {
+                storage: {
+                    type: 'blobContainer',
+                    value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
+                    authentication: this.createDeploymentStorageAuthentication(context)
+                }
+            },
+            runtime: {
+                name: sku.functionAppConfigProperties.runtime.name,
+                version: sku.functionAppConfigProperties.runtime.version
+            },
+            scaleAndConcurrency: {
+                maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
+                alwaysReady: [],
+                triggers: undefined
+            },
+        };
     }
 
+    private createDeploymentStorageAuthentication(context: IFlexFunctionAppWizardContext): FunctionsDeploymentStorageAuthentication {
+        const hasManagedIdentity: boolean = !!context.managedIdentity;
+        return {
+            userAssignedIdentityResourceId: hasManagedIdentity ? context.managedIdentity?.id : undefined,
+            type: hasManagedIdentity ? 'UserAssignedIdentity' : 'StorageAccountConnectionString',
+            storageAccountConnectionStringName: hasManagedIdentity ? undefined : 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
+        };
+    }
+    // #endregion
+
+    // #region executeActivityOutput
     protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
         const siteName: string = nonNullProp(context, 'newSiteName');
         return localize('creatingNewApp', 'Create function app "{0}"', siteName);
@@ -265,6 +364,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
         const siteName: string = nonNullProp(context, 'newSiteName');
         return localize('creatingNewApp', 'Creating function app "{0}"...', siteName);
     }
+    // #endregion
 }
 
 function getNewFileShareName(siteName: string): string {
