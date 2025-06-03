@@ -12,7 +12,7 @@ import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
-suite.only('Function App Operations', function (this: Mocha.Suite): void {
+suite('Function App Operations', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
 
     let appName: string;
