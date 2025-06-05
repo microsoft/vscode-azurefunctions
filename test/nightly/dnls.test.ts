@@ -7,11 +7,11 @@ import { type Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { createFunctionApp, createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString } from '../../extension.bundle';
+import { createFunctionApp, createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
-suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
+suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
 
     let basicAppName: string;
@@ -48,7 +48,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, basicAppName, basicAppName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.match(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.match(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
     });
 
     test('Create - Advanced - Tenant DNLS + Secrets', async () => {
@@ -62,7 +62,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.match(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.match(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
     });
 
     test('Create - Advanced - Tenant DNLS + Identity', async () => {
@@ -76,7 +76,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.match(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.match(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
 
         // Delete right away to free up quota
         await runWithTestActionContext('deleteFunctionApp', async context => {
@@ -97,7 +97,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.match(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.match(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
     });
 
     test('Create - Advanced - Global DNLS + Secrets', async () => {
@@ -111,7 +111,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.doesNotMatch(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.doesNotMatch(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
     });
 
     test('Create - Advanced - Global DNLS + Identity', async () => {
@@ -125,7 +125,7 @@ suite.only('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
         assert.ok(createdApp);
-        assert.doesNotMatch(createdApp.defaultHostName ?? '', domainNameSearch);
+        assert.doesNotMatch(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
 
         // Delete right away to free up quota
         await runWithTestActionContext('deleteFunctionApp', async context => {
