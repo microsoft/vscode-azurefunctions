@@ -179,7 +179,7 @@ export namespace durableUtils {
         }
 
         // Although the templates should incorporate this package already, it is often included with an out-dated version
-        // which can lead to errors on first run.
+        // which can lead to errors on first run.  To improve this experience for our users, ensure that the latest version is used.
         if (!isDotnetIsolated) {
             packages.push({ name: dotnetInProcDfBasePackage });
         }
