@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type SiteConfig, type UserAssignedIdentity } from "@azure/arm-appservice";
+import { type SiteConfig } from "@azure/arm-appservice";
 import { type DomainNameLabelScope } from "@microsoft/vscode-azext-azureappservice";
 
 // The types in this file were put together because of the need to make a manual call to the API endpoint.
@@ -22,7 +22,7 @@ export interface SitePayload {
     identity?: {
         type?: string;
         userAssignedIdentities?: {
-            [propertyName: string]: UserAssignedIdentity;
+            [userAssignedIdentityResourceId: string]: {};
         };
     };
     properties?: SitePropertiesPayload;
