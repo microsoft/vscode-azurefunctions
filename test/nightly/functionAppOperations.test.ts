@@ -51,7 +51,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: (string | RegExp)[] = [app2Name, 'Flex Consumption', location, /\.net/i, '4096', '100', 'Managed identity', rgName, saName, aiName, '$(plus) Create new user assigned identity'];
+        const testInputs: (string | RegExp)[] = [location, rgName, 'Tenant Scope', app2Name, 'Flex Consumption', /\.net/i, '4096', '100', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);

@@ -11,7 +11,7 @@ import { createFunctionApp, createFunctionAppAdvanced, deleteFunctionApp, Dialog
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
-suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
+suite('Domain Name Label Scopes (DNLS)', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
 
     let basicAppName: string;
@@ -54,7 +54,7 @@ suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
     test('Create - Advanced - Tenant DNLS + Secrets', async () => {
         const appName: string = getRandomHexString();
         const testInputs: (string | RegExp)[] = [location, '$(plus) Create new resource group', rgName, 'Tenant Scope', appName, 'Flex Consumption', /\.net/i, '4096', '100', 'Secrets', '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+        await runWithTestActionContext('createFunctionAppAdvancedDnls', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
             });
@@ -68,7 +68,7 @@ suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
     test('Create - Advanced - Tenant DNLS + Identity', async () => {
         const appName: string = getRandomHexString();
         const testInputs: (string | RegExp)[] = [location, rgName, 'Tenant Scope', appName, 'App Service Plan', /\.net/i, 'Linux', '$(plus) Create new App Service plan', aspName, 'S1', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+        await runWithTestActionContext('createFunctionAppAdvancedDnls', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
             });
@@ -86,24 +86,13 @@ suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
         });
     });
 
-    test('Create - Advanced - Tenant DNLS + Identity + Flex', async () => {
-        const appName: string = getRandomHexString();
-        const testInputs: (string | RegExp)[] = [location, rgName, 'Tenant Scope', appName, 'Flex Consumption', /\.net/i, '4096', '100', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
-            await context.ui.runWithInputs(testInputs, async () => {
-                await createFunctionAppAdvanced(context);
-            });
-        });
-        const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
-        const domainNameSearch: RegExp = new RegExp(location.replace(/\s+/g, ''), 'i');
-        assert.ok(createdApp);
-        assert.match(nonNullProp(createdApp, 'defaultHostName'), domainNameSearch);
-    });
+    // Create - Advanced - Tenant DNLS + Identity + Flex
+    // Skip - already covered under main scenario of `functionAppOperations.test.ts`
 
     test('Create - Advanced - Global DNLS + Secrets', async () => {
         const appName: string = getRandomHexString();
         const testInputs: (string | RegExp)[] = [location, rgName, 'Global', appName, 'Flex Consumption', /\.net/i, '4096', '100', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+        await runWithTestActionContext('createFunctionAppAdvancedDnls', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
             });
@@ -117,7 +106,7 @@ suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
     test('Create - Advanced - Global DNLS + Identity', async () => {
         const appName: string = getRandomHexString();
         const testInputs: (string | RegExp)[] = [location, rgName, 'Global', appName, 'App Service Plan', /\.net/i, 'Linux', '$(plus) Create new App Service plan', aspName, 'S1', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+        await runWithTestActionContext('createFunctionAppAdvancedDnls', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
             });
@@ -138,7 +127,7 @@ suite('Domain Name Label Scopes', function (this: Mocha.Suite): void {
     test('Create - Advanced - Global DNLS + Identity + Flex', async () => {
         const appName: string = getRandomHexString();
         const testInputs: (string | RegExp)[] = [location, rgName, 'Global', appName, 'Flex Consumption', /\.net/i, '4096', '100', 'Managed identity', saName, aiName, '$(plus) Create new user assigned identity'];
-        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+        await runWithTestActionContext('createFunctionAppAdvancedDnls', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
                 await createFunctionAppAdvanced(context);
             });
