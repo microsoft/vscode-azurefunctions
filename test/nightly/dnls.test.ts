@@ -38,6 +38,10 @@ suite('Domain Name Label Scopes (DNLS)', function (this: Mocha.Suite): void {
         resourceGroupsToDelete.push(rgName, basicAppName);
     });
 
+    // NOTE:
+    // Tenant DNLS apps will include the location as part of the domain name, making it possible for duplicate site names to be created if they are in different locations and resource groups.
+    // Global DNLS apps will not include the location as part of the domain name.  Names for these must be globally unique.
+
     test('Create - Basic - Tenant DNLS', async () => {
         const testInputs: (string | RegExp)[] = [location, basicAppName, /\.net/i, 'Managed identity'];
         await runWithTestActionContext('createFunctionAppBasicDnls', async context => {
