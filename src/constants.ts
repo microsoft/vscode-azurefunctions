@@ -149,11 +149,9 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
-export const localEventHubsEmulatorConnectionStringDefault: string = 'MemoryF';
-export const localEventHubsEmulatorConnectionStringAlternate: string = 'Memory';
-
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
-export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternate}`);
+export const localEventHubsEmulatorConnectionString: string = 'SingleHost';
+export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionString}|MemoryF|Memory`);
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const workerRuntimeVersionKey: string = 'FUNCTIONS_WORKER_RUNTIME_VERSION';
