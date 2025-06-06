@@ -24,6 +24,10 @@ import { ProjectResource, ProjectSource, matchesAnyPart } from "./projectContext
 import { ManagedIdentityTreeItem } from "./remoteProject/ManagedIdentityTreeItem";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
 
+export type ResolvedFunctionAppResourceOptions = {
+    showLocationAsTreeItemDescription?: boolean;
+};
+
 export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppResource {
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
@@ -65,7 +69,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
+    public constructor(subscription: ISubscriptionContext, site: Site, readonly options: ResolvedFunctionAppResourceOptions = {}) {
         super(new ParsedSite(site, subscription))
         this.data = this.site.rawSite;
         this._subscription = subscription;
@@ -93,8 +97,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site);
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site, options?: ResolvedFunctionAppResourceOptions): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site, options);
         void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
         return resource;
     }
@@ -108,10 +112,13 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get description(): string | undefined {
-        if (this._isFlex) {
+        if (this.options.showLocationAsTreeItemDescription) {
+            return this.site.location;
+        } else if (this._isFlex) {
             return localize('flexFunctionApp', 'Flex Consumption');
+        } else {
+            return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
         }
-        return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): TreeItemIconPath {

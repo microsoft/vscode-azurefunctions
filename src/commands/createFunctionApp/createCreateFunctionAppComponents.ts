@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, AppServicePlanListStep, CustomLocationListStep, DomainNameLabelScope, LogAnalyticsCreateStep, SiteDomainNameLabelScopeStep, SiteNameStep, WebsiteOS, type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, UserAssignedIdentityListStep, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
@@ -54,7 +54,13 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     await detectDockerfile(context);
 
-    promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
+    // SiteNameStep pre-requisites
+    if (!context.advancedCreation) {
+        LocationListStep.addStep(wizardContext, promptSteps);
+    } else {
+        CustomLocationListStep.addStep(wizardContext, promptSteps);
+        promptSteps.push(new ResourceGroupListStep());
+    }
 
     if (context.dockerfilePath) {
         const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
@@ -68,7 +74,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     promptSteps.push(new AuthenticationPromptStep());
 
     if (!wizardContext.advancedCreation) {
-        LocationListStep.addStep(wizardContext, promptSteps);
         // if the user is deploying to a container app, do not use a flex consumption plan
         wizardContext.useFlexConsumptionPlan = true && !context.dockerfilePath;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
@@ -81,7 +86,6 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
             executeSteps.push(new LogAnalyticsCreateStep());
         }
     } else {
-        promptSteps.push(new ResourceGroupListStep());
         promptSteps.push(new StorageAccountListStep(
             storageAccountCreateOptions,
             {
@@ -145,8 +149,14 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
+    // SiteNameStep pre-requisites
+    promptSteps.push(new SiteDomainNameLabelScopeStep());
+    if (!wizardContext.advancedCreation) {
+        wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
+    }
+
+    promptSteps.push(new SiteNameStep("functionApp"));
     promptSteps.push(new FunctionAppHostingPlanStep());
-    CustomLocationListStep.addStep(wizardContext, promptSteps);
 
     promptSteps.push(new FunctionAppStackStep());
 
@@ -167,6 +177,7 @@ async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: Az
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
+    promptSteps.push(new SiteNameStep("containerizedFunctionApp"));
     executeSteps.push(new DeployWorkspaceProjectStep());
     executeSteps.push(new ContainerizedFunctionAppCreateStep());
 
