@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { DurableBackend, type DurableBackendValues } from "../../../constants";
-import { defaultDescription } from "../../../constants-nls";
+import { defaultDescription, previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
 import { FunctionSubWizard } from "../FunctionSubWizard";
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
@@ -19,24 +19,19 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
     }
 
     public async prompt(context: T): Promise<void> {
-        const durableStorageLabels: string[] = [
-            'Azure Storage',
-            'Netherite',
-            'MSSQL'
-        ];
         const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackendValues | undefined>[] = [
-            { label: durableStorageLabels[0], description: defaultDescription, data: DurableBackend.Storage, suppressPersistence: true },
-            { label: durableStorageLabels[1], data: DurableBackend.Netherite, suppressPersistence: true },
-            { label: durableStorageLabels[2], data: DurableBackend.SQL, suppressPersistence: true },
-            { label: durableStorageInfo, data: undefined, suppressPersistence: true }
+            { label: 'Azure Storage', description: defaultDescription, data: DurableBackend.Storage },
+            { label: 'Durable Task Scheduler', description: previewDescription, data: DurableBackend.DTS },
+            { label: 'MSSQL', data: DurableBackend.SQL },
+            { label: durableStorageInfo, data: undefined }
         ];
 
         let pick: DurableBackendValues | undefined;
         while (!pick) {
-            pick = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+            pick = (await context.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
             if (!pick) {
                 await openUrl('https://aka.ms/durable-storage-providers');
             }
