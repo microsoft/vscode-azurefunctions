@@ -32,6 +32,7 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: ParsedSite;
     public data: Site;
+    public queryResult: FunctionAppQueryResponse;
 
     private _subscription: ISubscriptionContext;
     public logStreamPath: string = '';
@@ -66,11 +67,18 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, readonly queryResult: FunctionAppQueryResponse) {
+    public constructor(subscription: ISubscriptionContext, queryResult: FunctionAppQueryResponse | Site) {
         super();
         this._subscription = subscription;
         this.contextValuesToAdd = [];
-        this._isFlex = queryResult.pricingTier === 'Flex Consumption';
+        if ('pricingTier' in queryResult) {
+            // queryResult is narrowed to QueryResult
+            this._isFlex = queryResult.pricingTier === 'Flex Consumption';
+            this.queryResult = queryResult;
+        } else {
+            this._isFlex = !!queryResult.functionAppConfig;
+            this.site = new ParsedSite(queryResult, subscription);
+        }
 
         if (this._isFlex) {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.flexContextValue);
@@ -93,11 +101,11 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         // }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site);
-        void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
-        return resource;
-    }
+    // public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
+    //     const resource = new ResolvedFunctionAppResource(subscription, site);
+    //     void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
+    //     return resource;
+    // }
 
     public get label(): string {
         return this.site?.slotName ?? this.site?.fullName ?? this.queryResult.name;
