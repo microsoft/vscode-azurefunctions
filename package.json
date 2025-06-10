@@ -1473,6 +1473,7 @@
         "@azure/arm-appservice": "^15.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
+        "@azure/arm-resourcegraph": "^5.0.0-beta.3",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@azure/arm-servicebus": "^5.0.0",
         "@azure/arm-sql": "^9.1.0",

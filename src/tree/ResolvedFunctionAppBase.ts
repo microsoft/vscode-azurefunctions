@@ -4,20 +4,18 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
-import { nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { type FuncVersion } from "../FuncVersion";
+import { type FunctionAppQueryResponse } from "../FunctionAppResolver";
 import { type IParsedHostJson } from "../funcConfig/host";
 import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
 import { type ContainerSite } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 
 export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: ContainerSite | ParsedSite;
-    public constructor(site: ContainerSite | ParsedSite) {
-        this.site = site;
-    }
-
+    public queryResult: FunctionAppQueryResponse;
     public get name(): string {
         return this.label;
     }
@@ -25,7 +23,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
     public abstract label: string;
 
     public get id(): string {
-        return nonNullProp(this.site, 'id');
+        return this.site?.id ?? this.queryResult.id;
     }
 
     public abstract iconPath?: TreeItemIconPath | undefined;

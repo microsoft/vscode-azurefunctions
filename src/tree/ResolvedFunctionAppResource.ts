@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
-import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
+import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, createWebSiteClient, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
+import { type FunctionAppQueryResponse } from "../FunctionAppResolver";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
@@ -65,32 +66,31 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
-        super(new ParsedSite(site, subscription))
-        this.data = this.site.rawSite;
+    public constructor(subscription: ISubscriptionContext, readonly queryResult: FunctionAppQueryResponse) {
+        super();
         this._subscription = subscription;
         this.contextValuesToAdd = [];
-        this._isFlex = !!site.functionAppConfig;
+        this._isFlex = queryResult.pricingTier === 'Flex Consumption';
+
         if (this._isFlex) {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.flexContextValue);
-        } else if (this.site.isSlot) {
-            this.contextValuesToAdd.push(ResolvedFunctionAppResource.slotContextValue);
         } else {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.productionContextValue);
         }
 
-        const valuesToMask = [
-            this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
-            this.site.planName, this.site.planResourceGroup, this.site.kuduHostName, this.site.gitUrl,
-            this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
-        ];
+        // this.data = this.site.rawSite;
+        // const valuesToMask = [
+        //     this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
+        //     this.site.planName, this.site.planResourceGroup, this.site.kuduHostName, this.site.gitUrl,
+        //     this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
+        // ];
 
 
-        for (const v of valuesToMask) {
-            if (v) {
-                this.maskedValuesToAdd.push(v);
-            }
-        }
+        // for (const v of valuesToMask) {
+        //     if (v) {
+        //         this.maskedValuesToAdd.push(v);
+        //     }
+        // }
     }
 
     public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
@@ -100,7 +100,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get label(): string {
-        return this.site.slotName ?? this.site.fullName;
+        return this.site?.slotName ?? this.site?.fullName ?? this.queryResult.name;
     }
 
     public get logStreamLabel(): string {
@@ -111,7 +111,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         if (this._isFlex) {
             return localize('flexFunctionApp', 'Flex Consumption');
         }
-        return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        return this.queryResult.status?.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -209,6 +209,12 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        // initialize item at this point
+        const webClient = await createWebSiteClient({ ...context, ...this._subscription });
+        const site = await webClient.webApps.get(this.queryResult.resourceGroup, this.queryResult.name);
+        const parsedSite = new ParsedSite(site, this._subscription);
+        this.site = parsedSite;
+
         const client = await this.site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
         const sourceControl: SiteSourceControl = await client.getSourceControl();
