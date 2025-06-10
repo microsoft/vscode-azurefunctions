@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type ResourceManagementClient } from '@azure/arm-resources';
 import { type AzExtClientContext, createAzureClient, type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, parseClientContext, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
+import { type Progress, workspace } from "vscode";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -13,8 +15,6 @@ import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { workspace, type Progress } from "vscode";
-import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;

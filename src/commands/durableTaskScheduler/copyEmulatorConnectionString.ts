@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
-import { localize } from "../../localize";
-import { ext } from "../../extensionVariables";
 import { env, QuickPickItemKind, type QuickPickItem } from "vscode";
+import { ext } from "../../extensionVariables";
+import { localize } from "../../localize";
 import { type DurableTaskSchedulerEmulatorWorkspaceResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorWorkspaceResourceModel";
 
 export function copyEmulatorConnectionStringCommandFactory() {
@@ -24,9 +24,9 @@ export function copyEmulatorConnectionStringCommandFactory() {
         if (taskHubs.length > 0) {
 
             const noTaskHubItem: QuickPickItem = {
-                    detail: localize('noTaskHubDetail', 'Do not connect to a specific task hub.'),
-                    label: localize('noTaskHubLabel', 'None')
-                }
+                detail: localize('noTaskHubDetail', 'Do not connect to a specific task hub.'),
+                label: localize('noTaskHubLabel', 'None')
+            }
 
             const taskHubItems: QuickPickItem[] =
                 taskHubs.map(taskHub => ({ label: taskHub }));

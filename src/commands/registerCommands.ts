@@ -21,6 +21,7 @@ import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFu
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
+import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
@@ -50,6 +51,7 @@ import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
+import { copyEmulatorConnectionStringCommandFactory } from './durableTaskScheduler/copyEmulatorConnectionString';
 import { copySchedulerConnectionStringCommandFactory } from './durableTaskScheduler/copySchedulerConnectionString';
 import { copySchedulerEndpointCommandFactory } from './durableTaskScheduler/copySchedulerEndpoint';
 import { createSchedulerCommandFactory } from './durableTaskScheduler/createScheduler';
@@ -57,6 +59,8 @@ import { createTaskHubCommandFactory } from './durableTaskScheduler/createTaskHu
 import { deleteSchedulerCommandFactory } from './durableTaskScheduler/deleteScheduler';
 import { deleteTaskHubCommandFactory } from './durableTaskScheduler/deleteTaskHub';
 import { openTaskHubDashboard } from './durableTaskScheduler/openTaskHubDashboard';
+import { startEmulatorCommandFactory } from './durableTaskScheduler/startEmulator';
+import { stopEmulatorCommandFactory } from './durableTaskScheduler/stopEmulator';
 import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
@@ -79,10 +83,6 @@ import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
-import { startEmulatorCommandFactory } from './durableTaskScheduler/startEmulator';
-import { stopEmulatorCommandFactory } from './durableTaskScheduler/stopEmulator';
-import { type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { copyEmulatorConnectionStringCommandFactory } from './durableTaskScheduler/copyEmulatorConnectionString';
 
 export function registerCommands(
     services: {
@@ -204,4 +204,5 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.openTaskHubDashboard', openTaskHubDashboard);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.startEmulator', startEmulatorCommandFactory(services.dts.emulatorClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.stopEmulator', stopEmulatorCommandFactory(services.dts.emulatorClient));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.getEmulators', async (_: IActionContext): Promise<DurableTaskSchedulerEmulator[]> => await services.dts.emulatorClient.getEmulators());
 }

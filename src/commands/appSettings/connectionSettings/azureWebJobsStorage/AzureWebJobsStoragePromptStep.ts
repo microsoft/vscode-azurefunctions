@@ -36,7 +36,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
     }
 
-    public async configureBeforePrompt(context: T & { eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): Promise<void> {
+    public async configureBeforePrompt(context: T & { dtsConnectionType?: ConnectionType, eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): Promise<void> {
         if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Emulator) {
             context.azureWebJobsStorageType = this.options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
@@ -47,6 +47,8 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         } else if (context.sqlDbConnectionType === ConnectionType.Azure) {
             // No official support for an `Emulator` scenario yet
             context.azureWebJobsStorageType = context.sqlDbConnectionType;
+        } else if (context.dtsConnectionType === ConnectionType.Emulator) {
+            context.azureWebJobsStorageType = context.dtsConnectionType;
         }
 
         // Even if we end up skipping the prompt, we should still record the flow in telemetry
