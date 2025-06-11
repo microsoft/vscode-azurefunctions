@@ -169,11 +169,6 @@ export namespace durableUtils {
                     packages.push({ name: dotnetIsolatedDTSPackage, prerelease: true }) :
                     packages.push({ name: dotnetInProcDTSPackage, prerelease: true });
                 break;
-            case DurableBackend.DTS:
-                isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDTSPackage) :
-                    packageNames.push(dotnetInProcDTSPackage);
-                break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?
                     packages.push({ name: dotnetIsolatedDfSqlPackage }) :
