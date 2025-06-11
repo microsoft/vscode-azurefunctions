@@ -27,6 +27,7 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
         action: CodeAction.Debug,
         dtsConnectionType: useDTSEmulator ? ConnectionType.Emulator : undefined,
     });
+
     const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('acquireDTSConnection', 'Acquire DTS connection'),
         promptSteps: [new DTSConnectionTypeListStep(availableDebugConnectionTypes)],
