@@ -11,7 +11,7 @@ import { getLocalSettingsConnectionString } from "../../funcConfig/local.setting
 import { localize } from "../../localize";
 import { requestUtils } from "../../utils/requestUtils";
 
-// If the user previously chose to debug using the emulator, save that preference for the VS Code session
+// If the user previously chose to debug using the emulator, save that preference for the ongoing VS Code session
 let useDTSEmulator: boolean;
 
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
