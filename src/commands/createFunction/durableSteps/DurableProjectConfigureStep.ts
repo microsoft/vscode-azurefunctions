@@ -57,8 +57,6 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 }
             });
 
-            // Todo: We should probably throw a non-blocking error here with custom fail state logic
-
             return;
         }
 
