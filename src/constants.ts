@@ -127,7 +127,7 @@ export enum DurableBackend {
 }
 
 export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
-export type StorageConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
+export type StorageConnectionType = ConnectionType.Azure | ConnectionType.Emulator;
 export type EventHubsConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
 export type SqlDbConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Emulator>;
 

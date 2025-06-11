@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceGroup } from "@azure/arm-resources";
-import { type EventHubsConnectionTypeValues, type StorageConnectionTypeValues } from "../../../../constants";
+import { type EventHubsConnectionTypeValues, type StorageConnectionType } from "../../../../constants";
 import { type IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
@@ -12,7 +12,7 @@ export interface IEventHubsConnectionWizardContext extends IEventHubWizardContex
     resourceGroup?: ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: StorageConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionType;
     eventHubsConnectionType?: EventHubsConnectionTypeValues;
 
     // Netherite uses all of the eventhub namespace settings in IEventHubWizardContext

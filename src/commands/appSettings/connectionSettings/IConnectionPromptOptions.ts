@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type EventHubsConnectionTypeValues, type SqlDbConnectionTypeValues, type StorageConnectionTypeValues } from "../../../constants";
+import { type EventHubsConnectionTypeValues, type SqlDbConnectionTypeValues, type StorageConnectionType } from "../../../constants";
 
 export interface IConnectionPromptOptions {
-    preselectedConnectionType?: StorageConnectionTypeValues | EventHubsConnectionTypeValues | SqlDbConnectionTypeValues;
+    preselectedConnectionType?: StorageConnectionType | EventHubsConnectionTypeValues | SqlDbConnectionTypeValues;
 }
 

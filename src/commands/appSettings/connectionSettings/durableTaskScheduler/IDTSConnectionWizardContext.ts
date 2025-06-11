@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceGroup } from "@azure/arm-resources";
-import { type ConnectionType, type StorageConnectionTypeValues } from "../../../../constants";
+import { type ConnectionType, type StorageConnectionType } from "../../../../constants";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
 export interface IDTSConnectionWizardContext extends ISetConnectionSettingContext {
     resourceGroup?: ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: StorageConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionType;
     dtsConnectionType?: ConnectionType;
 
     newDTSConnection?: string;
