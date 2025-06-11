@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault, type ConnectionKeyValues } from '../../../../constants';
+import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionString, type ConnectionKeyValues } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
@@ -22,7 +22,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
             if (currentConnection && localEventHubsEmulatorConnectionRegExp.test(currentConnection)) {
                 return;
             }
-            value = localEventHubsEmulatorConnectionStringDefault;
+            value = localEventHubsEmulatorConnectionString;
         } else {
             value = (await getEventHubsConnectionString(<T & ISubscriptionContext>context)).connectionString;
         }

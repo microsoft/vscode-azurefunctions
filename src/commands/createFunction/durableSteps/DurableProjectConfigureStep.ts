@@ -83,6 +83,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                         id: 'Microsoft.Azure.Functions.ExtensionBundle.Preview',
                         version: '[4.29.0, 5.0.0)',
                     };
+                    ext.outputChannel.appendLog(localize('extensionBundlePreview', 'Updated "host.json" extension bundle to preview version to enable new DTS features.'));
                 }
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTSHub, 'default', MismatchBehavior.Overwrite);
