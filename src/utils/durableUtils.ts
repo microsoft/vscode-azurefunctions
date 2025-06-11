@@ -232,7 +232,6 @@ export namespace durableUtils {
             useGracefulShutdown: true,
             storageProvider: {
                 type: DurableBackend.Netherite,
-                partitionCount: 12,
                 StorageConnectionName: ConnectionKey.Storage,
                 EventHubsConnectionName: ConnectionKey.EventHubs,
             }
