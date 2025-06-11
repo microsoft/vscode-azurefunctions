@@ -99,6 +99,8 @@ export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
+    DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
+    DTSHub = 'TASKHUB_NAME',
     SQL = 'SQLDB_Connection'
 }
 
@@ -120,7 +122,8 @@ export enum ConnectionType {
 export enum DurableBackend {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
-    SQL = "mssql"
+    DTS = 'azureManaged',
+    SQL = 'mssql',
 }
 
 export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];

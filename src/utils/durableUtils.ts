@@ -10,7 +10,7 @@ import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName, type DurableBackendValues } from "../constants";
 import { ext } from "../extensionVariables";
-import { type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
+import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { dotnetUtils } from "./dotnetUtils";
@@ -24,6 +24,8 @@ export namespace durableUtils {
     export const dotnetIsolatedDfSqlPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.SqlServer';
     export const dotnetInProcDfNetheritePackage: string = 'Microsoft.Azure.DurableTask.Netherite.AzureFunctions';
     export const dotnetIsolatedDfNetheritePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.Netherite';
+    export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask.AzureManaged';
+    export const dotnetIsolatedDTSPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged';
     export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
@@ -62,6 +64,8 @@ export namespace durableUtils {
         switch (hostStorageType) {
             case DurableBackend.Netherite:
                 return DurableBackend.Netherite;
+            case DurableBackend.DTS:
+                return DurableBackend.DTS;
             case DurableBackend.SQL:
                 return DurableBackend.SQL;
             case DurableBackend.Storage:
@@ -150,39 +154,46 @@ export namespace durableUtils {
     }
 
     async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
-        const packageNames: string[] = [];
+        const packages: { name: string; prerelease?: boolean }[] = [];
         const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
                 isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDfNetheritePackage) :
-                    packageNames.push(dotnetInProcDfNetheritePackage);
+                    packages.push({ name: dotnetIsolatedDfNetheritePackage }) :
+                    packages.push({ name: dotnetInProcDfNetheritePackage });
+                break;
+            case DurableBackend.DTS:
+                // Todo: Remove prerelease flag once this functionality is out of preview
+                isDotnetIsolated ?
+                    packages.push({ name: dotnetIsolatedDTSPackage, prerelease: true }) :
+                    packages.push({ name: dotnetInProcDTSPackage, prerelease: true });
                 break;
             case DurableBackend.SQL:
                 isDotnetIsolated ?
-                    packageNames.push(dotnetIsolatedDfSqlPackage) :
-                    packageNames.push(dotnetInProcDfSqlPackage);
+                    packages.push({ name: dotnetIsolatedDfSqlPackage }) :
+                    packages.push({ name: dotnetInProcDfSqlPackage });
                 break;
             case DurableBackend.Storage:
             default:
         }
 
-        /*
-         * https://github.com/microsoft/vscode-azurefunctions/issues/3599
-         * Seems that the package arrives out-dated and needs to be updated to at least 2.9.1;
-         * otherwise, error appears when running with sql backend
-         */
+        // Although the templates should incorporate this package already, it is often included with an out-dated version
+        // which can lead to errors on first run.  To improve this experience for our users, ensure that the latest version is used.
         if (!isDotnetIsolated) {
-            packageNames.push(dotnetInProcDfBasePackage);
+            packages.push({ name: dotnetInProcDfBasePackage });
         }
 
         const failedPackages: string[] = [];
-        for (const packageName of packageNames) {
+        for (const p of packages) {
             try {
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
+                const packageArgs: string[] = [p.name];
+                if (p.prerelease) {
+                    packageArgs.push('--prerelease');
+                }
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', ...packageArgs);
             } catch {
-                failedPackages.push(packageName);
+                failedPackages.push(p.name);
             }
         }
 
@@ -215,14 +226,24 @@ export namespace durableUtils {
         };
     }
 
-    export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
+    export function getDefaultNetheriteTaskConfig(hubName: string = ''): INetheriteTaskJson {
         return {
-            hubName: hubName || '',
+            hubName,
             useGracefulShutdown: true,
             storageProvider: {
                 type: DurableBackend.Netherite,
                 StorageConnectionName: ConnectionKey.Storage,
                 EventHubsConnectionName: ConnectionKey.EventHubs,
+            }
+        };
+    }
+
+    export function getDefaultDTSTaskConfig(): IDTSTaskJson {
+        return {
+            hubName: '%TASKHUB_NAME%',
+            storageProvider: {
+                type: DurableBackend.DTS,
+                connectionStringName: ConnectionKey.DTS,
             }
         };
     }
