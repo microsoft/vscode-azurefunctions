@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
-import { env, QuickPickItemKind, type QuickPickItem } from "vscode";
 import { localize } from "../../localize";
 import { ext } from "../../extensionVariables";
+import { env, QuickPickItemKind, type QuickPickItem } from "vscode";
 import { type DurableTaskSchedulerEmulatorWorkspaceResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorWorkspaceResourceModel";
 
 export function copyEmulatorConnectionStringCommandFactory() {
