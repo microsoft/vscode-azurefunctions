@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceGroup } from "@azure/arm-resources";
-import { type ConnectionType, type StorageConnectionType } from "../../../../constants";
+import { type ConnectionType } from "../../../../constants";
+import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
 export interface IDTSConnectionWizardContext extends ISetConnectionSettingContext {

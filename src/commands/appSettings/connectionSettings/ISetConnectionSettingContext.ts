@@ -5,8 +5,9 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type CodeActionValues, type ConnectionKey } from "../../../constants";
+import { type IConnectionTypesContext } from "./IConnectionTypesContext";
 
-export interface ISetConnectionSettingContext extends IActionContext {
+export interface ISetConnectionSettingContext extends IActionContext, IConnectionTypesContext {
     action: CodeActionValues;
     projectPath: string;
 

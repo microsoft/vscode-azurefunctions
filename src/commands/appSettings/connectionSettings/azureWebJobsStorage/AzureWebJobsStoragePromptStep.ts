@@ -6,11 +6,12 @@
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, type EventHubsConnectionTypeValues, type SqlDbConnectionTypeValues, type StorageConnectionType } from '../../../../constants';
+import { ConnectionType } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { type IConnectionPromptOptions } from '../IConnectionPromptOptions';
+import { type StorageConnectionType } from '../IConnectionTypesContext';
 import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
@@ -36,16 +37,16 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
     }
 
-    public async configureBeforePrompt(context: T & { dtsConnectionType?: ConnectionType, eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): Promise<void> {
-        const reuseableConnectionType: ConnectionType | undefined = tryReuseExistingConnectionType([context.dtsConnectionType, context.eventHubsConnectionType, context.sqlDbConnectionType]);
+    public async configureBeforePrompt(context: T): Promise<void> {
+        const matchingConnectionType: StorageConnectionType | undefined = tryFindMatchingConnectionType([context.dtsConnectionType, context.eventHubsConnectionType, context.sqlDbConnectionType]);
 
         if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Emulator) {
             context.azureWebJobsStorageType = this.options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
             // Only should prompt if no storage account was selected
             context.azureWebJobsStorageType = ConnectionType.Azure;
-        } else if (reuseableConnectionType) {
-            context.azureWebJobsStorageType = reuseableConnectionType;
+        } else if (matchingConnectionType) {
+            context.azureWebJobsStorageType = matchingConnectionType;
         }
 
         // Even if we end up skipping the prompt, we should still record the flow in telemetry
@@ -90,7 +91,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
 
 const availableStorageConnections: Set<ConnectionType> = new Set([ConnectionType.Azure, ConnectionType.Emulator]);
 
-function tryReuseExistingConnectionType(connections: (ConnectionType | undefined)[]): StorageConnectionType | undefined {
+function tryFindMatchingConnectionType(connections: (ConnectionType | undefined)[]): StorageConnectionType | undefined {
     for (const c of connections) {
         if (!c) {
             continue;
