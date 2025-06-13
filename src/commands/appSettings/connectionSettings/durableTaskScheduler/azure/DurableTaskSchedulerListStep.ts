@@ -50,7 +50,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         const schedulers: DurableTaskSchedulerResource[] = await this.schedulerClient.getSchedulers(nonNullProp(context, 'subscription'), resourceGroupName) ?? [];
 
         const createPick = {
-            label: localize('createTaskScheduler', '$(plus) Create new Durable Task Scheduler'),
+            label: localize('createTaskScheduler', '$(plus) Create new durable task scheduler'),
             data: undefined,
         };
 

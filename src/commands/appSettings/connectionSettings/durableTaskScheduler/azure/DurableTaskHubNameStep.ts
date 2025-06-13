@@ -18,7 +18,7 @@ export class DurableTaskHubNameStep<T extends IDTSAzureConnectionWizardContext> 
 
     public async prompt(context: T): Promise<void> {
         context.newDTSHubName = await context.ui.showInputBox({
-            prompt: localize('taskSchedulerName', 'Enter a name for the Durable Task Hub'),
+            prompt: localize('taskSchedulerName', 'Enter a name for the durable task hub'),
             value: context.suggestedDTSHub,
             // Todo: validation
         });

@@ -46,7 +46,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
             await this.schedulerClient.getSchedulerTaskHubs(nonNullProp(context, 'subscription'), resourceGroupName, context.dts.name) : [];
 
         const createPick = {
-            label: localize('createTaskHub', '$(plus) Create new Durable Task Hub'),
+            label: localize('createTaskHub', '$(plus) Create new durable task hub'),
             data: undefined,
         };
 

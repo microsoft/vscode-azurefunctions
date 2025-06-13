@@ -18,7 +18,7 @@ export class DurableTaskSchedulerNameStep<T extends IDTSAzureConnectionWizardCon
 
     public async prompt(context: T): Promise<void> {
         context.newDTSName = await context.ui.showInputBox({
-            prompt: localize('taskSchedulerName', 'Enter a name for the Durable Task Scheduler'),
+            prompt: localize('taskSchedulerName', 'Enter a name for the durable task scheduler'),
             // Todo: validation
         });
 
