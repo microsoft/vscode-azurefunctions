@@ -10,7 +10,6 @@ import { ConnectionType, DurableTaskProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { HttpDurableTaskSchedulerClient } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { DurableTaskHubListStep } from './azure/DurableTaskHubListStep';
 import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
 import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromptStep';
 import { DTSHubNameCustomPromptStep } from './custom/DTSHubNameCustomPromptStep';
@@ -60,10 +59,7 @@ export class DTSConnectionTypeListStep<T extends IDTSConnectionWizardContext> ex
         switch (context.dtsConnectionType) {
             case ConnectionType.Azure:
                 const client = new HttpDurableTaskSchedulerClient();
-                promptSteps.push(
-                    new DurableTaskSchedulerListStep(client),
-                    new DurableTaskHubListStep(client)
-                );
+                promptSteps.push(new DurableTaskSchedulerListStep(client));
                 executeSteps.push(new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]));
                 break;
             case ConnectionType.Emulator:
