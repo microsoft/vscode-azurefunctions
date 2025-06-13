@@ -13,10 +13,10 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext> 
     public debugDeploySetting: ConnectionKey = ConnectionKey.DTS;
 
     public async execute(context: T): Promise<void> {
-        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSConnection'));
+        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSConnectionSetting'));
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newDTSConnection;
+        return !!context.newDTSConnectionSetting;
     }
 }

@@ -3,17 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType } from '../../../../constants';
+import { ConnectionType, DurableTaskProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
-import { DTSConnectionCustomPromptStep } from './DTSConnectionCustomPromptStep';
+import { HttpDurableTaskSchedulerClient } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { DurableTaskHubListStep } from './azure/DurableTaskHubListStep';
+import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
+import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromptStep';
+import { DTSHubNameCustomPromptStep } from './custom/DTSHubNameCustomPromptStep';
 import { DTSConnectionSetSettingStep } from './DTSConnectionSetSettingStep';
-import { DTSEmulatorStartStep } from './DTSEmulatorStartStep';
-import { DTSHubNameCustomPromptStep } from './DTSHubNameCustomPromptStep';
 import { DTSHubNameSetSettingStep } from './DTSHubNameSetSettingStep';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { DTSEmulatorStartStep } from './emulator/DTSEmulatorStartStep';
+import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
 export class DTSConnectionTypeListStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     constructor(readonly connectionTypes: Set<ConnectionType>) {
@@ -50,12 +54,18 @@ export class DTSConnectionTypeListStep<T extends IDTSConnectionWizardContext> ex
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
-        const promptSteps: AzureWizardPromptStep<T>[] = [];
-        const executeSteps: AzureWizardExecuteStep<T>[] = [];
+        const promptSteps: AzureWizardPromptStep<T | IDTSAzureConnectionWizardContext>[] = [];
+        const executeSteps: AzureWizardExecuteStep<T | IDTSAzureConnectionWizardContext>[] = [];
 
         switch (context.dtsConnectionType) {
             case ConnectionType.Azure:
-                throw new Error('Needs implementation.');
+                const client = new HttpDurableTaskSchedulerClient();
+                promptSteps.push(
+                    new DurableTaskSchedulerListStep(client),
+                    new DurableTaskHubListStep(client)
+                );
+                executeSteps.push(new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]));
+                break;
             case ConnectionType.Emulator:
                 executeSteps.push(new DTSEmulatorStartStep());
                 break;

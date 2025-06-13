@@ -4,17 +4,32 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceGroup } from "@azure/arm-resources";
+import { type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type ConnectionType } from "../../../../constants";
+import { type DurableTaskHubResource, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IDTSConnectionWizardContext extends ISetConnectionSettingContext {
-    resourceGroup?: ResourceGroup;
-
+export interface IDTSConnectionWizardContext extends IActionContext, ISetConnectionSettingContext {
     // Connection Types
     azureWebJobsStorageType?: StorageConnectionType;
     dtsConnectionType?: ConnectionType;
 
-    newDTSConnection?: string;
+    newDTSConnectionSetting?: string;
+    newDTSHubNameConnectionSetting?: string;
+}
+
+export interface IDTSAzureConnectionWizardContext extends ISubscriptionActionContext, IDTSConnectionWizardContext {
+    subscription?: AzureSubscription;
+    resourceGroup?: ResourceGroup;
+
+    suggestedDTSEndpointLocalSettings?: string;
+    suggestedDTSHub?: string;
+
+    newDTSName?: string;
+    dts?: DurableTaskSchedulerResource;
+
     newDTSHubName?: string;
+    dtsHub?: DurableTaskHubResource;
 }

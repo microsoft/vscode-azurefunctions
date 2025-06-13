@@ -5,10 +5,10 @@
 
 import { AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
-import { ConnectionType } from '../../../../constants';
-import { localize } from '../../../../localize';
-import { type DurableTaskSchedulerEmulator } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { ConnectionType } from '../../../../../constants';
+import { localize } from '../../../../../localize';
+import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
@@ -29,11 +29,11 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
             localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
         );
 
-        context.newDTSConnection = `Endpoint=${emulator.schedulerEndpoint};Authentication=None`;
-        context.newDTSHubName = 'default';
+        context.newDTSConnectionSetting = `Endpoint=${emulator.schedulerEndpoint};Authentication=None`;
+        context.newDTSHubNameConnectionSetting = 'default';
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.newDTSConnection && context.dtsConnectionType === ConnectionType.Emulator;
+        return !context.newDTSConnectionSetting && context.dtsConnectionType === ConnectionType.Emulator;
     }
 }
