@@ -25,7 +25,7 @@ export interface IDTSAzureConnectionWizardContext extends ISubscriptionActionCon
     resourceGroup?: ResourceGroup;
 
     suggestedDTSEndpointLocalSettings?: string;
-    suggestedDTSHub?: string;
+    suggestedDTSHubNameLocalSettings?: string;
 
     newDTSName?: string;
     dts?: DurableTaskSchedulerResource;

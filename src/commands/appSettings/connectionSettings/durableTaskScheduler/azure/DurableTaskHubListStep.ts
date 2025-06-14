@@ -55,7 +55,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
             ...taskHubs.map(h => {
                 return {
                     label: h.name,
-                    description: h.name === context.suggestedDTSHub ? localSettingsDescription : undefined,
+                    description: h.name === context.suggestedDTSHubNameLocalSettings ? localSettingsDescription : undefined,
                     data: h,
                 };
             }),
