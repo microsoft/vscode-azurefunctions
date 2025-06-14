@@ -5,13 +5,15 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type SiteClient } from "@microsoft/vscode-azext-azureappservice";
-import { AzureWizard, nonNullValue, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { LocationListStep } from "@microsoft/vscode-azext-azureutils";
+import { AzureWizard, nonNullValue, nonNullValueAndProp, parseError, type AzureWizardPromptStep, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
-import { CodeAction, ConnectionKey, ConnectionType } from "../../../../constants";
+import { CodeAction, ConnectionKey, ConnectionType, DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { localize } from "../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { createActivityContext } from "../../../../utils/activityUtils";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
 import { DTSConnectionTypeListStep } from "./DTSConnectionTypeListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
@@ -34,6 +36,7 @@ export async function validateDTSConnection(context: ValidateDTSConnectionContex
 
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
+        ...await createActivityContext(),
         subscription: context.subscription,
         projectPath,
         action: CodeAction.Deploy,
@@ -44,8 +47,15 @@ export async function validateDTSConnection(context: ValidateDTSConnectionContex
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };
 
+    const promptSteps: AzureWizardPromptStep<IDTSAzureConnectionWizardContext>[] = [new DTSConnectionTypeListStep(availableDeployConnectionTypes)];
+    // Should we prompt or should we set for all resources based on node.site.location?
+    LocationListStep.addProviderForFiltering(wizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
+    LocationListStep.addStep(wizardContext, promptSteps);
+
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [new DTSConnectionTypeListStep(availableDeployConnectionTypes)],
+        title: localize('createAndAssignDTS', 'Create and assign DTS resources'),
+        promptSteps,
+        showLoadingPrompt: true,
     });
 
     await wizard.prompt();
@@ -72,7 +82,7 @@ function tryGetDTSEndpoint(dtsConnection: string | undefined): string | undefine
         return undefined;
     }
 
-    const endpointMatch = dtsConnection.match(/Endpoint=(^;)+/);
+    const endpointMatch = dtsConnection.match(/Endpoint=([^;]+)/);
     if (!endpointMatch) {
         return undefined;
     }

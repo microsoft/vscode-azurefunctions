@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ResourceGroup } from "@azure/arm-resources";
-import { type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { type IResourceGroupWizardContext } from "@microsoft/vscode-azext-azureutils";
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type ConnectionType } from "../../../../constants";
 import { type DurableTaskHubResource, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
@@ -20,9 +20,8 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
     newDTSHubNameConnectionSetting?: string;
 }
 
-export interface IDTSAzureConnectionWizardContext extends ISubscriptionActionContext, IDTSConnectionWizardContext {
+export interface IDTSAzureConnectionWizardContext extends IResourceGroupWizardContext, IDTSConnectionWizardContext {
     subscription?: AzureSubscription;
-    resourceGroup?: ResourceGroup;
 
     suggestedDTSEndpointLocalSettings?: string;
     suggestedDTSHubNameLocalSettings?: string;

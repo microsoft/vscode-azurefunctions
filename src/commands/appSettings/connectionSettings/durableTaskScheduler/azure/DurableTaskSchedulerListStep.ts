@@ -22,7 +22,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
 
     public async prompt(context: T): Promise<void> {
         context.dts = (await context.ui.showQuickPick(await this.getPicks(context), {
-            placeHolder: localize('selectTaskScheduler', 'Select a Durable Task Scheduler'),
+            placeHolder: localize('selectTaskScheduler', 'Select a durable task scheduler'),
         })).data;
 
         context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.dts?.properties.endpoint === context.suggestedDTSEndpointLocalSettings) : undefined;
@@ -47,7 +47,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
 
     private async getPicks(context: T): Promise<IAzureQuickPickItem<DurableTaskSchedulerResource | undefined>[]> {
         const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
-        const schedulers: DurableTaskSchedulerResource[] = await this.schedulerClient.getSchedulers(nonNullProp(context, 'subscription'), resourceGroupName) ?? [];
+        const schedulers: DurableTaskSchedulerResource[] = await this.schedulerClient.getSchedulers(nonNullProp(context, 'subscription'), resourceGroupName);
 
         const createPick = {
             label: localize('createTaskScheduler', '$(plus) Create new durable task scheduler'),

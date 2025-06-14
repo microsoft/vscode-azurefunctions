@@ -73,7 +73,7 @@ export interface DurableTaskSchedulerClient {
     deleteTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskStatus>;
 
     getScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskSchedulerResource | undefined>;
-    getSchedulers(subscription: AzureSubscription, resourceGroupName: string): Promise<DurableTaskSchedulerResource[] | undefined>;
+    getSchedulers(subscription: AzureSubscription, resourceGroupName: string): Promise<DurableTaskSchedulerResource[]>;
 
     getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource | undefined>;
     getSchedulerTaskHubs(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskHubResource[]>;
@@ -147,12 +147,12 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         return scheduler;
     }
 
-    async getSchedulers(subscription: AzureSubscription, resourceGroupName: string): Promise<DurableTaskSchedulerResource[] | undefined> {
+    async getSchedulers(subscription: AzureSubscription, resourceGroupName: string): Promise<DurableTaskSchedulerResource[]> {
         const schedulerUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName);
 
-        const schedulers = await this.getAsJson<DurableTaskSchedulerResource[]>(schedulerUrl, subscription.authentication);
+        const schedulers = await this.getAsJson<{ value: DurableTaskSchedulerResource[] }>(schedulerUrl, subscription.authentication);
 
-        return schedulers;
+        return schedulers?.value ?? [];
     }
 
     async getSchedulerTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource | undefined> {
