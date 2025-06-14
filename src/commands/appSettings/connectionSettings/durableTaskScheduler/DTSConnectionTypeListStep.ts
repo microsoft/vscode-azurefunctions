@@ -71,6 +71,8 @@ export class DTSConnectionTypeListStep<T extends IDTSConnectionWizardContext> ex
                     new DTSHubNameCustomPromptStep(),
                 );
                 break;
+            default:
+                throw new Error(localize('unexpectedConnectionType', 'Internal error: Unexpected DTS connection type encountered: "{0}".', context.dtsConnectionType));
         }
 
         executeSteps.push(
