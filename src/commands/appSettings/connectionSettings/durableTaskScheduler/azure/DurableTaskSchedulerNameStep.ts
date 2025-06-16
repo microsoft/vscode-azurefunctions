@@ -21,7 +21,6 @@ export class DurableTaskSchedulerNameStep<T extends IDTSAzureConnectionWizardCon
             prompt: localize('taskSchedulerName', 'Enter a name for the durable task scheduler'),
             // Todo: validation
         });
-
         context.valuesToMask.push(context.newDTSName);
     }
 

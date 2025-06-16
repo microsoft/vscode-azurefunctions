@@ -8,7 +8,7 @@ import * as path from "path";
 import { type Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName, type DurableBackendValues } from "../constants";
+import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
@@ -47,7 +47,7 @@ export namespace durableUtils {
         return durableOrchestrator.test(templateId) || durableEntity.test(templateId);
     }
 
-    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<DurableBackendValues | undefined> {
+    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<DurableBackend | undefined> {
         const hasDurableStorage: boolean = await verifyHasDurableStorage(language, projectPath);
         if (!hasDurableStorage) {
             return undefined;
@@ -59,7 +59,7 @@ export namespace durableUtils {
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
-        const hostStorageType: DurableBackendValues | undefined = hostJson.extensions?.durableTask?.storageProvider?.type;
+        const hostStorageType: DurableBackend | undefined = hostJson.extensions?.durableTask?.storageProvider?.type;
 
         switch (hostStorageType) {
             case DurableBackend.Netherite:

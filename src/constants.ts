@@ -126,10 +126,6 @@ export enum DurableBackend {
     SQL = 'mssql',
 }
 
-export type CodeActionValues = typeof CodeAction[keyof typeof CodeAction];
-export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
-export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];
-
 export const func: string = 'func';
 export const extInstallCommand: string = 'extensions install';
 export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;

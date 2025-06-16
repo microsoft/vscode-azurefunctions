@@ -27,6 +27,7 @@ export class DurableTaskHubCreateStep<T extends IDTSAzureConnectionWizardContext
             nonNullValueAndProp(context.dts, 'name'),
             nonNullProp(context, 'newDTSHubName'),
         );
+        context.newDTSHubNameConnectionSetting = context.dtsHub.name;
     }
 
     public shouldExecute(context: T): boolean {

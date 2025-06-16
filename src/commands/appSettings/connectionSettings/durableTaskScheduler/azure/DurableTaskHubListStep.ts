@@ -23,6 +23,11 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
         context.dtsHub = (await context.ui.showQuickPick(await this.getPicks(context), {
             placeHolder: localize('selectTaskScheduler', 'Select a Durable Task Scheduler'),
         })).data;
+
+        if (context.dtsHub) {
+            context.newDTSHubNameConnectionSetting = context.dtsHub.name;
+            context.valuesToMask.push(context.dtsHub.name);
+        }
     }
 
     public shouldPrompt(context: T): boolean {

@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { LocationListStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../../../../constants';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
@@ -25,7 +27,13 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
             placeHolder: localize('selectTaskScheduler', 'Select a durable task scheduler'),
         })).data;
 
-        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.dts?.properties.endpoint === context.suggestedDTSEndpointLocalSettings) : undefined;
+        if (context.dts) {
+            context.newDTSConnectionSetting = context.dts?.properties.endpoint;
+            context.valuesToMask.push(context.dts.name);
+            context.valuesToMask.push(context.newDTSConnectionSetting);
+        }
+
+        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.newDTSConnectionSetting === context.suggestedDTSEndpointLocalSettings) : undefined;
     }
 
     public shouldPrompt(context: T): boolean {
@@ -37,6 +45,11 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!context.dts) {
+            // Note: The location offering for this provider isn't 1:1 with what's available for the function app
+            // Todo: We should probably update the behavior of LocationListStep so that we re-verify the provider locations even if the location is already set
+            LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
+            LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
+
             promptSteps.push(new DurableTaskSchedulerNameStep(this.schedulerClient));
             executeSteps.push(new DurableTaskSchedulerCreateStep(this.schedulerClient));
         }

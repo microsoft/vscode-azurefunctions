@@ -8,29 +8,39 @@ import { AzureWizardExecuteStep, nonNullProp, nonNullValueAndProp } from "@micro
 import { type Progress } from "vscode";
 import { localize } from "../../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient } from "../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { withCancellation } from "../../../../../utils/cancellation";
 import { type IDTSAzureConnectionWizardContext } from "../IDTSConnectionWizardContext";
 
 export class DurableTaskSchedulerCreateStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     priority: number = 150;
     private readonly schedulerClient: DurableTaskSchedulerClient;
 
-    constructor(schedulerClient?: DurableTaskSchedulerClient) {
+    public constructor(schedulerClient?: DurableTaskSchedulerClient) {
         super();
         this.schedulerClient = schedulerClient ?? new HttpDurableTaskSchedulerClient();
     }
 
-    async execute(context: T, progress: Progress<{ message?: string; increment?: number; }>): Promise<void> {
+    public async execute(context: T, progress: Progress<{ message?: string; increment?: number; }>): Promise<void> {
         progress.report({ message: localize('createTaskScheduler', 'Creating durable task scheduler...') });
 
-        context.dts = (await this.schedulerClient.createScheduler(
+        const response = (await this.schedulerClient.createScheduler(
             nonNullProp(context, 'subscription'),
             nonNullValueAndProp(context.resourceGroup, 'name'),
             (await LocationListStep.getLocation(context)).name,
             nonNullProp(context, 'newDTSName'),
-        )).scheduler;
+        ));
+
+        const status = await withCancellation(token => response.status.waitForCompletion(token), 1000 * 60 * 30);
+
+        if (status !== true) {
+            throw new Error(localize('schedulerCreationFailed', 'The scheduler could not be created.'));
+        }
+
+        context.dts = response.scheduler;
+        context.newDTSConnectionSetting = context.dts.properties.endpoint;
     }
 
-    shouldExecute(context: T): boolean {
+    public shouldExecute(context: T): boolean {
         return !context.dts;
     }
 }

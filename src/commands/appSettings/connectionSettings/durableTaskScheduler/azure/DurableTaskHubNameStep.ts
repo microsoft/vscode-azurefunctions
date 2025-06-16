@@ -23,7 +23,12 @@ export class DurableTaskHubNameStep<T extends IDTSAzureConnectionWizardContext> 
             // Todo: validation
         });
 
-        context.valuesToMask.push(context.newDTSHubName);
+        context.telemetry.properties.usedDTSDefaultHub = 'true';
+
+        if (context.newDTSHubName && context.newDTSHubName !== 'default') {
+            context.telemetry.properties.usedDTSDefaultHub = 'false';
+            context.valuesToMask.push(context.newDTSHubName);
+        }
     }
 
     public shouldPrompt(context: T): boolean {
