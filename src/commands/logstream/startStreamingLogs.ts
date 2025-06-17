@@ -23,7 +23,9 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
         treeItem = await pickFunctionApp(context);
     }
 
-    const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;
+    const site: ParsedSite = isSlotTreeItem(treeItem) ?
+        await treeItem.getSite(context) :
+        await treeItem.parent.parent.getSite(context);
 
     if (site.isLinux) {
         try {

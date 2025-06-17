@@ -23,15 +23,15 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
 
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
-        site: node.site,
+        site: (await node.getSite(context)),
         resourceGroup: {
-            name: node.site.resourceGroup,
-            location: node.site.location,
+            name: (await node.getSite(context)).resourceGroup,
+            location: (await node.getSite(context)).location,
         }, // we only need these two properties from the resource group
         ...node.subscription,
         ...(await createActivityContext())
     }
-    await LocationListStep.setLocation(wizardContext, node.site.location);
+    await LocationListStep.setLocation(wizardContext, (await node.getSite(context)).location);
 
     const promptSteps: AzureWizardPromptStep<ManagedIdentityAssignContext>[] = [
         new UserAssignedIdentityListStep()

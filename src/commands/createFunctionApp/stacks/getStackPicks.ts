@@ -369,9 +369,10 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
 
 export async function showEolWarningIfNecessary(context: ISubscriptionActionContext, parent: AzExtParentTreeItem, client?: IAppSettingsClient) {
     if (isResolvedFunctionApp(parent)) {
-        client = client ?? await parent.site.createClient(context);
+        const site = await parent.getSite(context);
+        client = client ?? await site.createClient(context);
         const eolWarningMessage = await getEolWarningMessages(context, {
-            site: parent.site.rawSite,
+            site: site.rawSite,
             isLinux: client.isLinux,
             isFlex: parent.isFlex,
             client

@@ -15,6 +15,8 @@ export async function stopStreamingLogs(context: IActionContext, node?: SlotTree
         node = await pickFunctionApp({ ...context, suppressCreatePick: true });
     }
 
-    const site: ParsedSite = isSlotTreeItem(node) ? node.site : node.parent.parent.site;
+    const site: ParsedSite = isSlotTreeItem(node) ?
+        await node.getSite(context) :
+        await node.parent.parent.getSite(context);
     await appservice.stopStreamingLogs(site, node.logStreamPath);
 }

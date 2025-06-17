@@ -19,11 +19,12 @@ export async function enableSystemIdentity(context: IActionContext, node?: Syste
     } else {
         slotTreeItem = node.parent.parent;
     }
-    const title: string = localize('enabling', 'Enable system assigned identity for "{0}".', slotTreeItem.site.fullName);
+    const site = await slotTreeItem.getSite(context);
+    const title: string = localize('enabling', 'Enable system assigned identity for "{0}".', site.fullName);
 
     const wizardContext: ManagedIdentityAssignContext & ExecuteActivityContext = Object.assign(context, {
-        site: slotTreeItem.site,
-        ...slotTreeItem.site.subscription,
+        site,
+        ...site.subscription,
         ...(await createActivityContext()),
         activityTitle: title
     });

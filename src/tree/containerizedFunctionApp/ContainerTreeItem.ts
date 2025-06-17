@@ -25,4 +25,8 @@ export class ContainerTreeItem extends SlotContainerTreeItemBase {
     public async isReadOnly(): Promise<boolean> {
         return await this.resolved.isReadOnly();
     }
+
+    public getSite(): ContainerSite {
+        return this.resolved.site;
+    }
 }

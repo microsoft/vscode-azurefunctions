@@ -43,10 +43,10 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
         if (clearCache) {
             this._nextLink = undefined;
         }
-
+        const site = await this.parent.getSite(context);
         const client: WebSiteManagementClient = await createWebSiteClient([context, this.subscription]);
         // https://github.com/Azure/azure-sdk-for-js/issues/20380
-        const webAppCollection: Site[] = await uiUtils.listAllIterator(client.webApps.listSlots(this.parent.site.resourceGroup, this.parent.site.siteName));
+        const webAppCollection: Site[] = await uiUtils.listAllIterator(client.webApps.listSlots(site.resourceGroup, site.siteName));
 
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
@@ -62,7 +62,8 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
-        const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
+        const site = await this.parent.getSite(context);
+        const newSite: Site = await createSlot(site, existingSlots.map(s => s.site), context);
         return new SlotTreeItem(this, new ResolvedFunctionAppResource(this.subscription, newSite));
     }
 }

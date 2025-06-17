@@ -8,14 +8,12 @@ import { nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type Tree
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { type FuncVersion } from "../FuncVersion";
-import { type FunctionAppQueryResponse } from "../FunctionAppResolver";
 import { type IParsedHostJson } from "../funcConfig/host";
 import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeItem";
 import { type ContainerSite } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 
 export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     public site: ContainerSite | ParsedSite;
-    public queryResult: FunctionAppQueryResponse;
     public get name(): string {
         return this.label;
     }
@@ -23,7 +21,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
     public abstract label: string;
 
     public get id(): string {
-        return this.site?.id ?? this.queryResult.id;
+        return this.site?.id || '';
     }
 
     public abstract iconPath?: TreeItemIconPath | undefined;

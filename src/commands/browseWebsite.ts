@@ -14,5 +14,5 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
         node = await pickAppResource(context);
     }
 
-    await openUrl(nonNullValueAndProp(node.site, 'defaultHostUrl'));
+    await openUrl(nonNullValueAndProp(await node.getSite(context), 'defaultHostUrl'));
 }

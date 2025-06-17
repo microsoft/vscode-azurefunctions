@@ -13,7 +13,7 @@ export async function configureDeploymentSource(context: IActionContext, node?: 
         node = await pickFunctionApp(context);
     }
 
-    const updatedScmType: string | undefined = await editScmType(context, node.site, node.subscription);
+    const updatedScmType: string | undefined = await editScmType(context, (await node.getSite(context)), node.subscription);
     if (updatedScmType !== undefined) {
         context.telemetry.properties.updatedScmType = updatedScmType;
     }
