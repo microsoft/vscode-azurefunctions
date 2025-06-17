@@ -18,10 +18,10 @@ import { type IFuncDeployContext } from "../../../deploy/deploy";
 import { DTSConnectionTypeListStep } from "./DTSConnectionTypeListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
 
-type ValidateDTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
-type DTSConnections = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
+type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
+type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
 
-export async function validateDTSConnection(context: ValidateDTSConnectionContext, client: SiteClient, projectPath: string): Promise<DTSConnections | undefined> {
+export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, projectPath: string): Promise<DTSConnection | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
     const remoteDTSConnection: string | undefined = app?.properties?.[ConnectionKey.DTS];
@@ -78,7 +78,7 @@ export async function validateDTSConnection(context: ValidateDTSConnectionContex
 // If not creating a new DTS, you can skip this
 // After adding the role, we need to set the new connection for DTS which should include the client ID for the connection string
 
-async function getDTSResource(context: ValidateDTSConnectionContext, dtsEndpoint: string): Promise<DurableTaskSchedulerResource | undefined> {
+async function getDTSResource(context: DTSConnectionContext, dtsEndpoint: string): Promise<DurableTaskSchedulerResource | undefined> {
     try {
         const client = new HttpDurableTaskSchedulerClient();
         const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulers(context.subscription, nonNullValueAndProp(context.resourceGroup, 'name')) ?? [];

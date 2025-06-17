@@ -9,6 +9,7 @@ import { DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../..
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { FunctionAppUserAssignedIdentitiesListStep } from '../../../../identity/listUserAssignedIdentities/FunctionAppUserAssignedIdentitiesListStep';
 import { type IDTSAzureConnectionWizardContext } from '../IDTSConnectionWizardContext';
 import { DurableTaskHubListStep } from './DurableTaskHubListStep';
 import { DurableTaskSchedulerCreateStep } from './DurableTaskSchedulerCreateStep';
@@ -54,7 +55,12 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
             executeSteps.push(new DurableTaskSchedulerCreateStep(this.schedulerClient));
         }
 
-        promptSteps.push(new DurableTaskHubListStep(this.schedulerClient));
+        if (!context.dtsHub) {
+            promptSteps.push(new DurableTaskHubListStep(this.schedulerClient));
+        }
+
+        promptSteps.push(new FunctionAppUserAssignedIdentitiesListStep())
+
         return { promptSteps, executeSteps };
     }
 
