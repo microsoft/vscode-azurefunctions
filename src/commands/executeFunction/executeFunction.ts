@@ -100,7 +100,10 @@ export async function executeFunctionWithInput(context: IActionContext, function
             'Content-Type': 'application/json',
         });
 
-        const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
+        const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ?
+            await (await node.parent.parent.getSite(context)).createClient(context) :
+            undefined;
+
         if (client) {
             headers.set('x-functions-key', (await client.listHostKeys()).masterKey ?? '');
         }

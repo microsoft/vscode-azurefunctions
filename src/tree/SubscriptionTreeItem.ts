@@ -66,9 +66,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            (site: Site) => {
+            async (site: Site) => {
                 const resolved = new ResolvedFunctionAppResource(this.subscription, site);
-                if (resolved.site.isFunctionApp) {
+                const pSite = await resolved.getSite(context);
+                if (pSite.isFunctionApp) {
                     return new SlotTreeItem(this, resolved);
                 }
                 return undefined;

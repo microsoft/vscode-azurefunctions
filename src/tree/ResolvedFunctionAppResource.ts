@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
-import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
+import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, createWebSiteClient, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { AzureWizard, DeleteConfirmationStep, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
+import { type FunctionAppModel } from "../FunctionAppResolver";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
@@ -29,8 +30,10 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
 }
 
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
-    public site: ParsedSite;
+    private _site: ParsedSite;
+
     public data: Site;
+    public queryResult: FunctionAppModel;
 
     private _subscription: ISubscriptionContext;
     public logStreamPath: string = '';
@@ -65,26 +68,49 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
-        super(new ParsedSite(site, subscription))
-        this.data = this.site.rawSite;
+    public constructor(subscription: ISubscriptionContext, dataModel: FunctionAppModel | Site) {
+        super();
         this._subscription = subscription;
         this.contextValuesToAdd = [];
-        this._isFlex = !!site.functionAppConfig;
+        if ('pricingTier' in dataModel) {
+            // dataModel is narrowed to FunctionAppModel due to the above check
+            this._isFlex = dataModel.pricingTier.toLocaleLowerCase() === 'FlexConsumption'.toLocaleLowerCase();
+            this.queryResult = dataModel;
+            this.data = dataModel;
+        } else {
+            this._site = new ParsedSite(dataModel, subscription);
+            this._isFlex = !!dataModel.functionAppConfig;
+            this.data = this._site.rawSite;
+            this.addValuesToMask(this._site);
+        }
+
         if (this._isFlex) {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.flexContextValue);
-        } else if (this.site.isSlot) {
-            this.contextValuesToAdd.push(ResolvedFunctionAppResource.slotContextValue);
         } else {
             this.contextValuesToAdd.push(ResolvedFunctionAppResource.productionContextValue);
         }
+    }
 
+    public async getSite(context: IActionContext): Promise<ParsedSite> {
+        let site: ParsedSite | undefined = this._site;
+        if (!site) {
+            const webClient = await createWebSiteClient({ ...context, ...this._subscription });
+            const rawSite = await webClient.webApps.get(this.queryResult.resourceGroup, this.queryResult.name);
+            site = new ParsedSite(rawSite, this._subscription);
+            this.data = rawSite;
+            this._site = site;
+            this.addValuesToMask(this._site);
+        }
+
+        return site;
+    }
+
+    private addValuesToMask(site: ParsedSite): void {
         const valuesToMask = [
-            this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
-            this.site.planName, this.site.planResourceGroup, this.site.kuduHostName, this.site.gitUrl,
-            this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
+            site.siteName, site.slotName, site.defaultHostName, site.resourceGroup,
+            site.planName, site.planResourceGroup, site.kuduHostName, site.gitUrl,
+            site.rawSite.repositorySiteName, ...(site.rawSite.hostNames || []), ...(site.rawSite.enabledHostNames || [])
         ];
-
 
         for (const v of valuesToMask) {
             if (v) {
@@ -93,18 +119,12 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         }
     }
 
-    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
-        const resource = new ResolvedFunctionAppResource(subscription, site);
-        void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
-        return resource;
-    }
-
     public get label(): string {
-        return this.site.slotName ?? this.site.fullName;
+        return this._site?.slotName ?? this._site?.fullName ?? this.queryResult.name;
     }
 
     public get logStreamLabel(): string {
-        return this.site.fullName;
+        return this._site.fullName ?? this.queryResult.name;
     }
 
     public get description(): string | undefined {
@@ -120,7 +140,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     private get _state(): string | undefined {
-        return this.site.rawSite.state;
+        return this._site?.rawSite.state ?? this.queryResult.status;
     }
 
     public get isFlex(): boolean {
@@ -135,8 +155,9 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         this._cachedHostJson = undefined;
         this._cachedIsConsumption = undefined;
 
-        const client = await this.site.createClient(context);
-        this.site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this._subscription);
+        // on refresh, we should reinitialize the site to ensure we have the latest data
+        const client = await this._site.createClient(context);
+        this._site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this._subscription);
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {
@@ -144,7 +165,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         if (result === undefined) {
             let version: FuncVersion | undefined;
             try {
-                const client = await this.site.createClient(context);
+                const site = await this.getSite(context);
+                const client = await site.createClient(context);
                 const appSettings: StringDictionary = await client.listApplicationSettings();
                 version = tryParseFuncVersion(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
             } catch {
@@ -163,8 +185,9 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let data: any;
             try {
+                const site = await this.getSite(context);
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                data = JSON.parse((await getFile(context, this.site, 'site/wwwroot/host.json')).data);
+                data = JSON.parse((await getFile(context, site, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
             }
@@ -177,13 +200,15 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
-        const client = await this.site.createClient(context);
+        const site = await this.getSite(context);
+        const client = await site.createClient(context);
         const appSettings: StringDictionary = await client.listApplicationSettings();
         return appSettings.properties || {};
     }
 
     public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
-        const client = await this.site.createClient(context);
+        const site = await this.getSite(context);
+        const client = await site.createClient(context);
         const settings: StringDictionary = await client.listApplicationSettings();
         if (!settings.properties) {
             settings.properties = {};
@@ -196,7 +221,8 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         let result: boolean | undefined = this._cachedIsConsumption;
         if (result === undefined) {
             try {
-                const client = await this.site.createClient(context);
+                const site = await this.getSite(context);
+                const client = await site.createClient(context);
                 result = await client.getIsConsumption(context);
             } catch {
                 // ignore and use default
@@ -209,27 +235,28 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = await this.site.createClient(context);
+        const site = await this.getSite(context);
+        const client = await site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
         const sourceControl: SiteSourceControl = await client.getSourceControl();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
         this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
-            site: this.site,
+            site,
             siteConfig,
             sourceControl,
             contextValuesToAdd: ['azFunc']
         });
-        this.appSettingsTreeItem = await AppSettingsTreeItem.createAppSettingsTreeItem(context, proxyTree, this.site, ext.prefix, {
+        this.appSettingsTreeItem = await AppSettingsTreeItem.createAppSettingsTreeItem(context, proxyTree, site, ext.prefix, {
             contextValuesToAdd: ['azFunc'],
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
-            site: this.site,
+            site,
             isReadOnly: true,
             contextValuesToAdd: ['azFunc']
         });
         this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, {
-            site: this.site,
+            site,
             contextValuesToAdd: ['azFunc']
         });
 
@@ -246,7 +273,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             children.push(this.deploymentsNode);
         }
 
-        if (!this.site.isSlot && !this._isFlex) {
+        if (!site.isSlot && !this._isFlex) {
             this._slotsTreeItem = new SlotsTreeItem(proxyTree);
             children.push(this._slotsTreeItem);
         }
@@ -256,44 +283,47 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
 
     // eslint-disable-next-line @typescript-eslint/require-await
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        if (!this.site.isSlot) {
+        return await callWithTelemetryAndErrorHandling('functionApp.pickTreeItem', async (context: IActionContext) => {
+            const site = await this.getSite(context);
+            if (!site.isSlot) {
+                for (const expectedContextValue of expectedContextValues) {
+                    switch (expectedContextValue) {
+                        case SlotsTreeItem.contextValue:
+                        case ResolvedFunctionAppResource.slotContextValue:
+                            return this._slotsTreeItem;
+                        default:
+                    }
+                }
+            }
+
             for (const expectedContextValue of expectedContextValues) {
-                switch (expectedContextValue) {
-                    case SlotsTreeItem.contextValue:
-                    case ResolvedFunctionAppResource.slotContextValue:
+                if (expectedContextValue instanceof RegExp) {
+                    const appSettingsContextValues = [AppSettingsTreeItem.contextValue, AppSettingTreeItem.contextValue];
+                    if (matchContextValue(expectedContextValue, appSettingsContextValues)) {
+                        return this.appSettingsTreeItem;
+                    }
+                    const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
+                    if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
+                        return this.deploymentsNode;
+                    }
+
+                    if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
                         return this._slotsTreeItem;
-                    default:
-                }
-            }
-        }
-
-        for (const expectedContextValue of expectedContextValues) {
-            if (expectedContextValue instanceof RegExp) {
-                const appSettingsContextValues = [AppSettingsTreeItem.contextValue, AppSettingTreeItem.contextValue];
-                if (matchContextValue(expectedContextValue, appSettingsContextValues)) {
-                    return this.appSettingsTreeItem;
-                }
-                const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
-                if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
-                    return this.deploymentsNode;
+                    }
                 }
 
-                if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
-                    return this._slotsTreeItem;
+                if (typeof expectedContextValue === 'string') {
+                    // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
+                    if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
+                        return this.deploymentsNode;
+                    }
+                } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
+                    return this._functionsTreeItem;
                 }
             }
 
-            if (typeof expectedContextValue === 'string') {
-                // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
-                    return this.deploymentsNode;
-                }
-            } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
-                return this._functionsTreeItem;
-            }
-        }
-
-        return undefined;
+            return undefined;
+        });
     }
 
     public compareChildrenImpl(): number {
@@ -301,24 +331,26 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public async isReadOnly(context: IActionContext): Promise<boolean> {
-        const client = await this.site.createClient(context);
+        const site = await this.getSite(context);
+        const client = await site.createClient(context);
         const appSettings: StringDictionary = await client.listApplicationSettings();
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        const site = await this.getSite(context);
         const wizardContext: IDeleteSiteWizardContext = Object.assign(context, {
-            site: this.site,
+            site,
             ...(await createActivityContext())
         });
 
-        const confirmationMessage: string = this.site.isSlot ?
-            localize('confirmDeleteSlot', 'Are you sure you want to delete slot "{0}"?', this.site.fullName) :
-            localize('confirmDeleteFunctionApp', 'Are you sure you want to delete function app "{0}"?', this.site.fullName);
+        const confirmationMessage: string = site.isSlot ?
+            localize('confirmDeleteSlot', 'Are you sure you want to delete slot "{0}"?', site.fullName) :
+            localize('confirmDeleteFunctionApp', 'Are you sure you want to delete function app "{0}"?', site.fullName);
 
-        const title: string = this.site.isSlot ?
-            localize('deleteSlot', 'Delete Slot "{0}"', this.site.fullName) :
-            localize('deleteFunctionApp', 'Delete Function App "{0}"', this.site.fullName);
+        const title: string = site.isSlot ?
+            localize('deleteSlot', 'Delete Slot "{0}"', site.fullName) :
+            localize('deleteFunctionApp', 'Delete Function App "{0}"', site.fullName);
 
         const wizard = new AzureWizard(wizardContext, {
             promptSteps: [new DeleteConfirmationStep(confirmationMessage), new DeleteLastServicePlanStep()],

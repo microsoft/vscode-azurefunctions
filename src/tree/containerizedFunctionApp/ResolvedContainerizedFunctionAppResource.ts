@@ -45,7 +45,8 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public readonly source: ProjectSource = ProjectSource.Remote;
 
     public constructor(subscription: ISubscriptionContext, site: Site) {
-        super(Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false }));
+        super();
+        this.site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
         this._subscription = subscription;
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 

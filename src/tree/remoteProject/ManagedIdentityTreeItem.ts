@@ -42,8 +42,8 @@ export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const systemIdentitiesTreeItem: AzExtTreeItem = createSystemIdentityTreeItem(this);
+    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        const systemIdentitiesTreeItem: AzExtTreeItem = await createSystemIdentityTreeItem(context, this);
         const userAssignedIdentitiesTreeItem = new UserAssignedIdentitiesTreeItem(this.parent);
         return [systemIdentitiesTreeItem, userAssignedIdentitiesTreeItem];
     }

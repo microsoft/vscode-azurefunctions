@@ -34,7 +34,7 @@ export class SlotTreeItem extends SlotContainerTreeItemBase {
         const slotContextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
         const contextValues = [slotContextValue, 'slot'];
         this.contextValue = Array.from(new Set(contextValues)).sort().join(';');
-        this.site = this.resolved.site;
+        this.site = this.resolved.site as ParsedSite;
         this.iconPath = treeUtils.getIconPath(slotContextValue);
     }
     public get logStreamLabel(): string {
@@ -43,6 +43,10 @@ export class SlotTreeItem extends SlotContainerTreeItemBase {
 
     public get description(): string | undefined {
         return this.resolved.description;
+    }
+
+    public async getSite(context: IActionContext): Promise<ParsedSite> {
+        return await this.resolved.getSite(context);
     }
 
     /**

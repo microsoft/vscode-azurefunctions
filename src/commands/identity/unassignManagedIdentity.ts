@@ -14,9 +14,10 @@ import { ManagedIdentityUnassignStep } from './ManagedIdentityUnassignStep';
 export async function unassignManagedIdentity(context: IActionContext, node: UserAssignedIdentityTreeItem): Promise<void> {
 
     const slotTreeItem = node.parent.parent as SlotTreeItem;
+    const site = await slotTreeItem.getSite(context);
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
-        site: slotTreeItem.site,
+        site,
         managedIdentity: node.identity,
         ...node.subscription,
         ...(await createActivityContext())
@@ -24,7 +25,7 @@ export async function unassignManagedIdentity(context: IActionContext, node: Use
 
     await context.ui.showWarningMessage(
         localize('unassignManagedIdentityWarning', "'{0}' will not be able to request access tokens for the user assigned managed identity '{1}'. Do you want to continue?",
-            slotTreeItem.site?.fullName,
+            site?.fullName,
             node.identity.name),
         { modal: true },
         DialogResponses.yes
