@@ -9,7 +9,7 @@ import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext
 import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
-import { type FunctionAppQueryResponse } from "../FunctionAppResolver";
+import { type FunctionAppModel } from "../FunctionAppResolver";
 import { runFromPackageKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { parseHostJson, type IParsedHostJson } from "../funcConfig/host";
@@ -33,7 +33,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     private _site: ParsedSite;
 
     public data: Site;
-    public queryResult: FunctionAppQueryResponse;
+    public queryResult: FunctionAppModel;
 
     private _subscription: ISubscriptionContext;
     public logStreamPath: string = '';
@@ -68,13 +68,13 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, dataModel: FunctionAppQueryResponse | Site) {
+    public constructor(subscription: ISubscriptionContext, dataModel: FunctionAppModel | Site) {
         super();
         this._subscription = subscription;
         this.contextValuesToAdd = [];
         if ('pricingTier' in dataModel) {
-            // dataModel is narrowed to QueryResult
-            this._isFlex = dataModel.pricingTier === 'Flex Consumption';
+            // dataModel is narrowed to FunctionAppModel due to the above check
+            this._isFlex = dataModel.pricingTier.toLocaleLowerCase() === 'FlexConsumption'.toLocaleLowerCase();
             this.queryResult = dataModel;
             this.data = dataModel;
         } else {
