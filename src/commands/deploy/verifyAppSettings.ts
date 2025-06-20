@@ -34,19 +34,20 @@ export async function verifyAppSettings(options: {
 }): Promise<void> {
 
     const { context, node, projectPath, version, language, bools, durableStorageType } = options;
-    const client = await (await node.getSite(context)).createClient(context);
+    await node.initSite(context);
+    const client = await node.site.createClient(context);
     const appSettings: StringDictionary = options.appSettings;
     if (appSettings.properties) {
         const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
-        await verifyVersionAndLanguage(context, projectPath, (await node.getSite(context)).fullName, version, language, appSettings.properties);
+        await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
         // update the settings if the remote runtime was changed
         let updateAppSettings: boolean = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
-        if ((await node.getSite(context)).isLinux) {
+        if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings ||= remoteBuildSettingsChanged;
         } else {
-            updateAppSettings ||= verifyRunFromPackage(context, (await node.getSite(context)), appSettings.properties);
+            updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);

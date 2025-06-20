@@ -28,7 +28,7 @@ import { ImageTreeItem } from "./ImageTreeItem";
 export type ContainerSite = Site & { defaultHostUrl?: string; fullName?: string; isSlot?: boolean };
 
 export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
-    public site: ContainerSite;
+    protected _site: ContainerSite;
     public maskedValuesToAdd: string[] = [];
     public contextValuesToAdd?: string[] | undefined;
     public static containerContextValue: string = 'azFuncContainer';
@@ -46,7 +46,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public constructor(subscription: ISubscriptionContext, site: Site) {
         super();
-        this.site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
+        this._site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
         this._subscription = subscription;
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 
@@ -71,6 +71,17 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public get label(): string {
         return nonNullProp(this.site, 'name');
+    }
+
+    public get site(): ContainerSite {
+        if (!this._site) {
+            throw new Error(localize('siteNotSet', 'Site is not set. Ensure the site is initialized before accessing it.'));
+        }
+        return this._site;
+    }
+
+    public async initSite(_context: IActionContext): Promise<void> {
+        // the site is included in the constructor, so this is a no-op for containerized function apps but needed for interface compliance
     }
 
     public get iconPath(): TreeItemIconPath {

@@ -32,11 +32,11 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
 
         const localConnectionSettings = await getConnectionSettings(localSettings.Values ?? {});
         const remoteConnectionSettings = await getConnectionSettings(options.appSettings?.properties ?? {});
-        const site = await options.node.getSite(context);
+        await options.node.initSite(context);
 
         if (localConnectionSettings.some(setting => setting.type === 'ManagedIdentity')) {
-            if (!site.rawSite.identity ||
-                site.rawSite.identity.type === 'None') {
+            if (!options.node.site.rawSite.identity ||
+                options.node.site.rawSite.identity.type === 'None') {
                 // if they have nothing in remote, warn them to connect a managed identity
                 return localize('configureManagedIdentityWarning',
                     'Your app is not connected to a managed identity. To ensure access, please configure a managed identity. Without it, your application may encounter authorization issues.');

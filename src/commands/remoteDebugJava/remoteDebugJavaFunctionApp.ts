@@ -21,10 +21,11 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     if (!node) {
         node = await pickFunctionApp(context);
     }
-    const client: SiteClient = await (await node.getSite(context)).createClient(context);
+    await node.initSite(context);
+    const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await findFreePort();
     const publishCredential: User = await client.getWebAppPublishCredential();
-    const debugProxy: DebugProxy = new DebugProxy((await node.getSite(context)), portNumber, publishCredential);
+    const debugProxy: DebugProxy = new DebugProxy(node.site, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();

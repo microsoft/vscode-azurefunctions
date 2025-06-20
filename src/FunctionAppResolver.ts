@@ -7,7 +7,7 @@ import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFu
 import { createResourceGraphClient } from "./utils/azureClients";
 
 export type FunctionAppModel = {
-    pricingTier: string,
+    isFlex: boolean,
     id: string,
     kind: string,
     name: string,
@@ -36,11 +36,12 @@ export class FunctionAppResolver implements AppResourceResolver {
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
+                // do this before the graph client is created because the async graph client create takes enough time to mess up the following resolves
+                this.loaded = false;
+                this.siteCache.clear(); // clear the cache before fetching new data
                 this.siteCacheLastUpdated = Date.now();
                 const graphClient = await createResourceGraphClient({ ...context, ...subContext });
                 async function fetchAllApps(graphClient: ResourceGraphClient, subContext: ISubscriptionContext, resolver: FunctionAppResolver): Promise<void> {
-                    resolver.loaded = false;
-                    resolver.siteCache.clear(); // clear the cache before fetching new data
                     const query = `resources | where type == 'microsoft.web/sites' and kind contains 'functionapp' and kind !contains 'workflowapp'`;
 
                     async function fetchApps(skipToken?: string): Promise<void> {
@@ -55,7 +56,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                         const record = response.data as Record<string, FunctionQueryModel>;
                         Object.values(record).forEach(data => {
                             const dataModel: FunctionAppModel = {
-                                pricingTier: data.properties.sku,
+                                isFlex: data.properties.sku.toLocaleLowerCase() === 'flexconsumption',
                                 id: data.id,
                                 kind: data.kind,
                                 name: data.name,
@@ -86,14 +87,15 @@ export class FunctionAppResolver implements AppResourceResolver {
                 await this.listFunctionAppsTask;
             }
 
-            const site = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
-            if (nonNullValueAndProp(site, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
+            const siteModel = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
+            if (nonNullValueAndProp(siteModel, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
+                // need the full site to resolve containerized function apps
                 const client = await createWebSiteClient({ ...context, ...subContext });
-                const fullSite = await client.webApps.get(nonNullValueAndProp(site, 'resourceGroup'), nonNullValueAndProp(site, 'name'));
+                const fullSite = await client.webApps.get(nonNullValueAndProp(siteModel, 'resourceGroup'), nonNullValueAndProp(siteModel, 'name'));
                 return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
             }
-            if (site) {
-                return new ResolvedFunctionAppResource(subContext, site);
+            if (siteModel) {
+                return new ResolvedFunctionAppResource(subContext, undefined, siteModel);
             }
 
             return undefined;

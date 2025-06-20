@@ -16,8 +16,8 @@ export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTre
         });
     }
 
-    const sourceSlotNodeSite = await sourceSlotNode.getSite(context);
+    await sourceSlotNode.initSite(context);
     const deploymentSlots: SlotTreeItem[] = <SlotTreeItem[]>await sourceSlotNode.parent?.getCachedChildren(context);
-    await appservice.swapSlot(context, sourceSlotNodeSite, deploymentSlots.map(ds => ds.site));
+    await appservice.swapSlot(context, sourceSlotNode.site, deploymentSlots.map(ds => ds.site));
     await sourceSlotNode.parent?.parent?.refresh(context);
 }
