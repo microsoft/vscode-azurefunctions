@@ -5,7 +5,7 @@
 
 import { type Site } from "@azure/arm-appservice";
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
-import { nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { type FuncVersion } from "../FuncVersion";
@@ -29,6 +29,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
     }
 
     public abstract iconPath?: TreeItemIconPath | undefined;
+    public abstract initSite(context: IActionContext): Promise<void>;
 
     public abstract isReadOnly(context: IActionContext): Promise<boolean>;
 
@@ -36,7 +37,17 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
         return {
             data: this.data,
             label: this.name,
+            getData: () => this.getData(),
         }
+    }
+
+    public async getData(): Promise<Site> {
+        if (!this._site) {
+            await callWithTelemetryAndErrorHandling('getData.initSite', async (context: IActionContext) => {
+                await this.initSite(context);
+            });
+        }
+        return this._site as Site;
     }
 
     public abstract getHostJson(context: IActionContext): Promise<IParsedHostJson>;
