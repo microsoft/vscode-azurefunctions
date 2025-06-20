@@ -83,7 +83,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         return await getOrCreateFunctionApp(context)
     });
 
-    const site = await node.resolved.getSite(context);
+    await node.initSite(context);
+    const site = node.resolved.site;
 
     if (node.contextValue.includes('container')) {
         const learnMoreLink: string = 'https://aka.ms/deployContainerApps'

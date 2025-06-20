@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { type Site } from "@azure/arm-appservice";
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { nonNullValueAndProp, type AzExtTreeItem, type IActionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
@@ -13,15 +14,18 @@ import { type ApplicationSettings, type FuncHostRequest } from "./IProjectTreeIt
 import { type ContainerSite } from "./containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 
 export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase {
-    public site: ContainerSite | ParsedSite;
+    protected abstract _site: ContainerSite | ParsedSite | undefined;
     public get name(): string {
         return this.label;
     }
 
+    public data: Site;
     public abstract label: string;
+    public abstract get site(): ContainerSite | ParsedSite;
+    public abstract set site(value: ContainerSite | ParsedSite);
 
     public get id(): string {
-        return this.site?.id || '';
+        return this.data?.id || '';
     }
 
     public abstract iconPath?: TreeItemIconPath | undefined;
@@ -30,7 +34,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
 
     public get viewProperties(): ViewPropertiesModel {
         return {
-            data: this.site,
+            data: this.data,
             label: this.name,
         }
     }
@@ -41,6 +45,10 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
 
     public async getHostRequest(): Promise<FuncHostRequest> {
         return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') }
+    }
+
+    public getDefaultHostUrl(): string {
+        return nonNullValueAndProp(this.site, 'defaultHostUrl');
     }
 
     public abstract getApplicationSettings(context: IActionContext): Promise<ApplicationSettings>;

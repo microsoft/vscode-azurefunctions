@@ -13,6 +13,6 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
     if (!node) {
         node = await pickAppResource(context);
     }
-
-    await openUrl(nonNullValueAndProp(await node.getSite(context), 'defaultHostUrl'));
+    await node.initSite(context);
+    await openUrl(nonNullValueAndProp(node.site, 'defaultHostUrl'));
 }

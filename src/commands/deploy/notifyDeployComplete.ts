@@ -17,7 +17,8 @@ import { startStreamingLogs } from '../logstream/startStreamingLogs';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
 export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean): Promise<void> {
-    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', (await node.getSite(context)).fullName);
+    await node.initSite(context);
+    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
@@ -37,6 +38,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             postDeployContext.valuesToMask.push(...context.valuesToMask);
             context.telemetry.eventVersion = 2;
+            await node.initSite(context);
 
             if (result === viewOutput) {
                 ext.outputChannel.show();
@@ -45,7 +47,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
             } else if (result === uploadSettings) {
                 const subContext = {
                     ...postDeployContext,
-                    ...(await node.getSite(context)).subscription
+                    ...node.site.subscription
                 }
                 await uploadAppSettings(subContext, node.appSettingsTreeItem, undefined, workspaceFolder);
             }
@@ -60,7 +62,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
                 const message: string = currentAttempt === 1 ?
                     localize('queryingTriggers', 'Querying triggers...') :
                     localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
-                ext.outputChannel.appendLog(message, { resourceName: (await node.getSite(context)).fullName });
+                ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
                 await listHttpTriggerUrls(context, node);
             },
             { retries, minTimeout: 2 * 1000 }
@@ -77,8 +79,8 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItem):
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
     const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find(n => n instanceof RemoteFunctionsTreeItem);
     await node.treeDataProvider.refresh(context, functionsNode);
-
-    const logOptions: {} = { resourceName: (await node.getSite(context)).fullName };
+    await node.initSite(context);
+    const logOptions: {} = { resourceName: node.site.fullName };
     let hasHttpTriggers: boolean = false;
     const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
     const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter(f => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && f.isAnonymous);

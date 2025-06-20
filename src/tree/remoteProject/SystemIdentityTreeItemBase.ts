@@ -11,11 +11,11 @@ import { type ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
 
 export type SystemIdentityTreeItemBase = SystemIdentityTreeItem | DisabledIdentityTreeItem;
 export async function createSystemIdentityTreeItem(context: IActionContext, parent: ManagedIdentityTreeItem): Promise<SystemIdentityTreeItem | DisabledIdentityTreeItem> {
-    const site = await parent.parent.getSite(context);
-    if (!site.rawSite.identity?.type?.includes('SystemAssigned')) {
+    await parent.parent.initSite(context);
+    if (!parent.parent.site.rawSite.identity?.type?.includes('SystemAssigned')) {
         return new DisabledIdentityTreeItem(parent);
     } else {
-        return new SystemIdentityTreeItem(parent, site.rawSite.identity);
+        return new SystemIdentityTreeItem(parent, parent.parent.site.rawSite.identity);
     }
 }
 

@@ -16,7 +16,8 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
         node = await pickFunctionApp(context);
     }
 
-    const siteClient = await (await node.getSite(context)).createClient(context);
+    await node.initSite(context);
+    const siteClient = await node.site.createClient(context);
     const siteConfig: SiteConfig = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, cancellable: true }, async (progress, token) => {
         appservice.reportMessage('Fetching site configuration...', progress, token);
         return await siteClient.getSiteConfig();
@@ -26,9 +27,9 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
     const language: appservice.RemoteDebugLanguage = getRemoteDebugLanguage(siteConfig, appServicePlan?.sku?.family);
 
     await appservice.startRemoteDebug(context, {
-        site: (await node.getSite(context)),
+        site: node.site,
         siteConfig,
         language,
-        credentials: (await node.getSite(context)).subscription.credentials
+        credentials: node.site.subscription.credentials
     });
 }
