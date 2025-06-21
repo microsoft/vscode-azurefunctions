@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskHubResource, type DurableTaskSchedulerClient } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
@@ -46,9 +47,8 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
     }
 
     private async getPicks(context: T): Promise<IAzureQuickPickItem<DurableTaskHubResource | undefined>[]> {
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
         const taskHubs: DurableTaskHubResource[] = context.dts ?
-            await this.schedulerClient.getSchedulerTaskHubs(nonNullProp(context, 'subscription'), resourceGroupName, context.dts.name) : [];
+            await this.schedulerClient.getSchedulerTaskHubs(nonNullProp(context, 'subscription'), parseAzureResourceId(context.dts.id).resourceGroup, context.dts.name) : [];
 
         const createPick = {
             label: localize('createTaskHub', '$(plus) Create new durable task hub'),

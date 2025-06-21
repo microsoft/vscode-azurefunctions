@@ -6,6 +6,6 @@
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { type IResourceGroupWizardContext } from "@microsoft/vscode-azext-azureutils";
 
-export interface FunctionAppUserAssignedIdentitiesContext extends IResourceGroupWizardContext {
+export interface IFunctionAppUserAssignedIdentitiesContext extends IResourceGroupWizardContext {
     site?: ParsedSite;
 }

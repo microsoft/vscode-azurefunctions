@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
-import { type SiteClient } from "@microsoft/vscode-azext-azureappservice";
+import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
@@ -21,7 +21,7 @@ import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardCon
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
 type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
 
-export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, projectPath: string): Promise<DTSConnection | undefined> {
+export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
     const remoteDTSConnection: string | undefined = app?.properties?.[ConnectionKey.DTS];
@@ -42,6 +42,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
         ...await createActivityContext(),
+        site,
         projectPath,
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
@@ -52,7 +53,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     };
 
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('getDTSResources', 'Get Durable Task Scheduler resources'),
+        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connection'),
         promptSteps: [
             new ResourceGroupListStep(),
             new DTSConnectionTypeListStep(availableDeployConnectionTypes),
@@ -69,19 +70,10 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     };
 }
 
-// Check function app for user assigned identity,
-// 1. if exists, assign it to context
-// 2. If it doesn't exist we need to either select or create a new user assigned identity.  Do we need to prompt for managed identity vs. secret - Lily said only MI connection supported
-// For this bottom choice we can probably follow whatever the create function app logic is doing
-
-// After creating the new DTS, add a step to assign the Durable Task Scheduler Contributor role to the user assigned identity
-// If not creating a new DTS, you can skip this
-// After adding the role, we need to set the new connection for DTS which should include the client ID for the connection string
-
 async function getDTSResource(context: DTSConnectionContext, dtsEndpoint: string): Promise<DurableTaskSchedulerResource | undefined> {
     try {
         const client = new HttpDurableTaskSchedulerClient();
-        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulers(context.subscription, nonNullValueAndProp(context.resourceGroup, 'name')) ?? [];
+        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulersByResourceGroup(context.subscription, nonNullValueAndProp(context.resourceGroup, 'name')) ?? [];
         return schedulers.find(s => s.properties.endpoint === dtsEndpoint);
     } catch (e) {
         const pe: IParsedError = parseError(e);

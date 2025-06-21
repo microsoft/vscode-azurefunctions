@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IResourceGroupWizardContext } from "@microsoft/vscode-azext-azureutils";
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type ConnectionType } from "../../../../constants";
 import { type DurableTaskHubResource, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { type IFunctionAppUserAssignedIdentitiesContext } from "../../../identity/listUserAssignedIdentities/IFunctionAppUserAssignedIdentitiesContext";
 import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
@@ -20,7 +20,7 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
     newDTSHubNameConnectionSetting?: string;
 }
 
-export interface IDTSAzureConnectionWizardContext extends IResourceGroupWizardContext, IDTSConnectionWizardContext {
+export interface IDTSAzureConnectionWizardContext extends IFunctionAppUserAssignedIdentitiesContext, IDTSConnectionWizardContext {
     subscription?: AzureSubscription;
 
     suggestedDTSEndpointLocalSettings?: string;

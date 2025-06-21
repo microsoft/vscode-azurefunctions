@@ -150,7 +150,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     if (durableStorageType === DurableBackend.DTS) {
-        const dtsConnections = await validateDTSConnection(Object.assign(context, subscriptionContext), client, context.projectPath);
+        const dtsConnections = await validateDTSConnection(Object.assign(context, subscriptionContext), client, node.site, context.projectPath);
         context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
         context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
     }

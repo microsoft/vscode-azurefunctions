@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LocationListStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { CommonRoleDefinitions, createRoleId, LocationListStep, parseAzureResourceId, RoleAssignmentExecuteStep, type ILocationWizardContext, type Role } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../../../../constants';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
@@ -16,11 +16,11 @@ import { DurableTaskSchedulerCreateStep } from './DurableTaskSchedulerCreateStep
 import { DurableTaskSchedulerNameStep } from './DurableTaskSchedulerNameStep';
 
 export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    private readonly schedulerClient: DurableTaskSchedulerClient;
+    private readonly _schedulerClient: DurableTaskSchedulerClient;
 
     constructor(schedulerClient?: DurableTaskSchedulerClient) {
         super();
-        this.schedulerClient = schedulerClient ?? new HttpDurableTaskSchedulerClient();
+        this._schedulerClient = schedulerClient ?? new HttpDurableTaskSchedulerClient();
     }
 
     public async prompt(context: T): Promise<void> {
@@ -51,22 +51,42 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
             LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
             LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
 
-            promptSteps.push(new DurableTaskSchedulerNameStep(this.schedulerClient));
-            executeSteps.push(new DurableTaskSchedulerCreateStep(this.schedulerClient));
+            promptSteps.push(new DurableTaskSchedulerNameStep(this._schedulerClient));
+            executeSteps.push(new DurableTaskSchedulerCreateStep(this._schedulerClient));
         }
 
         if (!context.dtsHub) {
-            promptSteps.push(new DurableTaskHubListStep(this.schedulerClient));
+            promptSteps.push(new DurableTaskHubListStep(this._schedulerClient));
         }
 
-        promptSteps.push(new FunctionAppUserAssignedIdentitiesListStep())
+        const dtsContributorRole: Role = {
+            scopeId: context.dts?.id,
+            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.durableTaskDataContributor),
+            roleDefinitionName: CommonRoleDefinitions.durableTaskDataContributor.roleName,
+        };
+
+        const identitiesListStep = new FunctionAppUserAssignedIdentitiesListStep(dtsContributorRole /** target role */);
+        promptSteps.push(identitiesListStep);
+        executeSteps.push(new RoleAssignmentExecuteStep(getDTSRoleAssignmentCallback(context, identitiesListStep, dtsContributorRole)));
 
         return { promptSteps, executeSteps };
+
+        function getDTSRoleAssignmentCallback(context: T, functionAppIdentitiesListStep: FunctionAppUserAssignedIdentitiesListStep<T>, role: Role): () => Role[] {
+            return () => {
+                const roleAssignment: Role = {
+                    ...role,
+                    // This id may be missing when the role is initially passed in,
+                    // but by the time we run the step, we should have the populated id ready.
+                    scopeId: context.dts?.id,
+                };
+
+                return functionAppIdentitiesListStep.hasIdentityWithAssignedRole ? [] : [roleAssignment];
+            };
+        }
     }
 
     private async getPicks(context: T): Promise<IAzureQuickPickItem<DurableTaskSchedulerResource | undefined>[]> {
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
-        const schedulers: DurableTaskSchedulerResource[] = await this.schedulerClient.getSchedulers(nonNullProp(context, 'subscription'), resourceGroupName);
+        const schedulers: DurableTaskSchedulerResource[] = await this._schedulerClient.getSchedulersBySubscription(nonNullProp(context, 'subscription'));
 
         const createPick = {
             label: localize('createTaskScheduler', '$(plus) Create new durable task scheduler'),
@@ -76,9 +96,12 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         return [
             createPick,
             ...schedulers.map(s => {
+                const resourceGroupName: string = parseAzureResourceId(s.id).resourceGroup;
                 return {
                     label: s.name,
-                    description: s.properties.endpoint === context.suggestedDTSEndpointLocalSettings ? localSettingsDescription : undefined,
+                    description: s.properties.endpoint === context.suggestedDTSEndpointLocalSettings ?
+                        `${resourceGroupName} ${localSettingsDescription}` :
+                        resourceGroupName,
                     data: s,
                 };
             }),
