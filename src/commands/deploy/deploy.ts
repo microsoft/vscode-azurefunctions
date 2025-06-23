@@ -5,7 +5,7 @@
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
-import { LocationListStep, ResourceGroupListStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
@@ -95,8 +95,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     Object.assign(context, {
         resourceGroup: (await ResourceGroupListStep.getResourceGroups(Object.assign(context, subscriptionContext))).find(rg => rg.name === node.site.resourceGroup),
     });
-
-    await LocationListStep.setAutoSelectLocation(context as unknown as ILocationWizardContext, node.site.location);
 
     if (node.contextValue.includes('container')) {
         const learnMoreLink: string = 'https://aka.ms/deployContainerApps'

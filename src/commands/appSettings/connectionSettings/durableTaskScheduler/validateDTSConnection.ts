@@ -5,7 +5,7 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
-import { LocationListStep, ResourceGroupListStep, type AzExtLocation } from "@microsoft/vscode-azext-azureutils";
+import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../constants";
@@ -51,14 +51,9 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };
 
-    const autoSelectLocation: AzExtLocation | undefined = LocationListStep.getAutoSelectLocation(wizardContext);
-
-    // Always reset location to avoid mismatches with the Durable Task provider offering. If a location was already set and is not valid for this resource type, deployment may fail.
+    // Always reset location to avoid potential mismatches with the Durable Task provider offering. If a location was already set and is not valid for this resource type, deployment may fail.
     LocationListStep.resetLocation(wizardContext);
-
-    if (autoSelectLocation) {
-        await LocationListStep.setAutoSelectLocation(wizardContext, autoSelectLocation.name);
-    }
+    await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('prepareDTSConnection', 'Prepare durable task scheduler connection'),
