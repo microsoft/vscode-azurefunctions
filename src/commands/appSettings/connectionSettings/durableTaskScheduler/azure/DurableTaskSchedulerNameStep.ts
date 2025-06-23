@@ -27,4 +27,14 @@ export class DurableTaskSchedulerNameStep<T extends IDTSAzureConnectionWizardCon
     public shouldPrompt(context: T): boolean {
         return !context.newDTSName;
     }
+
+    // validation
+    // Same validation for the hub name
+    // 3-64 characters inclusive
+    // alphanumeric okay
+    // No symbols, but dashes okay, can repeat
+
+    // async validation
+    // Also check that other schedulers / hubs with same name don't exist
+    // Can have same name if in unique resource group, so check for duplicate by resource group not subscription
 }
