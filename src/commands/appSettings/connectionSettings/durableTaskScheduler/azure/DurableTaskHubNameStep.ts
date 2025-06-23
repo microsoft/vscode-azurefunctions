@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { parseAzureResourceId, type ParsedAzureResourceId } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizardPromptStep, nonNullProp, parseError, validationUtils, type IParsedError } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, nonNullProp, validationUtils } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskHubResource, type DurableTaskSchedulerClient } from "../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type IDTSAzureConnectionWizardContext } from "../IDTSConnectionWizardContext";
@@ -68,12 +68,10 @@ export class DurableTaskHubNameStep<T extends IDTSAzureConnectionWizardContext> 
             if (hub) {
                 return localize('hubAlreadyExists', 'A task hub with name "{0}" already exists with scheduler "{1}".', hubName, parsedScheduler.resourceName);
             }
-
-            // `getSchedulerTaskHub` should return 'undefined' when a 404 status code is encountered
-            return undefined;
-        } catch (e) {
-            const pe: IParsedError = parseError(e);
-            return localize('validateNameError', 'Failed to validate name availability: "{0}"', pe.message);
+        } catch {
+            // Do nothing
         }
+
+        return undefined;
     }
 }

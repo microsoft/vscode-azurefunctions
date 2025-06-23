@@ -47,8 +47,6 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!context.dts) {
-            // Note: The location offering for this provider isn't 1:1 with what's available for the function app
-            // Todo: We should probably update the behavior of LocationListStep so that we re-verify the provider locations even if the location is already set
             LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
             LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
 
