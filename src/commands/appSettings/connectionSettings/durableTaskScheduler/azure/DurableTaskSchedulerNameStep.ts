@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, validationUtils } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, parseError, validationUtils, type IParsedError } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type IDTSAzureConnectionWizardContext } from "../IDTSConnectionWizardContext";
@@ -54,11 +54,13 @@ export class DurableTaskSchedulerNameStep<T extends IDTSAzureConnectionWizardCon
             if (scheduler) {
                 return localize('schedulerAlreadyExists', 'A scheduler with name "{0}" already exists in resource group "{1}".', schedulerName, resourceGroupName);
             }
-        } catch (e) {
-            console.log(e)
-        }
 
-        return undefined;
+            // `getScheduler` should return 'undefined' when a 404 status code is encountered
+            return undefined;
+        } catch (e) {
+            const pe: IParsedError = parseError(e);
+            return localize('validateNameError', 'Failed to validate name availability: "{0}"', pe.message);
+        }
     }
 
     // async validation
