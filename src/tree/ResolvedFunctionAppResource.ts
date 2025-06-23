@@ -105,7 +105,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
                 void this.initSite(context);
             });
             // If the site is not initialized, we should throw an error
-            throw new Error(localize('siteNotSet', 'Site has not initialized. Please try again in a moment.'));
+            throw new Error(localize('siteNotSet', 'Site is not initialized. Please try again in a moment.'));
         }
         return this._site;
     }
@@ -128,6 +128,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         return {
             id: site.id ?? '',
             name: site.name ?? '',
+            type: site.type ?? '',
             kind: site.kind ?? '',
             location: site.location,
             resourceGroup: site.resourceGroup ?? '',
@@ -145,10 +146,11 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get description(): string | undefined {
-        if (this._isFlex) {
-            return localize('flexFunctionApp', 'Flex Consumption');
+        let state = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        if (this._isFlex && !state) {
+            state = localize('flexFunctionAppState', 'Flex Consumption');
         }
-        return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        return state;
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -175,6 +177,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         // on refresh, we should reinitialize the site to ensure we have the latest data
         const client = await this.site.createClient(context);
         this._site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this._subscription);
+        this.dataModel = this.createDataModelFromSite(this._site.rawSite);
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {

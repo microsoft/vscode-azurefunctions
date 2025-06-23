@@ -9,6 +9,7 @@ import { createResourceGraphClient } from "./utils/azureClients";
 export type FunctionAppModel = {
     isFlex: boolean,
     id: string,
+    type: string,
     kind: string,
     name: string,
     resourceGroup: string,
@@ -23,6 +24,7 @@ type FunctionQueryModel = {
     },
     location: string,
     id: string,
+    type: string,
     kind: string,
     name: string,
     resourceGroup: string
@@ -58,6 +60,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                             const dataModel: FunctionAppModel = {
                                 isFlex: data.properties.sku.toLocaleLowerCase() === 'flexconsumption',
                                 id: data.id,
+                                type: data.type,
                                 kind: data.kind,
                                 name: data.name,
                                 resourceGroup: data.resourceGroup,
