@@ -74,12 +74,10 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         if (dataModel) {
             this._isFlex = dataModel.isFlex;
             this.dataModel = dataModel;
-            this.data = dataModel
         } else if (site) {
             this._site = new ParsedSite(site, subscription);
             this.dataModel = this.createDataModelFromSite(site);
             this._isFlex = !!site.functionAppConfig;
-            this.data = this.site.rawSite;
             this.addValuesToMask(this.site);
         }
 
@@ -102,7 +100,12 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
 
     public get site(): ParsedSite {
         if (!this._site) {
-            throw new Error(localize('siteNotSet', 'Site is not set. Ensure the site is initialized before accessing it.'));
+            void callWithTelemetryAndErrorHandling('functionApp.initSiteFailed', async (context: IActionContext) => {
+                // try to lazy load the site if it hasn't been initialized yet
+                void this.initSite(context);
+            });
+            // If the site is not initialized, we should throw an error
+            throw new Error(localize('siteNotSet', 'Site has not initialized. Please try again in a moment.'));
         }
         return this._site;
     }
