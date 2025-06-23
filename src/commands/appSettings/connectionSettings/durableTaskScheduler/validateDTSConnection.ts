@@ -15,7 +15,7 @@ import { localize } from "../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { createActivityContext } from "../../../../utils/activityUtils";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
-import { DTSConnectionTypeListStep } from "./DTSConnectionTypeListStep";
+import { DTSConnectionListStep } from "./DTSConnectionListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
 
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
@@ -56,7 +56,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
         title: localize('prepareDTSConnection', 'Prepare durable task scheduler connection'),
         promptSteps: [
             new ResourceGroupListStep(),
-            new DTSConnectionTypeListStep(availableDeployConnectionTypes),
+            new DTSConnectionListStep(availableDeployConnectionTypes),
         ],
         showLoadingPrompt: true,
     });

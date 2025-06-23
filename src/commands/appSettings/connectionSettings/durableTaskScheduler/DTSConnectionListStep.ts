@@ -17,7 +17,7 @@ import { DTSHubNameSetSettingStep } from './DTSHubNameSetSettingStep';
 import { DTSEmulatorStartStep } from './emulator/DTSEmulatorStartStep';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
-export class DTSConnectionTypeListStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
+export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     constructor(readonly connectionTypes: Set<ConnectionType>) {
         super();
     }
