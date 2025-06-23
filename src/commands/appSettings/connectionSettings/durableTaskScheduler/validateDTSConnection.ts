@@ -38,7 +38,6 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     const remoteDTSEndpoint: string | undefined = tryGetDTSEndpoint(remoteDTSConnection);
     const availableDeployConnectionTypes = new Set([ConnectionType.Azure]);
 
-    // Spread the properties onto a new wizardContext so that we can initiate a separate activity log entry
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
         ...await createActivityContext(),
