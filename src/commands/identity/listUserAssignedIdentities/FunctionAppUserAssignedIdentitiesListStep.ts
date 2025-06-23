@@ -7,6 +7,7 @@ import { type ManagedServiceIdentityClient } from '@azure/arm-msi';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { createAuthorizationManagementClient, createManagedServiceIdentityClient, parseAzureResourceId, uiUtils, type ParsedAzureResourceId, type Role } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { type IFunctionAppUserAssignedIdentitiesContext } from './IFunctionAppUserAssignedIdentitiesContext';
 
@@ -70,7 +71,10 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
         }
 
         context.telemetry.properties.functionAppHasIdentityWithTargetRole = String(this.hasIdentityWithTargetRole);
-        // Todo: Add output log messages
+
+        this.hasIdentityWithTargetRole ?
+            ext.outputChannel.appendLog(localize('foundIdentity', 'Located existing user assigned identity "{0}" with role "{1}".', context.managedIdentity?.name, this.targetRole.roleDefinitionName)) :
+            ext.outputChannel.appendLog(localize('foundNoIdentity', 'Found no existing user assigned identity with role "{0}".', this.targetRole.roleDefinitionName));
     }
 
     public async prompt(context: T): Promise<void> {
