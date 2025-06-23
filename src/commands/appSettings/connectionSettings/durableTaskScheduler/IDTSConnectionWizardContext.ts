@@ -23,7 +23,13 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
 export interface IDTSAzureConnectionWizardContext extends IFunctionAppUserAssignedIdentitiesContext, IDTSConnectionWizardContext {
     subscription?: AzureSubscription;
 
+    /**
+     * Durable Task Scheduler endpoint detected in local settings JSON
+     */
     suggestedDTSEndpointLocalSettings?: string;
+    /**
+     * Durable Task Scheduler hub name detected in local settings JSON
+     */
     suggestedDTSHubNameLocalSettings?: string;
 
     newDTSName?: string;

@@ -8,6 +8,7 @@ import { commands } from 'vscode';
 import { ConnectionType } from '../../../../../constants';
 import { localize } from '../../../../../localize';
 import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -29,7 +30,7 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
             localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
         );
 
-        context.newDTSConnectionSetting = `Endpoint=${emulator.schedulerEndpoint};Authentication=None`;
+        context.newDTSConnectionSetting = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
         context.newDTSHubNameConnectionSetting = 'default';
     }
 

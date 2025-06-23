@@ -14,16 +14,16 @@ import { type IFunctionAppUserAssignedIdentitiesContext } from './IFunctionAppUs
  * Wizard step to select a user-assigned managed identity from the parsed site of a function app.
  * Upon selection, retrieves and stores the identity on the wizard context.
  *
- * @param role Optional. If provided, the function app will be checked for a user assigned identity with this target role.
+ * @param role Optional. If provided, the function app will be pre-checked for an existing user assigned identity with this target role.
  * If such an identity exists, it will be automatically assigned as a managed identity without prompting the user.
  *
  * @populates `context.managedIdentity`
  */
 export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUserAssignedIdentitiesContext> extends AzureWizardPromptStep<T> {
     private _msiClient: ManagedServiceIdentityClient;
-    private _hasAssignedRole?: boolean;
+    private _hasTargetRole?: boolean;
 
-    constructor(readonly role?: Role) {
+    constructor(readonly targetRole?: Role) {
         super();
     }
 
@@ -31,22 +31,22 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
      * Indicates whether there is at least one user-assigned identity on the function app with the provided role.
      * If no role is provided, or if the step has not yet been run, this will return `undefined`.
      */
-    get hasIdentityWithAssignedRole(): boolean | undefined {
-        return this._hasAssignedRole;
+    get hasIdentityWithTargetRole(): boolean | undefined {
+        return this._hasTargetRole;
     }
 
     // Verify if any of the existing user assigned identities for the function app have the required role already
     public async configureBeforePrompt(context: T): Promise<void> {
-        if (!this.role || !this.role?.scopeId) {
-            this._hasAssignedRole = undefined;
+        if (!this.targetRole || !this.targetRole?.scopeId) {
+            this._hasTargetRole = undefined;
             return;
         }
 
-        this._hasAssignedRole = false;
+        this._hasTargetRole = false;
         this._msiClient ??= await createManagedServiceIdentityClient(context);
         const amClient = await createAuthorizationManagementClient(context);
 
-        const role: Role = this.role;
+        const role: Role = this.targetRole;
         const site: ParsedSite = nonNullProp(context, 'site');
         const identityIds: string[] = Object.keys(site.identity?.userAssignedIdentities ?? {}) ?? [];
         context.telemetry.properties.functionAppUserAssignedIdentityCount = String(identityIds.length);
@@ -54,7 +54,7 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
         for (const identityId of identityIds) {
             const uaid = site.identity?.userAssignedIdentities?.[identityId];
             const roleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
-                this.role.scopeId,
+                this.targetRole.scopeId,
                 {
                     // $filter=principalId eq {id}
                     filter: `principalId eq '{${uaid?.principalId}}'`,
@@ -64,11 +64,12 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
             if (roleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId))) {
                 const parsedIdentity = parseAzureResourceId(identityId);
                 context.managedIdentity = await this._msiClient.userAssignedIdentities.get(parsedIdentity.resourceGroup, parsedIdentity.resourceName);
-                this._hasAssignedRole = true;
+                this._hasTargetRole = true;
                 break;
             }
         }
 
+        context.telemetry.properties.functionAppHasIdentityWithTargetRole = String(this.hasIdentityWithTargetRole);
         // Todo: Add output log messages
     }
 

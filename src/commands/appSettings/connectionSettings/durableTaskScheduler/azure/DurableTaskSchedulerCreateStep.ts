@@ -9,6 +9,7 @@ import { type Progress } from "vscode";
 import { localize } from "../../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient } from "../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { withCancellation } from "../../../../../utils/cancellation";
+import { getSchedulerConnectionString, SchedulerAuthenticationType } from "../../../../durableTaskScheduler/copySchedulerConnectionString";
 import { type IDTSAzureConnectionWizardContext } from "../IDTSConnectionWizardContext";
 
 export class DurableTaskSchedulerCreateStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -37,7 +38,7 @@ export class DurableTaskSchedulerCreateStep<T extends IDTSAzureConnectionWizardC
         }
 
         context.dts = response.scheduler;
-        context.newDTSConnectionSetting = context.dts.properties.endpoint;
+        context.newDTSConnectionSetting = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
     }
 
     public shouldExecute(context: T): boolean {
