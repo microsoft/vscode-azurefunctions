@@ -155,13 +155,13 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         let description = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
         if (this._isFlex && !description) {
             if (this.options?.showLocationAsTreeItemDescription) {
-                description = localize('flexFunctionAppStateWithLocation', 'Flex Consumption ({0})', this.site.location);
+                description = localize('flexFunctionAppStateWithLocation', 'Flex Consumption ({0})', this.dataModel.location);
             } else {
                 description = localize('flexFunctionAppState', 'Flex Consumption');
             }
         } else if (this.options?.showLocationAsTreeItemDescription && !description) {
             // When showing location for non-flexapps, omit parenthesis
-            description = this.site.location;
+            description = this.dataModel.location;
         }
         return description;
     }
