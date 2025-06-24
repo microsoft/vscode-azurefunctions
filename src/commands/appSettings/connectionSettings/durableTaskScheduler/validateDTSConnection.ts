@@ -21,6 +21,13 @@ import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardCon
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
 type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
 
+/**
+ * A pre-flight deployment operation that ensures that:
+ *
+ * a) A remote DTS connection already exists for the given function app or
+ *
+ * b) That a new DTS resource and hub is created and ready to be added for use by the function app
+ */
 export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
