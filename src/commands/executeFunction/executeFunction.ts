@@ -99,8 +99,12 @@ export async function executeFunctionWithInput(context: IActionContext, function
         const headers = createHttpHeaders({
             'Content-Type': 'application/json',
         });
+        let client: SiteClient | undefined;
+        if (node instanceof RemoteFunctionTreeItem) {
+            await node.parent.parent.initSite(context);
+            client = await node.parent.parent.site.createClient(context);
+        }
 
-        const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
         if (client) {
             headers.set('x-functions-key', (await client.listHostKeys()).masterKey ?? '');
         }

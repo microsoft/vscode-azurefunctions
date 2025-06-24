@@ -21,6 +21,7 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
         node = node.parent as SlotTreeItem;
     }
 
+    await node.initSite(context);
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
         site: node.site,

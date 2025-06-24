@@ -54,6 +54,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             Under these circumstances, we will attempt to do the call 3 times during warmup before throwing the error.
         */
         const retries = 3;
+        await this.parent.initSite(context);
         const client = await this.parent.site.createClient(context);
 
         const funcs = await retry<FunctionEnvelope[]>(

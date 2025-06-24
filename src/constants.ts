@@ -99,6 +99,8 @@ export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
+    DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
+    DTSHub = 'TASKHUB_NAME',
     SQL = 'SQLDB_Connection'
 }
 
@@ -120,7 +122,8 @@ export enum ConnectionType {
 export enum DurableBackend {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
-    SQL = "mssql"
+    DTS = 'azureManaged',
+    SQL = 'mssql',
 }
 
 export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
@@ -149,11 +152,9 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
-export const localEventHubsEmulatorConnectionStringDefault: string = 'MemoryF';
-export const localEventHubsEmulatorConnectionStringAlternate: string = 'Memory';
-
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
-export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternate}`);
+export const localEventHubsEmulatorConnectionString: string = 'SingleHost';
+export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionString}|MemoryF|Memory`);
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const workerRuntimeVersionKey: string = 'FUNCTIONS_WORKER_RUNTIME_VERSION';

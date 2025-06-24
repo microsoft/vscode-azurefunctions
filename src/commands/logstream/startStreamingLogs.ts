@@ -23,7 +23,16 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
         treeItem = await pickFunctionApp(context);
     }
 
-    const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;
+    let site: ParsedSite;
+    if (isSlotTreeItem(treeItem)) {
+        // If it's a SlotTreeItem, we need to ensure the site is initialized
+        await treeItem.initSite(context);
+        site = treeItem.site;
+    } else {
+        // If it's a RemoteFunctionTreeItem, we need to get the parent SlotTreeItem
+        await treeItem.parent.parent.initSite(context);
+        site = treeItem.parent.parent.site;
+    }
 
     if (site.isLinux) {
         try {

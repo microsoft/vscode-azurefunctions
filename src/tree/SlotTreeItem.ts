@@ -27,16 +27,26 @@ export class SlotTreeItem extends SlotContainerTreeItemBase {
 
     public resolved: ResolvedFunctionAppResource;
 
-    public constructor(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource) {
+    private constructor(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource, site: ParsedSite) {
         super(parent, resolvedFunctionAppResource);
         this.resolved = resolvedFunctionAppResource;
         // this is for the slotContextValue because it never gets resolved by the Resources extension
-        const slotContextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
+        const slotContextValue = site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
         const contextValues = [slotContextValue, 'slot'];
         this.contextValue = Array.from(new Set(contextValues)).sort().join(';');
-        this.site = this.resolved.site;
+        this.site = site;
         this.iconPath = treeUtils.getIconPath(slotContextValue);
     }
+
+    public static async createSlotTreeItem(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource): Promise<SlotTreeItem> {
+        await resolvedFunctionAppResource.initSite({} as IActionContext);
+        return new SlotTreeItem(parent, resolvedFunctionAppResource, resolvedFunctionAppResource.site);
+    }
+
+    public async initSite(context: IActionContext): Promise<void> {
+        await this.initSite(context);
+    }
+
     public get logStreamLabel(): string {
         return this.resolved.logStreamLabel;
     }
