@@ -29,7 +29,12 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
 
+export type ResolvedFunctionAppResourceOptions = {
+    showLocationAsTreeItemDescription?: boolean;
+};
+
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
+    private options?: ResolvedFunctionAppResourceOptions;
     protected _site: ParsedSite | undefined = undefined;
     public data: Site;
     public dataModel: FunctionAppModel;
@@ -67,8 +72,9 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site | undefined, dataModel?: FunctionAppModel) {
+    public constructor(subscription: ISubscriptionContext, site: Site | undefined, dataModel?: FunctionAppModel, options?: ResolvedFunctionAppResourceOptions) {
         super();
+        this.options = options;
         this._subscription = subscription;
         this.contextValuesToAdd = [];
         if (dataModel) {
@@ -146,11 +152,18 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get description(): string | undefined {
-        let state = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
-        if (this._isFlex && !state) {
-            state = localize('flexFunctionAppState', 'Flex Consumption');
+        let description = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        if (this._isFlex && !description) {
+            if (this.options?.showLocationAsTreeItemDescription) {
+                description = localize('flexFunctionAppStateWithLocation', 'Flex Consumption ({0})', this.site.location);
+            } else {
+                description = localize('flexFunctionAppState', 'Flex Consumption');
+            }
+        } else if (this.options?.showLocationAsTreeItemDescription && !description) {
+            // When showing location for non-flexapps, omit parenthesis
+            description = this.site.location;
         }
-        return state;
+        return description;
     }
 
     public get iconPath(): TreeItemIconPath {
