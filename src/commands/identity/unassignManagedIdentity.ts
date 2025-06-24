@@ -14,7 +14,8 @@ import { ManagedIdentityUnassignStep } from './ManagedIdentityUnassignStep';
 export async function unassignManagedIdentity(context: IActionContext, node: UserAssignedIdentityTreeItem): Promise<void> {
 
     const slotTreeItem = node.parent.parent as SlotTreeItem;
-    const site = await slotTreeItem.getSite(context);
+    await slotTreeItem.initSite(context);
+    const site = slotTreeItem.site;
     const wizardContext: ManagedIdentityAssignContext = {
         ...context,
         site,

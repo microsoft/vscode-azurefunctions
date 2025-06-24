@@ -14,7 +14,8 @@ import { getWorkspaceSetting, updateWorkspaceSetting } from "../../vsCodeConfig/
 
 export async function hasRemoteEventGridBlobTrigger(context: IActionContext, node: SlotTreeItem): Promise<boolean> {
     const retries = 3;
-    const client = await (await node.getSite(context)).createClient(context);
+    await node.initSite(context);
+    const client = await node.site.createClient(context);
 
     const funcs = await retry<FunctionEnvelope[]>(
         async () => {
