@@ -108,7 +108,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                 return new ResolvedFunctionAppResource(subContext, undefined, siteModel, {
                     // Multiple sites with the same name could be displayed as long as they are in different locations
                     // To help distinguish these apps for our users, lookahead and determine if the location should be provided for duplicated site names
-                    showLocationAsTreeItemDescription: groupBySetting === 'resourceType' && (this.siteNameCounter.get(siteModel.name) ?? 1) > 1,
+                    showLocationInTreeItemDescription: groupBySetting === 'resourceType' && (this.siteNameCounter.get(siteModel.name) ?? 1) > 1,
                 });
             }
 
