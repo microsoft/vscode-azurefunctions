@@ -44,7 +44,7 @@ export class SlotTreeItem extends SlotContainerTreeItemBase {
     }
 
     public async initSite(context: IActionContext): Promise<void> {
-        await this.initSite(context);
+        await this.resolved.initSite(context);
     }
 
     public get logStreamLabel(): string {
