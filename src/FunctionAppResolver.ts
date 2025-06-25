@@ -6,6 +6,7 @@ import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-az
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createResourceGraphClient } from "./utils/azureClients";
+import { getGlobalSetting } from "./vsCodeConfig/settings";
 
 export type FunctionAppModel = {
     isFlex: boolean,
@@ -34,6 +35,7 @@ export class FunctionAppResolver implements AppResourceResolver {
     private loaded: boolean = false;
     private siteCacheLastUpdated = 0;
     private siteCache: Map<string, FunctionAppModel> = new Map<string, FunctionAppModel>();
+    private siteNameCounter: Map<string, number> = new Map<string, number>();
     private listFunctionAppsTask: Promise<void> | undefined;
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
@@ -41,6 +43,7 @@ export class FunctionAppResolver implements AppResourceResolver {
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
                 // do this before the graph client is created because the async graph client create takes enough time to mess up the following resolves
                 this.loaded = false;
+                this.siteNameCounter.clear();
                 this.siteCache.clear(); // clear the cache before fetching new data
                 this.siteCacheLastUpdated = Date.now();
                 const graphClient = await createResourceGraphClient({ ...context, ...subContext });
@@ -69,6 +72,9 @@ export class FunctionAppResolver implements AppResourceResolver {
                                 location: data.location
                             }
                             resolver.siteCache.set(dataModel.id.toLowerCase(), dataModel);
+
+                            const count: number = (resolver.siteNameCounter.get(dataModel.name) ?? 0) + 1;
+                            resolver.siteNameCounter.set(dataModel.name, count);
                         });
 
                         const nextSkipToken = response?.skipToken;
@@ -102,7 +108,12 @@ export class FunctionAppResolver implements AppResourceResolver {
 
                 return new ResolvedFunctionAppResource(subContext, fullSite);
             } else if (siteModel) {
-                return new ResolvedFunctionAppResource(subContext, undefined, siteModel);
+                const groupBySetting: string | undefined = getGlobalSetting<string>('groupBy', 'azureResourceGroups');
+                return new ResolvedFunctionAppResource(subContext, undefined, siteModel, {
+                    // Multiple sites with the same name could be displayed as long as they are in different locations
+                    // To help distinguish these apps for our users, lookahead and determine if the location should be provided for duplicated site names
+                    showLocationInTreeItemDescription: groupBySetting === 'resourceType' && (this.siteNameCounter.get(siteModel.name) ?? 1) > 1,
+                });
             }
 
             return undefined;
