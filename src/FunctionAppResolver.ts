@@ -97,7 +97,7 @@ export class FunctionAppResolver implements AppResourceResolver {
             }
 
             const siteModel = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
-            if (nonNullValueAndProp(siteModel, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
+            if (siteModel?.kind === 'functionapp,linux,container,azurecontainerapps') {
                 // need the full site to resolve containerized function apps
                 const client = await createWebSiteClient({ ...context, ...subContext });
                 const fullSite = await client.webApps.get(nonNullValueAndProp(siteModel, 'resourceGroup'), nonNullValueAndProp(siteModel, 'name'));
