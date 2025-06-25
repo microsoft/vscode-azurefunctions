@@ -6,7 +6,7 @@
 import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
 import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, createWebSiteClient, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, nonNullValue, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { type ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { latestGAVersion, tryParseFuncVersion, type FuncVersion } from "../FuncVersion";
 import { type FunctionAppModel } from "../FunctionAppResolver";
@@ -93,7 +93,6 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             const webClient = await createWebSiteClient({ ...context, ...this._subscription });
             const rawSite = await webClient.webApps.get(this.dataModel.resourceGroup, this.dataModel.name);
             this._site = new ParsedSite(rawSite, this._subscription);
-            this.data = rawSite;
             this.addValuesToMask(this._site);
         }
     }
@@ -104,7 +103,6 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
                 // try to lazy load the site if it hasn't been initialized yet
                 void this.initSite(context);
             });
-            // If the site is not initialized, we should throw an error
             throw new Error(localize('siteNotSet', 'Site is not initialized. Please try again in a moment.'));
         }
         return this._site;
@@ -176,8 +174,11 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
 
         // on refresh, we should reinitialize the site to ensure we have the latest data
         const client = await this.site.createClient(context);
-        this._site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this._subscription);
-        this.dataModel = this.createDataModelFromSite(this._site.rawSite);
+        const site = await client.getSite();
+        if (site) {
+            this.dataModel = this.createDataModelFromSite(site);
+            this._site = new ParsedSite(site, this._subscription);
+        }
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {
