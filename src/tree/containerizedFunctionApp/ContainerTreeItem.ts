@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type AzExtParentTreeItem } from "@microsoft/vscode-azext-utils";
+import { type AzExtParentTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { SlotContainerTreeItemBase } from "../SlotContainerTreeItemBase";
 import { ProjectSource } from "../projectContextValues";
 import { type ContainerSite, type ResolvedContainerizedFunctionAppResource } from "./ResolvedContainerizedFunctionAppResource";
@@ -24,5 +24,9 @@ export class ContainerTreeItem extends SlotContainerTreeItemBase {
 
     public async isReadOnly(): Promise<boolean> {
         return await this.resolved.isReadOnly();
+    }
+
+    public async initSite(context: IActionContext): Promise<void> {
+        await this.initSite(context);
     }
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
-import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths } from '@microsoft/vscode-azext-azureappservice';
+import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
@@ -83,6 +83,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         return await getOrCreateFunctionApp(context)
     });
 
+    await node.initSite(context);
+    const site = node.site;
+
     if (node.contextValue.includes('container')) {
         const learnMoreLink: string = 'https://aka.ms/deployContainerApps'
         await context.ui.showWarningMessage(localize('containerFunctionAppError', 'Deploy is not currently supported for containerized function apps within the Azure Functions extension. Please read here to learn how to deploy your project.'), { learnMoreLink });
@@ -98,19 +101,19 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     context.telemetry.properties.projectRuntime = version;
     context.telemetry.properties.languageModel = String(languageModel);
 
-    if (language === ProjectLanguage.Python && !node.site.isLinux) {
+    if (language === ProjectLanguage.Python && !site.isLinux) {
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    void showCoreToolsWarning(context, version, node.site.fullName);
+    void showCoreToolsWarning(context, version, site.fullName);
 
-    const client = await node.site.createClient(actionContext);
+    const client = await site.createClient(actionContext);
     const siteConfig: SiteConfigResource = await client.getSiteConfig();
     const isConsumption: boolean = await client.getIsConsumption(actionContext);
     let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
-    if (!isZipDeploy && node.site.isLinux && isConsumption) {
-        ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: node.site.fullName });
+    if (!isZipDeploy && site.isLinux && isConsumption) {
+        ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: site.fullName });
         isZipDeploy = true;
         context.deployMethod = 'zip';
     }
@@ -121,10 +124,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
-        await validateRemoteBuild(context, node.site, context.workspaceFolder, language);
+        await validateRemoteBuild(context, site, context.workspaceFolder, language);
     }
 
-    if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
+    if (isZipDeploy && site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
     } else if (isFlexConsumption) {
         context.deployMethod = 'flexconsumption';
@@ -161,7 +164,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     } as unknown as ISubscriptionActionContext;
 
     const eolWarningMessage = await getEolWarningMessages(subContext, {
-        site: node.site.rawSite,
+        site: site.rawSite,
         isLinux: client.isLinux,
         isFlex: isFlexConsumption,
         client
@@ -175,7 +178,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         deploymentWarningMessages.length > 0) {
         // if there is a warning message, we want to show the deploy confirmation regardless of the setting
         const deployCommandId = 'azureFunctions.deploy';
-        await showDeployConfirmation(context, node.site, deployCommandId, deploymentWarningMessages,
+        await showDeployConfirmation(context, site, deployCommandId, deploymentWarningMessages,
             eolWarningMessage ? stackUpgradeLearnMoreLink : undefined);
     }
 
@@ -185,8 +188,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
-    if (language === ProjectLanguage.CSharp && !node.site.isLinux || durableStorageType) {
-        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
+    if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
     }
 
     // app settings shouldn't be checked with flex consumption plans
@@ -222,15 +225,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             }
             const deployContext = Object.assign(context, await createActivityContext());
             deployContext.activityChildren = [];
-            await innerDeploy(node.site, deployFsPath, deployContext);
+            await innerDeploy(site, deployFsPath, deployContext);
         }
     );
 
     await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {
-    const client = await node.site.createClient(context);
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, site: ParsedSite, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+    const client = await site.createClient(context);
     const config: SiteConfigResource = {
         use32BitWorkerProcess: false
     };

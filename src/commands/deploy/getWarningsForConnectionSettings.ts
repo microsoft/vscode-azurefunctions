@@ -32,6 +32,7 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
 
         const localConnectionSettings = await getConnectionSettings(localSettings.Values ?? {});
         const remoteConnectionSettings = await getConnectionSettings(options.appSettings?.properties ?? {});
+        await options.node.initSite(context);
 
         if (localConnectionSettings.some(setting => setting.type === 'ManagedIdentity')) {
             if (!options.node.site.rawSite.identity ||

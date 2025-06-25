@@ -17,6 +17,7 @@ import { startStreamingLogs } from '../logstream/startStreamingLogs';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
 export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean): Promise<void> {
+    await node.initSite(context);
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
@@ -37,6 +38,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             postDeployContext.valuesToMask.push(...context.valuesToMask);
             context.telemetry.eventVersion = 2;
+            await node.initSite(context);
 
             if (result === viewOutput) {
                 ext.outputChannel.show();
@@ -77,7 +79,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItem):
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
     const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find(n => n instanceof RemoteFunctionsTreeItem);
     await node.treeDataProvider.refresh(context, functionsNode);
-
+    await node.initSite(context);
     const logOptions: {} = { resourceName: node.site.fullName };
     let hasHttpTriggers: boolean = false;
     const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);

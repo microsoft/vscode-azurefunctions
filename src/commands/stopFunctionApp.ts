@@ -14,6 +14,7 @@ export async function stopFunctionApp(context: IActionContext, node?: SlotTreeIt
         node = await pickFunctionApp(context);
     }
 
+    await node.initSite(context);
     const client: SiteClient = await node.site.createClient(context);
     await node.runWithTemporaryDescription(
         context,
