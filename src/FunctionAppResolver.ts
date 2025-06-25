@@ -1,6 +1,7 @@
 import { type ResourceGraphClient } from "@azure/arm-resourcegraph";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
-import { callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
+import { callWithTelemetryAndErrorHandling, nonNullProp, type IActionContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
@@ -91,13 +92,16 @@ export class FunctionAppResolver implements AppResourceResolver {
             }
 
             const siteModel = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
-            if (nonNullValueAndProp(siteModel, 'kind') === 'functionapp,linux,container,azurecontainerapps') {
-                // need the full site to resolve containerized function apps
+            if (!siteModel || siteModel.kind === 'functionapp,linux,container,azurecontainerapps') {
+                // if the site model is not found or if it's a containerized function app, we need the full site details
                 const client = await createWebSiteClient({ ...context, ...subContext });
-                const fullSite = await client.webApps.get(nonNullValueAndProp(siteModel, 'resourceGroup'), nonNullValueAndProp(siteModel, 'name'));
-                return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
-            }
-            if (siteModel) {
+                const fullSite = await client.webApps.get(getResourceGroupFromId(resource.id), resource.name);
+                if (fullSite.kind === 'functionapp,linux,container,azurecontainerapps') {
+                    return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
+                }
+
+                return new ResolvedFunctionAppResource(subContext, fullSite);
+            } else if (siteModel) {
                 return new ResolvedFunctionAppResource(subContext, undefined, siteModel);
             }
 
