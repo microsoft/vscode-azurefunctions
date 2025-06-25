@@ -11,7 +11,7 @@
     <ItemGroup>
         <PackageReference Include="MicroBuild.Core" Version="0.3.0" PrivateAssets="all" />
         <PackageReference Include="MicroBuild.Core.Sentinel" Version="1.0.0" PrivateAssets="all" />
-        <PackageReference Include="MicroBuild.Plugins.Signing" Version="1.1.741" PrivateAssets="all" />
+        <PackageReference Include="MicroBuild.Plugins.Signing" Version="1.1.1065" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
