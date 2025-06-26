@@ -16,6 +16,7 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
         node = await pickFunctionApp(context);
     }
 
+    await node.initSite(context);
     const siteClient = await node.site.createClient(context);
     const siteConfig: SiteConfig = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, cancellable: true }, async (progress, token) => {
         appservice.reportMessage('Fetching site configuration...', progress, token);

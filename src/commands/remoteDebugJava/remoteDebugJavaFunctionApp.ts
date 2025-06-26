@@ -21,6 +21,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     if (!node) {
         node = await pickFunctionApp(context);
     }
+    await node.initSite(context);
     const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await findFreePort();
     const publishCredential: User = await client.getWebAppPublishCredential();

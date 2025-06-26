@@ -68,10 +68,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            (site: Site) => {
+            async (site: Site) => {
                 const resolved = new ResolvedFunctionAppResource(this.subscription, site);
+                await resolved.initSite(context);
                 if (resolved.site.isFunctionApp) {
-                    return new SlotTreeItem(this, resolved);
+                    return await SlotTreeItem.createSlotTreeItem(this, resolved);
                 }
                 return undefined;
             },
@@ -113,7 +114,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             node = new ContainerTreeItem(subscription, resolved);
         } else {
             const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
-            node = new SlotTreeItem(subscription, resolved);
+            node = await SlotTreeItem.createSlotTreeItem(subscription, resolved);
         }
 
         await ext.rgApi.tree.refresh(context);

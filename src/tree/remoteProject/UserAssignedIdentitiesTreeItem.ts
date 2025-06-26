@@ -38,6 +38,7 @@ export class UserAssignedIdentitiesTreeItem extends AzExtParentTreeItem {
             this._nextLink = undefined;
         }
 
+        await this.parent.initSite(context);
         const myIdentity = this.parent.site.rawSite.identity;
         const identities: Identity[] = [];
         const identityClient = await createManagedServiceIdentityClient([context, this.parent.subscription]);

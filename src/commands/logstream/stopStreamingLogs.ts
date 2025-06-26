@@ -15,6 +15,15 @@ export async function stopStreamingLogs(context: IActionContext, node?: SlotTree
         node = await pickFunctionApp({ ...context, suppressCreatePick: true });
     }
 
-    const site: ParsedSite = isSlotTreeItem(node) ? node.site : node.parent.parent.site;
+    let site: ParsedSite;
+    if (isSlotTreeItem(node)) {
+        // If it's a SlotTreeItem, we need to ensure the site is initialized
+        await node.initSite(context);
+        site = node.site;
+    } else {
+        // If it's a RemoteFunctionTreeItem, we need to get the parent SlotTreeItem
+        await node.parent.parent.initSite(context);
+        site = node.parent.parent.site;
+    }
     await appservice.stopStreamingLogs(site, node.logStreamPath);
 }

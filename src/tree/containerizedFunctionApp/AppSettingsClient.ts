@@ -18,6 +18,7 @@ export class ContainerAppSettingsClientProvider implements AppSettingsClientProv
     }
     public async createClient(context: IActionContext): Promise<IAppSettingsClient> {
         const client = await createWebSiteClient([context, this._subscription]);
+        await this._node.initSite(context);
         return new ContainerAppSettingsClient(this._node.site, client);
     }
 }

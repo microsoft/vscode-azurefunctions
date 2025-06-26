@@ -34,6 +34,7 @@ export async function verifyAppSettings(options: {
 }): Promise<void> {
 
     const { context, node, projectPath, version, language, bools, durableStorageType } = options;
+    await node.initSite(context);
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = options.appSettings;
     if (appSettings.properties) {

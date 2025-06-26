@@ -10,7 +10,8 @@ import { localize } from '../../localize';
 import { type ManagedIdentityTreeItem } from './ManagedIdentityTreeItem';
 
 export type SystemIdentityTreeItemBase = SystemIdentityTreeItem | DisabledIdentityTreeItem;
-export function createSystemIdentityTreeItem(parent: ManagedIdentityTreeItem): SystemIdentityTreeItem | DisabledIdentityTreeItem {
+export async function createSystemIdentityTreeItem(context: IActionContext, parent: ManagedIdentityTreeItem): Promise<SystemIdentityTreeItem | DisabledIdentityTreeItem> {
+    await parent.parent.initSite(context);
     if (!parent.parent.site.rawSite.identity?.type?.includes('SystemAssigned')) {
         return new DisabledIdentityTreeItem(parent);
     } else {

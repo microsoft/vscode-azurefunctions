@@ -37,9 +37,11 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                 throw new Error(localize('failedToFindApp', 'Failed to find function app with id "{0}"', resourceId));
             }
 
-            const client = await slotTreeItem.site.createClient(context);
+            await slotTreeItem.initSite(context);
+            const site = slotTreeItem.site;
+            const client = await site.createClient(context);
             const hostKeys: HostKeys | undefined = await client.listHostKeys();
-            const defaultHostName: string | undefined = slotTreeItem.site.defaultHostName;
+            const defaultHostName: string | undefined = site.defaultHostName;
 
             if (!!hostKeys && hostKeys.masterKey && defaultHostName) {
                 const requestOptions: AzExtRequestPrepareOptions = {
