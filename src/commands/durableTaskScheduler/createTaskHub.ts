@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, type ExecuteActivityContext, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { localize } from '../../localize';
+import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
+import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type Progress } from "vscode";
-import { localize } from '../../localize';
-import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
-import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
 import { createActivityContext } from "../../utils/activityUtils";
 
 interface ICreateTaskHubContext extends IActionContext, ExecuteActivityContext {
@@ -58,13 +58,13 @@ export function createTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         }
 
         const wizardContext: ICreateTaskHubContext =
-        {
-            subscription: scheduler.subscription,
-            resourceGroup: scheduler.resourceGroup,
-            schedulerName: scheduler.name,
-            ...actionContext,
-            ...await createActivityContext()
-        };
+            {
+                subscription: scheduler.subscription,
+                resourceGroup: scheduler.resourceGroup,
+                schedulerName: scheduler.name,
+                ...actionContext,
+                ...await createActivityContext()
+            };
 
         const wizard = new AzureWizard<ICreateTaskHubContext>(
             wizardContext,
