@@ -53,7 +53,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
-        // If the local settings are using the emulator (i.e. localhost), it's fine because it won't match up with any remote resources and the suggestion will end up hidden from the user
+        // If the local settings are using the emulator (i.e. localhost), it's fine because it won't match up with any remote resources and there will be no suggestion for the user
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };
