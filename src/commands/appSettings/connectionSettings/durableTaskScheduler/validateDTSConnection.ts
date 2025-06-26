@@ -22,7 +22,7 @@ type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { 
 type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
 
 /**
- * A pre-flight deployment operation that ensures that:
+ * A pre-flight operation that ensures that:
  *
  * a) A remote DTS connection already exists for the given function app or
  *
