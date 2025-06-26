@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
-import { localSettingsFileName, type ConnectionKeyValues } from '../constants';
+import { localSettingsFileName, type ConnectionKey } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 
@@ -19,7 +19,7 @@ export interface ILocalSettingsJson {
     ConnectionStrings?: { [key: string]: string };
 }
 
-export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
+export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKey, projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[connectionKey]) {
         return process.env[connectionKey];

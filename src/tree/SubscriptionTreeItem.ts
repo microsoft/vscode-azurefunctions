@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
+import { type ResourceGroup } from '@azure/arm-resources';
 import { SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, parseError, type AzExtTreeItem, type IActionContext, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { type WorkspaceFolder } from 'vscode';
@@ -24,6 +25,7 @@ import { ResolvedContainerizedFunctionAppResource } from './containerizedFunctio
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
+    resourceGroup?: ResourceGroup;
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
     dockerfilePath?: string;

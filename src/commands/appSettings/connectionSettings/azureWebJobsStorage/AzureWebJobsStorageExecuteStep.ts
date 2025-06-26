@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, type ConnectionKeyValues } from '../../../../constants';
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getStorageConnectionString } from '../getLocalConnectionSetting';
 import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 230;
-    public debugDeploySetting: ConnectionKeyValues = ConnectionKey.Storage;
+    public debugDeploySetting: ConnectionKey = ConnectionKey.Storage;
 
     public async execute(context: T): Promise<void> {
         let value: string;

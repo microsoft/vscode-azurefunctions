@@ -13,10 +13,10 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
     public debugDeploySetting: ConnectionKey = ConnectionKey.DTSHub;
 
     public async execute(context: T): Promise<void> {
-        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSHubName'));
+        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSHubNameConnectionSetting'));
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newDTSHubName;
+        return !!context.newDTSHubNameConnectionSetting;
     }
 }

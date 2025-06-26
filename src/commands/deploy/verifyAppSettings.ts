@@ -9,7 +9,7 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ConnectionKeyValues, type DurableBackendValues, type ProjectLanguage } from '../../constants';
+import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -29,7 +29,7 @@ export async function verifyAppSettings(options: {
     language: ProjectLanguage,
     languageModel: number | undefined,
     bools: VerifyAppSettingBooleans,
-    durableStorageType: DurableBackendValues | undefined,
+    durableStorageType: DurableBackend | undefined,
     appSettings: StringDictionary,
 }): Promise<void> {
 
@@ -67,12 +67,17 @@ export async function verifyAppSettings(options: {
     }
 }
 
-export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: DurableBackendValues | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: DurableBackend | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
     let didUpdate: boolean = false;
     switch (durableStorageType) {
         case DurableBackend.Netherite:
             const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs]);
             didUpdate ||= updatedNetheriteConnection;
+            break;
+        case DurableBackend.DTS:
+            const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTS, context[ConnectionKey.DTS]);
+            const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTSHub, context[ConnectionKey.DTSHub]);
+            didUpdate ||= updatedDTSConnection || updatedDTSHub;
             break;
         case DurableBackend.SQL:
             const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL]);
@@ -88,8 +93,8 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
     return didUpdate;
 }
 
-export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKeyValues, newValue: string | undefined): boolean {
-    if (newValue) {
+export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKey, newValue: string | undefined): boolean {
+    if (newValue && newValue !== remoteProperties[propertyName]) {
         remoteProperties[propertyName] = newValue;
         context.telemetry.properties[`update${propertyName}`] = 'true';
         return true;
