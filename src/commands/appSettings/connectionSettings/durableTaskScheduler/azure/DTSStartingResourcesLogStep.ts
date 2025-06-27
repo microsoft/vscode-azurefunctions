@@ -31,6 +31,18 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
             ext.outputChannel.appendLog(localize('usingResourceGroup', 'Using resource group "{0}".', context.resourceGroup.name));
         }
 
+        if (context.site) {
+            prependOrInsertAfterLastInfoChild(context,
+                new ActivityChildItem({
+                    label: localize('useFunctionApp', 'Use function app "{0}"', context.site.fullName),
+                    contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
+                    activityType: ActivityChildType.Info,
+                    iconPath: activityInfoIcon,
+                }) as ActivityInfoChild,
+            );
+            ext.outputChannel.appendLog(localize('usingFunctionApp', 'Using function app "{0}".', context.site.fullName));
+        }
+
         if (context.dts) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
@@ -53,18 +65,6 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
                 }) as ActivityInfoChild,
             );
             ext.outputChannel.appendLog(localize('usingDTSHub', 'Using durable task hub "{0}".', context.dtsHub.name));
-        }
-
-        if (context.managedIdentity) {
-            prependOrInsertAfterLastInfoChild(context,
-                new ActivityChildItem({
-                    label: localize('useManagedIdentity', 'Use managed identity "{0}"', context.managedIdentity.name),
-                    contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
-                    activityType: ActivityChildType.Info,
-                    iconPath: activityInfoIcon,
-                }) as ActivityInfoChild,
-            );
-            ext.outputChannel.appendLog(localize('usingManagedIdentity', 'Using managed identity "{0}".', context.managedIdentity.name));
         }
 
         ext.outputChannel.appendLog(localize('prioritizingSiteLocation', 'Prioritizing site location: "{0}".', context.site?.location));

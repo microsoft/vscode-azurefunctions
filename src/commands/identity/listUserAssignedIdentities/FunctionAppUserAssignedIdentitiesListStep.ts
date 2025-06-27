@@ -75,7 +75,7 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
         if (this.hasIdentityWithTargetRole) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
-                    label: localize('useIdentityWithRole', 'Found identity "{0}" with role "{1}"', context.managedIdentity?.name, this.targetRole.roleDefinitionName),
+                    label: localize('useIdentityWithRole', 'Use identity "{0}" with role "{1}"', context.managedIdentity?.name, this.targetRole.roleDefinitionName),
                     contextValue: createContextValue(['functionAppUserAssignedIdentitiesListStepItem', activityInfoContext]),
                     activityType: ActivityChildType.Info,
                     iconPath: activityInfoIcon
