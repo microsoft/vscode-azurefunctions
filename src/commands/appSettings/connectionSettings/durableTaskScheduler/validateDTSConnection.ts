@@ -64,7 +64,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connection'),
+        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connections'),
         promptSteps: [
             new ResourceGroupListStep(),
             new DTSConnectionListStep(availableDeployConnectionTypes),
