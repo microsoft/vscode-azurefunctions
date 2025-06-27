@@ -7,9 +7,10 @@ import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../extensionVariables";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 
-export async function createActivityContext(): Promise<ExecuteActivityContext> {
+export async function createActivityContext(options?: { withChildren?: boolean }): Promise<ExecuteActivityContext> {
     return {
         registerActivity: async (activity) => ext.rgApi.registerActivity(activity),
         suppressNotification: await getWorkspaceSetting('suppressActivityNotifications', undefined, 'azureResourceGroups'),
+        activityChildren: options?.withChildren ? [] : undefined,
     };
 }
