@@ -143,6 +143,10 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         return this.dataModel.name;
     }
 
+    public get id(): string {
+        return this.dataModel.id;
+    }
+
     public get description(): string | undefined {
         let state = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
         if (this._isFlex && !state) {
