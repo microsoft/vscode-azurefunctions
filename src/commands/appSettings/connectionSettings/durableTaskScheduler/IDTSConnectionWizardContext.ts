@@ -12,12 +12,10 @@ import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
 export interface IDTSConnectionWizardContext extends IActionContext, ISetConnectionSettingContext {
-    // Connection Types
     azureWebJobsStorageType?: StorageConnectionType;
     dtsConnectionType?: ConnectionType;
 
-    newDTSConnectionSetting?: string;
-    newDTSHubNameConnectionSetting?: string;
+    // Refer to `IDTSConnectionSetSettingsContext` for individual DTS settings
 }
 
 export interface IDTSAzureConnectionWizardContext extends IFunctionAppUserAssignedIdentitiesContext, IDTSConnectionWizardContext, Partial<ExecuteActivityContext> {

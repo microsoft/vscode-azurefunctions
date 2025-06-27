@@ -8,19 +8,19 @@ import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azurea
 import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
-import { CodeAction, ConnectionKey, ConnectionType } from "../../../../constants";
+import { CodeAction, ConnectionType } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
-import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { localize } from "../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { createActivityContext } from "../../../../utils/activityUtils";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
+import { type IDTSConnectionSetSettingsContext } from "../ISetConnectionSettingContext";
 import { DTSConnectionListStep } from "./DTSConnectionListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
 import { DTSStartingResourcesLogStep } from "./azure/DTSStartingResourcesLogStep";
+import { getDTSHostConnectionKeys, getDTSLocalSettingsValues } from "./getDTSLocalProjectConnections";
 
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
-type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
 
 /**
  * A pre-flight operation that ensures that:
@@ -29,21 +29,21 @@ type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: st
  *
  * b) That a new DTS resource and hub is created and ready for connection to the function app
  */
-export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
+export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<IDTSConnectionSetSettingsContext | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
-    const remoteDTSConnection: string | undefined = app?.properties?.[ConnectionKey.DTS];
-    const remoteDTSHubName: string | undefined = app?.properties?.[ConnectionKey.DTSHub];
+    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(Object.assign(context, { site })) ?? {};
+    const remoteDTSConnection: string | undefined = dtsConnectionKey ? app?.properties?.[dtsConnectionKey] : undefined;
+    const remoteDTSHubName: string | undefined = dtsHubConnectionKey ? app?.properties?.[dtsHubConnectionKey] : undefined;
 
     if (remoteDTSConnection && remoteDTSHubName) {
         return undefined;
     }
 
-    const localDTSConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.DTS, projectPath);
-    const localDTSHubName: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.DTSHub, projectPath);
+    const { dtsConnectionValue: localDTSConnection, dtsHubConnectionValue: localDTSHubName } = await getDTSLocalSettingsValues(context, { dtsConnectionKey, dtsHubConnectionKey }) ?? {};
     const localDTSEndpoint: string | undefined = tryGetDTSEndpoint(localDTSConnection);
-
     const remoteDTSEndpoint: string | undefined = tryGetDTSEndpoint(remoteDTSConnection);
+
     const availableDeployConnectionTypes = new Set([ConnectionType.Azure]);
 
     const wizardContext: IDTSAzureConnectionWizardContext = {
@@ -54,6 +54,8 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
+        newDTSConnectionSettingKey: dtsConnectionKey,
+        newDTSHubConnectionSettingKey: dtsHubConnectionKey,
         // If the local settings are using the emulator (i.e. localhost), it's fine because it won't match up with any remote resources and there will be no suggestion for the user
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
@@ -77,8 +79,10 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
     await wizard.execute();
 
     return {
-        [ConnectionKey.DTS]: wizardContext[ConnectionKey.DTS],
-        [ConnectionKey.DTSHub]: wizardContext[ConnectionKey.DTSHub],
+        newDTSConnectionSettingKey: wizardContext.newDTSConnectionSettingKey,
+        newDTSConnectionSettingValue: wizardContext.newDTSConnectionSettingValue,
+        newDTSHubConnectionSettingKey: wizardContext.newDTSHubConnectionSettingKey,
+        newDTSHubConnectionSettingValue: wizardContext.newDTSHubConnectionSettingValue,
     };
 }
 

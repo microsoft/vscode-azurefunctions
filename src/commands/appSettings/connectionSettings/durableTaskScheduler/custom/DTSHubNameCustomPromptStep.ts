@@ -3,24 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, validationUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ConnectionKey, ConnectionType, localSettingsFileName } from '../../../../../constants';
+import { ConnectionType, localSettingsFileName } from '../../../../../constants';
 import { getLocalSettingsJson } from '../../../../../funcConfig/local.settings';
 import { localize } from '../../../../../localize';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSHubNameCustomPromptStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
-        context.newDTSHubNameConnectionSetting = (await context.ui.showInputBox({
+        context.newDTSHubConnectionSettingValue = (await context.ui.showInputBox({
             prompt: localize('customDTSConnectionPrompt', 'Provide the custom DTS hub name.'),
-            value: await getDTSHubName(context, context.projectPath),
+            value: await this.getDTSHubName(context, context.projectPath),
             validateInput: (value: string) => this.validateInput(value)
         })).trim();
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newDTSHubNameConnectionSetting && context.dtsConnectionType === ConnectionType.Custom;
+        return !context.newDTSHubConnectionSettingValue && context.dtsConnectionType === ConnectionType.Custom;
     }
 
     private validateInput(name: string): string | undefined {
@@ -31,9 +31,11 @@ export class DTSHubNameCustomPromptStep<T extends IDTSConnectionWizardContext> e
         }
         return undefined;
     }
+
+    private async getDTSHubName(context: T, projectPath: string): Promise<string | undefined> {
+        const localSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+        return context.newDTSHubConnectionSettingKey ? localSettingsJson.Values?.[context.newDTSHubConnectionSettingKey] : undefined;
+    }
 }
 
-async function getDTSHubName(context: IActionContext, projectPath: string): Promise<string | undefined> {
-    const localSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-    return localSettingsJson.Values?.[ConnectionKey.DTSHub];
-}
+

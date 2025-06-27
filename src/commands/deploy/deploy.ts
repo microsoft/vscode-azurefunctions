@@ -9,7 +9,7 @@ import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionKey, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
+import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -153,9 +153,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     if (durableStorageType === DurableBackend.DTS) {
-        const dtsConnections = await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath);
-        context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
-        context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
+        Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
     }
     if (shouldValidateEventHubs) {
         await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });

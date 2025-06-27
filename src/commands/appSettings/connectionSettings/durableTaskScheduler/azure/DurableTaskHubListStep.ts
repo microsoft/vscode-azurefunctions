@@ -26,7 +26,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
         })).data;
 
         if (context.dtsHub) {
-            context.newDTSHubNameConnectionSetting = context.dtsHub.name;
+            context.newDTSHubConnectionSettingValue = context.dtsHub.name;
             context.valuesToMask.push(context.dtsHub.name);
         }
     }

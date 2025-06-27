@@ -4,17 +4,39 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type CodeAction, type ConnectionKey } from "../../../constants";
+import { type CodeAction } from "../../../constants";
 import { type IConnectionTypesContext } from "./IConnectionTypesContext";
 
-export interface ISetConnectionSettingContext extends IActionContext, IConnectionTypesContext {
+export interface ISetConnectionSettingContext extends IActionContext, IConnectionTypesContext, IDurableStorageProvidersSetSettingsContext {
     action: CodeAction;
     projectPath: string;
+}
 
-    // Remote connections for deploy
-    [ConnectionKey.Storage]?: string;
-    [ConnectionKey.EventHubs]?: string;
-    [ConnectionKey.DTS]?: string;
-    [ConnectionKey.DTSHub]?: string;
-    [ConnectionKey.SQL]?: string;
+// -- Durable Storage Provider contexts --
+
+type IDurableStorageProvidersSetSettingsContext = IStorageSetSettingsContext & IEventHubsSetSettingsContext & IDTSConnectionSetSettingsContext & ISqlConnectionSetSettingsContext;
+
+export interface IStorageSetSettingsContext {
+    newStorageConnectionSettingKey?: string;
+    newStorageConnectionSettingValue?: string;
+}
+
+export interface IEventHubsSetSettingsContext {
+    newStorageConnectionSettingKey?: string;
+    newStorageConnectionSettingValue?: string;
+}
+
+export interface IDTSConnectionSetSettingsContext {
+    // DTS
+    newDTSConnectionSettingKey?: string;
+    newDTSConnectionSettingValue?: string;
+
+    // DTS hub
+    newDTSHubConnectionSettingKey?: string;
+    newDTSHubConnectionSettingValue?: string;
+}
+
+export interface ISqlConnectionSetSettingsContext {
+    newSQLStorageConnectionSettingKey?: string;
+    newSQLStorageConnectionSettingValue?: string;
 }

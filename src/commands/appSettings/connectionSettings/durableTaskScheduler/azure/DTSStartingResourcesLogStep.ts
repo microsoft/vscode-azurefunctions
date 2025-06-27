@@ -67,6 +67,8 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
             ext.outputChannel.appendLog(localize('usingDTSHub', 'Using durable task hub "{0}".', context.dtsHub.name));
         }
 
+        // Todo: Add output logs describing which host.json keys we're reading from
+
         ext.outputChannel.appendLog(localize('prioritizingSiteLocation', 'Prioritizing site location: "{0}".', context.site?.location));
         this.hasLogged = true;
     }

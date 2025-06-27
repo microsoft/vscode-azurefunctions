@@ -30,11 +30,11 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
             localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
         );
 
-        context.newDTSConnectionSetting = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
-        context.newDTSHubNameConnectionSetting = 'default';
+        context.newDTSConnectionSettingValue = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
+        context.newDTSHubConnectionSettingValue = 'default';
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.newDTSConnectionSetting && context.dtsConnectionType === ConnectionType.Emulator;
+        return !context.newDTSConnectionSettingValue && context.dtsConnectionType === ConnectionType.Emulator;
     }
 }

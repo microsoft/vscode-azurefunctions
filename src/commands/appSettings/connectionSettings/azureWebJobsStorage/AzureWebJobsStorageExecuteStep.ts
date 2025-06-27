@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
-import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getStorageConnectionString } from '../getLocalConnectionSetting';
+import { setConnectionSetting } from '../setConnectionSetting';
 import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
-export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingStepBase<T> {
+export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
     public debugDeploySetting: ConnectionKey = ConnectionKey.Storage;
 
@@ -22,7 +23,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
             value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;
         }
 
-        await this.setConnectionSetting(context, value);
+        await setConnectionSetting(context, ConnectionKey.Storage, value);
     }
 
     public shouldExecute(context: T): boolean {

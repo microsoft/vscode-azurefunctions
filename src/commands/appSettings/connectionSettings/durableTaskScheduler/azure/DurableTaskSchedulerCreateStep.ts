@@ -44,7 +44,7 @@ export class DurableTaskSchedulerCreateStep<T extends IDTSAzureConnectionWizardC
         }
 
         context.dts = response.scheduler;
-        context.newDTSConnectionSetting = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
+        context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
     }
 
     public shouldExecute(context: T): boolean {

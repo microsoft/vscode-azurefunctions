@@ -30,12 +30,12 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         })).data;
 
         if (context.dts) {
-            context.newDTSConnectionSetting = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
+            context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
             context.valuesToMask.push(context.dts.name);
-            context.valuesToMask.push(context.newDTSConnectionSetting);
+            context.valuesToMask.push(context.newDTSConnectionSettingValue);
         }
 
-        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.newDTSConnectionSetting === context.suggestedDTSEndpointLocalSettings) : undefined;
+        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.newDTSConnectionSettingValue === context.suggestedDTSEndpointLocalSettings) : undefined;
     }
 
     public shouldPrompt(context: T): boolean {

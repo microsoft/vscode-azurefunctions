@@ -9,6 +9,8 @@ import { localize } from "../../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskHubResource, type DurableTaskSchedulerClient } from "../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type IDTSAzureConnectionWizardContext } from "../IDTSConnectionWizardContext";
 
+const defaultHubName = 'default';
+
 export class DurableTaskHubNameStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private readonly _schedulerClient: DurableTaskSchedulerClient;
 
@@ -20,14 +22,14 @@ export class DurableTaskHubNameStep<T extends IDTSAzureConnectionWizardContext> 
     public async prompt(context: T): Promise<void> {
         context.newDTSHubName = (await context.ui.showInputBox({
             prompt: localize('taskSchedulerName', 'Enter a name for the durable task hub'),
-            value: context.suggestedDTSHubNameLocalSettings,
+            value: context.suggestedDTSHubNameLocalSettings ?? defaultHubName,
             validateInput: this.validateInput,
             asyncValidationTask: (name: string) => this.validateNameAvailable(context, name),
         })).trim();
 
         context.telemetry.properties.usedDTSDefaultHub = 'true';
 
-        if (context.newDTSHubName && context.newDTSHubName !== 'default') {
+        if (context.newDTSHubName && context.newDTSHubName !== defaultHubName) {
             context.telemetry.properties.usedDTSDefaultHub = 'false';
             context.valuesToMask.push(context.newDTSHubName);
         }
