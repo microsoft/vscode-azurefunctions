@@ -95,7 +95,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             deployment: {
                 storage: {
                     type: 'blobContainer',
-                    value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)}-${randomUtils.getRandomHexString(7)}`,
+                    value: `${context.storageAccount?.primaryEndpoints?.blob}app-package-${context.newSiteName?.substring(0, 32)?.toLowerCase()}-${randomUtils.getRandomHexString(7)}`,
                     authentication: createDeploymentStorageAuthentication(context)
                 }
             },
