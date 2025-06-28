@@ -22,8 +22,8 @@ export interface IStorageSetSettingsContext {
 }
 
 export interface IEventHubsSetSettingsContext {
-    newStorageConnectionSettingKey?: string;
-    newStorageConnectionSettingValue?: string;
+    newEventHubsConnectionSettingKey?: string;
+    newEventHubsConnectionSettingValue?: string;
 }
 
 export interface IDTSConnectionSetSettingsContext {

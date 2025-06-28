@@ -7,6 +7,7 @@ import { CodeAction } from "../../../constants";
 import { MismatchBehavior, setLocalAppSetting } from "../../../funcConfig/local.settings";
 import { type ISetConnectionSettingContext } from "./ISetConnectionSettingContext";
 
+// Todo: Add better comment about what this does
 export async function setConnectionSetting(context: ISetConnectionSettingContext, key: string, value: string): Promise<void> {
     if (context.action === CodeAction.Deploy) {
         context[key] = value;

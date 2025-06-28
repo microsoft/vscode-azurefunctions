@@ -12,8 +12,8 @@ import { NetheriteConfigureHostStep } from "../../../createFunction/durableSteps
 import { NetheriteEventHubNameStep } from "../../../createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
 import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
-import { EventHubsConnectionExecuteStep } from "./EventHubsConnectionExecuteStep";
-import { EventHubsConnectionPromptStep } from "./EventHubsConnectionPromptStep";
+import { EventHubsConnectionListStep } from "./EventHubsConnectionListStep";
+import { EventHubsSetSettingStep } from "./EventHubsSetSettingStep";
 import { type IEventHubsConnectionWizardContext } from "./IEventHubsConnectionWizardContext";
 
 // Supports validation on both 'debug' and 'deploy'
@@ -40,8 +40,8 @@ export async function validateEventHubsConnection(context: Omit<ISetConnectionSe
     const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
     if (!eventHubsConnection || localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection)) {
-        promptSteps.push(new EventHubsConnectionPromptStep(options));
-        executeSteps.push(new EventHubsConnectionExecuteStep());
+        promptSteps.push(new EventHubsConnectionListStep(options));
+        executeSteps.push(new EventHubsSetSettingStep());
     }
 
     if (!eventHubName) {

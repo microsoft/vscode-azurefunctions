@@ -32,7 +32,7 @@ type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { 
 export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<IDTSConnectionSetSettingsContext | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
-    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(Object.assign(context, { site })) ?? {};
+    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(Object.assign(context, { projectPath })) ?? {};
     const remoteDTSConnection: string | undefined = dtsConnectionKey ? app?.properties?.[dtsConnectionKey] : undefined;
     const remoteDTSHubName: string | undefined = dtsHubConnectionKey ? app?.properties?.[dtsHubConnectionKey] : undefined;
 

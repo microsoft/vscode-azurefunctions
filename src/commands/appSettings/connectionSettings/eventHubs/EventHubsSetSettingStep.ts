@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionString } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
-import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
+import { setConnectionSetting } from '../setConnectionSetting';
 import { type IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
-export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
+export class EventHubsSetSettingStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
-    public debugDeploySetting: ConnectionKey = ConnectionKey.EventHubs;
 
     public async execute(context: T): Promise<void> {
         let value: string;
@@ -27,7 +26,8 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
             value = (await getEventHubsConnectionString(<T & ISubscriptionContext>context)).connectionString;
         }
 
-        await this.setConnectionSetting(context, value);
+        // Todo: set
+        await setConnectionSetting(context, value);
     }
 
     public shouldExecute(context: T): boolean {

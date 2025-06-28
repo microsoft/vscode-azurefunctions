@@ -10,7 +10,7 @@ import { getStorageConnectionString } from '../getLocalConnectionSetting';
 import { setConnectionSetting } from '../setConnectionSetting';
 import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
-export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
+export class AzureWebJobsStorageSetSettingStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
     public debugDeploySetting: ConnectionKey = ConnectionKey.Storage;
 

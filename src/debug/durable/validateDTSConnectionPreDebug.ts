@@ -5,9 +5,9 @@
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { DTSConnectionListStep } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
+import { getDTSHostConnectionKeys, getDTSLocalSettingsValues } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
 import { type IDTSConnectionWizardContext } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
-import { CodeAction, ConnectionKey, ConnectionType } from "../../constants";
-import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
+import { CodeAction, ConnectionType } from "../../constants";
 import { localize } from "../../localize";
 import { requestUtils } from "../../utils/requestUtils";
 
@@ -15,7 +15,10 @@ import { requestUtils } from "../../utils/requestUtils";
 let useDTSEmulator: boolean;
 
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
-    const dtsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.DTS, projectPath);
+    const projectPathContext = Object.assign(context, { projectPath });
+    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(projectPathContext) ?? {};
+    const { dtsConnectionValue: dtsConnection } = await getDTSLocalSettingsValues(projectPathContext, { dtsConnectionKey }) ?? {};
+
     if (dtsConnection && await isAliveConnection(context, dtsConnection)) {
         return;
     }
@@ -26,6 +29,8 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
         projectPath,
         action: CodeAction.Debug,
         dtsConnectionType: useDTSEmulator ? ConnectionType.Emulator : undefined,
+        newDTSConnectionSettingKey: dtsConnectionKey,
+        newDTSHubConnectionSettingKey: dtsHubConnectionKey,
     });
 
     const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {

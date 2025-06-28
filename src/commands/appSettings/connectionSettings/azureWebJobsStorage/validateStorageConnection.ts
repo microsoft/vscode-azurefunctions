@@ -8,8 +8,8 @@ import { CodeAction, ConnectionKey } from "../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
-import { AzureWebJobsStorageExecuteStep } from "./AzureWebJobsStorageExecuteStep";
 import { AzureWebJobsStoragePromptStep } from "./AzureWebJobsStoragePromptStep";
+import { AzureWebJobsStorageSetSettingStep } from "./AzureWebJobsStorageSetSettingStep";
 import { type IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardContext";
 
 export async function validateStorageConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
@@ -28,7 +28,7 @@ export async function validateStorageConnection(context: Omit<ISetConnectionSett
     const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
     const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new AzureWebJobsStoragePromptStep(options)],
-        executeSteps: [new AzureWebJobsStorageExecuteStep()]
+        executeSteps: [new AzureWebJobsStorageSetSettingStep()]
     });
     await wizard.prompt();
     await wizard.execute();
