@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { hostFileName } from '../../../../constants';
+import { CodeAction, hostFileName } from '../../../../constants';
 import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
-import { setConnectionSetting } from '../setConnectionSetting';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
 
 export class EventHubSetSettingStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -24,11 +24,15 @@ export class EventHubSetSettingStep<T extends INetheriteConnectionWizardContext>
             await this.configureHostJson(context, hubName);
         } else {
             // Target local or app settings
-            await setConnectionSetting(
-                context,
-                context.newEventHubConnectionSettingKey,
-                hubName,
-            );
+            if (context.action === CodeAction.Debug) {
+                await setLocalSetting(
+                    context,
+                    context.newEventHubConnectionSettingKey,
+                    hubName,
+                );
+            } else {
+                // No further action required
+            }
         }
 
         context.valuesToMask.push(context.newEventHubConnectionSettingValue as string);

@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { hostFileName } from '../../../../constants';
+import { CodeAction, hostFileName } from '../../../../constants';
 import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
-import { setConnectionSetting } from '../setConnectionSetting';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
 export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -27,7 +27,15 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
             context.newDTSHubConnectionSettingKey = defaultHubKey;
         }
 
-        await setConnectionSetting(context, nonNullProp(context, 'newDTSHubConnectionSettingKey'), nonNullProp(context, 'newDTSHubConnectionSettingValue'));
+        if (context.action === CodeAction.Debug) {
+            await setLocalSetting(
+                context,
+                nonNullProp(context, 'newDTSHubConnectionSettingKey'),
+                nonNullProp(context, 'newDTSHubConnectionSettingValue'),
+            );
+        } else {
+            // No further action required
+        }
     }
 
     public shouldExecute(context: T): boolean {

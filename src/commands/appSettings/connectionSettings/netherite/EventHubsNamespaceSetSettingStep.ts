@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { hostFileName } from '../../../../constants';
+import { CodeAction, hostFileName } from '../../../../constants';
 import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
-import { setConnectionSetting } from '../setConnectionSetting';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
 
 export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -22,11 +22,15 @@ export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWiza
             context.newEventHubsNamespaceConnectionSettingKey = defaultEventHubsKey;
         }
 
-        await setConnectionSetting(
-            context,
-            nonNullProp(context, 'newEventHubsNamespaceConnectionSettingKey'),
-            nonNullProp(context, 'newEventHubsNamespaceConnectionSettingValue'),
-        );
+        if (context.action === CodeAction.Debug) {
+            await setLocalSetting(
+                context,
+                nonNullProp(context, 'newEventHubsNamespaceConnectionSettingKey'),
+                nonNullProp(context, 'newEventHubsNamespaceConnectionSettingValue'),
+            );
+        } else {
+            // No further action required
+        }
 
         context.valuesToMask.push(context.newDTSConnectionSettingValue as string);
     }

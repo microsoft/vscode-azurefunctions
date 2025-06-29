@@ -5,11 +5,11 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { hostFileName } from '../../../../constants';
+import { CodeAction, hostFileName } from '../../../../constants';
 import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
-import { setConnectionSetting } from '../setConnectionSetting';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
 export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -34,7 +34,11 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext> 
             newDTSConnectionSettingValue = newDTSConnectionSettingValue.replace('<ClientID>', (context as unknown as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? '');
         }
 
-        await setConnectionSetting(context, newDTSConnectionSettingKey, newDTSConnectionSettingValue);
+        if (context.action === CodeAction.Debug) {
+            await setLocalSetting(context, newDTSConnectionSettingKey, newDTSConnectionSettingValue);
+        } else {
+            // No further action required
+        }
 
         context.newDTSConnectionSettingValue = newDTSConnectionSettingValue;
         context.valuesToMask.push(context.newDTSConnectionSettingValue);
