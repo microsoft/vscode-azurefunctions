@@ -5,18 +5,19 @@
 
 import { KnownAccessRights, type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, nonNullProp, nonNullValue, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
-import { ext } from '../../../../extensionVariables';
-import { localize } from '../../../../localize';
-import { createEventHubClient } from '../../../../utils/azureClients';
-import { type IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { ext } from '../../../../../extensionVariables';
+import { localize } from '../../../../../localize';
+import { createEventHubClient } from '../../../../../utils/azureClients';
+import { type INetheriteAzureConnectionWizardContext } from '../INetheriteConnectionWizardContext';
+import { getEventHubsConnectionString } from './getEventHubsConnectionString';
 
-export class EventHubsNamespaceAuthRuleCreateStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 250;
+export class EventHubsNamespaceAuthRuleCreateStep<T extends INetheriteAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+    public priority: number = 200;
 
     public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
+        const client: EventHubManagementClient = await createEventHubClient(context);
         const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
         const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
         const authRuleName: string = nonNullProp(context, 'newAuthRuleName');
@@ -27,6 +28,11 @@ export class EventHubsNamespaceAuthRuleCreateStep<T extends IEventHubsConnection
         progress.report({ message: creating });
 
         context.authRule = await client.namespaces.createOrUpdateAuthorizationRule(rgName, namespaceName, authRuleName, defaultParams);
+        context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsConnectionString(
+            context,
+            nonNullProp(context, 'eventHubsNamespace'),
+            context.authRule,
+        );
     }
 
     public shouldExecute(context: T): boolean {

@@ -22,16 +22,20 @@ export interface IStorageSetSettingsContext {
 }
 
 export interface IEventHubsSetSettingsContext {
-    newEventHubsConnectionSettingKey?: string;
-    newEventHubsConnectionSettingValue?: string;
+    newEventHubsNamespaceConnectionSettingKey?: string;
+    newEventHubsNamespaceConnectionSettingValue?: string;
+
+    /**
+     * Explicitly `undefined` when the `host.json` sets this value for us (meaning no corresponding app or local settings to worry about)
+     */
+    newEventHubConnectionSettingKey?: string | undefined;
+    newEventHubConnectionSettingValue?: string;
 }
 
 export interface IDTSConnectionSetSettingsContext {
-    // DTS
     newDTSConnectionSettingKey?: string;
     newDTSConnectionSettingValue?: string;
 
-    // DTS hub
     newDTSHubConnectionSettingKey?: string;
     newDTSHubConnectionSettingValue?: string;
 }

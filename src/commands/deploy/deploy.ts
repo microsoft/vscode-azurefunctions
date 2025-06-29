@@ -9,7 +9,7 @@ import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
+import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -25,7 +25,7 @@ import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateDTSConnection } from '../appSettings/connectionSettings/durableTaskScheduler/validateDTSConnection';
-import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
+import { validateNetheriteConnection } from '../appSettings/connectionSettings/netherite/validateNetheriteConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
@@ -33,7 +33,6 @@ import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
-import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
@@ -149,17 +148,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
-    const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
-
-    // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
-    if (durableStorageType === DurableBackend.DTS) {
-        Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
-    }
-    if (shouldValidateEventHubs) {
-        await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
-    }
-    if (shouldValidateSqlDb) {
-        await validateSqlDbConnection(context, context.projectPath);
+    switch (durableStorageType) {
+        case DurableBackend.DTS:
+            Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
+            break;
+        case DurableBackend.Netherite:
+            Object.assign(context, await validateNetheriteConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
+            break;
+        case DurableBackend.SQL:
+            await validateSqlDbConnection(context, context.projectPath);
+            break;
+        default:
     }
 
     const appSettings: StringDictionary = await client.listApplicationSettings();
@@ -205,6 +204,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     // app settings shouldn't be checked with flex consumption plans
+    // Todo: Does flex consumption conflict with Durable Projects?
     if (isZipDeploy && !isFlexConsumption) {
         await verifyAppSettings({
             context,

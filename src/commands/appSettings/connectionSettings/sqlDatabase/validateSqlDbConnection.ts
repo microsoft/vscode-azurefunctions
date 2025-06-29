@@ -9,7 +9,7 @@ import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.s
 import { SqlDatabaseListStep } from "../../../createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
-import { type IEventHubsConnectionWizardContext } from "../eventHubs/IEventHubsConnectionWizardContext";
+import { type INetheriteConnectionWizardContext } from "../netherite/INetheriteConnectionWizardContext";
 import { type ISqlDatabaseConnectionWizardContext } from "./ISqlDatabaseConnectionWizardContext";
 import { SqlDatabaseConnectionExecuteStep } from "./SqlDatabaseConnectionExecuteStep";
 import { SqlDatabaseConnectionPromptStep } from "./SqlDatabaseConnectionPromptStep";
@@ -28,7 +28,7 @@ export async function validateSqlDbConnection(context: Omit<ISetConnectionSettin
     }
 
     const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
-    const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard: AzureWizard<INetheriteConnectionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new SqlDatabaseConnectionPromptStep(options), new SqlDatabaseListStep()],
         executeSteps: [new SqlDatabaseConnectionExecuteStep()]
     });

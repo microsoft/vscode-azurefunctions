@@ -3,17 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { KnownAccessRights, type AccessKeys, type AuthorizationRule, type EventHubManagementClient } from "@azure/arm-eventhub";
 import { type StorageAccount, type StorageAccountListKeysResult, type StorageManagementClient } from "@azure/arm-storage";
-import { getResourceGroupFromId, uiUtils, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
-import { nonNullProp, nonNullValue, randomUtils, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { localSettingsFileName, localStorageEmulatorConnectionString } from "../../../constants";
-import { defaultDescription } from "../../../constants-nls";
-import { ext } from "../../../extensionVariables";
+import { getResourceGroupFromId, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
+import { nonNullProp, nonNullValue, randomUtils } from "@microsoft/vscode-azext-utils";
+import { localStorageEmulatorConnectionString } from "../../../constants";
 import { localize } from "../../../localize";
-import { createEventHubClient, createStorageClient } from "../../../utils/azureClients";
-import { createAndGetAuthRuleName } from "../../createFunction/durableSteps/netherite/createAndGetAuthRuleName";
-import { type IEventHubsConnectionWizardContext } from "./eventHubs/IEventHubsConnectionWizardContext";
+import { createStorageClient } from "../../../utils/azureClients";
 import { type ISqlDatabaseConnectionWizardContext } from "./sqlDatabase/ISqlDatabaseConnectionWizardContext";
 
 export interface IResourceResult {
@@ -45,43 +40,6 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
     return {
         name,
         connectionString: `DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key};EndpointSuffix=${endpointSuffix}`
-    };
-}
-
-export async function getEventHubsConnectionString(context: IEventHubsConnectionWizardContext & ISubscriptionContext): Promise<IResourceResult> {
-    const client: EventHubManagementClient = await createEventHubClient(context);
-    const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
-    const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
-
-    const authRulesIterable = client.namespaces.listAuthorizationRules(rgName, namespaceName);
-    const authRules: AuthorizationRule[] = await uiUtils.listAllIterator(authRulesIterable);
-    const manageAccessRules: AuthorizationRule[] = authRules.filter(authRule => authRule.rights?.includes(KnownAccessRights.Manage));
-
-    let authRuleName: string;
-    if (!manageAccessRules.length) {
-        authRuleName = await createAndGetAuthRuleName(context);
-    } else if (manageAccessRules.length === 1) {
-        authRuleName = nonNullProp(authRules[0], 'name');
-    } else {
-        const rootKeyName: string = 'RootManageSharedAccessKey';
-        const placeHolder: string = localize('chooseSharedAccessPolicy', 'Choose a shared access policy.');
-
-        authRuleName = (await context.ui.showQuickPick(manageAccessRules.map(authRule => {
-            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? defaultDescription : '' };
-        }), { placeHolder })).label;
-    }
-
-    const accessKeys: AccessKeys = await client.namespaces.listKeys(rgName, namespaceName, authRuleName);
-    if (!accessKeys.primaryConnectionString && !accessKeys.secondaryConnectionString) {
-        const learnMoreLink: string = 'https://aka.ms/event-hubs-connection-string';
-        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your namespace\'s shared access policy. Locate a valid access policy and add the connection string to "{0}".', localSettingsFileName);
-        void context.ui.showWarningMessage(message, { learnMoreLink });
-        ext.outputChannel.appendLog(message);
-    }
-
-    return {
-        name: namespaceName,
-        connectionString: accessKeys.primaryConnectionString || accessKeys.secondaryConnectionString || ''
     };
 }
 

@@ -201,5 +201,8 @@ export enum EventGridExecuteFunctionEntryPoint {
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
 
+export const EventHubsProvider: string = 'Microsoft.EventHub';
+export const EventHubsNamespaceResourceType: string = 'namespaces';
+
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';

@@ -3,31 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType } from '../../../../constants';
+import { ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
-import { EventHubsSetSettingStep } from './EventHubsSetSettingStep';
-import { type IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
+import { EventHubsNamespaceListStep } from './azure/EventHubsNamespaceListStep';
+import { NetheriteEmulatorConfigureStep } from './emulator/NetheriteEmulatorConfigureStep';
+import { NetheriteHostEventHubNameStep } from './emulator/NetheriteHostEventHubNameStep';
+import { EventHubSetSettingStep } from './EventHubSetSettingStep';
+import { EventHubsNamespaceSetSettingStep } from './EventHubsNamespaceSetSettingStep';
+import { type INetheriteAzureConnectionWizardContext, type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
 
-export class EventHubsConnectionListStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
+export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardContext> extends AzureWizardPromptStep<T> {
     constructor(readonly connectionTypes: Set<Exclude<ConnectionType, 'Custom'>>) {
         super();
-    }
-
-    public async configureBeforePrompt(context: T): Promise<void> {
-        // Todo: Figure out a better way to handle this
-        if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Emulator) {
-            context.eventHubsConnectionType = this.options.preselectedConnectionType;
-        } else if (context.azureWebJobsStorageType) {
-            context.eventHubsConnectionType = context.azureWebJobsStorageType;
-        }
-
-        // Even if we skip the prompting, we should still record the flow in telemetry
-        if (context.eventHubsConnectionType) {
-            context.telemetry.properties.eventHubsConnectionType = context.eventHubsConnectionType;
-        }
     }
 
     public async prompt(context: T): Promise<void> {
@@ -42,12 +34,6 @@ export class EventHubsConnectionListStep<T extends IEventHubsConnectionWizardCon
             buttons.push(connectEmulatorButton);
         }
 
-        // Todo: This logic should be handled in validateNetheritePreDebug
-        // const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, context.projectPath);
-        // if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
-        //     return undefined;
-        // }
-
         const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hubs namespace for internal use by the Azure Functions runtime.');
         context.eventHubsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
@@ -61,26 +47,35 @@ export class EventHubsConnectionListStep<T extends IEventHubsConnectionWizardCon
         return !context.eventHubsConnectionType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
-        const promptSteps: AzureWizardPromptStep<T>[] = [];
-        const executeSteps: AzureWizardExecuteStep<T>[] = [];
-
-        // Todo: Handle this later - If the user wants to connect through Azure (usually during debug) but an Azure connection is already in the local settings, just use that instead
+    public async getSubWizard(context: T): Promise<IWizardOptions<T | INetheriteAzureConnectionWizardContext> | undefined> {
+        const promptSteps: AzureWizardPromptStep<T | INetheriteAzureConnectionWizardContext>[] = [];
+        const executeSteps: AzureWizardExecuteStep<T | INetheriteAzureConnectionWizardContext>[] = [];
 
         switch (context.eventHubsConnectionType) {
             case ConnectionType.Azure:
-                // Todo:
+                const subscriptionPromptStep = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context) as AzureWizardPromptStep<INetheriteAzureConnectionWizardContext> | undefined;
+                if (subscriptionPromptStep) {
+                    promptSteps.push(subscriptionPromptStep);
+                }
+
+                promptSteps.push(
+                    new ResourceGroupListStep() as AzureWizardPromptStep<INetheriteAzureConnectionWizardContext>,
+                    new EventHubsNamespaceListStep(),
+                );
+
+                executeSteps.push(new VerifyProvidersStep<INetheriteAzureConnectionWizardContext>([EventHubsProvider]));
                 break;
             case ConnectionType.Emulator:
-                // Todo:
+                promptSteps.push(new NetheriteHostEventHubNameStep());
+                executeSteps.push(new NetheriteEmulatorConfigureStep());
                 break;
             default:
                 throw new Error(localize('unexpectedConnectionType', 'Internal error: Unexpected event hubs connection type encountered: "{0}".', context.eventHubsConnectionType));
         }
 
         executeSteps.push(
-            // Todo: Is there another setting we should set here too?
-            new EventHubsSetSettingStep(),
+            new EventHubsNamespaceSetSettingStep(),
+            new EventHubSetSettingStep(),
         );
 
         return { promptSteps, executeSteps };

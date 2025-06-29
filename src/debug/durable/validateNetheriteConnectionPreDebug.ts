@@ -4,34 +4,46 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { type IDTSConnectionWizardContext } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
-import { EventHubsConnectionListStep } from "../../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionListStep";
+import { EventHubsConnectionListStep } from "../../commands/appSettings/connectionSettings/netherite/EventHubsConnectionListStep";
+import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
+import { type INetheriteConnectionWizardContext } from "../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
+import { parseEventHubsNamespaceName } from "../../commands/appSettings/connectionSettings/netherite/validateNetheriteConnection";
 import { CodeAction, ConnectionType } from "../../constants";
 import { localize } from "../../localize";
+import { createActivityContext } from "../../utils/activityUtils";
 
 export async function validateNetheriteConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
-    const { dtsConnectionKey } = await getDTSHostConnectionKeys(projectPathContext) ?? {};
-    const { dtsConnectionValue: dtsConnection } = await getDTSLocalSettingsValues(projectPathContext, { dtsConnectionKey }) ?? {};
+    const { eventHubsNamespaceConnectionKey, eventHubConnectionKey } = await getNetheriteSettingsKeys(projectPathContext) ?? {};
+    const {
+        eventHubsNamespaceConnectionValue: eventHubsConnection,
+        eventHubConnectionValue: eventHubName,
+    } = await getNetheriteLocalSettingsValues(projectPathContext, { eventHubsNamespaceConnectionKey, eventHubConnectionKey }) ?? {};
 
-    if (dtsConnection && await isAliveConnection(context, dtsConnection)) {
+    if (!!eventHubsConnection && !!eventHubName) {
         return;
     }
 
-    const availableDebugConnectionTypes: Set<Exclude<ConnectionType, 'Custom'>> = new Set([ConnectionType.Azure, ConnectionType.Emulator]);
+    const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
-    const wizardContext: IDTSConnectionWizardContext = Object.assign(context, {
+    const wizardContext: INetheriteConnectionWizardContext = {
+        ...context,
+        ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
-    });
+        newEventHubsNamespaceConnectionSettingKey: eventHubsNamespaceConnectionKey,
+        newEventHubConnectionSettingKey: eventHubConnectionKey,
+        newEventHubsNamespaceConnectionSettingValue: eventHubsConnection,
+        newEventHubConnectionSettingValue: eventHubName,
+        suggestedNamespaceLocalSettings: parseEventHubsNamespaceName(eventHubsConnection),
+    };
 
-    const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('acquireDTSConnection', 'Acquire DTS connection'),
+    const wizard: AzureWizard<INetheriteConnectionWizardContext> = new AzureWizard(wizardContext, {
+        title: localize('prepareNetheriteDebug', 'Prepare Netherite debug configuration'),
         promptSteps: [new EventHubsConnectionListStep(availableDebugConnectionTypes)],
+        showLoadingPrompt: true,
     });
 
     await wizard.prompt();
     await wizard.execute();
-
-    useDTSEmulator = wizardContext.dtsConnectionType === ConnectionType.Emulator;
 }

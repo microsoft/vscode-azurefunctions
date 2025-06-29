@@ -71,8 +71,14 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
     let didUpdate: boolean = false;
     switch (durableStorageType) {
         case DurableBackend.Netherite:
-            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs] as string | undefined);
-            didUpdate ||= updatedNetheriteConnection;
+            if (context.newEventHubsNamespaceConnectionSettingKey && context.newEventHubConnectionSettingValue) {
+                const updatedNamespaceConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubsNamespaceConnectionSettingKey, context.newEventHubsNamespaceConnectionSettingValue);
+                didUpdate ||= updatedNamespaceConnection;
+            }
+            if (context.newEventHubConnectionSettingKey && context.newEventHubConnectionSettingValue) {
+                const updatedEventHubConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubConnectionSettingKey, context.newEventHubConnectionSettingValue);
+                didUpdate ||= updatedEventHubConnection;
+            }
             break;
         case DurableBackend.DTS:
             if (context.newDTSConnectionSettingKey && context.newDTSConnectionSettingValue) {

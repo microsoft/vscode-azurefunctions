@@ -3,20 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
+import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
+import * as path from "path";
 import { hostFileName } from '../../../../constants';
 import { viewOutput } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
-import { durableUtils } from '../../../../utils/durableUtils';
-import { type IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { setConnectionSetting } from '../setConnectionSetting';
+import { type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
 
-export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+export class EventHubSetSettingStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 245;
 
     public async execute(context: T): Promise<void> {
+        const hubName: string = nonNullProp(context, 'newEventHubConnectionSettingValue');
+
+        if (!context.newEventHubConnectionSettingKey) {
+            // Target `host.json`
+            await this.configureHostJson(context, hubName);
+        } else {
+            // Target local or app settings
+            await setConnectionSetting(
+                context,
+                context.newEventHubConnectionSettingKey,
+                hubName,
+            );
+        }
+
+        context.valuesToMask.push(context.newEventHubConnectionSettingValue as string);
+    }
+
+    public shouldExecute(context: T): boolean {
+        return !!context.newEventHubConnectionSettingValue;
+    }
+
+    private async configureHostJson(context: T, hubName: string) {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
 
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
@@ -36,19 +58,10 @@ export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardCont
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
-
-        const durableTask = hostJson.extensions?.durableTask as INetheriteTaskJson ?? {};
-        const existingHubName: string | undefined = durableTask?.hubName;
-
         hostJson.extensions ??= {};
-        hostJson.extensions.durableTask = durableUtils.getDefaultNetheriteTaskConfig(
-            nonNullValue(context.newEventHubName || existingHubName)
-        );
+        hostJson.extensions.durableTask ??= {};
+        (hostJson.extensions.durableTask as INetheriteTaskJson).hubName = hubName;
 
         await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
-    }
-
-    public shouldExecute(context: T): boolean {
-        return !!context.newEventHubName;
     }
 }

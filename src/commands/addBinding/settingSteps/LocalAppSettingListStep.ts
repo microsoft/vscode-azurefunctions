@@ -11,9 +11,9 @@ import { type BindingSettingValue } from '../../../funcConfig/function';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
-import { type IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { type INetheriteConnectionWizardContext } from '../../appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext';
+import { EventHubsNamespaceListStep } from '../../appSettings/connectionSettings/netherite/azure/EventHubsNamespaceListStep';
 import { getBindingSetting, type FunctionV2WizardContext, type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
-import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
@@ -58,8 +58,8 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext & FunctionV2WizardContext> | undefined> {
         if (!getBindingSetting(context, this._setting)) {
-            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
-            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & INetheriteConnectionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & INetheriteConnectionWizardContext>[] = [];
             switch (this._resourceType) {
                 case ResourceType.DocumentDB:
                     azurePromptSteps.push(new CosmosDBListStep());
