@@ -26,7 +26,7 @@ export interface IEventHubsSetSettingsContext {
     newEventHubsNamespaceConnectionSettingValue?: string;
 
     /**
-     * Explicitly `undefined` when the `host.json` sets this value for us (meaning no corresponding app or local settings to worry about)
+     * Explicitly `undefined` when the `host.json` sets this value for us (there will be no corresponding app or local settings)
      */
     newEventHubConnectionSettingKey?: string | undefined;
     newEventHubConnectionSettingValue?: string;
@@ -36,6 +36,9 @@ export interface IDTSConnectionSetSettingsContext {
     newDTSConnectionSettingKey?: string;
     newDTSConnectionSettingValue?: string;
 
+    /**
+     * Explicitly `undefined` when the `host.json` sets this value for us (there will be no corresponding app or local settings)
+     */
     newDTSHubConnectionSettingKey?: string;
     newDTSHubConnectionSettingValue?: string;
 }
