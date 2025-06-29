@@ -5,7 +5,7 @@
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { DTSConnectionListStep } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
-import { getDTSHostConnectionKeys, getDTSLocalSettingsValues } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
 import { type IDTSConnectionWizardContext } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
 import { CodeAction, ConnectionType } from "../../constants";
 import { localize } from "../../localize";
@@ -16,10 +16,14 @@ let useDTSEmulator: boolean;
 
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
-    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(projectPathContext) ?? {};
-    const { dtsConnectionValue: dtsConnection } = await getDTSLocalSettingsValues(projectPathContext, { dtsConnectionKey }) ?? {};
+    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
+    const {
+        dtsConnectionValue: dtsConnection,
+        dtsHubConnectionValue: dtsHubConnection,
+    } = await getDTSLocalSettingsValues(projectPathContext, { dtsConnectionKey, dtsHubConnectionKey }) ?? {};
 
-    if (dtsConnection && await isAliveConnection(context, dtsConnection)) {
+    const isAliveDTSConnection = dtsConnection && await isAliveConnection(context, dtsConnection);
+    if (isAliveDTSConnection && dtsHubConnection) {
         return;
     }
 
@@ -31,6 +35,8 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
         dtsConnectionType: useDTSEmulator ? ConnectionType.Emulator : undefined,
         newDTSConnectionSettingKey: dtsConnectionKey,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
+        newDTSConnectionSettingValue: isAliveDTSConnection ? dtsConnection : undefined,
+        newDTSHubConnectionSettingValue: dtsHubConnection,
     });
 
     const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {

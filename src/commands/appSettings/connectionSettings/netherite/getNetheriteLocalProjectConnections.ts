@@ -55,6 +55,6 @@ export async function getNetheriteLocalSettingsValues(context: IActionContext & 
 
     return {
         eventHubsNamespaceConnectionValue: ehnKey ? localSettings?.Values?.[ehnKey] : undefined,
-        eventHubConnectionValue: ehKey ? localSettings?.Values?.[ehKey] : (hostJson.extensions?.durableTask as IDTSTaskJson)?.hubName,
+        eventHubConnectionValue: ehKey ? localSettings?.Values?.[ehKey] : (hostJson.extensions?.durableTask as INetheriteTaskJson)?.hubName,
     };
 }

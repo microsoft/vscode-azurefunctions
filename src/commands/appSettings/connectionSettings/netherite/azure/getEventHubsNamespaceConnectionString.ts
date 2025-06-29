@@ -12,7 +12,7 @@ import { localize } from "../../../../../localize";
 import { createEventHubClient } from "../../../../../utils/azureClients";
 import { type INetheriteAzureConnectionWizardContext } from "../INetheriteConnectionWizardContext";
 
-export async function getEventHubsConnectionString(context: INetheriteAzureConnectionWizardContext, namespace: EHNamespace, authRule: AuthorizationRule): Promise<string> {
+export async function getEventHubsNamespaceConnectionString(context: INetheriteAzureConnectionWizardContext, namespace: EHNamespace, authRule: AuthorizationRule): Promise<string> {
     const client: EventHubManagementClient = await createEventHubClient(context);
     const parsedResource = parseAzureResourceId(nonNullProp(namespace, 'id'));
     const authRuleName: string = nonNullProp(authRule, 'name');

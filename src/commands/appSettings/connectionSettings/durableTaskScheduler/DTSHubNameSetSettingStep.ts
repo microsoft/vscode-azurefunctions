@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
+import * as path from "path";
+import { hostFileName } from '../../../../constants';
+import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
+import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
 import { setConnectionSetting } from '../setConnectionSetting';
 import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
@@ -17,10 +21,34 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
     protected getTreeItemLabel = (context: T) => localize('prepareDTSHubNameLabel', 'Prepare DTS hub connection: "{0}"', context.newDTSHubConnectionSettingValue);
 
     public async execute(context: T): Promise<void> {
+        if (!context.newDTSHubConnectionSettingKey) {
+            const defaultHubKey: string = 'TASKHUB_NAME';
+            await this.configureHostJson(context, `%${defaultHubKey}%`);
+            context.newDTSHubConnectionSettingKey = defaultHubKey;
+        }
+
         await setConnectionSetting(context, nonNullProp(context, 'newDTSHubConnectionSettingKey'), nonNullProp(context, 'newDTSHubConnectionSettingValue'));
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newDTSHubConnectionSettingKey && !!context.newDTSHubConnectionSettingValue;
+        return !!context.newDTSHubConnectionSettingValue;
+    }
+
+    private async configureHostJson(context: T, hubName: string): Promise<void> {
+        const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+
+        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
+            context.telemetry.properties.dtsHostConfigFailed = 'true';
+            const message: string = localize('dtsHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your DTS hub settings manually.', hostFileName);
+            notifyFailedToConfigureHost(context, message);
+            return;
+        }
+
+        const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+        hostJson.extensions ??= {};
+        hostJson.extensions.durableTask ??= {};
+        (hostJson.extensions.durableTask as IDTSTaskJson).hubName = hubName;
+
+        await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }
 }

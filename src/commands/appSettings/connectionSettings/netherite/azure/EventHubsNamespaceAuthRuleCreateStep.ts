@@ -11,7 +11,7 @@ import { ext } from '../../../../../extensionVariables';
 import { localize } from '../../../../../localize';
 import { createEventHubClient } from '../../../../../utils/azureClients';
 import { type INetheriteAzureConnectionWizardContext } from '../INetheriteConnectionWizardContext';
-import { getEventHubsConnectionString } from './getEventHubsConnectionString';
+import { getEventHubsNamespaceConnectionString } from './getEventHubsNamespaceConnectionString';
 
 export class EventHubsNamespaceAuthRuleCreateStep<T extends INetheriteAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
@@ -28,7 +28,7 @@ export class EventHubsNamespaceAuthRuleCreateStep<T extends INetheriteAzureConne
         progress.report({ message: creating });
 
         context.authRule = await client.namespaces.createOrUpdateAuthorizationRule(rgName, namespaceName, authRuleName, defaultParams);
-        context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsConnectionString(
+        context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsNamespaceConnectionString(
             context,
             nonNullProp(context, 'eventHubsNamespace'),
             context.authRule,

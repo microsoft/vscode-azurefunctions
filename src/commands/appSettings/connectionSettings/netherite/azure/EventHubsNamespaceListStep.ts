@@ -15,7 +15,7 @@ import { EventHubListStep } from './EventHubListStep';
 import { EventHubsNamespaceAuthRuleListStep } from './EventHubsNamespaceAuthRuleListStep';
 import { EventHubsNamespaceCreateStep } from './EventHubsNamespaceCreateStep';
 import { EventHubsNamespaceNameStep } from './EventHubsNamespaceNameStep';
-import { getEventHubsConnectionString } from './getEventHubsConnectionString';
+import { getEventHubsNamespaceConnectionString } from './getEventHubsNamespaceConnectionString';
 
 export class EventHubsNamespaceListStep<T extends INetheriteAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
@@ -30,7 +30,7 @@ export class EventHubsNamespaceListStep<T extends INetheriteAzureConnectionWizar
             context.valuesToMask.push(context.eventHubsNamespace.name);
 
             if (context.authRule) {
-                context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsConnectionString(context, context.eventHubsNamespace, context.authRule);
+                context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsNamespaceConnectionString(context, context.eventHubsNamespace, context.authRule);
             }
         }
     }

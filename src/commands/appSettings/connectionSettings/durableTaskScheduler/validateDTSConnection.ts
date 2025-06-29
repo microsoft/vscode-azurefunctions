@@ -18,7 +18,7 @@ import { type IDTSConnectionSetSettingsContext } from "../ISetConnectionSettingC
 import { DTSConnectionListStep } from "./DTSConnectionListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
 import { DTSStartingResourcesLogStep } from "./azure/DTSStartingResourcesLogStep";
-import { getDTSHostConnectionKeys, getDTSLocalSettingsValues } from "./getDTSLocalProjectConnections";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "./getDTSLocalProjectConnections";
 
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
 
@@ -32,7 +32,7 @@ type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { 
 export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<IDTSConnectionSetSettingsContext | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
-    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSHostConnectionKeys(Object.assign(context, { projectPath })) ?? {};
+    const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(Object.assign(context, { projectPath })) ?? {};
     const remoteDTSConnection: string | undefined = dtsConnectionKey ? app?.properties?.[dtsConnectionKey] : undefined;
     const remoteDTSHubName: string | undefined = dtsHubConnectionKey ? app?.properties?.[dtsHubConnectionKey] : undefined;
 

@@ -15,26 +15,29 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
     public priority: number = 200;
 
     public async execute(context: T): Promise<void> {
-        const emulatorId: string = nonNullValue(
-            await commands.executeCommand('azureFunctions.durableTaskScheduler.startEmulator'),
-            localize('failedToStartEmulator', 'Internal error: Failed to start DTS emulator.'),
-        );
+        if (!context.newDTSHubConnectionSettingValue) {
+            const emulatorId: string = nonNullValue(
+                await commands.executeCommand('azureFunctions.durableTaskScheduler.startEmulator'),
+                localize('failedToStartEmulator', 'Internal error: Failed to start DTS emulator.'),
+            );
 
-        const emulators: DurableTaskSchedulerEmulator[] = nonNullValue(
-            await commands.executeCommand('azureFunctions.durableTaskScheduler.getEmulators'),
-            localize('failedToGetEmulators', 'Internal error: Failed to retrieve the list of DTS emulators.'),
-        );
+            const emulators: DurableTaskSchedulerEmulator[] = nonNullValue(
+                await commands.executeCommand('azureFunctions.durableTaskScheduler.getEmulators'),
+                localize('failedToGetEmulators', 'Internal error: Failed to retrieve the list of DTS emulators.'),
+            );
 
-        const emulator: DurableTaskSchedulerEmulator = nonNullValue(
-            emulators.find(e => e.id === emulatorId),
-            localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
-        );
+            const emulator: DurableTaskSchedulerEmulator = nonNullValue(
+                emulators.find(e => e.id === emulatorId),
+                localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
+            );
 
-        context.newDTSConnectionSettingValue = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
+            context.newDTSConnectionSettingValue = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
+        }
+
         context.newDTSHubConnectionSettingValue = 'default';
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.newDTSConnectionSettingValue && context.dtsConnectionType === ConnectionType.Emulator;
+        return context.dtsConnectionType === ConnectionType.Emulator;
     }
 }

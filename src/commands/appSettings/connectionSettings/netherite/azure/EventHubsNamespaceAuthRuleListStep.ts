@@ -12,7 +12,7 @@ import { createEventHubClient } from '../../../../../utils/azureClients';
 import { type INetheriteAzureConnectionWizardContext } from '../INetheriteConnectionWizardContext';
 import { EventHubsNamespaceAuthRuleCreateStep } from './EventHubsNamespaceAuthRuleCreateStep';
 import { EventHubsNamespaceAuthRuleNameStep } from './EventHubsNamespaceAuthRuleNameStep';
-import { getEventHubsConnectionString } from './getEventHubsConnectionString';
+import { getEventHubsNamespaceConnectionString } from './getEventHubsNamespaceConnectionString';
 
 export class EventHubsNamespaceAuthRuleListStep<T extends INetheriteAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
@@ -33,7 +33,7 @@ export class EventHubsNamespaceAuthRuleListStep<T extends INetheriteAzureConnect
 
         // Todo: These settings should all be consolidated to an execute step
         if (context.authRule) {
-            context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsConnectionString(context, context.eventHubsNamespace, context.authRule);
+            context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsNamespaceConnectionString(context, context.eventHubsNamespace, context.authRule);
         }
     }
 
