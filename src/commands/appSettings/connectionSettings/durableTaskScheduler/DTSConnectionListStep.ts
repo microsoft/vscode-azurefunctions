@@ -43,8 +43,6 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
             title: string;
             data: ConnectionType;
         }).data;
-
-        context.telemetry.properties.dtsConnectionType = context.dtsConnectionType;
     }
 
     public shouldPrompt(context: T): boolean {
@@ -54,6 +52,8 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
         const promptSteps: AzureWizardPromptStep<T | IDTSAzureConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T | IDTSAzureConnectionWizardContext>[] = [];
+
+        context.telemetry.properties.dtsConnectionType = context.dtsConnectionType;
 
         switch (context.dtsConnectionType) {
             case ConnectionType.Azure:

@@ -40,8 +40,6 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
             title: string;
             data: Exclude<ConnectionType, 'Custom'>;
         }).data;
-
-        context.telemetry.properties.eventHubsConnectionType = context.eventHubsConnectionType;
     }
 
     public shouldPrompt(context: T): boolean {
@@ -51,6 +49,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
     public async getSubWizard(context: T): Promise<IWizardOptions<T | INetheriteAzureConnectionWizardContext> | undefined> {
         const promptSteps: AzureWizardPromptStep<T | INetheriteAzureConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T | INetheriteAzureConnectionWizardContext>[] = [];
+
+        context.telemetry.properties.eventHubsConnectionType = context.eventHubsConnectionType;
 
         switch (context.eventHubsConnectionType) {
             case ConnectionType.Azure:
