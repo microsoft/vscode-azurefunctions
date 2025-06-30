@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceGroup } from "@azure/arm-resources";
-import { type IEventHubWizardContext } from "../../../addBinding/settingSteps/eventHub/IEventHubWizardContext";
-import { type EventHubsConnectionType, type StorageConnectionType } from "../IConnectionTypesContext";
+import { type ConnectionType } from "../../../../constants";
+import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IEventHubsConnectionWizardContext extends IEventHubWizardContext, ISetConnectionSettingContext {
+export interface IDTSConnectionWizardContext extends ISetConnectionSettingContext {
     resourceGroup?: ResourceGroup;
 
     // Connection Types
     azureWebJobsStorageType?: StorageConnectionType;
-    eventHubsConnectionType?: EventHubsConnectionType;
+    dtsConnectionType?: ConnectionType;
 
-    // Netherite uses all of the eventhub namespace settings in IEventHubWizardContext
+    newDTSConnection?: string;
+    newDTSHubName?: string;
 }
