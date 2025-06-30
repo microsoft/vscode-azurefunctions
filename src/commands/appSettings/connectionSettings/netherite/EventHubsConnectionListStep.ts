@@ -10,8 +10,9 @@ import { ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
+import { EventHubNamespaceGetConnectionStep } from './azure/EventHubNamespaceGetConnectionStep';
 import { EventHubsNamespaceListStep } from './azure/EventHubsNamespaceListStep';
-import { NetheriteEmulatorConfigureStep } from './emulator/NetheriteEmulatorConfigureStep';
+import { NetheriteEmulatorGetConnectionStep } from './emulator/NetheriteEmulatorGetConnectionStep';
 import { NetheriteHostEventHubNameStep } from './emulator/NetheriteHostEventHubNameStep';
 import { EventHubSetSettingStep } from './EventHubSetSettingStep';
 import { EventHubsNamespaceSetSettingStep } from './EventHubsNamespaceSetSettingStep';
@@ -63,11 +64,14 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
                     new EventHubsNamespaceListStep(),
                 );
 
-                executeSteps.push(new VerifyProvidersStep<INetheriteAzureConnectionWizardContext>([EventHubsProvider]));
+                executeSteps.push(
+                    new VerifyProvidersStep<INetheriteAzureConnectionWizardContext>([EventHubsProvider]),
+                    new EventHubNamespaceGetConnectionStep(),
+                );
                 break;
             case ConnectionType.Emulator:
                 promptSteps.push(new NetheriteHostEventHubNameStep());
-                executeSteps.push(new NetheriteEmulatorConfigureStep());
+                executeSteps.push(new NetheriteEmulatorGetConnectionStep());
                 break;
             default:
                 throw new Error(localize('unexpectedConnectionType', 'Internal error: Unexpected event hubs connection type encountered: "{0}".', context.eventHubsConnectionType));

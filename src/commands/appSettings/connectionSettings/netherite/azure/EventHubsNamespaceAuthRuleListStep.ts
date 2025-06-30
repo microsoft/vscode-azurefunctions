@@ -12,7 +12,6 @@ import { createEventHubClient } from '../../../../../utils/azureClients';
 import { type INetheriteAzureConnectionWizardContext } from '../INetheriteConnectionWizardContext';
 import { EventHubsNamespaceAuthRuleCreateStep } from './EventHubsNamespaceAuthRuleCreateStep';
 import { EventHubsNamespaceAuthRuleNameStep } from './EventHubsNamespaceAuthRuleNameStep';
-import { getEventHubsNamespaceConnectionString } from './getEventHubsNamespaceConnectionString';
 
 export class EventHubsNamespaceAuthRuleListStep<T extends INetheriteAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
@@ -30,11 +29,6 @@ export class EventHubsNamespaceAuthRuleListStep<T extends INetheriteAzureConnect
         context.authRule = (await context.ui.showQuickPick(await this.getPicks(manageAccessRules), {
             placeHolder: localize('chooseSharedAccessPolicy', 'Choose a shared access policy for "{0}".', context.eventHubsNamespace.name),
         })).data;
-
-        // Todo: These settings should all be consolidated to an execute step
-        if (context.authRule) {
-            context.newEventHubsNamespaceConnectionSettingValue = await getEventHubsNamespaceConnectionString(context, context.eventHubsNamespace, context.authRule);
-        }
     }
 
     public shouldPrompt(context: T): boolean {

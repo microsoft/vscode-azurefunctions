@@ -7,7 +7,7 @@ import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { localEventHubsEmulatorConnectionString } from '../../../../../constants';
 import { type INetheriteConnectionWizardContext } from '../INetheriteConnectionWizardContext';
 
-export class NetheriteEmulatorConfigureStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+export class NetheriteEmulatorGetConnectionStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 
     public async execute(context: T): Promise<void> {
