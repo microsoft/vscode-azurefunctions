@@ -14,7 +14,7 @@ export interface INetheriteConnectionWizardContext extends ISetConnectionSetting
     suggestedNamespaceLocalSettings?: string;
     suggestedEventHubLocalSettings?: string;
 
-    // Netherite uses all of the eventhub namespace settings in IEventHubWizardContext
+    // All properties from `IEventHubsSetSettingsContext` apply
 }
 
 export type INetheriteAzureConnectionWizardContext = INetheriteConnectionWizardContext & IEventHubWizardContext;

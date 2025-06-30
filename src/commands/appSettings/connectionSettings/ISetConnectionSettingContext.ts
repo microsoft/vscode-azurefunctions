@@ -14,7 +14,7 @@ export interface ISetConnectionSettingContext extends IActionContext, IConnectio
 
 // -- Durable Storage Provider contexts --
 
-type IDurableStorageProvidersSetSettingsContext = IStorageSetSettingsContext & IEventHubsSetSettingsContext & IDTSConnectionSetSettingsContext & ISqlConnectionSetSettingsContext;
+type IDurableStorageProvidersSetSettingsContext = IStorageSetSettingsContext & IEventHubsSetSettingsContext & IDTSConnectionSetSettingsContext & ISqlDbConnectionSetSettingsContext;
 
 export interface IStorageSetSettingsContext {
     newStorageConnectionSettingKey?: string;
@@ -43,7 +43,7 @@ export interface IDTSConnectionSetSettingsContext {
     newDTSHubConnectionSettingValue?: string;
 }
 
-export interface ISqlConnectionSetSettingsContext {
+export interface ISqlDbConnectionSetSettingsContext {
     newSQLStorageConnectionSettingKey?: string;
     newSQLStorageConnectionSettingValue?: string;
 }

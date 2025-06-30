@@ -10,7 +10,6 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
-import { validateSqlDbConnection } from '../commands/appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
@@ -25,6 +24,7 @@ import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { validateDTSConnectionPreDebug } from './durable/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './durable/validateNetheriteConnectionPreDebug';
+import { validateSQLConnectionPreDebug } from './durable/validateSQLConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -76,7 +76,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                         break;
                     case DurableBackend.SQL:
                         context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSqlDbConnection(context, context.projectPath);
+                        await validateSQLConnectionPreDebug(context, context.projectPath);
                         break;
                     case DurableBackend.Storage:
                     default:

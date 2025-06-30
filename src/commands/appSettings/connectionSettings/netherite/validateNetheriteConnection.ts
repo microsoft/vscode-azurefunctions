@@ -5,7 +5,7 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type EHNamespace, type Eventhub, type EventHubManagementClient } from "@azure/arm-eventhub";
-import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
+import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep, parseAzureResourceId } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { CodeAction, ConnectionType } from "../../../../constants";
@@ -28,17 +28,15 @@ type NetheriteConnectionContext = IFuncDeployContext & ISubscriptionActionContex
  *
  * b) That new event hub resources are created and ready for connection to the function app
  */
-export async function validateNetheriteConnection(context: NetheriteConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<IEventHubsSetSettingsContext | undefined> {
-    const app: StringDictionary = await client.listApplicationSettings();
-
+export async function validateNetheriteConnection(context: NetheriteConnectionContext, appSettings: StringDictionary, site: ParsedSite, projectPath: string): Promise<IEventHubsSetSettingsContext | undefined> {
     const { eventHubsNamespaceConnectionKey, eventHubConnectionKey } = await getNetheriteSettingsKeys(Object.assign(context, { projectPath })) ?? {};
     const {
         eventHubsNamespaceConnectionValue: localNamespaceConnection,
         eventHubConnectionValue: localHubConnection,
     } = await getNetheriteLocalSettingsValues(context, { eventHubsNamespaceConnectionKey, eventHubConnectionKey }) ?? {};
 
-    const remoteNamespaceConnection: string | undefined = eventHubsNamespaceConnectionKey ? app?.properties?.[eventHubsNamespaceConnectionKey] : undefined;
-    const remoteHubConnection: string | undefined = eventHubConnectionKey ? app?.properties?.[eventHubConnectionKey] : localHubConnection /** The host.json value */;
+    const remoteNamespaceConnection: string | undefined = eventHubsNamespaceConnectionKey ? appSettings?.properties?.[eventHubsNamespaceConnectionKey] : undefined;
+    const remoteHubConnection: string | undefined = eventHubConnectionKey ? appSettings?.properties?.[eventHubConnectionKey] : localHubConnection /** The host.json value */;
 
     if (remoteNamespaceConnection && remoteHubConnection) {
         return undefined;
@@ -93,7 +91,6 @@ export function parseEventHubsNamespaceName(eventHubsConnection?: string): strin
     return match ? match[1] : undefined;
 }
 
-// Todo: In the future if we add a way to recommend resource groups in `ResourceGroupListStep`, we should try to recommend the namespace resource group
 export async function tryGetEventHubsNamespace(context: NetheriteConnectionContext, namespaceName?: string): Promise<EHNamespace | undefined> {
     if (!namespaceName) {
         return undefined;

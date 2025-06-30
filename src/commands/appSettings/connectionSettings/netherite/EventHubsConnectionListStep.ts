@@ -6,7 +6,7 @@
 import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, EventHubsProvider } from '../../../../constants';
+import { CodeAction, ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -26,6 +26,7 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
     public async prompt(context: T): Promise<void> {
         const connectAzureButton = { title: localize('connectEventHubsNamespace', 'Connect Azure Event Hubs Namespace'), data: ConnectionType.Azure };
         const connectEmulatorButton = { title: useEmulator, data: ConnectionType.Emulator };
+        const skipForNow = { title: localize('skipForNow', 'Skip for now'), data: undefined };
 
         const buttons: MessageItem[] = [];
         if (this.connectionTypes.has(ConnectionType.Azure)) {
@@ -33,6 +34,9 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
         }
         if (this.connectionTypes.has(ConnectionType.Emulator)) {
             buttons.push(connectEmulatorButton);
+        }
+        if (context.action === CodeAction.Deploy) {
+            buttons.push(skipForNow);
         }
 
         const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hubs namespace for internal use by the Azure Functions runtime.');
@@ -74,7 +78,7 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
                 executeSteps.push(new NetheriteEmulatorGetConnectionStep());
                 break;
             default:
-                throw new Error(localize('unexpectedConnectionType', 'Internal error: Unexpected event hubs connection type encountered: "{0}".', context.eventHubsConnectionType));
+                return undefined;
         }
 
         executeSteps.push(

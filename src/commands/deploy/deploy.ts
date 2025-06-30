@@ -26,7 +26,7 @@ import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { validateDTSConnection } from '../appSettings/connectionSettings/durableTaskScheduler/validateDTSConnection';
 import { validateNetheriteConnection } from '../appSettings/connectionSettings/netherite/validateNetheriteConnection';
-import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
+import { validateSQLConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
@@ -145,23 +145,23 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'flexconsumption';
     }
 
+    const appSettings: StringDictionary = await client.listApplicationSettings();
+
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
     switch (durableStorageType) {
         case DurableBackend.DTS:
-            Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
+            Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         case DurableBackend.Netherite:
-            Object.assign(context, await validateNetheriteConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath));
+            Object.assign(context, await validateNetheriteConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         case DurableBackend.SQL:
-            await validateSqlDbConnection(context, context.projectPath);
+            Object.assign(context, await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         default:
     }
-
-    const appSettings: StringDictionary = await client.listApplicationSettings();
 
     const deploymentWarningMessages: string[] = [];
     const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {

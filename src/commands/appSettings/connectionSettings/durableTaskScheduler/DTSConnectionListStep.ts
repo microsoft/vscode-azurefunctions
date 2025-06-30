@@ -6,7 +6,7 @@
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, DurableTaskProvider } from '../../../../constants';
+import { CodeAction, ConnectionType, DurableTaskProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
@@ -26,6 +26,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
         const connectAzureButton = { title: localize('connectAzureTaskScheduler', 'Connect Azure Task Scheduler'), data: ConnectionType.Azure };
         const connectEmulatorButton = { title: useEmulator, data: ConnectionType.Emulator };
         const connectCustomDTSButton = { title: localize('connectCustomTaskScheduler', 'Connect Custom Task Scheduler'), data: ConnectionType.Custom };
+        const skipForNow = { title: localize('skipForNow', 'Skip for now'), data: undefined };
 
         const buttons: MessageItem[] = [];
         if (this.connectionTypes.has(ConnectionType.Azure)) {
@@ -36,6 +37,9 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
         }
         if (this.connectionTypes.has(ConnectionType.Custom)) {
             buttons.push(connectCustomDTSButton);
+        }
+        if (context.action === CodeAction.Deploy) {
+            buttons.push(skipForNow);
         }
 
         const message: string = localize('selectDTSConnection', 'In order to proceed, you must connect a Durable Task Scheduler for internal use by the Azure Functions runtime.');
@@ -70,7 +74,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                 );
                 break;
             default:
-                throw new Error(localize('unexpectedConnectionType', 'Internal error: Unexpected DTS connection type encountered: "{0}".', context.dtsConnectionType));
+                return undefined;
         }
 
         executeSteps.push(

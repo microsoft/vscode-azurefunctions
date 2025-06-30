@@ -91,8 +91,10 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
             }
             break;
         case DurableBackend.SQL:
-            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL] as string | undefined);
-            didUpdate ||= updatedSqlDbConnection;
+            if (context.newSQLStorageConnectionSettingKey && context.newSQLStorageConnectionSettingValue) {
+                const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newSQLStorageConnectionSettingKey, context.newSQLStorageConnectionSettingValue);
+                didUpdate ||= updatedSqlDbConnection;
+            }
             break;
         case DurableBackend.Storage:
         default:

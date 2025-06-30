@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from "@azure/arm-appservice";
-import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
+import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
@@ -29,12 +29,10 @@ type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { 
  *
  * b) That a new DTS resource and hub is created and ready for connection to the function app
  */
-export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<IDTSConnectionSetSettingsContext | undefined> {
-    const app: StringDictionary = await client.listApplicationSettings();
-
+export async function validateDTSConnection(context: DTSConnectionContext, appSettings: StringDictionary, site: ParsedSite, projectPath: string): Promise<IDTSConnectionSetSettingsContext | undefined> {
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(Object.assign(context, { projectPath })) ?? {};
-    const remoteDTSConnection: string | undefined = dtsConnectionKey ? app?.properties?.[dtsConnectionKey] : undefined;
-    const remoteDTSHubName: string | undefined = dtsHubConnectionKey ? app?.properties?.[dtsHubConnectionKey] : undefined;
+    const remoteDTSConnection: string | undefined = dtsConnectionKey ? appSettings?.properties?.[dtsConnectionKey] : undefined;
+    const remoteDTSHubName: string | undefined = dtsHubConnectionKey ? appSettings?.properties?.[dtsHubConnectionKey] : undefined;
 
     if (remoteDTSConnection && remoteDTSHubName) {
         return undefined;

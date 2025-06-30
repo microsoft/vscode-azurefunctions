@@ -15,20 +15,14 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
     azureWebJobsStorageType?: StorageConnectionType;
     dtsConnectionType?: ConnectionType;
 
-    // Refer to `IDTSConnectionSetSettingsContext` for individual DTS settings
+    suggestedDTSEndpointLocalSettings?: string;
+    suggestedDTSHubNameLocalSettings?: string;
+
+    // All properties from `IDTSConnectionSetSettingsContext` apply
 }
 
 export interface IDTSAzureConnectionWizardContext extends IFunctionAppUserAssignedIdentitiesContext, IDTSConnectionWizardContext, Partial<ExecuteActivityContext> {
     subscription?: AzureSubscription;
-
-    /**
-     * Durable Task Scheduler endpoint detected in local settings JSON
-     */
-    suggestedDTSEndpointLocalSettings?: string;
-    /**
-     * Durable Task Scheduler hub name detected in local settings JSON
-     */
-    suggestedDTSHubNameLocalSettings?: string;
 
     newDTSName?: string;
     dts?: DurableTaskSchedulerResource;
