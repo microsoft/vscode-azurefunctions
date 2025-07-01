@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Database, type SqlManagementClient } from '@azure/arm-sql';
-import { LocationListStep, parseAzureResourceId, type AzExtLocation } from '@microsoft/vscode-azext-azureutils';
+import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { ext } from '../../../../../extensionVariables';
@@ -23,9 +23,8 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardCo
         const parsedServer = parseAzureResourceId(nonNullValueAndProp(context.sqlServer, 'id'))
         const newDatabaseName: string = nonNullProp(context, 'newSqlDatabaseName');
 
-        const location: AzExtLocation = await LocationListStep.getLocation(context);
         const dbParams: Database = {
-            location: nonNullProp(location, 'name'),
+            location: nonNullValueAndProp(context.sqlServer, 'location'),
             sku: {
                 name: 'GP_S_Gen5',
                 tier: 'GeneralPurpose',

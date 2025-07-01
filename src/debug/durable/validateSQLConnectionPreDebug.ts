@@ -32,7 +32,7 @@ export async function validateSQLConnectionPreDebug(context: IActionContext, pro
     };
 
     const wizard: AzureWizard<ISqlDatabaseConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareSqlDbConnectionDebug', 'Prepare SQL database debug connections'),
+        title: localize('prepareSqlDbConnectionDebug', 'Prepare SQL database debug connection'),
         promptSteps: [new SqlConnectionListStep(availableDebugConnectionTypes)],
         showLoadingPrompt: true,
     });

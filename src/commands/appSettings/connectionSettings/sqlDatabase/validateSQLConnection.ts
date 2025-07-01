@@ -53,7 +53,7 @@ export async function validateSQLConnection(context: SqlConnectionContext, appSe
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<ISqlDatabaseAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareSqlDbConnection', 'Prepare SQL database connections'),
+        title: localize('prepareSqlDbConnection', 'Prepare SQL database connection'),
         promptSteps: [new SqlConnectionListStep(availableDeployConnectionTypes)],
         showLoadingPrompt: true,
     });
