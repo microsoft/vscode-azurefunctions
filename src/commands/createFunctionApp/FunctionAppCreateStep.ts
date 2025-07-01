@@ -19,7 +19,7 @@ import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
-import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
+import { getStorageConnectionString } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { type Sku } from './stacks/models/FlexSkuModel';

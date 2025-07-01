@@ -8,16 +8,15 @@ import * as path from 'path';
 import { localize } from '../../../../localize';
 import { getLocalSettingsFile } from '../../localSettings/getLocalSettingsFile';
 import { type ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
-import { AzureWebJobsStoragePromptStep } from './AzureWebJobsStoragePromptStep';
-import { AzureWebJobsStorageSetSettingStep } from './AzureWebJobsStorageSetSettingStep';
-import { type IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IStorageConnectionWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { AzureWebJobsStoragePromptStep } from './StorageConnectionListStep';
+import { AzureWebJobsStorageSetSettingStep } from './StorageConnectionSetSettingStep';
 
 export async function setAzureWebJobsStorage(context: Omit<ISetConnectionSettingContext, 'projectPath'>): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select your local settings file.');
     const localSettingsFile: string = await getLocalSettingsFile(context, message);
-    // Todo: Add code action debug?
-    const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath: path.dirname(localSettingsFile) });
-    const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
+    const wizardContext: IStorageConnectionWizardContext = Object.assign(context, { projectPath: path.dirname(localSettingsFile) });
+    const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new AzureWebJobsStoragePromptStep()],
         executeSteps: [new AzureWebJobsStorageSetSettingStep()]
     });

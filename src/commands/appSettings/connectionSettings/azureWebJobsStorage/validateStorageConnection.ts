@@ -3,33 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard } from "@microsoft/vscode-azext-utils";
-import { CodeAction, ConnectionKey } from "../../../../constants";
-import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
-import { type IConnectionPromptOptions } from "../IConnectionPromptOptions";
-import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
-import { AzureWebJobsStoragePromptStep } from "./AzureWebJobsStoragePromptStep";
-import { AzureWebJobsStorageSetSettingStep } from "./AzureWebJobsStorageSetSettingStep";
-import { type IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardContext";
+import { type StringDictionary } from "@azure/arm-appservice";
+import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
+import { type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { type IFuncDeployContext } from "../../../deploy/deploy";
+import { type IStorageSetSettingsContext } from "../ISetConnectionSettingContext";
 
-export async function validateStorageConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
-    if (context.action === CodeAction.Deploy) {
-        // Skip validation on deploy - we already connect the storage account for the user when the Function App is initially created
-        return;
-    }
+type StorageConnectionContext = IFuncDeployContext & ISubscriptionActionContext;
 
-    const currentStorageConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
-    const currentStorageIdentityConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath);
-    if (currentStorageConnection || currentStorageIdentityConnection) {
-        // Found a valid connection in debug mode.  Skip the wizard.
-        return;
-    }
+export async function validateStorageConnection(_context: StorageConnectionContext, _appSettings: StringDictionary, _site: ParsedSite, _projectPath: string): Promise<IStorageSetSettingsContext | undefined> {
+    // Skip validation on deploy - we already connect the storage account for the user when the Function App is initially created
 
-    const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
-    const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [new AzureWebJobsStoragePromptStep(options)],
-        executeSteps: [new AzureWebJobsStorageSetSettingStep()]
-    });
-    await wizard.prompt();
-    await wizard.execute();
+    // Todo: In the future we can probably do more here, but first we would need to be able to correctly validate identity based scenarios, see:
+    // https://github.com/microsoft/vscode-azurefunctions/issues/3688
+    return undefined;
 }

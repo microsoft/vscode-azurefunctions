@@ -19,7 +19,7 @@ import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "./getSqlDbLocal
 type SqlConnectionContext = IFuncDeployContext & ISubscriptionActionContext;
 
 /**
- * A pre-flight operation that ensures that:
+ * A pre-flight deployment operation that ensures that:
  *
  * a) Remote SQL connections already exist for the given function app or
  *

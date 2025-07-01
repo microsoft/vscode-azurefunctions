@@ -6,7 +6,7 @@
 import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { CodeAction, ConnectionType, SqlProvider } from '../../../../constants';
+import { ConnectionType, SqlProvider } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { SqlDatabaseGetConnectionStep } from './azure/SqlDatabaseGetConnectionStep';
@@ -32,9 +32,8 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
         if (this.connectionTypes.has(ConnectionType.Custom)) {
             buttons.push(connectCustomButton);
         }
-        if (context.action === CodeAction.Deploy) {
-            buttons.push(skipForNow);
-        }
+
+        buttons.push(skipForNow);
 
         const message: string = localize('selectSqlDatabaseConnection', 'In order to proceed, you must connect a SQL database for internal use by the Azure Functions runtime.');
         context.sqlDbConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {

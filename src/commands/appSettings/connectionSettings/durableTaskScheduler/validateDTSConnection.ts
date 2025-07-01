@@ -23,7 +23,7 @@ import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "./getDTSLocalProj
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
 
 /**
- * A pre-flight operation that ensures that:
+ * A pre-flight deployment operation that ensures that:
  *
  * a) A remote DTS connection already exists for the given function app or
  *

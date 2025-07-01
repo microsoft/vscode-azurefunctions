@@ -95,11 +95,15 @@ export enum CodeAction {
     Debug = 'Debug'
 }
 
+/**
+ * The default connection string keys used for the `host.json`
+ */
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
+    // Todo: Add %% and handle accordingly
     DTSHub = 'TASKHUB_NAME',
     SQL = 'SQLDB_Connection'
 }
@@ -200,6 +204,9 @@ export enum EventGridExecuteFunctionEntryPoint {
 
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
+
+export const StorageProvider = 'Microsoft.Storage';
+export const StorageAccountsResourceType: string = 'storageAccounts';
 
 export const SqlProvider: string = 'Microsoft.Sql';
 export const SqlServerResourceType: string = 'servers';

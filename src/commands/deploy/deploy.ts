@@ -24,6 +24,7 @@ import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
 import { validateDTSConnection } from '../appSettings/connectionSettings/durableTaskScheduler/validateDTSConnection';
 import { validateNetheriteConnection } from '../appSettings/connectionSettings/netherite/validateNetheriteConnection';
 import { validateSQLConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSQLConnection';
@@ -152,16 +153,22 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     switch (durableStorageType) {
         case DurableBackend.DTS:
-            Object.assign(context, await validateDTSConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+            Object.assign(context,
+                await validateDTSConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         case DurableBackend.Netherite:
-            Object.assign(context, await validateNetheriteConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+            Object.assign(context,
+                await validateNetheriteConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         case DurableBackend.SQL:
-            Object.assign(context, await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+            Object.assign(context,
+                await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
             break;
         default:
     }
+
+    Object.assign(context,
+        await validateStorageConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
     const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {

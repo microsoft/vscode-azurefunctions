@@ -6,8 +6,8 @@
 import { type StorageAccount, type StorageAccountListKeysResult, type StorageManagementClient } from "@azure/arm-storage";
 import { getResourceGroupFromId, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
 import { nonNullProp, nonNullValue, randomUtils } from "@microsoft/vscode-azext-utils";
-import { localStorageEmulatorConnectionString } from "../../../constants";
-import { createStorageClient } from "../../../utils/azureClients";
+import { localStorageEmulatorConnectionString } from "../../../../constants";
+import { createStorageClient } from "../../../../utils/azureClients";
 
 export interface IResourceResult {
     name: string;

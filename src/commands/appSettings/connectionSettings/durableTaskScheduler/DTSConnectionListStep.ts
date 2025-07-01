@@ -6,7 +6,7 @@
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { CodeAction, ConnectionType, DurableTaskProvider } from '../../../../constants';
+import { ConnectionType, DurableTaskProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
@@ -38,9 +38,8 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
         if (this.connectionTypes.has(ConnectionType.Custom)) {
             buttons.push(connectCustomDTSButton);
         }
-        if (context.action === CodeAction.Deploy) {
-            buttons.push(skipForNow);
-        }
+
+        buttons.push(skipForNow);
 
         const message: string = localize('selectDTSConnection', 'In order to proceed, you must connect a Durable Task Scheduler for internal use by the Azure Functions runtime.');
         context.dtsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {

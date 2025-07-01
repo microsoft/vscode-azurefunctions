@@ -22,7 +22,7 @@ import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "./get
 type NetheriteConnectionContext = IFuncDeployContext & ISubscriptionActionContext;
 
 /**
- * A pre-flight operation that ensures that:
+ * A pre-flight deployment operation that ensures that:
  *
  * a) Remote event hub connections already exist for the given function app or
  *

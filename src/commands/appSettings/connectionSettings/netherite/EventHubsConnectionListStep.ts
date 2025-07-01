@@ -6,7 +6,7 @@
 import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { CodeAction, ConnectionType, EventHubsProvider } from '../../../../constants';
+import { ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -35,9 +35,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
         if (this.connectionTypes.has(ConnectionType.Emulator)) {
             buttons.push(connectEmulatorButton);
         }
-        if (context.action === CodeAction.Deploy) {
-            buttons.push(skipForNow);
-        }
+
+        buttons.push(skipForNow);
 
         const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hubs namespace for internal use by the Azure Functions runtime.');
         context.eventHubsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
