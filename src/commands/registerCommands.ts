@@ -171,43 +171,10 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.stopFunctionApp', stopFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.stopStreamingLogs', stopStreamingLogs);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.swapSlot', swapSlot);
-    // Monkey-patch AppSettingTreeItem to include visibility state in contextValue
-    const originalContextValueGetter = Object.getOwnPropertyDescriptor(AppSettingTreeItem.prototype, 'contextValue')?.get;
-    if (originalContextValueGetter) {
-        Object.defineProperty(AppSettingTreeItem.prototype, 'contextValue', {
-            get: function (this: AppSettingTreeItem) {
-                const originalValue = originalContextValueGetter.call(this) as string;
-                const isHidden = (this.label as string).includes('Hidden value');
-                return isHidden ? `${originalValue};hidden` : `${originalValue};visible`;
-            },
-            configurable: true
-        });
-    }
-
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.toggleAppSettingVisibility',
         async (context: IActionContext, node: AppSettingTreeItem) => {
             await node.toggleValueVisibility(context);
-        },
-        250,
-    );
-    registerCommandWithTreeNodeUnwrapping(
-        'azureFunctions.showAppSettingValue',
-        async (context: IActionContext, node: AppSettingTreeItem) => {
-            // Only show if currently hidden
-            if (node.label.includes('Hidden value')) {
-                await node.toggleValueVisibility(context);
-            }
-        },
-        250,
-    );
-    registerCommandWithTreeNodeUnwrapping(
-        'azureFunctions.hideAppSettingValue',
-        async (context: IActionContext, node: AppSettingTreeItem) => {
-            // Only hide if currently shown
-            if (!node.label.includes('Hidden value')) {
-                await node.toggleValueVisibility(context);
-            }
         },
         250,
     );

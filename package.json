@@ -365,19 +365,7 @@
                 "command": "azureFunctions.toggleAppSettingVisibility",
                 "title": "%azureFunctions.toggleAppSettingVisibility%",
                 "category": "Azure Functions",
-                "icon": "$(eye)"
-            },
-            {
-                "command": "azureFunctions.showAppSettingValue",
-                "title": "%azureFunctions.showAppSettingValue%",
-                "category": "Azure Functions",
-                "icon": "$(eye)"
-            },
-            {
-                "command": "azureFunctions.hideAppSettingValue",
-                "title": "%azureFunctions.hideAppSettingValue%",
-                "category": "Azure Functions",
-                "icon": "$(eye-closed)"
+                "icon": "$(eye-watch)"
             },
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
@@ -729,13 +717,8 @@
                     "group": "1@4"
                 },
                 {
-                    "command": "azureFunctions.showAppSettingValue",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings).*hidden/",
-                    "group": "inline"
-                },
-                {
-                    "command": "azureFunctions.hideAppSettingValue", 
-                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings).*visible/",
+                    "command": "azureFunctions.toggleAppSettingVisibility",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings)/",
                     "group": "inline"
                 },
                 {
@@ -914,14 +897,6 @@
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.showAppSettingValue",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.hideAppSettingValue",
                     "when": "never"
                 },
                 {
