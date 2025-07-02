@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
+import { type Site, type StringDictionary } from "@azure/arm-appservice";
 import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, createWebSiteClient, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
@@ -262,17 +262,17 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.initSite(context);
         const client = await this.site.createClient(context);
-        const siteConfig: SiteConfig = await client.getSiteConfig();
-        const sourceControl: SiteSourceControl = await client.getSourceControl();
+        // const siteConfig: SiteConfig = await client.getSiteConfig();
+        // const sourceControl: SiteSourceControl = await client.getSourceControl();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
         this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
             site: this.site,
-            siteConfig,
-            sourceControl,
+            //siteConfig,
+            // sourceControl,
             contextValuesToAdd: ['azFunc']
         });
-        this.appSettingsTreeItem = await AppSettingsTreeItem.createAppSettingsTreeItem(context, proxyTree, this.site, ext.prefix, {
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
             contextValuesToAdd: ['azFunc'],
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
@@ -358,8 +358,13 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public async isReadOnly(context: IActionContext): Promise<boolean> {
         await this.initSite(context);
         const client = await this.site.createClient(context);
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-        return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+        try {
+            const appSettings: StringDictionary = await client.listApplicationSettings();
+            return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+        } catch (error) {
+            // if we can't read the app settings, just assume that this is read-only
+            return true;
+        }
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
