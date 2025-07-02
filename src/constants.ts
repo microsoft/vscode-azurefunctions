@@ -96,15 +96,14 @@ export enum CodeAction {
 }
 
 /**
- * The default connection string keys used for the `host.json`
+ * Default connection string keys
  */
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
-    // Todo: Add %% and handle accordingly
-    DTSHub = 'TASKHUB_NAME',
+    DTSHub = '%TASKHUB_NAME%',
     SQL = 'SQLDB_Connection'
 }
 

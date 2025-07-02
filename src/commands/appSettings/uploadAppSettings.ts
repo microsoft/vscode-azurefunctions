@@ -59,6 +59,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const excludedAppSettings: string[] = [];
 
+        // Todo: Investigate this for durable...
         // Local emulator connections should not be uploaded to the cloud - exclude them (https://github.com/microsoft/vscode-azurefunctions/issues/3298)
         if (localSettings.Values[ConnectionKey.Storage] === localStorageEmulatorConnectionString) {
             delete localSettings.Values?.[ConnectionKey.Storage];

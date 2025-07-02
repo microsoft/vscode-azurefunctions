@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { type IStorageAzureConnectionWizard } from '../IAzureWebJobsStorageWizardContext';
+import { type IStorageAzureConnectionWizard } from '../IStorageConnectionWizardContext';
 import { getStorageConnectionString } from '../getStorageConnectionString';
 
 export class StorageAccountGetConnectionStep<T extends IStorageAzureConnectionWizard> extends AzureWizardExecuteStep<T> {

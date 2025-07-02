@@ -9,7 +9,7 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
+import { DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -100,8 +100,10 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
         default:
     }
 
-    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context[ConnectionKey.Storage] as string | undefined);
-    didUpdate ||= updatedStorageConnection;
+    if (context.newStorageConnectionSettingKey && context.newStorageConnectionSettingValue) {
+        const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, context.newStorageConnectionSettingKey, context.newStorageConnectionSettingValue);
+        didUpdate ||= updatedStorageConnection;
+    }
 
     return didUpdate;
 }

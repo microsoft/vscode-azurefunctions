@@ -11,7 +11,7 @@ import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { type StorageConnectionType } from '../IConnectionTypesContext';
-import { type IStorageAzureConnectionWizard, type IStorageConnectionWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IStorageAzureConnectionWizard, type IStorageConnectionWizardContext } from './IStorageConnectionWizardContext';
 import { StorageConnectionSetSettingStep } from './StorageConnectionSetSettingStep';
 import { StorageAccountGetConnectionStep } from './azure/StorageAccountGetConnectionStep';
 import { StorageEmulatorGetConnectionStep } from './emulator/StorageEmulatorGetConnectionStep';

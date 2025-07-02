@@ -5,9 +5,10 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { CodeAction, hostFileName } from '../../../../constants';
+import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
 import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
+import { tryGetVariableSubstitutedKey } from '../getVariableSubstitutedKey';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
 import { setLocalSetting } from '../setConnectionSetting';
 import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
@@ -22,9 +23,8 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
 
     public async execute(context: T): Promise<void> {
         if (!context.newDTSHubConnectionSettingKey) {
-            const defaultHubKey: string = 'TASKHUB_NAME';
-            await this.configureHostJson(context, `%${defaultHubKey}%`);
-            context.newDTSHubConnectionSettingKey = defaultHubKey;
+            await this.configureHostJson(context, ConnectionKey.DTSHub);
+            context.newDTSHubConnectionSettingKey = tryGetVariableSubstitutedKey(ConnectionKey.DTSHub);
         }
 
         if (context.action === CodeAction.Debug) {

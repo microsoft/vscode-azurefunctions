@@ -8,7 +8,7 @@ import * as path from 'path';
 import { localize } from '../../../../localize';
 import { getLocalSettingsFile } from '../../localSettings/getLocalSettingsFile';
 import { type ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
-import { type IStorageConnectionWizardContext } from './IAzureWebJobsStorageWizardContext';
+import { type IStorageConnectionWizardContext } from './IStorageConnectionWizardContext';
 import { AzureWebJobsStoragePromptStep } from './StorageConnectionListStep';
 import { AzureWebJobsStorageSetSettingStep } from './StorageConnectionSetSettingStep';
 

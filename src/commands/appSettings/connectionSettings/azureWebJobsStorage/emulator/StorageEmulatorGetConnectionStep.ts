@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { localStorageEmulatorConnectionString } from '../../../../../constants';
-import { type IStorageAzureConnectionWizard } from '../IAzureWebJobsStorageWizardContext';
+import { type IStorageAzureConnectionWizard } from '../IStorageConnectionWizardContext';
 
 export class StorageEmulatorGetConnectionStep<T extends IStorageAzureConnectionWizard> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;

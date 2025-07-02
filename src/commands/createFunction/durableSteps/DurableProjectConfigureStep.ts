@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
@@ -13,6 +13,7 @@ import { type IHostJsonV2 } from '../../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { durableUtils } from '../../../utils/durableUtils';
+import { tryGetVariableSubstitutedKey } from '../../appSettings/connectionSettings/getVariableSubstitutedKey';
 import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -84,7 +85,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                     ext.outputChannel.appendLog(localize('extensionBundlePreview', 'Updated "host.json" extension bundle to preview version to enable new DTS features.'));
                 }
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
-                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTSHub, 'default', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), 'default', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = durableUtils.getDefaultSqlTaskConfig();

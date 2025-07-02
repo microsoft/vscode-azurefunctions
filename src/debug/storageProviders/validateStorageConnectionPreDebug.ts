@@ -5,7 +5,7 @@
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { getStorageLocalSettingsValue } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
-import { type IStorageConnectionWizardContext } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/IAzureWebJobsStorageWizardContext";
+import { type IStorageConnectionWizardContext } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
 import { StorageConnectionListStep } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../constants";
 import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
@@ -28,7 +28,7 @@ export async function validateStorageConnectionPreDebug(context: IActionContext,
         action: CodeAction.Debug,
         // If the user hasn't already set up a managed identity, we can default to connection string for ease of use
         // in the future we can explore if we want to include managed identity here as well
-        newStorageConnectionSettingKey: ConnectionKey.Storage,
+        newStorageConnectionSettingKey: storageConnectionKey,
     };
 
     const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
