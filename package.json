@@ -368,6 +368,18 @@
                 "icon": "$(eye)"
             },
             {
+                "command": "azureFunctions.showAppSettingValue",
+                "title": "Show App Setting Value",
+                "category": "Azure Functions",
+                "icon": "$(eye)"
+            },
+            {
+                "command": "azureFunctions.hideAppSettingValue",
+                "title": "Hide App Setting Value",
+                "category": "Azure Functions",
+                "icon": "$(eye-closed)"
+            },
+            {
                 "command": "azureFunctions.uninstallFuncCoreTools",
                 "title": "%azureFunctions.uninstallFuncCoreTools%",
                 "category": "Azure Functions",
@@ -717,8 +729,13 @@
                     "group": "1@4"
                 },
                 {
-                    "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings)/",
+                    "command": "azureFunctions.showAppSettingValue",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings).*hidden/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.hideAppSettingValue", 
+                    "when": "view =~ /(azureResourceGroups|azureFocusView|azureWorkspace)/ && viewItem =~ /applicationSettingItem.*(azFunc|localSettings).*visible/",
                     "group": "inline"
                 },
                 {
