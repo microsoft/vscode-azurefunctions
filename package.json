@@ -369,13 +369,13 @@
             },
             {
                 "command": "azureFunctions.showAppSettingValue",
-                "title": "Show App Setting Value",
+                "title": "%azureFunctions.showAppSettingValue%",
                 "category": "Azure Functions",
                 "icon": "$(eye)"
             },
             {
                 "command": "azureFunctions.hideAppSettingValue",
-                "title": "Hide App Setting Value",
+                "title": "%azureFunctions.hideAppSettingValue%",
                 "category": "Azure Functions",
                 "icon": "$(eye-closed)"
             },
@@ -914,6 +914,14 @@
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.showAppSettingValue",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.hideAppSettingValue",
                     "when": "never"
                 },
                 {

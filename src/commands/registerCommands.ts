@@ -175,9 +175,9 @@ export function registerCommands(
     const originalContextValueGetter = Object.getOwnPropertyDescriptor(AppSettingTreeItem.prototype, 'contextValue')?.get;
     if (originalContextValueGetter) {
         Object.defineProperty(AppSettingTreeItem.prototype, 'contextValue', {
-            get: function () {
-                const originalValue = originalContextValueGetter.call(this);
-                const isHidden = this.label.includes('Hidden value');
+            get: function (this: AppSettingTreeItem) {
+                const originalValue = originalContextValueGetter.call(this) as string;
+                const isHidden = (this.label as string).includes('Hidden value');
                 return isHidden ? `${originalValue};hidden` : `${originalValue};visible`;
             },
             configurable: true
