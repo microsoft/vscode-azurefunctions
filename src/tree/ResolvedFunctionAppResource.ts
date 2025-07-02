@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type StringDictionary } from "@azure/arm-appservice";
+import { type Site, type SiteConfig, type SiteSourceControl, type StringDictionary } from "@azure/arm-appservice";
 import { DeleteLastServicePlanStep, DeleteSiteStep, DeploymentTreeItem, DeploymentsTreeItem, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem, createWebSiteClient, getFile, type IDeleteSiteWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AppSettingTreeItem, AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
 import { AzureWizard, DeleteConfirmationStep, callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext, type ISubscriptionContext, type TreeItemIconPath } from "@microsoft/vscode-azext-utils";
@@ -262,14 +262,14 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.initSite(context);
         const client = await this.site.createClient(context);
-        // const siteConfig: SiteConfig = await client.getSiteConfig();
-        // const sourceControl: SiteSourceControl = await client.getSourceControl();
+        const siteConfig: SiteConfig = await client.getSiteConfig();
+        const sourceControl: SiteSourceControl = await client.getSourceControl();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
         this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
             site: this.site,
-            //siteConfig,
-            // sourceControl,
+            siteConfig,
+            sourceControl,
             contextValuesToAdd: ['azFunc']
         });
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
