@@ -50,7 +50,6 @@ export async function validateDTSConnection(context: DTSConnectionContext, appSe
         site,
         projectPath,
         action: CodeAction.Deploy,
-        dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
         newDTSConnectionSettingKey: dtsConnectionKey,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
@@ -64,7 +63,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, appSe
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connections'),
+        title: localize('prepareDTSConnection', 'Prepare durable task scheduler deployment connections'),
         promptSteps: [
             new ResourceGroupListStep(),
             new DTSConnectionListStep(availableDeployConnectionTypes),
@@ -74,7 +73,10 @@ export async function validateDTSConnection(context: DTSConnectionContext, appSe
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.dtsConnectionType) {
+        await wizard.execute();
+    }
 
     return {
         newDTSConnectionSettingKey: wizardContext.newDTSConnectionSettingKey,

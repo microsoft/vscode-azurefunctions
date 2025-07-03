@@ -22,14 +22,13 @@ export async function validateStorageConnectionPreDebug(context: IActionContext,
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
-    const wizardContext: IStorageConnectionWizardContext = {
-        ...context,
+    const wizardContext: IStorageConnectionWizardContext = Object.assign(context, {
         projectPath,
         action: CodeAction.Debug,
         // If the user hasn't already set up a managed identity, we can default to connection string for ease of use
         // in the future we can explore if we want to include managed identity here as well
         newStorageConnectionSettingKey: storageConnectionKey,
-    };
+    });
 
     const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new StorageConnectionListStep(availableDebugConnectionTypes)],

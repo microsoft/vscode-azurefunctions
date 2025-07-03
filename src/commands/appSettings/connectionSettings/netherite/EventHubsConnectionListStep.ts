@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
@@ -49,7 +49,7 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
         return !context.eventHubsConnectionType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T | INetheriteAzureConnectionWizardContext> | undefined> {
+    public async getSubWizard(context: T | INetheriteAzureConnectionWizardContext): Promise<IWizardOptions<T | INetheriteAzureConnectionWizardContext> | undefined> {
         const promptSteps: AzureWizardPromptStep<T | INetheriteAzureConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T | INetheriteAzureConnectionWizardContext>[] = [];
 
@@ -57,9 +57,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
 
         switch (context.eventHubsConnectionType) {
             case ConnectionType.Azure:
-                const subscriptionPromptStep = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context) as AzureWizardPromptStep<INetheriteAzureConnectionWizardContext> | undefined;
-                if (subscriptionPromptStep) {
-                    promptSteps.push(subscriptionPromptStep);
+                if (!(context as INetheriteAzureConnectionWizardContext).subscriptionId) {
+                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
                 promptSteps.push(

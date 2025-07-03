@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, DurableTaskProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
 import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromptStep';
@@ -52,7 +53,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
         return !context.dtsConnectionType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+    public async getSubWizard(context: T | IDTSAzureConnectionWizardContext): Promise<IWizardOptions<T> | undefined> {
         const promptSteps: AzureWizardPromptStep<T | IDTSAzureConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T | IDTSAzureConnectionWizardContext>[] = [];
 
@@ -60,6 +61,10 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
 
         switch (context.dtsConnectionType) {
             case ConnectionType.Azure:
+                if (!(context as IDTSAzureConnectionWizardContext).subscriptionId) {
+                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
+                }
+
                 promptSteps.push(new DurableTaskSchedulerListStep());
                 executeSteps.push(new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]));
                 break;

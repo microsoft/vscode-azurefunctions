@@ -11,10 +11,10 @@ export class NetheriteEmulatorGetConnectionStep<T extends INetheriteConnectionWi
     public priority: number = 230;
 
     public async execute(context: T): Promise<void> {
-        context.newEventHubConnectionSettingValue = localEventHubsEmulatorConnectionString;
+        context.newEventHubsNamespaceConnectionSettingValue = localEventHubsEmulatorConnectionString;
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.newEventHubConnectionSettingValue;
+        return !context.newEventHubsNamespaceConnectionSettingValue;
     }
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { LocationListStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, StorageAccountsResourceType, StorageProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
@@ -65,9 +65,8 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
 
         switch (context.azureWebJobsStorageType) {
             case ConnectionType.Azure:
-                const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-                if (subscriptionPromptStep) {
-                    promptSteps.push(subscriptionPromptStep as AzureWizardPromptStep<IStorageAzureConnectionWizard>);
+                if (!(context as IStorageAzureConnectionWizard).subscriptionId) {
+                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
                 if (!(context as IStorageAzureConnectionWizard).storageAccount) {

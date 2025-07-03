@@ -45,7 +45,10 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.dtsConnectionType) {
+        await wizard.execute();
+    }
 
     useDTSEmulator = wizardContext.dtsConnectionType === ConnectionType.Emulator;
 }

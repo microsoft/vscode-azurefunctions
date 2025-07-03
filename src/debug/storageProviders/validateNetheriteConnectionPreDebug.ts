@@ -26,8 +26,7 @@ export async function validateNetheriteConnectionPreDebug(context: IActionContex
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
-    const wizardContext: INetheriteConnectionWizardContext = {
-        ...context,
+    const wizardContext: INetheriteConnectionWizardContext = Object.assign(context, {
         ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
@@ -36,7 +35,7 @@ export async function validateNetheriteConnectionPreDebug(context: IActionContex
         newEventHubsNamespaceConnectionSettingValue: eventHubsConnection,
         newEventHubConnectionSettingValue: eventHubName,
         suggestedNamespaceLocalSettings: parseEventHubsNamespaceName(eventHubsConnection),
-    };
+    });
 
     const wizard: AzureWizard<INetheriteConnectionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('prepareNetheriteDebug', 'Prepare Netherite debug configuration'),
@@ -45,5 +44,8 @@ export async function validateNetheriteConnectionPreDebug(context: IActionContex
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.eventHubsConnectionType) {
+        await wizard.execute();
+    }
 }

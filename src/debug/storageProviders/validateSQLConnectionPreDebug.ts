@@ -22,6 +22,7 @@ export async function validateSQLConnectionPreDebug(context: IActionContext, pro
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Custom]) satisfies Set<Exclude<ConnectionType, 'Emulator'>>;
 
+    // Todo: Use Object.assign() if we ever introduce an emulator option so we can carry over the same preference for azureWebJobsStorage
     const wizardContext: ISqlDatabaseConnectionWizardContext = {
         ...context,
         ...await createActivityContext(),
@@ -38,5 +39,8 @@ export async function validateSQLConnectionPreDebug(context: IActionContext, pro
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.sqlDbConnectionType) {
+        await wizard.execute();
+    }
 }

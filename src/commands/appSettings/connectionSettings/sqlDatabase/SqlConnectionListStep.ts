@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, SqlProvider } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
@@ -46,7 +46,7 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
         return !context.sqlDbConnectionType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+    public async getSubWizard(context: T | ISqlDatabaseAzureConnectionWizardContext): Promise<IWizardOptions<T> | undefined> {
         const promptSteps: AzureWizardPromptStep<T | ISqlDatabaseAzureConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T | ISqlDatabaseAzureConnectionWizardContext>[] = [];
 
@@ -54,9 +54,8 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
 
         switch (context.sqlDbConnectionType) {
             case ConnectionType.Azure:
-                const subscriptionPromptStep: AzureWizardPromptStep<ISqlDatabaseAzureConnectionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-                if (subscriptionPromptStep) {
-                    promptSteps.push(subscriptionPromptStep);
+                if (!(context as ISqlDatabaseAzureConnectionWizardContext).subscriptionId) {
+                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
                 promptSteps.push(

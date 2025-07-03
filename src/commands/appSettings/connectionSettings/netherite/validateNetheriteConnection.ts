@@ -47,31 +47,33 @@ export async function validateNetheriteConnection(context: NetheriteConnectionCo
 
     const availableDeployConnectionTypes = new Set([ConnectionType.Azure]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
-    const wizardContext: INetheriteAzureConnectionWizardContext = {
+    const wizardContext: INetheriteAzureConnectionWizardContext = Object.assign(context, {
         ...context,
         ...await createActivityContext(),
         projectPath,
         action: CodeAction.Deploy,
-        eventHubsConnectionType: ConnectionType.Azure,
         eventHubsNamespace,
         eventHub: await tryGetEventHub(context, eventHubsNamespace, localHubConnection),
         newEventHubsNamespaceConnectionSettingKey: eventHubsNamespaceConnectionKey,
         newEventHubConnectionSettingKey: eventHubConnectionKey,
         suggestedNamespaceLocalSettings: localNamespaceName,
         suggestedEventHubLocalSettings: localHubConnection,
-    };
+    });
 
     LocationListStep.resetLocation(wizardContext);
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<INetheriteAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareNetheriteConnection', 'Prepare Netherite connections'),
+        title: localize('prepareNetheriteConnection', 'Prepare Netherite deployment connections'),
         promptSteps: [new EventHubsConnectionListStep(availableDeployConnectionTypes)],
         showLoadingPrompt: true,
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.eventHubsConnectionType) {
+        await wizard.execute();
+    }
 
     return {
         newEventHubsNamespaceConnectionSettingKey: wizardContext.newEventHubsNamespaceConnectionSettingKey,
