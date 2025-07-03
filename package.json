@@ -365,7 +365,7 @@
                 "command": "azureFunctions.toggleAppSettingVisibility",
                 "title": "%azureFunctions.toggleAppSettingVisibility%",
                 "category": "Azure Functions",
-                "icon": "$(eye)"
+                "icon": "$(eye-watch)"
             },
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
