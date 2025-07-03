@@ -5,7 +5,6 @@
 
 import { CommonRoleDefinitions, createRoleId, LocationListStep, parseAzureResourceId, RoleAssignmentExecuteStep, type ILocationWizardContext, type Role } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../../../../constants';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
@@ -47,11 +46,9 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!context.dts) {
-            LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
-            LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
-
             promptSteps.push(new DurableTaskSchedulerNameStep(this._schedulerClient));
             executeSteps.push(new DurableTaskSchedulerCreateStep(this._schedulerClient));
+            LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
         }
 
         if (!context.dtsHub) {

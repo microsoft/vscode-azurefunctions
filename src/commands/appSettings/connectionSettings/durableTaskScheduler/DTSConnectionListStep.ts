@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, ResourceGroupListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, DurableTaskProvider } from '../../../../constants';
+import { ConnectionType, DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -65,7 +65,12 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                     Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
-                promptSteps.push(new DurableTaskSchedulerListStep());
+                LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
+
+                promptSteps.push(
+                    new ResourceGroupListStep() as AzureWizardPromptStep<IDTSAzureConnectionWizardContext>,
+                    new DurableTaskSchedulerListStep(),
+                );
                 executeSteps.push(new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]));
                 break;
             case ConnectionType.Emulator:

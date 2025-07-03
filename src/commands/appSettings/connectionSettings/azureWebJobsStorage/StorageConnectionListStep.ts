@@ -69,10 +69,9 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                     Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
-                if (!(context as IStorageAzureConnectionWizard).storageAccount) {
-                    LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, StorageProvider, StorageAccountsResourceType);
-                    LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
+                LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, StorageProvider, StorageAccountsResourceType);
 
+                if (!(context as IStorageAzureConnectionWizard).storageAccount) {
                     promptSteps.push(new StorageAccountListStep(
                         { // INewStorageAccountDefaults
                             kind: StorageAccountKind.Storage,
@@ -86,6 +85,7 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                             learnMoreLink: 'https://aka.ms/Cfqnrc'
                         }
                     ) as AzureWizardPromptStep<IStorageAzureConnectionWizard>);
+                    LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
 
                     executeSteps.push(new VerifyProvidersStep<IStorageAzureConnectionWizard>([StorageProvider]));
                 }

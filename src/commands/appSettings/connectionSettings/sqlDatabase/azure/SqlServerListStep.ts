@@ -6,7 +6,6 @@
 import { type Server, type SqlManagementClient } from '@azure/arm-sql';
 import { LocationListStep, uiUtils, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ConfirmPreviousInputStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { SqlProvider, SqlServerResourceType } from '../../../../../constants';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { createSqlClient } from '../../../../../utils/azureClients';
@@ -40,11 +39,9 @@ export class SqlServerListStep<T extends ISqlDatabaseAzureConnectionWizardContex
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!context.sqlServer) {
-            LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, SqlProvider, SqlServerResourceType);
-            LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
-
             promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new ConfirmPreviousInputStep('newSqlAdminPassword', { isPassword: true }));
             executeSteps.push(new SqlServerCreateStep());
+            LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
         }
 
         if (!context.sqlDatabase) {

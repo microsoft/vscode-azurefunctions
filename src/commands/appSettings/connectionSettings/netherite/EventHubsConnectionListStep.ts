@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroupListStep, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, ResourceGroupListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, EventHubsProvider } from '../../../../constants';
+import { ConnectionType, EventHubsNamespaceResourceType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -60,6 +60,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
                 if (!(context as INetheriteAzureConnectionWizardContext).subscriptionId) {
                     Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
+
+                LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, EventHubsProvider, EventHubsNamespaceResourceType);
 
                 promptSteps.push(
                     new ResourceGroupListStep() as AzureWizardPromptStep<INetheriteAzureConnectionWizardContext>,

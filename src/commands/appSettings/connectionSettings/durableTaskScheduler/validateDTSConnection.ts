@@ -5,7 +5,7 @@
 
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type ParsedSite } from "@microsoft/vscode-azext-azureappservice";
-import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
+import { LocationListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { CodeAction, ConnectionType } from "../../../../constants";
@@ -65,7 +65,6 @@ export async function validateDTSConnection(context: DTSConnectionContext, appSe
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('prepareDTSConnection', 'Prepare durable task scheduler deployment connections'),
         promptSteps: [
-            new ResourceGroupListStep(),
             new DTSConnectionListStep(availableDeployConnectionTypes),
             new DTSStartingResourcesLogStep(),
         ],
