@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LocationListStep, ResourceGroupListStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type ISubscriptionActionContext, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, StorageAccountsResourceType, StorageProvider } from '../../../../constants';
@@ -74,7 +74,6 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                     LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, StorageProvider, StorageAccountsResourceType);
                     LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
 
-                    promptSteps.push(new ResourceGroupListStep() as AzureWizardPromptStep<IStorageAzureConnectionWizard>);
                     promptSteps.push(new StorageAccountListStep(
                         { // INewStorageAccountDefaults
                             kind: StorageAccountKind.Storage,
@@ -107,7 +106,7 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
     }
 }
 
-const availableStorageConnections: Set<ConnectionType> = new Set([ConnectionType.Azure, ConnectionType.Emulator]);
+export const availableStorageConnections = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
 function tryFindMatchingConnectionType(connections: (ConnectionType | undefined)[]): StorageConnectionType | undefined {
     for (const c of connections) {
@@ -115,7 +114,7 @@ function tryFindMatchingConnectionType(connections: (ConnectionType | undefined)
             continue;
         }
 
-        if (availableStorageConnections.has(c)) {
+        if ((availableStorageConnections as Set<ConnectionType>).has(c)) {
             return c as StorageConnectionType;
         }
     }
