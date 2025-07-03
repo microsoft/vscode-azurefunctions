@@ -11,7 +11,7 @@ import { type BindingSettingValue } from '../../../funcConfig/function';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
-import { type INetheriteConnectionWizardContext } from '../../appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext';
+import { type INetheriteConnectionWizardContext as IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext';
 import { EventHubsNamespaceListStep } from '../../appSettings/connectionSettings/netherite/azure/EventHubsNamespaceListStep';
 import { getBindingSetting, type FunctionV2WizardContext, type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
@@ -58,8 +58,8 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext & FunctionV2WizardContext> | undefined> {
         if (!getBindingSetting(context, this._setting)) {
-            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & INetheriteConnectionWizardContext>[] = [];
-            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & INetheriteConnectionWizardContext>[] = [];
+            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionActionContext & IEventHubsConnectionWizardContext>[] = [];
             switch (this._resourceType) {
                 case ResourceType.DocumentDB:
                     azurePromptSteps.push(new CosmosDBListStep());
