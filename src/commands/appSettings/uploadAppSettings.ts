@@ -69,6 +69,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
             delete localSettings.Values?.[ConnectionKey.EventHubs];
             excludedAppSettings.push(ConnectionKey.EventHubs);
         }
+        // Todo: Add DTS
 
         if (exclude) {
             Object.keys(localSettings.Values).forEach((settingName) => {
