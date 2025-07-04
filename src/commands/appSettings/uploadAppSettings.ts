@@ -8,7 +8,7 @@ import { confirmOverwriteSettings } from "@microsoft/vscode-azext-azureappservic
 import { AppSettingsTreeItem, type IAppSettingsClient } from "@microsoft/vscode-azext-azureappsettings";
 import { AzExtFsExtra, nonNullValue, type IActionContext, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
+import { functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { type ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -59,17 +59,17 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const excludedAppSettings: string[] = [];
 
-        // Todo: Investigate this for durable...
         // Local emulator connections should not be uploaded to the cloud - exclude them (https://github.com/microsoft/vscode-azurefunctions/issues/3298)
-        if (localSettings.Values[ConnectionKey.Storage] === localStorageEmulatorConnectionString) {
-            delete localSettings.Values?.[ConnectionKey.Storage];
-            excludedAppSettings.push(ConnectionKey.Storage);
+        for (const [key, value] of Object.entries(localSettings.Values)) {
+            const emulatorPatterns: RegExp[] = [new RegExp(localStorageEmulatorConnectionString), localEventHubsEmulatorConnectionRegExp, /localhost/i];
+            for (const emulatorPattern of emulatorPatterns) {
+                if (emulatorPattern.test(value)) {
+                    delete localSettings.Values[key];
+                    excludedAppSettings.push(key);
+                    break;
+                }
+            }
         }
-        if (localEventHubsEmulatorConnectionRegExp.test(localSettings.Values[ConnectionKey.EventHubs])) {
-            delete localSettings.Values?.[ConnectionKey.EventHubs];
-            excludedAppSettings.push(ConnectionKey.EventHubs);
-        }
-        // Todo: Add DTS
 
         if (exclude) {
             Object.keys(localSettings.Values).forEach((settingName) => {
