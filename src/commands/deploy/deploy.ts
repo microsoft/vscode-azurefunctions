@@ -210,8 +210,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
     }
 
+    // Note for Durable Projects:
+    // https://github.com/Azure/azure-functions-durable-extension/issues/2957
+    // Only the Azure Storage backend is supported for Durable Function apps hosted in the Flex Consumption plan.
+
     // app settings shouldn't be checked with flex consumption plans
-    // Todo: Does flex consumption conflict with Durable Projects?
     if (isZipDeploy && !isFlexConsumption) {
         await verifyAppSettings({
             context,
