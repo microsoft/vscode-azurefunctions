@@ -151,20 +151,27 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
-    switch (durableStorageType) {
-        case DurableBackend.DTS:
-            Object.assign(context,
-                await validateDTSConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
-            break;
-        case DurableBackend.Netherite:
-            Object.assign(context,
-                await validateNetheriteConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
-            break;
-        case DurableBackend.SQL:
-            Object.assign(context,
-                await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
-            break;
-        default:
+    if (durableStorageType && !isFlexConsumption) {
+        switch (durableStorageType) {
+            case DurableBackend.DTS:
+                Object.assign(context,
+                    await validateDTSConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            case DurableBackend.Netherite:
+                Object.assign(context,
+                    await validateNetheriteConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            case DurableBackend.SQL:
+                Object.assign(context,
+                    await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            default:
+        }
+    }
+
+    if (durableStorageType && durableStorageType !== DurableBackend.Storage && isFlexConsumption) {
+        // https://github.com/Azure/azure-functions-durable-extension/issues/2957
+        ext.outputChannel.appendLog(localize('durableStorageTypeWarning', 'Warning: Detected a flex consumption app using an incompatible Durable Functions storage provider. Only the Azure Storage backend is supported for Durable Function apps hosted in the Flex Consumption plan.'));
     }
 
     Object.assign(context,
@@ -209,10 +216,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
     }
-
-    // Note for Durable Projects:
-    // https://github.com/Azure/azure-functions-durable-extension/issues/2957
-    // Only the Azure Storage backend is supported for Durable Function apps hosted in the Flex Consumption plan.
 
     // app settings shouldn't be checked with flex consumption plans
     if (isZipDeploy && !isFlexConsumption) {
