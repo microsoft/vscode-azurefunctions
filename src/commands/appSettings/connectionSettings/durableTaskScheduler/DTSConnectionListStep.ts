@@ -10,11 +10,13 @@ import { ConnectionType, DurableTaskProvider, DurableTaskSchedulersResourceType 
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
+import { DurableTaskSchedulerGetConnectionStep } from './azure/DurableTaskSchedulerGetConnectionStep';
 import { DurableTaskSchedulerListStep } from './azure/DurableTaskSchedulerListStep';
 import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromptStep';
 import { DTSHubNameCustomPromptStep } from './custom/DTSHubNameCustomPromptStep';
 import { DTSConnectionSetSettingStep } from './DTSConnectionSetSettingStep';
 import { DTSHubNameSetSettingStep } from './DTSHubNameSetSettingStep';
+import { DTSEmulatorGetConnectionsStep } from './emulator/DTSEmulatorGetConnectionsStep';
 import { DTSEmulatorStartStep } from './emulator/DTSEmulatorStartStep';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
@@ -71,10 +73,16 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                     new ResourceGroupListStep() as AzureWizardPromptStep<IDTSAzureConnectionWizardContext>,
                     new DurableTaskSchedulerListStep(),
                 );
-                executeSteps.push(new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]));
+                executeSteps.push(
+                    new VerifyProvidersStep<IDTSAzureConnectionWizardContext>([DurableTaskProvider]),
+                    new DurableTaskSchedulerGetConnectionStep(),
+                );
                 break;
             case ConnectionType.Emulator:
-                executeSteps.push(new DTSEmulatorStartStep());
+                executeSteps.push(
+                    new DTSEmulatorStartStep(),
+                    new DTSEmulatorGetConnectionsStep(),
+                );
                 break;
             case ConnectionType.Custom:
                 promptSteps.push(

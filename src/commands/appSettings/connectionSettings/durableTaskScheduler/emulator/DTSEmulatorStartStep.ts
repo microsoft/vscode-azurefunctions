@@ -8,11 +8,10 @@ import { commands } from 'vscode';
 import { ConnectionType } from '../../../../../constants';
 import { localize } from '../../../../../localize';
 import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 200;
+    public priority: number = 190;
 
     public async execute(context: T): Promise<void> {
         if (!context.newDTSHubConnectionSettingValue) {
@@ -26,15 +25,11 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
                 localize('failedToGetEmulators', 'Internal error: Failed to retrieve the list of DTS emulators.'),
             );
 
-            const emulator: DurableTaskSchedulerEmulator = nonNullValue(
+            context.dtsEmulator = nonNullValue(
                 emulators.find(e => e.id === emulatorId),
                 localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
             );
-
-            context.newDTSConnectionSettingValue = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
         }
-
-        context.newDTSHubConnectionSettingValue = 'default';
     }
 
     public shouldExecute(context: T): boolean {

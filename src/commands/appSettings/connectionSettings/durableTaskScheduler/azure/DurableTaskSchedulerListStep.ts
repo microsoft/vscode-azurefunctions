@@ -8,7 +8,6 @@ import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type I
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
 import { FunctionAppUserAssignedIdentitiesListStep } from '../../../../identity/listUserAssignedIdentities/FunctionAppUserAssignedIdentitiesListStep';
 import { type IDTSAzureConnectionWizardContext } from '../IDTSConnectionWizardContext';
 import { DurableTaskHubListStep } from './DurableTaskHubListStep';
@@ -29,12 +28,10 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         })).data;
 
         if (context.dts) {
-            context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
             context.valuesToMask.push(context.dts.name);
-            context.valuesToMask.push(context.newDTSConnectionSettingValue);
         }
 
-        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.newDTSConnectionSettingValue === context.suggestedDTSEndpointLocalSettings) : undefined;
+        context.telemetry.properties.usedLocalDTSConnectionSettings = context.suggestedDTSEndpointLocalSettings ? String(context.dts?.properties.endpoint === context.suggestedDTSEndpointLocalSettings) : undefined;
     }
 
     public shouldPrompt(context: T): boolean {
@@ -63,7 +60,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
 
         const identitiesListStep = new FunctionAppUserAssignedIdentitiesListStep(dtsContributorRole /** targetRole */);
         promptSteps.push(identitiesListStep);
-        executeSteps.push(new RoleAssignmentExecuteStep(getDTSRoleAssignmentCallback(context, identitiesListStep, dtsContributorRole)));
+        executeSteps.push(new RoleAssignmentExecuteStep(getDTSRoleAssignmentCallback(context, identitiesListStep, dtsContributorRole), { priority: 190 }));
 
         return { promptSteps, executeSteps };
 

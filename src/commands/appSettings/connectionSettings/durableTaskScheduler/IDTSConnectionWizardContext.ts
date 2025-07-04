@@ -7,6 +7,7 @@ import { type ExecuteActivityContext, type IActionContext } from "@microsoft/vsc
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type ConnectionType } from "../../../../constants";
 import { type DurableTaskHubResource, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerEmulator } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient";
 import { type IFunctionAppUserAssignedIdentitiesContext } from "../../../identity/listUserAssignedIdentities/IFunctionAppUserAssignedIdentitiesContext";
 import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
@@ -17,6 +18,8 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
 
     suggestedDTSEndpointLocalSettings?: string;
     suggestedDTSHubNameLocalSettings?: string;
+
+    dtsEmulator?: DurableTaskSchedulerEmulator;
 
     // All properties from `IDTSConnectionSetSettingsContext` apply
 }
