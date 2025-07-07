@@ -5,11 +5,12 @@
 
 import { type ManagedServiceIdentityClient } from '@azure/arm-msi';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { createAuthorizationManagementClient, createManagedServiceIdentityClient, parseAzureResourceId, uiUtils, type ParsedAzureResourceId, type Role } from '@microsoft/vscode-azext-azureutils';
-import { ActivityChildItem, ActivityChildType, activityInfoContext, activityInfoIcon, AzureWizardPromptStep, createContextValue, nonNullProp, prependOrInsertAfterLastInfoChild, type ActivityInfoChild, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { ext } from '../../../extensionVariables';
-import { localize } from '../../../localize';
-import { type IFunctionAppUserAssignedIdentitiesContext } from './IFunctionAppUserAssignedIdentitiesContext';
+import { createAuthorizationManagementClient, createManagedServiceIdentityClient, parseAzureResourceId, uiUtils, UserAssignedIdentityListStep, type ParsedAzureResourceId, type Role } from '@microsoft/vscode-azext-azureutils';
+import { ActivityChildItem, ActivityChildType, activityInfoContext, activityInfoIcon, AzureWizardPromptStep, createContextValue, nonNullProp, prependOrInsertAfterLastInfoChild, type ActivityInfoChild, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../localize';
+import { type ManagedIdentityAssignContext } from './ManagedIdentityAssignContext';
+import { ManagedIdentityAssignStep } from './ManagedIdentityAssignStep';
 
 /**
  * Wizard step to select a user-assigned managed identity from the parsed site of a function app.
@@ -20,11 +21,14 @@ import { type IFunctionAppUserAssignedIdentitiesContext } from './IFunctionAppUs
  *
  * @populates `context.managedIdentity`
  */
-export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUserAssignedIdentitiesContext> extends AzureWizardPromptStep<T> {
+export class FunctionAppUserAssignedIdentitiesListStep<T extends ManagedIdentityAssignContext> extends AzureWizardPromptStep<T> {
     private _msiClient: ManagedServiceIdentityClient;
     private _hasTargetRole?: boolean;
 
-    constructor(readonly targetRole?: Role) {
+    constructor(
+        readonly targetRole?: Role,
+        readonly options?: { identityAssignStepPriority?: number },
+    ) {
         super();
     }
 
@@ -89,11 +93,13 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
 
     public async prompt(context: T): Promise<void> {
         const site: ParsedSite = nonNullProp(context, 'site');
-        const identityId: string = (await context.ui.showQuickPick(await this.getPicks(site), {
+        const identityId: string | undefined = (await context.ui.showQuickPick(await this.getPicks(site), {
             placeHolder: localize('selectFunctionAppIdentity', 'Select a function app identity for new role assignments'),
-            // Todo: Remove when create + assign is implemented
-            noPicksMessage: localize('noUserAssignedIdentities', 'No identities found. Add a user assigned identity to the function app before proceeding.'),
         })).data;
+
+        if (!identityId) {
+            return;
+        }
 
         const parsedIdentity: ParsedAzureResourceId = parseAzureResourceId(identityId);
         this._msiClient ??= await createManagedServiceIdentityClient(context);
@@ -106,14 +112,34 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends IFunctionAppUse
         return !context.managedIdentity;
     }
 
-    private async getPicks(site: ParsedSite): Promise<IAzureQuickPickItem<string>[]> {
-        return Object.keys(site.identity?.userAssignedIdentities ?? {}).map((id) => {
-            const parsedResource: ParsedAzureResourceId = parseAzureResourceId(id);
-            return {
-                label: parsedResource.resourceName,
-                description: parsedResource.resourceGroup,
-                data: id,
-            };
-        });
+    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+        if (context.managedIdentity) {
+            return undefined;
+        }
+
+        return {
+            promptSteps: [new UserAssignedIdentityListStep()],
+            executeSteps: [new ManagedIdentityAssignStep({ priority: this.options?.identityAssignStepPriority })],
+        };
+    }
+
+    private async getPicks(site: ParsedSite): Promise<IAzureQuickPickItem<string | undefined>[]> {
+        const picks: IAzureQuickPickItem<string | undefined>[] = [{
+            label: localize('assignIdentity', '$(plus) Assign new user-assigned identity'),
+            data: undefined,
+        }];
+
+        return picks.concat(
+            Object
+                .keys(site.identity?.userAssignedIdentities ?? {})
+                .map((id) => {
+                    const parsedResource: ParsedAzureResourceId = parseAzureResourceId(id);
+                    return {
+                        label: parsedResource.resourceName,
+                        description: parsedResource.resourceGroup,
+                        data: id,
+                    };
+                }),
+        );
     }
 }

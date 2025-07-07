@@ -8,7 +8,7 @@ import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type I
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { FunctionAppUserAssignedIdentitiesListStep } from '../../../../identity/listUserAssignedIdentities/FunctionAppUserAssignedIdentitiesListStep';
+import { FunctionAppUserAssignedIdentitiesListStep } from '../../../../identity/FunctionAppUserAssignedIdentitiesListStep';
 import { type IDTSAzureConnectionWizardContext } from '../IDTSConnectionWizardContext';
 import { DurableTaskHubListStep } from './DurableTaskHubListStep';
 import { DurableTaskSchedulerCreateStep } from './DurableTaskSchedulerCreateStep';
@@ -58,7 +58,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
             roleDefinitionName: CommonRoleDefinitions.durableTaskDataContributor.roleName,
         };
 
-        const identitiesListStep = new FunctionAppUserAssignedIdentitiesListStep(dtsContributorRole /** targetRole */);
+        const identitiesListStep = new FunctionAppUserAssignedIdentitiesListStep(dtsContributorRole /** targetRole */, { identityAssignStepPriority: 180 });
         promptSteps.push(identitiesListStep);
         executeSteps.push(new RoleAssignmentExecuteStep(getDTSRoleAssignmentCallback(context, identitiesListStep, dtsContributorRole), { priority: 190 }));
 
