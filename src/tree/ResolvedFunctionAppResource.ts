@@ -267,8 +267,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             site: this.site,
             contextValuesToAdd: ['azFunc']
         });
-
-        this.appSettingsTreeItem = await AppSettingsTreeItem.createAppSettingsTreeItem(context, proxyTree, this.site, ext.prefix, {
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, ext.prefix, {
             contextValuesToAdd: ['azFunc'],
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
@@ -354,8 +353,13 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     public async isReadOnly(context: IActionContext): Promise<boolean> {
         await this.initSite(context);
         const client = await this.site.createClient(context);
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-        return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+        try {
+            const appSettings: StringDictionary = await client.listApplicationSettings();
+            return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+        } catch (error) {
+            // if we can't read the app settings, just assume that this is read-only
+            return true;
+        }
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
