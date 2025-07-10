@@ -7,7 +7,7 @@ import { DeploymentsTreeItem, editScmType } from "@microsoft/vscode-azext-azurea
 import { type GenericTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { ScmType, functionFilter } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { isSlotTreeItem, type SlotTreeItem } from "../../tree/SlotTreeItem";
+import { isSlotTreeItem } from "../../tree/SlotTreeItem";
 
 export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
     let deployments: DeploymentsTreeItem;
