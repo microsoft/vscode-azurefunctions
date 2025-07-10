@@ -23,7 +23,7 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
 
     await deployments.init(context);
     if (deployments.parent && isSlotTreeItem(deployments.parent)) {
-        const siteItem = deployments.parent as SlotTreeItem;
+        const siteItem = deployments.parent;
         await siteItem.initSite(context);
         await editScmType(context, deployments.site, deployments.subscription, ScmType.GitHub);
         await deployments.refresh(context);
