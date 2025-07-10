@@ -3,7 +3,7 @@
 ## 1.18.0 - 2025-07-10
 
 ### Overview
-This release brings enhancements Durable Functions through DTS integration, improves deployment reliability, and performance of the Azure Functions extension.
+This release brings enhancements to Durable Functions through DTS integration, improves deployment reliability, and performance of the Azure Functions extension.
 
 ### Added
 * [[4580](https://github.com/microsoft/vscode-azurefunctions/pull/4580)] Integrate deployment with Copilot, offering richer error analysis when deploying to Function Apps.
