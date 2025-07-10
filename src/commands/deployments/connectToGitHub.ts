@@ -7,7 +7,7 @@ import { DeploymentsTreeItem, editScmType } from "@microsoft/vscode-azext-azurea
 import { type GenericTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { ScmType, functionFilter } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { isSlotTreeItem } from "../../tree/SlotTreeItem";
+import { isSlotTreeItem, type SlotTreeItem } from "../../tree/SlotTreeItem";
 
 export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
     let deployments: DeploymentsTreeItem;
@@ -21,7 +21,10 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
         deployments = <DeploymentsTreeItem>target.parent;
     }
 
+    await deployments.init(context);
     if (deployments.parent && isSlotTreeItem(deployments.parent)) {
+        const siteItem = deployments.parent as SlotTreeItem;
+        await siteItem.initSite(context);
         await editScmType(context, deployments.site, deployments.subscription, ScmType.GitHub);
         await deployments.refresh(context);
     } else {

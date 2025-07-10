@@ -315,7 +315,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
                     }
                 }
             }
-
+            const flexError = localize('flexFunctionAppDeploymentsNotSupported', 'Command not supported for Flex Consumption apps.');
             for (const expectedContextValue of expectedContextValues) {
                 if (expectedContextValue instanceof RegExp) {
                     const appSettingsContextValues = [AppSettingsTreeItem.contextValue, AppSettingTreeItem.contextValue];
@@ -324,10 +324,19 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
                     }
                     const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
                     if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
+                        if (this.isFlex) {
+                            context.errorHandling.rethrow = true;
+                            throw new Error(flexError);
+                        }
+                        await this.deploymentsNode?.init(context);
                         return this.deploymentsNode;
                     }
 
                     if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
+                        if (this.isFlex) {
+                            context.errorHandling.rethrow = true;
+                            throw new Error(flexError);
+                        }
                         return this._slotsTreeItem;
                     }
                 }
