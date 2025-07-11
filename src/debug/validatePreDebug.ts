@@ -13,7 +13,7 @@ import { validateStorageConnection } from '../commands/appSettings/connectionSet
 import { validateEventHubsConnection } from '../commands/appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../commands/appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey, type DurableBackendValues } from "../constants";
+import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -24,6 +24,7 @@ import { durableUtils } from '../utils/durableUtils';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
+import { validateDTSConnectionPreDebug } from './durable/validateDTSConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -52,10 +53,11 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
             if (context.projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
                 const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, context.projectPath);
-                const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, context.projectPath);
+                const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, context.projectPath);
 
                 context.telemetry.properties.projectLanguage = projectLanguage;
                 context.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
+                context.telemetry.properties.durableStorageType = durableStorageType;
 
                 context.telemetry.properties.lastValidateStep = 'functionVersion';
                 shouldContinue = await validateFunctionVersion(context, projectLanguage, projectLanguageModel, workspace.uri.fsPath);
@@ -64,6 +66,10 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
                 switch (durableStorageType) {
+                    case DurableBackend.DTS:
+                        context.telemetry.properties.lastValidateStep = 'dtsConnection';
+                        await validateDTSConnectionPreDebug(context, context.projectPath);
+                        break;
                     case DurableBackend.Netherite:
                         context.telemetry.properties.lastValidateStep = 'eventHubsConnection';
                         await validateEventHubsConnection(context, context.projectPath);
