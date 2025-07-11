@@ -13,7 +13,7 @@ import { ProjectSource } from './projectContextValues';
 import { type RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
 
 export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem | AzExtParentTreeItem): treeItem is SlotTreeItem {
-    return !!(treeItem as SlotTreeItem).site;
+    return !!(treeItem as SlotTreeItem).contextValue.includes('FunctionApp;')
 }
 
 export class SlotTreeItem extends SlotContainerTreeItemBase {

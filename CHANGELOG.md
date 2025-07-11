@@ -1,5 +1,24 @@
 # Change Log
 
+## 1.18.0 - 2025-07-10
+
+### Overview
+This release brings enhancements to Durable Functions through DTS integration, improves deployment reliability, and performance of the Azure Functions extension.
+
+### Added
+* [[4580](https://github.com/microsoft/vscode-azurefunctions/pull/4580)] Integrate deployment with Copilot, offering richer error analysis when deploying to Function Apps.
+* [[4405](https://github.com/microsoft/vscode-azurefunctions/pull/4405)] Integrate **DTS emulator** into the **Local Workspace view**.
+* [[4527](https://github.com/microsoft/vscode-azurefunctions/pull/4527)] Add **DTS preview support** for **Create Function** and remove **Netherite** from new storage options.
+* [[4548](https://github.com/microsoft/vscode-azurefunctions/pull/4548)] Improved performance for listing and resolving resources
+
+### Changed
+* [[4529](https://github.com/microsoft/vscode-azurefunctions/pull/4529)] Check for **DTS trigger** before app creation to ensure a **Premium plan** is used.
+
+### Fixed
+* [[4573](https://github.com/microsoft/vscode-azurefunctions/pull/4573)] Fix: Advanced creation no longer prompts for user identity if **secret-based access** is used.
+* [[4572](https://github.com/microsoft/vscode-azurefunctions/pull/4572)] Fix bug for **system identity** / resolved app ID.
+* [[4576](https://github.com/microsoft/vscode-azurefunctions/pull/4576)] Fix container name to always be **lowercase**.
+
 ## 1.17.3 - 2025-05-19
 
 ### Added
