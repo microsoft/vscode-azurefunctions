@@ -85,7 +85,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                     ext.outputChannel.appendLog(localize('extensionBundlePreview', 'Updated "host.json" extension bundle to preview version to enable new DTS features.'));
                 }
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
-                await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), 'default', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), '', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = durableUtils.getDefaultSqlTaskConfig();
