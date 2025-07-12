@@ -29,8 +29,7 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
             localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
         );
 
-        const schedulerEndpoint = context.dtsEmulator.schedulerEndpoint;
-        const dashboardEndpoint = context.dtsEmulator.dashboardEndpoint;
+        const { schedulerEndpoint, dashboardEndpoint } = context.dtsEmulator;
 
         const message: string = localize('dtsStartedMessage', `Durable Task Scheduler emulator has been started at "${schedulerEndpoint}".  Its dashboard is available at "${dashboardEndpoint}".`);
         void window.showInformationMessage(message);
