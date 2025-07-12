@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../../constants';
 import { localize } from '../../../../../localize';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
@@ -18,7 +17,7 @@ export class DTSHubNameCustomPromptStep<T extends IDTSConnectionWizardContext> e
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newDTSHubConnectionSettingValue && context.dtsConnectionType === ConnectionType.Custom;
+        return !context.newDTSHubConnectionSettingValue;
     }
 
     private validateInput(name: string): string | undefined {

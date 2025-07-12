@@ -19,11 +19,9 @@ export class EventHubSetSettingStep<T extends INetheriteConnectionWizardContext>
         const hubName: string = nonNullProp(context, 'newEventHubConnectionSettingValue');
 
         if (!context.newEventHubConnectionSettingKey) {
-            // Target `host.json`
             // First iteration of this support didn't include variable substitution, so we won't try to automatically set their local settings here
             await this.configureHostJson(context, hubName);
         } else {
-            // Target local or app settings
             if (context.action === CodeAction.Debug) {
                 await setLocalSetting(
                     context,

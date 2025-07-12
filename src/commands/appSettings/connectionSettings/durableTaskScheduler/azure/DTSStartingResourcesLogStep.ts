@@ -12,7 +12,7 @@ const startingResourcesContext: string = 'startingResourcesLogStepItem';
 
 export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public hideStepCount: boolean = true;
-    protected hasLogged: boolean = false;
+    private hasLogged: boolean = false;
 
     public async configureBeforePrompt(context: T): Promise<void> {
         if (this.hasLogged) {
@@ -68,11 +68,11 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
         }
 
         if (context.newDTSConnectionSettingKey) {
-            ext.outputChannel.appendLog(localize('dtsConnectionKey', 'Using DTS connection key "{0}"', context.newDTSConnectionSettingKey));
+            ext.outputChannel.appendLog(localize('dtsConnectionKey', 'Using DTS host connection key "{0}"', context.newDTSConnectionSettingKey));
         }
 
         if (context.newDTSHubConnectionSettingKey) {
-            ext.outputChannel.appendLog(localize('dtsHubConnectionKey', 'Using DTS hub connection key "{0}"', context.newDTSHubConnectionSettingKey));
+            ext.outputChannel.appendLog(localize('dtsHubConnectionKey', 'Using DTS hub host connection key "{0}"', context.newDTSHubConnectionSettingKey));
         }
 
         this.hasLogged = true;
