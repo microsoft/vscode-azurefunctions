@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
+import { commands, window } from 'vscode';
+import { ext } from '../../../../../extensionVariables';
 import { localize } from '../../../../../localize';
 import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
@@ -27,6 +28,13 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
             emulators.find(e => e.id === emulatorId),
             localize('couldNotFindEmulator', 'Internal error: Failed to retrieve info on the started DTS emulator.'),
         );
+
+        const schedulerEndpoint = context.dtsEmulator.schedulerEndpoint;
+        const dashboardEndpoint = context.dtsEmulator.dashboardEndpoint;
+
+        const message: string = localize('dtsStartedMessage', `Durable Task Scheduler emulator has been started at "${schedulerEndpoint}".  Its dashboard is available at "${dashboardEndpoint}".`);
+        void window.showInformationMessage(message);
+        ext.outputChannel.appendLog(message);
     }
 
     public shouldExecute(context: T): boolean {
