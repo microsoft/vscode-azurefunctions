@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.18.0 - 2025-07-10
+## 1.18.0 - 2025-07-14
 
 ### Overview
 This release brings enhancements to Durable Functions through DTS integration, improves deployment reliability, and performance of the Azure Functions extension.
