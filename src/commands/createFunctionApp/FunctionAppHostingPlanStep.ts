@@ -81,7 +81,7 @@ async function getFlexLocations(context: IAppServiceWizardContext): Promise<stri
     });
 
     const options: AzExtRequestPrepareOptions = {
-        url: `https://management.azure.com/subscriptions/${context.subscriptionId}/providers/Microsoft.Web/geoRegions?api-version=2023-01-01&sku=FlexConsumption`,
+        url: `${context.environment.resourceManagerEndpointUrl}/subscriptions/${context.subscriptionId}/providers/Microsoft.Web/geoRegions?api-version=2023-01-01&sku=FlexConsumption`,
         method: 'GET',
         headers
     };
