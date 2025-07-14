@@ -18,8 +18,9 @@ import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { startFuncProcessFromApi } from './commands/pickFuncProcess';
-import { registerCommands } from './commands/registerCommands';
+import { patchAppSettingTreeItem } from './commands/appSettings/appSettingIconPatch';
 import { func } from './constants';
+import { registerCommands } from './commands/registerCommands';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
@@ -83,6 +84,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+
+        // Apply patch to enable dynamic icons for app setting visibility
+        patchAppSettingTreeItem();
 
         registerCommands({
             dts: {
