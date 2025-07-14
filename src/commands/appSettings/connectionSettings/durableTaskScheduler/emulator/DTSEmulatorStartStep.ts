@@ -31,7 +31,7 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
 
         const { schedulerEndpoint, dashboardEndpoint } = context.dtsEmulator;
 
-        const message: string = localize('dtsStartedMessage', `Durable Task Scheduler emulator has been started at "{0}".  Its dashboard is available at "{1}".`, schedulerEndpoint.toString(), dashboardEndpoint.toString());
+        const message: string = localize('emulatorStartedMessage', `Durable Task Scheduler (DTS) emulator has been started by your container client at "{0}".  Its dashboard is available at "{1}".`, schedulerEndpoint.toString(), dashboardEndpoint.toString());
         void window.showInformationMessage(message);
         ext.outputChannel.appendLog(message);
     }
