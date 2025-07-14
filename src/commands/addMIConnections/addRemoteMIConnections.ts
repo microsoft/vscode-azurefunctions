@@ -20,6 +20,7 @@ export async function addRemoteMIConnections(context: AddMIConnectionsContext, n
     const connections: Connection[] = [];
     if (!node) {
         context.functionapp = await pickFunctionApp(context);
+        await context.functionapp.initSite(context);
         await addRemoteMIConnectionsInternal(context, connections);
     } else {
         if (node instanceof AppSettingTreeItem) {
