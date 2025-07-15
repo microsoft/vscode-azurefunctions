@@ -53,8 +53,8 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, cl
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
-        // Local settings connection string could include a useable remote resource, so try to suggest it if it's available
-        // If the local settings are pointing to an emulator (i.e. localhost), it's fine because it won't match up with any remote resources and thus won't show up as a suggestion for the user
+        // Local settings connection string could point to a useable remote resource, so try to suggest it if one is detected.
+        // If the local settings are pointing to an emulator (i.e. localhost), it's not a concern because it won't actually match up with any remote resources and thus won't show up as a suggestion.
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };
