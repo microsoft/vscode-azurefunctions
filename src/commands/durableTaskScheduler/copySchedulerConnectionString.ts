@@ -119,7 +119,7 @@ export function getSchedulerConnectionString(endpointUrl: string, authentication
         schedulerConnectionString += 'ManagedIdentity';
 
         if (authenticationType === SchedulerAuthenticationType.UserAssignedIdentity) {
-            schedulerConnectionString += `;ClientID=${clientIdKey}>`;
+            schedulerConnectionString += `;ClientID=${clientIdKey}`;
         }
     }
 
