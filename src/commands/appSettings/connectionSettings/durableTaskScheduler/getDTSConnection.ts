@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -84,7 +84,7 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, cl
 async function getDTSResource(context: DTSConnectionContext, dtsEndpoint: string): Promise<DurableTaskSchedulerResource | undefined> {
     try {
         const client = new HttpDurableTaskSchedulerClient();
-        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulersByResourceGroup(context.subscription, nonNullValueAndProp(context.resourceGroup, 'name')) ?? [];
+        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulersBySubscription(context.subscription) ?? [];
         return schedulers.find(s => s.properties.endpoint === dtsEndpoint);
     } catch (e) {
         const pe: IParsedError = parseError(e);
