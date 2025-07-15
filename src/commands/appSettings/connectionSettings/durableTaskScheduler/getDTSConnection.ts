@@ -28,7 +28,7 @@ type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: st
  *
  * b) That a new DTS resource and hub is created and ready for connection to the function app
  */
-export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
+export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
     const remoteDTSConnection: string | undefined = app?.properties?.[ConnectionKey.DTS];
@@ -53,7 +53,8 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
-        // If the local settings are using the emulator (i.e. localhost), it's fine because it won't match up with any remote resources and there will be no suggestion for the user
+        // Local settings connection string could include a useable remote resource, so try to suggest it if it's available
+        // If the local settings are pointing to an emulator (i.e. localhost), it's fine because it won't match up with any remote resources and thus won't show up as a suggestion for the user
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };

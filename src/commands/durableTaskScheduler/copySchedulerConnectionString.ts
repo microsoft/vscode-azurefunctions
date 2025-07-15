@@ -104,7 +104,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
     }
 }
 
-export const clientIdKeyword: string = '<ClientID>';
+export const clientIdKey: string = '<ClientID>';
 
 export function getSchedulerConnectionString(endpointUrl: string, authenticationType: SchedulerAuthenticationType): string {
     let schedulerConnectionString = `Endpoint=${endpointUrl};Authentication=`
@@ -119,7 +119,7 @@ export function getSchedulerConnectionString(endpointUrl: string, authentication
         schedulerConnectionString += 'ManagedIdentity';
 
         if (authenticationType === SchedulerAuthenticationType.UserAssignedIdentity) {
-            schedulerConnectionString += `;ClientID=${clientIdKeyword}>`;
+            schedulerConnectionString += `;ClientID=${clientIdKey}>`;
         }
     }
 

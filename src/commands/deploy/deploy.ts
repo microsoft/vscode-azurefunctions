@@ -24,7 +24,7 @@ import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
-import { validateDTSConnection } from '../appSettings/connectionSettings/durableTaskScheduler/validateDTSConnection';
+import { getDTSConnectionIfNeeded } from '../appSettings/connectionSettings/durableTaskScheduler/getDTSConnection';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
@@ -168,7 +168,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     if (durableStorageType === DurableBackend.DTS) {
-        const dtsConnections = await validateDTSConnection(Object.assign(context, subscriptionContext), client, site, context.projectPath);
+        const dtsConnections = await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), client, site, context.projectPath);
         context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
         context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
     }
