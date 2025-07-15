@@ -48,7 +48,7 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, cl
 
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
-        ...await createActivityContext(),
+        ...await createActivityContext({ withChildren: true }),
         site,
         projectPath,
         action: CodeAction.Deploy,
