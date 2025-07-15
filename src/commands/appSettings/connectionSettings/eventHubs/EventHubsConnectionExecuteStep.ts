@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionString, type ConnectionKeyValues } from '../../../../constants';
+import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionString } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
@@ -12,7 +12,7 @@ import { type IEventHubsConnectionWizardContext } from './IEventHubsConnectionWi
 
 export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 240;
-    public debugDeploySetting: ConnectionKeyValues = ConnectionKey.EventHubs;
+    public debugDeploySetting: ConnectionKey = ConnectionKey.EventHubs;
 
     public async execute(context: T): Promise<void> {
         let value: string;

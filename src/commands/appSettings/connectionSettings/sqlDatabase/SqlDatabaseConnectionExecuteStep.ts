@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullProp } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, type ConnectionKeyValues } from '../../../../constants';
+import { ConnectionKey, ConnectionType } from '../../../../constants';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { getSqlDatabaseConnectionString } from '../getLocalConnectionSetting';
 import { type ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 250;
-    public debugDeploySetting: ConnectionKeyValues = ConnectionKey.SQL;
+    public debugDeploySetting: ConnectionKey = ConnectionKey.SQL;
 
     public async execute(context: T): Promise<void> {
         let value: string;

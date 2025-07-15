@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../constants';
-import { localize } from '../../../../localize';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { ConnectionType } from '../../../../../constants';
+import { localize } from '../../../../../localize';
+import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSConnectionCustomPromptStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {

@@ -5,10 +5,11 @@
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
+import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
+import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink, type DurableBackendValues } from '../../constants';
+import { CodeAction, ConnectionKey, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -23,6 +24,7 @@ import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { getDTSConnectionIfNeeded } from '../appSettings/connectionSettings/durableTaskScheduler/getDTSConnection';
 import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
@@ -101,6 +103,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await node.initSite(context);
     const site = node.site;
 
+    const subscriptionContext: ISubscriptionContext & { subscription: AzureSubscription } = {
+        ...node.subscription,
+        subscription: await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider, {
+            selectBySubscriptionId: node.subscription.subscriptionId,
+        }),
+    };
+
+    Object.assign(context, {
+        resourceGroup: (await ResourceGroupListStep.getResourceGroups(Object.assign(context, subscriptionContext))).find(rg => rg.name === site.resourceGroup),
+    });
+
     if (node.contextValue.includes('container')) {
         const learnMoreLink: string = 'https://aka.ms/deployContainerApps'
         await context.ui.showWarningMessage(localize('containerFunctionAppError', 'Deploy is not currently supported for containerized function apps within the Azure Functions extension. Please read here to learn how to deploy your project.'), { learnMoreLink });
@@ -148,12 +161,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'flexconsumption';
     }
 
-    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
-    context.telemetry.properties.projectDurableStorageType = durableStorageType;
+    const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
+    context.telemetry.properties.durableStorageType = durableStorageType;
 
     const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
+    if (durableStorageType === DurableBackend.DTS) {
+        const dtsConnections = await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), client, site, context.projectPath);
+        context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
+        context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
+    }
     if (shouldValidateEventHubs) {
         await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
     }
@@ -174,11 +192,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         deploymentWarningMessages.push(connectionStringWarningMessage);
     }
 
-    const subContext = {
-        ...context
-    } as unknown as ISubscriptionActionContext;
-
-    const eolWarningMessage = await getEolWarningMessages(subContext, {
+    const eolWarningMessage = await getEolWarningMessages({ ...context, ...subscriptionContext }, {
         site: site.rawSite,
         isLinux: client.isLinux,
         isFlex: isFlexConsumption,
@@ -247,7 +261,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, site: ParsedSite, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, site: ParsedSite, language: ProjectLanguage, durableStorageType: DurableBackend | undefined): Promise<void> {
     const client = await site.createClient(context);
     const config: SiteConfigResource = {
         use32BitWorkerProcess: false

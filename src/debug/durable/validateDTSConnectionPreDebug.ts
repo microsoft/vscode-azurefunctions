@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { DTSConnectionTypeListStep } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionTypeListStep";
+import { DTSConnectionListStep } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
 import { type IDTSConnectionWizardContext } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../constants";
 import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
@@ -29,8 +29,8 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
     });
 
     const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDTSDebugConnection', 'Prepare DTS debug connection'),
-        promptSteps: [new DTSConnectionTypeListStep(availableDebugConnectionTypes)],
+        title: localize('acquireDTSConnection', 'Acquire DTS connection'),
+        promptSteps: [new DTSConnectionListStep(availableDebugConnectionTypes)],
     });
 
     await wizard.prompt();

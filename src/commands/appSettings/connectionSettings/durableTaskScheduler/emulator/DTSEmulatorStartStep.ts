@@ -5,11 +5,12 @@
 
 import { AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { commands, window } from 'vscode';
-import { ConnectionType } from '../../../../constants';
-import { ext } from '../../../../extensionVariables';
-import { localize } from '../../../../localize';
-import { type DurableTaskSchedulerEmulator } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { ConnectionType } from '../../../../../constants';
+import { ext } from '../../../../../extensionVariables';
+import { localize } from '../../../../../localize';
+import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
+import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
@@ -36,7 +37,7 @@ export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends
         void window.showInformationMessage(message);
         ext.outputChannel.appendLog(message);
 
-        context.newDTSConnectionSetting = `Endpoint=${emulator.schedulerEndpoint};Authentication=None`;
+        context.newDTSConnectionSetting = getSchedulerConnectionString(emulator.schedulerEndpoint.toString(), SchedulerAuthenticationType.None);
         context.newDTSHubNameConnectionSetting = 'default';
     }
 

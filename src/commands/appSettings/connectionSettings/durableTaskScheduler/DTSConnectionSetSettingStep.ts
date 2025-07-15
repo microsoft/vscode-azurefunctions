@@ -5,18 +5,23 @@
 
 import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey } from '../../../../constants';
+import { clientIdKey } from '../../../durableTaskScheduler/copySchedulerConnectionString';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
-export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
+export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext | IDTSAzureConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 240;
     public debugDeploySetting: ConnectionKey = ConnectionKey.DTS;
 
     public async execute(context: T): Promise<void> {
-        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSConnection'));
+        let newDTSConnectionSetting = nonNullProp(context, 'newDTSConnectionSetting');
+        if ((context as IDTSAzureConnectionWizardContext).managedIdentity) {
+            newDTSConnectionSetting = newDTSConnectionSetting.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
+        }
+        await this.setConnectionSetting(context, newDTSConnectionSetting);
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newDTSConnection;
+        return !!context.newDTSConnectionSetting;
     }
 }

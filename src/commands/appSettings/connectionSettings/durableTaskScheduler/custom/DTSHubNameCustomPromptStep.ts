@@ -5,10 +5,10 @@
 
 import { AzureWizardPromptStep, validationUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ConnectionKey, ConnectionType, localSettingsFileName } from '../../../../constants';
-import { getLocalSettingsJson } from '../../../../funcConfig/local.settings';
-import { localize } from '../../../../localize';
-import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
+import { ConnectionKey, ConnectionType, localSettingsFileName } from '../../../../../constants';
+import { getLocalSettingsJson } from '../../../../../funcConfig/local.settings';
+import { localize } from '../../../../../localize';
+import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSHubNameCustomPromptStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
