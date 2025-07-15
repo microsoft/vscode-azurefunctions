@@ -6,24 +6,21 @@
 import { ActivityChildItem, ActivityChildType, activityFailContext, activityFailIcon, activityProgressContext, activityProgressIcon, activitySuccessContext, activitySuccessIcon, createContextValue, nonNullProp, type ExecuteActivityOutput } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey } from '../../../../constants';
 import { localize } from '../../../../localize';
+import { clientIdKey } from '../../../durableTaskScheduler/copySchedulerConnectionString';
 import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
-export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
+export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext | IDTSAzureConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
     public priority: number = 240;
     public stepName: string = 'dtsConnectionSetSettingStep';
     public debugDeploySetting: ConnectionKey = ConnectionKey.DTS;
 
     public async execute(context: T): Promise<void> {
         let newDTSConnectionSetting = nonNullProp(context, 'newDTSConnectionSetting');
-        if ((context as unknown as IDTSAzureConnectionWizardContext).managedIdentity) {
-            newDTSConnectionSetting = newDTSConnectionSetting.replace('<ClientID>', (context as unknown as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? '');
+        if ((context as IDTSAzureConnectionWizardContext).managedIdentity) {
+            newDTSConnectionSetting = newDTSConnectionSetting.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
         }
-
         await this.setConnectionSetting(context, newDTSConnectionSetting);
-        context.newDTSConnectionSetting = newDTSConnectionSetting;
-
-        context.valuesToMask.push(context.newDTSConnectionSetting);
     }
 
     public shouldExecute(context: T): boolean {

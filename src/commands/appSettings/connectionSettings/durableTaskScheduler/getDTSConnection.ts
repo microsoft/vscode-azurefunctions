@@ -6,7 +6,7 @@
 import { type StringDictionary } from "@azure/arm-appservice";
 import { type ParsedSite, type SiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { LocationListStep, ResourceGroupListStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, nonNullValueAndProp, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, parseError, type IParsedError, type ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -29,7 +29,7 @@ type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: st
  *
  * b) That a new DTS resource and hub is created and ready for connection to the function app
  */
-export async function validateDTSConnection(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
+export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, client: SiteClient, site: ParsedSite, projectPath: string): Promise<DTSConnection | undefined> {
     const app: StringDictionary = await client.listApplicationSettings();
 
     const remoteDTSConnection: string | undefined = app?.properties?.[ConnectionKey.DTS];
@@ -48,13 +48,14 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
 
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
-        ...await createActivityContext({ withChildren: true }),
+        ...await createActivityContext(),
         site,
         projectPath,
         action: CodeAction.Deploy,
         dtsConnectionType: ConnectionType.Azure,
         dts: remoteDTSEndpoint ? await getDTSResource(context, remoteDTSEndpoint) : undefined,
-        // If the local settings are using the emulator (i.e. localhost), it's fine because it won't match up with any remote resources and there will be no suggestion for the user
+        // Local settings connection string could point to a useable remote resource, so try to suggest it if one is detected.
+        // If the local settings are pointing to an emulator (i.e. localhost), it's not a concern because it won't actually match up with any remote resources and thus won't show up as a suggestion.
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
     };
@@ -85,7 +86,7 @@ export async function validateDTSConnection(context: DTSConnectionContext, clien
 async function getDTSResource(context: DTSConnectionContext, dtsEndpoint: string): Promise<DurableTaskSchedulerResource | undefined> {
     try {
         const client = new HttpDurableTaskSchedulerClient();
-        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulersByResourceGroup(context.subscription, nonNullValueAndProp(context.resourceGroup, 'name')) ?? [];
+        const schedulers: DurableTaskSchedulerResource[] = await client.getSchedulersBySubscription(context.subscription) ?? [];
         return schedulers.find(s => s.properties.endpoint === dtsEndpoint);
     } catch (e) {
         const pe: IParsedError = parseError(e);
