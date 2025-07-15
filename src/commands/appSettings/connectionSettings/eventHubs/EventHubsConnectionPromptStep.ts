@@ -39,7 +39,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
             context.eventHubsConnectionType = ConnectionType.Emulator;
         }
 
-        context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
+        context.telemetry.properties.eventHubsConnectionType = context.eventHubsConnectionType;
     }
 
     public async configureBeforePrompt(context: T): Promise<void> {
@@ -51,7 +51,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
 
         // Even if we skip the prompting, we should still record the flow in telemetry
         if (context.eventHubsConnectionType) {
-            context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
+            context.telemetry.properties.eventHubsConnectionType = context.eventHubsConnectionType;
         }
     }
 

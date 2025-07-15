@@ -6,15 +6,15 @@
 import { type ResourceGroup } from '@azure/arm-resources';
 import { type Database, type Server } from '@azure/arm-sql';
 import { type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { type SqlDbConnectionTypeValues, type StorageConnectionTypeValues } from "../../../../constants";
+import { type SqlDbConnectionType, type StorageConnectionType } from '../IConnectionTypesContext';
 import { type ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
 
 export interface ISqlDatabaseConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
     resourceGroup?: ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: StorageConnectionTypeValues;
-    sqlDbConnectionType?: SqlDbConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionType;
+    sqlDbConnectionType?: SqlDbConnectionType;
 
     // SQL
     newSqlServerName?: string;
