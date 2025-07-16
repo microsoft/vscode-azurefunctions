@@ -17,6 +17,7 @@ import { createActivityContext } from "../../../../utils/activityUtils";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
 import { DTSConnectionListStep } from "./DTSConnectionListStep";
 import { type IDTSAzureConnectionWizardContext } from "./IDTSConnectionWizardContext";
+import { DTSStartingResourcesLogStep } from "./azure/DTSStartingResourcesLogStep";
 
 type DTSConnectionContext = IFuncDeployContext & ISubscriptionActionContext & { subscription: AzureSubscription };
 type DTSConnection = { [ConnectionKey.DTS]?: string, [ConnectionKey.DTSHub]?: string };
@@ -47,7 +48,7 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, cl
 
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
-        ...await createActivityContext(),
+        ...await createActivityContext({ withChildren: true }),
         site,
         projectPath,
         action: CodeAction.Deploy,
@@ -64,10 +65,11 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, cl
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
     const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connection'),
+        title: localize('prepareDTSConnection', 'Prepare durable task scheduler connections'),
         promptSteps: [
             new ResourceGroupListStep(),
             new DTSConnectionListStep(availableDeployConnectionTypes),
+            new DTSStartingResourcesLogStep(),
         ],
         showLoadingPrompt: true,
     });
