@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * Returns the local settings key if the input uses variable substitution (e.g. "%TASKHUB_NAME%").
- * If the input is not in variable substitution format, returns undefined.
+ * If a variable substituted key is used, grabs the connection key name it is referencing.
  *
- * Example: "%TASKHUB_NAME%" → "TASKHUB_NAME"
+ * Note: The `host.json` often specifies which connection key name to use by referencing a variable-substituted name.
+ * Instead of hardcoding the connection key, `host.json` uses a placeholder surrounded with parenthesis (e.g. %TASKHUB_NAME%)
+ * that is replaced at runtime with the actual value from `local.settings.json` or the app’s configuration settings.
+ *
+ * Example: %TASKHUB_NAME% => TASKHUB_NAME
  */
 export function tryGetVariableSubstitutedKey(key?: string): string | undefined {
     if (!key) {
