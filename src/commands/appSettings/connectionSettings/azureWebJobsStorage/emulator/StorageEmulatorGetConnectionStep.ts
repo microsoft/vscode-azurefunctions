@@ -11,7 +11,7 @@ export class StorageEmulatorGetConnectionStep<T extends IStorageAzureConnectionW
     public priority: number = 230;
 
     public async execute(context: T): Promise<void> {
-        // Todo: Should we handle logic to run the Azurite emulator in here as well and rename the step to StorageEmulatorStartStep?
+        // Todo: We could probably create a similar step for starting the azurite emulator, similar to the DTS flow
         context.newStorageConnectionSettingValue = localStorageEmulatorConnectionString;
     }
 
