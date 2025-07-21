@@ -10,7 +10,7 @@
  * Instead of hardcoding the connection key, `host.json` uses a placeholder surrounded with parenthesis (e.g. %TASKHUB_NAME%)
  * that is replaced at runtime with the actual value from `local.settings.json` or the app’s configuration settings.
  *
- * Example: %TASKHUB_NAME% => TASKHUB_NAME
+ * Example: `%TASKHUB_NAME%` => `TASKHUB_NAME`
  */
 export function tryGetVariableSubstitutedKey(key?: string): string | undefined {
     if (!key) {
