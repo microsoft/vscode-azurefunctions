@@ -6,7 +6,6 @@
 import { MismatchBehavior, setLocalAppSetting } from "../../../../funcConfig/local.settings";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-
 export async function setLocalSetting(context: ISetConnectionSettingContext, key: string, value: string): Promise<void> {
     await setLocalAppSetting(context, context.projectPath, key, value, MismatchBehavior.Overwrite);
 }
