@@ -35,8 +35,8 @@ type NetheriteConnectionValues = { eventHubsNamespaceConnectionValue?: string, e
 
 /**
  * Use to get the local settings values associated with each Netherite key provided.
- * If the event hub key is ommitted, it is assumed that the key was not using variable substitution and therefore can be read
- * directly from the `host.json`.
+ *
+ * Note: If the event hub key is omitted, it is assumed that there was not a variable substituted key, but instead a value that could be used directly.
  */
 export async function getNetheriteLocalSettingsValues(context: IActionContext & { projectPath: string }, localSettingsKeys: NetheriteConnectionKeys): Promise<NetheriteConnectionValues | undefined> {
     const localSettingsFilePath = path.join(context.projectPath, localSettingsFileName);
