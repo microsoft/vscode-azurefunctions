@@ -6,10 +6,8 @@
 import { type StorageAccount, type StorageAccountListKeysResult, type StorageManagementClient } from "@azure/arm-storage";
 import { getResourceGroupFromId, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
 import { nonNullProp, nonNullValue, randomUtils } from "@microsoft/vscode-azext-utils";
-import { localStorageEmulatorConnectionString } from "../../../constants";
-import { localize } from "../../../localize";
-import { createStorageClient } from "../../../utils/azureClients";
-import { type ISqlDatabaseConnectionWizardContext } from "./sqlDatabase/ISqlDatabaseConnectionWizardContext";
+import { localStorageEmulatorConnectionString } from "../../../../constants";
+import { createStorageClient } from "../../../../utils/azureClients";
 
 export interface IResourceResult {
     name: string;
@@ -40,28 +38,5 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
     return {
         name,
         connectionString: `DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key};EndpointSuffix=${endpointSuffix}`
-    };
-}
-
-export async function getSqlDatabaseConnectionString(context: ISqlDatabaseConnectionWizardContext): Promise<IResourceResult> {
-    const serverName: string = nonNullValue(context.sqlServer?.name);
-    const dbName: string = nonNullValue(context.sqlDatabase?.name);
-    const username: string | undefined = context.sqlServer?.administratorLogin;
-
-    if (!username) {
-        throw new Error(localize('unableToDetermineSqlConnection', 'Unable to locate SQL server\'s admin user. Add these credentials to your resource to proceed.'));
-    }
-
-    let password: string | undefined = context.newSqlAdminPassword;  // password is never returned back to us on the sqlServer object
-    if (!password) {
-        password = (await context.ui.showInputBox({
-            prompt: localize('sqlPasswordPrompt', 'Please enter your SQL server\'s admin password.'),
-            password: true
-        })).trim();
-    }
-
-    return {
-        name: dbName,
-        connectionString: `Server=${serverName}.database.windows.net,1433;Database=${dbName};User=${username};Password=${password}`
     };
 }

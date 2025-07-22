@@ -26,10 +26,10 @@ import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
-import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSettings';
+import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';

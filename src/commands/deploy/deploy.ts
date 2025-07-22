@@ -9,7 +9,7 @@ import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionKey, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
+import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -24,16 +24,14 @@ import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
-import { getDTSConnectionIfNeeded } from '../appSettings/connectionSettings/durableTaskScheduler/getDTSConnection';
-import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
+import { getStorageConnectionIfNeeded } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnection';
+import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSettings/netherite/getNetheriteConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
-import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
@@ -161,25 +159,33 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'flexconsumption';
     }
 
+    const appSettings: StringDictionary = await client.listApplicationSettings();
+
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
-    const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
+    if (durableStorageType && !isFlexConsumption) {
+        switch (durableStorageType) {
+            // case DurableBackend.DTS:
+            //     Object.assign(context, await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+            // break;
+            case DurableBackend.Netherite:
+                Object.assign(context, await getNetheriteConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            // case DurableBackend.SQL:
+            // Object.assign(context,
+            //     await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+            // break;
+            default:
+        }
+    }
 
-    // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
-    if (durableStorageType === DurableBackend.DTS) {
-        const dtsConnections = await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), client, site, context.projectPath);
-        context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
-        context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
-    }
-    if (shouldValidateEventHubs) {
-        await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
-    }
-    if (shouldValidateSqlDb) {
-        await validateSqlDbConnection(context, context.projectPath);
+    if (durableStorageType && durableStorageType !== DurableBackend.Storage && isFlexConsumption) {
+        // https://github.com/Azure/azure-functions-durable-extension/issues/2957
+        ext.outputChannel.appendLog(localize('durableStorageTypeWarning', 'Warning: Detected a flex consumption app using an incompatible Durable Functions storage provider. Only the Azure Storage backend is supported for Durable Function apps hosted in the Flex Consumption plan.'));
     }
 
-    const appSettings: StringDictionary = await client.listApplicationSettings();
+    Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
     const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
