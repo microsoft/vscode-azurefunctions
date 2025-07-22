@@ -9,7 +9,7 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
+import { DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -71,29 +71,44 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
     let didUpdate: boolean = false;
     switch (durableStorageType) {
         case DurableBackend.Netherite:
-            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs]);
-            didUpdate ||= updatedNetheriteConnection;
+            if (context.newEventHubsNamespaceConnectionSettingKey && context.newEventHubConnectionSettingValue) {
+                const updatedNamespaceConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubsNamespaceConnectionSettingKey, context.newEventHubsNamespaceConnectionSettingValue);
+                didUpdate ||= updatedNamespaceConnection;
+            }
+            if (context.newEventHubConnectionSettingKey && context.newEventHubConnectionSettingValue) {
+                const updatedEventHubConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubConnectionSettingKey, context.newEventHubConnectionSettingValue);
+                didUpdate ||= updatedEventHubConnection;
+            }
             break;
         case DurableBackend.DTS:
-            const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTS, context[ConnectionKey.DTS]);
-            const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTSHub, context[ConnectionKey.DTSHub]);
-            didUpdate ||= updatedDTSConnection || updatedDTSHub;
+            if (context.newDTSConnectionSettingKey && context.newDTSConnectionSettingValue) {
+                const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSConnectionSettingKey, context.newDTSConnectionSettingValue);
+                didUpdate ||= updatedDTSConnection;
+            }
+            if (context.newDTSHubConnectionSettingKey && context.newDTSConnectionSettingValue) {
+                const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue);
+                didUpdate ||= updatedDTSHub;
+            }
             break;
         case DurableBackend.SQL:
-            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL]);
-            didUpdate ||= updatedSqlDbConnection;
+            if (context.newSQLStorageConnectionSettingKey && context.newSQLStorageConnectionSettingValue) {
+                const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newSQLStorageConnectionSettingKey, context.newSQLStorageConnectionSettingValue);
+                didUpdate ||= updatedSqlDbConnection;
+            }
             break;
         case DurableBackend.Storage:
         default:
     }
 
-    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context[ConnectionKey.Storage]);
-    didUpdate ||= updatedStorageConnection;
+    if (context.newStorageConnectionSettingKey && context.newStorageConnectionSettingValue) {
+        const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, context.newStorageConnectionSettingKey, context.newStorageConnectionSettingValue);
+        didUpdate ||= updatedStorageConnection;
+    }
 
     return didUpdate;
 }
 
-export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKey, newValue: string | undefined): boolean {
+export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: string, newValue: string | undefined): boolean {
     if (newValue && newValue !== remoteProperties[propertyName]) {
         remoteProperties[propertyName] = newValue;
         context.telemetry.properties[`update${propertyName}`] = 'true';
