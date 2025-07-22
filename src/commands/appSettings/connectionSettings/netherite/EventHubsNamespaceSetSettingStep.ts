@@ -32,7 +32,7 @@ export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWiza
             // No further action required
         }
 
-        context.valuesToMask.push(context.newDTSConnectionSettingValue as string);
+        context.valuesToMask.push(context.newEventHubsNamespaceConnectionSettingValue as string);
     }
 
     public shouldExecute(context: T): boolean {

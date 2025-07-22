@@ -85,7 +85,7 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
                 const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSConnectionSettingKey, context.newDTSConnectionSettingValue);
                 didUpdate ||= updatedDTSConnection;
             }
-            if (context.newDTSHubConnectionSettingKey && context.newDTSConnectionSettingValue) {
+            if (context.newDTSHubConnectionSettingKey && context.newDTSHubConnectionSettingValue) {
                 const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue);
                 didUpdate ||= updatedDTSHub;
             }
