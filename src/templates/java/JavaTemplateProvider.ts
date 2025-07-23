@@ -37,7 +37,11 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     public async getLatestTemplateVersion(): Promise<string> {
         this.validateGradleProject();
         const pomPath: string = path.join(this.getProjectPath(), pomXmlFileName);
-        const pomContents: string = (await AzExtFsExtra.readFile(pomPath)).toString();
+        const pomFileContent = await AzExtFsExtra.readFile(pomPath);
+        if (!pomFileContent) {
+            throw new Error(localize('failedToReadPom', 'Failed to read pom.xml file.'));
+        }
+        const pomContents: string = pomFileContent.toString();
         const match: RegExpMatchArray | null = pomContents.match(/<azure.functions.maven.plugin.version>(.*)<\/azure.functions.maven.plugin.version>/i);
         if (!match) {
             throw new Error(localize('failedToDetectPluginVersion', 'Failed to detect Azure Functions maven plugin version.'));
