@@ -38,6 +38,7 @@ export class FunctionAppResolver implements AppResourceResolver {
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
+            context.errorHandling.rethrow = true; // rethrow errors to ensure it bubbles up to the resolver
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
                 // do this before the graph client is created because the async graph client create takes enough time to mess up the following resolves
                 this.loaded = false;
