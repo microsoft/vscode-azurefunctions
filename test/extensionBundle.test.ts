@@ -49,10 +49,12 @@ suite('ExtensionBundle Version Fix Tests', () => {
         
         // Case 1: No extensionBundle at all
         const hostJsonNoBundle: IHostJsonV2 = { version: '2.0' };
-        const shouldFixNoBundle = !hostJsonNoBundle.extensionBundle || !hostJsonNoBundle.extensionBundle?.version;
+        const shouldFixNoBundle = !hostJsonNoBundle.extensionBundle || 
+                                 !hostJsonNoBundle.extensionBundle?.id || 
+                                 !hostJsonNoBundle.extensionBundle?.version;
         assert.ok(shouldFixNoBundle, 'Should fix when no extensionBundle exists');
 
-        // Case 2: extensionBundle exists but missing version (the bug case)
+        // Case 2: extensionBundle exists but missing version (the main bug case)
         const hostJsonIncompleteBundle: IHostJsonV2 = {
             version: '2.0',
             extensionBundle: {
@@ -60,10 +62,25 @@ suite('ExtensionBundle Version Fix Tests', () => {
                 // No version!
             }
         };
-        const shouldFixIncomplete = !hostJsonIncompleteBundle.extensionBundle || !hostJsonIncompleteBundle.extensionBundle.version;
+        const shouldFixIncomplete = !hostJsonIncompleteBundle.extensionBundle || 
+                                   !hostJsonIncompleteBundle.extensionBundle.id || 
+                                   !hostJsonIncompleteBundle.extensionBundle.version;
         assert.ok(shouldFixIncomplete, 'Should fix when extensionBundle exists but version is missing');
 
-        // Case 3: Complete extensionBundle
+        // Case 3: extensionBundle exists but missing id (edge case)
+        const hostJsonMissingId: IHostJsonV2 = {
+            version: '2.0',
+            extensionBundle: {
+                version: '[1.*, 2.0.0)'
+                // No id!
+            }
+        };
+        const shouldFixMissingId = !hostJsonMissingId.extensionBundle || 
+                                  !hostJsonMissingId.extensionBundle.id || 
+                                  !hostJsonMissingId.extensionBundle.version;
+        assert.ok(shouldFixMissingId, 'Should fix when extensionBundle exists but id is missing');
+
+        // Case 4: Complete extensionBundle
         const hostJsonComplete: IHostJsonV2 = {
             version: '2.0',
             extensionBundle: {
@@ -71,7 +88,9 @@ suite('ExtensionBundle Version Fix Tests', () => {
                 version: '[1.*, 2.0.0)'
             }
         };
-        const shouldFixComplete = !hostJsonComplete.extensionBundle || !hostJsonComplete.extensionBundle.version;
+        const shouldFixComplete = !hostJsonComplete.extensionBundle || 
+                                 !hostJsonComplete.extensionBundle.id || 
+                                 !hostJsonComplete.extensionBundle.version;
         assert.ok(!shouldFixComplete, 'Should NOT fix when extensionBundle is complete');
     });
 });
