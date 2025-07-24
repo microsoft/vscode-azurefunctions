@@ -59,13 +59,13 @@ export class FunctionAppResolver implements AppResourceResolver {
                         const record = response.data as Record<string, FunctionQueryModel>;
                         Object.values(record).forEach(data => {
                             const dataModel: FunctionAppModel = {
-                                isFlex: data.properties.sku.toLocaleLowerCase() === 'flexconsumption',
+                                isFlex: data.properties?.sku?.toLocaleLowerCase() === 'flexconsumption',
                                 id: data.id,
                                 type: data.type,
                                 kind: data.kind,
                                 name: data.name,
                                 resourceGroup: data.resourceGroup,
-                                status: data.properties.state,
+                                status: data.properties?.state,
                                 location: data.location
                             }
                             resolver.siteCache.set(dataModel.id.toLowerCase(), dataModel);
