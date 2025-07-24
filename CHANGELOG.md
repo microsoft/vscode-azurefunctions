@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.18.1 - 2025-07-24
+
+### Fixed
+* [[4609]](https://github.com/microsoft/vscode-azurefunctions/pull/4609) Fix bug with function app resolving that assumed access to certain properties
+
 ## 1.18.0 - 2025-07-14
 
 ### Overview
