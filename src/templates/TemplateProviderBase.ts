@@ -106,7 +106,11 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
-        return (await AzExtFsExtra.readFile(await this.getBackupVersionPath())).toString().trim();
+        const versionContent = await AzExtFsExtra.readFile(await this.getBackupVersionPath());
+        if (!versionContent) {
+            throw new Error(localize('backupVersionFileEmpty', 'Backup template version file is empty or could not be read'));
+        }
+        return versionContent.toString().trim();
     }
 
     public async updateBackupTemplateVersion(version: string): Promise<void> {
