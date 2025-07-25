@@ -25,12 +25,12 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         if (result) {
             const rgClient = await createResourceClient(context);
             context.resourceGroup = await rgClient.resourceGroups.get(getResourceGroupFromId(nonNullProp(result, 'id')));
+            context.valuesToMask.push(nonNullProp(result, 'name'));
         }
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionContext> | undefined> {
         if (context.eventHubsNamespace) {
-            context.valuesToMask.push(nonNullProp(context.eventHubsNamespace, 'name'));
             return undefined;
         }
 

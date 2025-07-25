@@ -114,7 +114,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, projectP
 
     const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, localLanguage, projectPath);
 
-    if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
+    if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime?.toLowerCase() !== localWorkerRuntime?.toLowerCase()) {
         const incompatibleRuntime: string = localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime);
         if (promptToUpdateDotnetRuntime(azureWorkerRuntime, localWorkerRuntime)) {
             const updateAndDeploy = { title: localize('updateAndDeploy', 'Update and Deploy') };
