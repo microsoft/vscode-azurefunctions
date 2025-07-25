@@ -73,3 +73,6 @@ resources/backupTemplates/dotnet/**/cache/
 
 # macOS related extra files
 .DS_Store
+
+# Copilot instructions (internal development documentation)
+.github/copilot-instructions.md
