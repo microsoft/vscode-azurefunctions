@@ -9,9 +9,6 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
-import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
-import { validateEventHubsConnection } from '../commands/appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { validateSqlDbConnection } from '../commands/appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
@@ -24,7 +21,9 @@ import { durableUtils } from '../utils/durableUtils';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
-import { validateDTSConnectionPreDebug } from './durable/validateDTSConnectionPreDebug';
+import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
+import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
+import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -71,13 +70,13 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                         await validateDTSConnectionPreDebug(context, context.projectPath);
                         break;
                     case DurableBackend.Netherite:
-                        context.telemetry.properties.lastValidateStep = 'eventHubsConnection';
-                        await validateEventHubsConnection(context, context.projectPath);
+                        context.telemetry.properties.lastValidateStep = 'netheriteConnection';
+                        await validateNetheriteConnectionPreDebug(context, context.projectPath);
                         break;
-                    case DurableBackend.SQL:
-                        context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSqlDbConnection(context, context.projectPath);
-                        break;
+                    // case DurableBackend.SQL:
+                    // context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
+                    // await validateSQLConnectionPreDebug(context, context.projectPath);
+                    // break;
                     case DurableBackend.Storage:
                     default:
                 }
@@ -188,7 +187,7 @@ async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLan
         isNodeV4Plus({ language: projectLanguage, languageModel: projectLanguageModel }) ||
         requiresDurableStorage) {
 
-        await validateStorageConnection(context, projectPath);
+        await validateStorageConnectionPreDebug(context, projectPath);
     }
 }
 
