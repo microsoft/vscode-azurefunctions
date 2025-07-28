@@ -31,6 +31,8 @@ export class SqlDbConnectionSetSettingStep<T extends ISqlDatabaseConnectionWizar
         } else {
             // No further action required
         }
+
+        context.valuesToMask.push(context.newSQLStorageConnectionSettingValue as string);
     }
 
     public shouldExecute(context: T): boolean {
