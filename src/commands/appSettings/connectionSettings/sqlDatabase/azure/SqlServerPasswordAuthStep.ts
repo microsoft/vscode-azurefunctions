@@ -3,17 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { getInvalidLengthMessage } from '../../../../constants-nls';
-import { localize } from '../../../../localize';
-import { validateUtils } from '../../../../utils/validateUtils';
-import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { AzureWizardPromptStep, nonNullProp, validationUtils } from '@microsoft/vscode-azext-utils';
+import { localize } from '../../../../../localize';
+import { validateUtils } from '../../../../../utils/validateUtils';
+import { type ISqlDatabaseAzureConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
 
-export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    public constructor() {
-        super();
-    }
-
+export class SqlServerPasswordAuthStep<T extends ISqlDatabaseAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         context.newSqlAdminPassword = (await context.ui.showInputBox({
             prompt: localize('sqlServerPasswordPrompt', 'Provide an admin password for the SQL server.'),
@@ -28,12 +23,13 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
         return !context.newSqlAdminPassword;
     }
 
-    private validateInput(context: T, password: string | undefined): string | undefined {
+    private validateInput(context: T, password: string = ''): string | undefined {
         const login: string = nonNullProp(context, 'newSqlAdminUsername');
-        password = password ? password.trim() : '';
+        password = password.trim();
 
-        if (!validateUtils.isValidLength(password, 8, 128)) {
-            return getInvalidLengthMessage(8, 128);
+        const rc: validationUtils.RangeConstraints = { lowerLimitIncl: 8, upperLimitIncl: 128 };
+        if (!validationUtils.hasValidCharLength(password, rc)) {
+            return validationUtils.getInvalidCharLengthMessage(rc);
         }
         if (!validateUtils.meetsBasePasswordStrength(password)) {
             return localize('invalidPasswordStrength', 'Your password must contain three of the following - uppercase, lowercase, numbers, and symbols.');

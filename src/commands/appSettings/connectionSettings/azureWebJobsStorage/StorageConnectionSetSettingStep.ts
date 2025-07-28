@@ -5,8 +5,8 @@
 
 import { AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { CodeAction, ConnectionKey } from '../../../../constants';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type IStorageConnectionWizardContext } from './IStorageConnectionWizardContext';
-import { setLocalSetting } from './setConnectionSetting';
 
 export class StorageConnectionSetSettingStep<T extends IStorageConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;

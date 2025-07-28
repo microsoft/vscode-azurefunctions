@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { getStorageConnectionString } from '../../appSettings/connectionSettings/getLocalConnectionSetting';
+import { getStorageConnectionString } from '../../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString';
 import { type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 import { AzureConnectionCreateStepBase, type IConnection } from './AzureConnectionCreateStepBase';
 

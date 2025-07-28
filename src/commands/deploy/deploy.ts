@@ -26,6 +26,7 @@ import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { getStorageConnectionIfNeeded } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnection';
 import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSettings/netherite/getNetheriteConnection';
+import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlDatabase/getSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
@@ -172,10 +173,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             case DurableBackend.Netherite:
                 Object.assign(context, await getNetheriteConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
                 break;
-            // case DurableBackend.SQL:
-            // Object.assign(context,
-            //     await validateSQLConnection(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
-            // break;
+            case DurableBackend.SQL:
+                Object.assign(context, await getSQLConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
             default:
         }
     }

@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
-import { localize } from '../../../../localize';
-import { validateUtils } from '../../../../utils/validateUtils';
-import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { AzureWizardPromptStep, nonNullProp, validationUtils } from '@microsoft/vscode-azext-utils';
+import { invalidAlphanumericWithHyphens } from '../../../../../constants-nls';
+import { localize } from '../../../../../localize';
+import { validateUtils } from '../../../../../utils/validateUtils';
+import { type ISqlDatabaseAzureConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
 
-export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
+export class SqlServerUsernameAuthStep<T extends ISqlDatabaseAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         context.newSqlAdminUsername = (await context.ui.showInputBox({
             prompt: localize('sqlServerUsernamePrompt', 'Provide an admin username for the SQL server.'),
-            validateInput: (value: string | undefined) => this.validateInput(value)
+            validateInput: this.validateInput,
         })).trim();
 
         context.valuesToMask.push(nonNullProp(context, 'newSqlAdminUsername'));
@@ -23,11 +23,11 @@ export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardCon
         return !context.newSqlAdminUsername;
     }
 
-    private validateInput(name: string | undefined): string | undefined {
-        name = name ? name.trim() : '';
+    private validateInput(name: string = ''): string | undefined {
+        name = name.trim();
 
-        if (!validateUtils.isValidLength(name)) {
-            return getInvalidLengthMessage();
+        if (!validationUtils.hasValidCharLength(name)) {
+            return validationUtils.getInvalidCharLengthMessage();
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
