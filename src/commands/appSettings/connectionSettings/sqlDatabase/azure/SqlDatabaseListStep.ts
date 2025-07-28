@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Database, type Server, type SqlManagementClient } from '@azure/arm-sql';
+import { type Database, type SqlManagementClient } from '@azure/arm-sql';
 import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, nonNullValueAndProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localSettingsDescription } from '../../../../../constants-nls';
@@ -46,7 +46,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseAzureConnectionWizardCont
     }
 
     private async getPicks(context: T, databases: Database[]): Promise<IAzureQuickPickItem<Database | undefined>[]> {
-        const picks: IAzureQuickPickItem<Server | undefined>[] = [{
+        const picks: IAzureQuickPickItem<Database | undefined>[] = [{
             label: localize('newSqlDatabase', '$(plus) Create new SQL database'),
             data: undefined,
         }];
