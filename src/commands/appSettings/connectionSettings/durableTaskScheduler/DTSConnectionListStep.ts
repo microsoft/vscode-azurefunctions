@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LocationListStep, ResourceGroupListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { IdentityProvider, LocationListStep, ResourceGroupListStep, UserAssignedIdentityResourceType, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, DurableTaskProvider, DurableTaskSchedulersResourceType } from '../../../../constants';
@@ -67,6 +67,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                     Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
+                LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, IdentityProvider, UserAssignedIdentityResourceType);
                 LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, DurableTaskProvider, DurableTaskSchedulersResourceType);
 
                 promptSteps.push(
