@@ -28,6 +28,7 @@ export class SqlDatabaseGetConnectionStep<T extends ISqlDatabaseAzureConnectionW
         }
 
         context.newSQLStorageConnectionSettingValue = `Server=${serverName}.database.windows.net,1433;Database=${dbName};User=${username};Password=${password}`;
+        context.valuesToMask.push(context.newSQLStorageConnectionSettingValue);
     }
 
     public shouldExecute(context: T): boolean {
