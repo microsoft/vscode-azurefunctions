@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { CodeAction, hostFileName } from '../../../../constants';
+import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
 import { type IHostJsonV2, type ISqlTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
@@ -17,9 +17,8 @@ export class SqlDbConnectionSetSettingStep<T extends ISqlDatabaseConnectionWizar
 
     public async execute(context: T): Promise<void> {
         if (!context.newSQLStorageConnectionSettingKey) {
-            const defaultSqlConnectionName: string = 'SQLDB_Connection';
-            await this.configureHostJson(context, defaultSqlConnectionName);
-            context.newSQLStorageConnectionSettingKey = defaultSqlConnectionName;
+            await this.configureHostJson(context, ConnectionKey.SQL);
+            context.newSQLStorageConnectionSettingKey = ConnectionKey.SQL;
         }
 
         if (context.action === CodeAction.Debug) {

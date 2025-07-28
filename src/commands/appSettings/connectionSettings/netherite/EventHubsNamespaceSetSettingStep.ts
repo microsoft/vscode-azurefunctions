@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { CodeAction, hostFileName } from '../../../../constants';
+import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
 import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
@@ -17,9 +17,8 @@ export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWiza
 
     public async execute(context: T): Promise<void> {
         if (!context.newEventHubsNamespaceConnectionSettingKey) {
-            const defaultEventHubsKey: string = 'EventHubsConnection';
-            await this.configureHostJson(context, defaultEventHubsKey);
-            context.newEventHubsNamespaceConnectionSettingKey = defaultEventHubsKey;
+            await this.configureHostJson(context, ConnectionKey.EventHubs);
+            context.newEventHubsNamespaceConnectionSettingKey = ConnectionKey.EventHubs;
         }
 
         if (context.action === CodeAction.Debug) {
