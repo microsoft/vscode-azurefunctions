@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IAzExtOutputChannel } from '@microsoft/vscode-azext-utils';
-import * as cp from 'child_process';
+import { AccumulatorStream, isChildProcessError, Shell, spawnStreamAsync, type CommandLineArgs, type StreamSpawnOptions } from '@microsoft/vscode-processutils';
 import * as os from 'os';
+import { Stream } from 'stream';
 import { localize } from '../localize';
 
 export namespace cpUtils {
-    export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
-        const result: ICommandResult = await tryExecuteCommand(outputChannel, workingDirectory, command, ...args);
+    export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs): Promise<string> {
+        const result: ICommandResult = await tryExecuteCommand(outputChannel, workingDirectory, command, args);
         if (result.code !== 0) {
             // We want to make sure the full error message is displayed to the user, not just the error code.
             // If outputChannel is defined, then we simply call 'outputChannel.show()' and throw a generic error telling the user to check the output window
@@ -19,75 +20,83 @@ export namespace cpUtils {
                 outputChannel.show();
                 throw new Error(localize('commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', command));
             } else {
-                throw new Error(localize('commandError', 'Command "{0} {1}" failed with exit code "{2}":{3}{4}', command, result.formattedArgs, result.code, os.EOL, result.cmdOutputIncludingStderr));
+                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{2}":{3}{4}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
             }
         } else {
             if (outputChannel) {
-                outputChannel.appendLog(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', command, result.formattedArgs));
+                outputChannel.appendLog(localize('finishedRunningCommand', 'Finished running command: "{0}".', result.formattedCommandLine));
             }
         }
         return result.cmdOutput;
     }
 
-    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<ICommandResult> {
-        return await new Promise((resolve: (res: ICommandResult) => void, reject: (e: Error) => void): void => {
-            let cmdOutput: string = '';
-            let cmdOutputIncludingStderr: string = '';
-            const formattedArgs: string = args.join(' ');
+    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs): Promise<ICommandResult> {
+        const stdoutFinal = new AccumulatorStream();
+        const stdoutAndErrFinal = new AccumulatorStream();
 
-            workingDirectory = workingDirectory || os.tmpdir();
-            const options: cp.SpawnOptions = {
-                cwd: workingDirectory,
-                shell: true
-            };
-            const childProc: cp.ChildProcess = cp.spawn(command, args, options);
+        const stdoutIntermediate = new Stream.PassThrough();
+        const stderrIntermediate = new Stream.PassThrough();
+
+        stdoutIntermediate.on('data', (chunk: Buffer) => {
+            stdoutFinal.write(chunk);
+            stdoutAndErrFinal.write(chunk);
 
             if (outputChannel) {
-                outputChannel.appendLog(localize('runningCommand', 'Running command: "{0} {1}"...', command, formattedArgs));
+                outputChannel.append(bufferToString(chunk));
             }
-
-            childProc.stdout?.on('data', (data: string | Buffer) => {
-                data = data.toString();
-                cmdOutput = cmdOutput.concat(data);
-                cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-                if (outputChannel) {
-                    outputChannel.append(data);
-                }
-            });
-
-            childProc.stderr?.on('data', (data: string | Buffer) => {
-                data = data.toString();
-                cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-                if (outputChannel) {
-                    outputChannel.append(data);
-                }
-            });
-
-            childProc.on('error', reject);
-            childProc.on('close', (code: number) => {
-                resolve({
-                    code,
-                    cmdOutput,
-                    cmdOutputIncludingStderr,
-                    formattedArgs
-                });
-            });
         });
+
+        stderrIntermediate.on('data', (chunk: Buffer) => {
+            stdoutAndErrFinal.write(chunk);
+
+            if (outputChannel) {
+                outputChannel.append(bufferToString(chunk));
+            }
+        });
+
+        const result: Partial<ICommandResult> = {};
+
+        const options: StreamSpawnOptions = {
+            cwd: workingDirectory || os.tmpdir(),
+            shellProvider: Shell.getShellOrDefault(),
+            stdOutPipe: stdoutIntermediate,
+            stdErrPipe: stderrIntermediate,
+            onCommand: (commandLine: string) => {
+                result.formattedCommandLine = commandLine;
+
+                if (outputChannel) {
+                    outputChannel.appendLog(localize('runningCommand', 'Running command: "{0}"...', commandLine));
+                }
+            },
+        }
+
+        try {
+            await spawnStreamAsync(command, args, options);
+            result.code = 0;
+        } catch (error) {
+            if (isChildProcessError(error)) {
+                result.code = error.code ?? 1;
+            } else {
+                throw error;
+            }
+        } finally {
+            result.cmdOutput = await stdoutFinal.getString();
+            result.cmdOutputIncludingStderr = await stdoutAndErrFinal.getString();
+        }
+
+        return result as ICommandResult;
     }
 
     export interface ICommandResult {
         code: number;
         cmdOutput: string;
         cmdOutputIncludingStderr: string;
-        formattedArgs: string;
+        formattedCommandLine: string;
     }
 
-    const quotationMark: string = process.platform === 'win32' ? '"' : '\'';
-    /**
-     * Ensures spaces and special characters (most notably $) are preserved
-     */
-    export function wrapArgInQuotes(arg?: string | boolean | number): string {
-        arg ??= '';
-        return typeof arg === 'string' ? quotationMark + arg + quotationMark : String(arg);
+    function bufferToString(buffer: Buffer): string {
+        // Remove non-printing control characters and trailing newlines
+        // eslint-disable-next-line no-control-regex
+        return buffer.toString().replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F]|\r?\n$/g, '');
     }
 }

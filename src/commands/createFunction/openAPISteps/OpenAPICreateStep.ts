@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg, type CommandLineCurryFn } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { ProgressLocation, window, type Uri } from "vscode";
 import { ProjectLanguage, packageJsonFileName } from "../../../constants";
@@ -28,41 +29,56 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
     public async execute(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext & IDotnetFunctionWizardContext): Promise<void> {
         const uris: Uri[] = nonNullProp(wizardContext, 'openApiSpecificationFile');
         const uri: Uri = uris[0];
-        const args: string[] = [];
 
-        args.push(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)}`);
-        args.push(`--version:3.0.6320`);
+        // TODO: Need to work on this...we don't have a good answer for quoting things that are only a substring of a single argument
+        const generalArgsCurryFn = composeArgs(
+            withArg(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)}`), // TODO
+            withArg(`--version:3.0.6320`),
+        );
 
+        let langArgsCurryFn: CommandLineCurryFn;
         switch (wizardContext.language) {
             case ProjectLanguage.TypeScript:
-                args.push('--azure-functions-typescript');
-                args.push('--no-namespace-folders:True');
+                langArgsCurryFn = composeArgs(
+                    withArg('--azure-functions-typescript'),
+                    withArg('--no-namespace-folders:True'),
+                );
                 break;
             case ProjectLanguage.CSharp:
-                args.push(`--namespace:${nonNullProp(wizardContext, 'namespace')}`);
-                args.push('--azure-functions-csharp');
+                langArgsCurryFn = composeArgs(
+                    withArg(`--namespace:${nonNullProp(wizardContext, 'namespace')}`),
+                    withArg('--azure-functions-csharp'),
+                );
                 break;
             case ProjectLanguage.Java:
-                args.push(`--namespace:${nonNullProp(wizardContext, 'javaPackageName')}`);
-                args.push('--azure-functions-java');
+                langArgsCurryFn = composeArgs(
+                    withArg(`--namespace:${nonNullProp(wizardContext, 'javaPackageName')}`),
+                    withArg('--azure-functions-java'),
+                );
                 break;
             case ProjectLanguage.Python:
-                args.push('--azure-functions-python');
-                args.push('--no-namespace-folders:True');
-                args.push('--no-async');
+                langArgsCurryFn = composeArgs(
+                    withArg('--azure-functions-python'),
+                    withArg('--no-namespace-folders:True'),
+                    withArg('--no-async'),
+                );
                 break;
             default:
                 throw new Error(localize('notSupported', 'Not a supported language. We currently support C#, Java, Python, and Typescript'));
         }
 
-        args.push('--generate-metadata:false');
-        args.push(`--output-folder:${cpUtils.wrapArgInQuotes(wizardContext.projectPath)}`);
+        const args = composeArgs(
+            generalArgsCurryFn,
+            langArgsCurryFn,
+            withArg('--generate-metadata:false'),
+            withArg(`--output-folder:${cpUtils.wrapArgInQuotes(wizardContext.projectPath)}`), // TODO
+        )();
 
         ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.\nIf autorest fails, you can run the script on your command-line, or try resetting autorest (autorest --reset) and try again.'));
         const title: string = localize('generatingFunctions', 'Generating from OpenAPI...Check [output window](command:{0}) for status.', ext.prefix + '.showOutputChannel');
 
         await window.withProgress({ location: ProgressLocation.Notification, title }, async () => {
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'autorest', ...args);
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'autorest', args);
         });
 
         if (wizardContext.language === ProjectLanguage.TypeScript) {
@@ -78,7 +94,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
 
 async function validateAutorestInstalled(context: IActionContext): Promise<void> {
     try {
-        await cpUtils.executeCommand(undefined, undefined, 'autorest', '--version');
+        await cpUtils.executeCommand(undefined, undefined, 'autorest', composeArgs(withArg('--version'))());
     } catch (error) {
         const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
         if (!context.errorHandling.suppressDisplay) {
