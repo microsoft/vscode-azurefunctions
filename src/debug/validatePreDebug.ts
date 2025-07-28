@@ -23,7 +23,7 @@ import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
-import { validateSQLConnectionPreDebug } from './storageProviders/validateSqlConnectionPreDebug';
+import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
 import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
