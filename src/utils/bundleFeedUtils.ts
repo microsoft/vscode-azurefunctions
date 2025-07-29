@@ -90,7 +90,7 @@ export namespace bundleFeedUtils {
     export async function addDefaultBundle(context: IActionContext, hostJson: IHostJsonV2): Promise<void> {
         let versionRange: string;
         try {
-            versionRange = await getLatestVersionRange(context);
+            versionRange = (await getLatestVersionRange(context)) ?? defaultVersionRange;
         } catch {
             versionRange = defaultVersionRange;
         }
