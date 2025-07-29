@@ -13,6 +13,7 @@ export class SqlDbConnectionCustomPromptStep<T extends ISqlDatabaseConnectionWiz
             prompt: localize('customSqlConnectionPrompt', 'Provide a SQL connection string.'),
             validateInput: this.validateInput,
         })).trim();
+        context.valuesToMask.push(context.newSQLStorageConnectionSettingValue);
     }
 
     public shouldPrompt(context: T): boolean {
