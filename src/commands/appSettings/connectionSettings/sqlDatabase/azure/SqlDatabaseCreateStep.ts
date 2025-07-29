@@ -12,7 +12,6 @@ import { localize } from '../../../../../localize';
 import { createSqlClient } from '../../../../../utils/azureClients';
 import { type ISqlDatabaseAzureConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
 
-
 export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 210;
 
