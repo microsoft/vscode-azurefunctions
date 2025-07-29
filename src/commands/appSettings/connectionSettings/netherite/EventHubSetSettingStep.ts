@@ -8,8 +8,8 @@ import * as path from "path";
 import { CodeAction, hostFileName } from '../../../../constants';
 import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
-import { setLocalSetting } from '../azureWebJobsStorage/setConnectionSetting';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
 
 export class EventHubSetSettingStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {

@@ -23,6 +23,7 @@ import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
+import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
 import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
@@ -73,10 +74,10 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                         context.telemetry.properties.lastValidateStep = 'netheriteConnection';
                         await validateNetheriteConnectionPreDebug(context, context.projectPath);
                         break;
-                    // case DurableBackend.SQL:
-                    // context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                    // await validateSQLConnectionPreDebug(context, context.projectPath);
-                    // break;
+                    case DurableBackend.SQL:
+                        context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
+                        await validateSQLConnectionPreDebug(context, context.projectPath);
+                        break;
                     case DurableBackend.Storage:
                     default:
                 }

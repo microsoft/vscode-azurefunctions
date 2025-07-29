@@ -6,44 +6,42 @@
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
-import { type IHostJsonV2, type INetheriteTaskJson } from '../../../../funcConfig/host';
+import { type IHostJsonV2, type ISqlTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
 import { setLocalSetting } from '../setConnectionSetting';
-import { type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
+import { type ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
-export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 240;
+export class SqlDbConnectionSetSettingStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+    public priority: number = 250;
 
     public async execute(context: T): Promise<void> {
-        if (!context.newEventHubsNamespaceConnectionSettingKey) {
-            await this.configureHostJson(context, ConnectionKey.EventHubs);
-            context.newEventHubsNamespaceConnectionSettingKey = ConnectionKey.EventHubs;
+        if (!context.newSQLStorageConnectionSettingKey) {
+            await this.configureHostJson(context, ConnectionKey.SQL);
+            context.newSQLStorageConnectionSettingKey = ConnectionKey.SQL;
         }
 
         if (context.action === CodeAction.Debug) {
             await setLocalSetting(
                 context,
-                nonNullProp(context, 'newEventHubsNamespaceConnectionSettingKey'),
-                nonNullProp(context, 'newEventHubsNamespaceConnectionSettingValue'),
+                nonNullProp(context, 'newSQLStorageConnectionSettingKey'),
+                nonNullProp(context, 'newSQLStorageConnectionSettingValue'),
             );
         } else {
             // No further action required
         }
-
-        context.valuesToMask.push(context.newEventHubsNamespaceConnectionSettingValue as string);
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newEventHubsNamespaceConnectionSettingValue;
+        return !!context.newSQLStorageConnectionSettingValue;
     }
 
-    private async configureHostJson(context: T, eventHubsKey: string) {
+    private async configureHostJson(context: T, connectionStringName: string) {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
 
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
-            context.telemetry.properties.netheriteHostConfigFailed = 'true';
-            const message: string = localize('netheriteHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your Netherite event hub namespace settings manually.', hostFileName);
+            context.telemetry.properties.sqlDbHostConfigFailed = 'true';
+            const message: string = localize('sqlDbHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your SQL connection string settings manually.', hostFileName);
             notifyFailedToConfigureHost(context, message);
             return;
         }
@@ -52,9 +50,9 @@ export class EventHubsNamespaceSetSettingStep<T extends INetheriteConnectionWiza
         hostJson.extensions ??= {};
         hostJson.extensions.durableTask ??= {};
 
-        const durableTask = hostJson.extensions.durableTask as INetheriteTaskJson;
+        const durableTask = hostJson.extensions.durableTask as ISqlTaskJson;
         durableTask.storageProvider ??= {};
-        durableTask.storageProvider.EventHubsConnectionName = eventHubsKey;
+        durableTask.storageProvider.connectionStringName = connectionStringName;
 
         await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }

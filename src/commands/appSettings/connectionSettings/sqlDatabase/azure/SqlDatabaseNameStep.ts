@@ -4,44 +4,44 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Database, type SqlManagementClient } from '@azure/arm-sql';
-import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, nonNullProp, nonNullValue, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
-import { localize } from '../../../../localize';
-import { createSqlClient } from '../../../../utils/azureClients';
-import { validateUtils } from '../../../../utils/validateUtils';
-import { type ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, nonNullValueAndProp, validationUtils } from '@microsoft/vscode-azext-utils';
+import { invalidAlphanumericWithHyphens } from '../../../../../constants-nls';
+import { localize } from '../../../../../localize';
+import { createSqlClient } from '../../../../../utils/azureClients';
+import { validateUtils } from '../../../../../utils/validateUtils';
+import { type ISqlDatabaseAzureConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
 
-export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
+export class SqlDatabaseNameStep<T extends ISqlDatabaseAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private databases: Database[] = [];
 
     public async prompt(context: T): Promise<void> {
         // If we have a sql server already, then we should check to make sure we don't have a name duplicate down the line
         // If we don't have a sql server yet, then that means we can just take any name that meets basic validation requirements
         if (context.sqlServer) {
-            const rgName: string = getResourceGroupFromId(nonNullValue(context.sqlServer?.id));
-            const serverName: string = nonNullProp(context.sqlServer, 'name');
-
-            const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
-            const dbIterator = client.databases.listByServer(rgName, serverName);
-            this.databases = await uiUtils.listAllIterator(dbIterator);
+            const client: SqlManagementClient = await createSqlClient(context);
+            const parsedResource = parseAzureResourceId(nonNullValueAndProp(context.sqlServer, 'id'));
+            this.databases = await uiUtils.listAllIterator(client.databases.listByServer(parsedResource.resourceGroup, parsedResource.resourceName));
         }
 
         context.newSqlDatabaseName = (await context.ui.showInputBox({
             prompt: localize('sqlDatabaseNamePrompt', 'Provide a SQL database name.'),
-            validateInput: (value: string | undefined) => this.validateInput(value)
+            validateInput: (value: string) => this.validateInput(value)
         })).trim();
+
+        context.valuesToMask.push(context.newSqlDatabaseName);
     }
 
     public shouldPrompt(context: T): boolean {
         return !context.newSqlDatabaseName;
     }
 
-    private validateInput(name: string | undefined): string | undefined {
-        name = name ? name.trim() : '';
+    private validateInput(name: string = ''): string | undefined {
+        name = name.trim();
 
-        if (!validateUtils.isValidLength(name, 6, 50)) {
-            return getInvalidLengthMessage(6, 50);
+        const rc: validationUtils.RangeConstraints = { lowerLimitIncl: 6, upperLimitIncl: 50 };
+        if (!validationUtils.hasValidCharLength(name, rc)) {
+            return validationUtils.getInvalidCharLengthMessage(rc);
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
