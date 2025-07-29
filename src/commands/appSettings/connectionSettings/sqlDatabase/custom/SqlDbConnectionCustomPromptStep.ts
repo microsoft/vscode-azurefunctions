@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../../constants';
 import { localize } from '../../../../../localize';
 import { type ISqlDatabaseConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
 
@@ -17,7 +16,7 @@ export class SqlDbConnectionCustomPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newSQLStorageConnectionSettingValue && context.sqlDbConnectionType === ConnectionType.Custom;
+        return !context.newSQLStorageConnectionSettingValue;
     }
 
     private validateInput(value: string = ''): string | undefined {
