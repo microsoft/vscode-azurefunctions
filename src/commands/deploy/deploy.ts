@@ -21,6 +21,7 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
+import { pickFunctionApp } from '../../utils/pickFunctionApp';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
@@ -54,7 +55,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
     await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.pickSlotContextValue));
 }
 
-async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, _expectedContextValue?: string | RegExp): Promise<void> {
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue?: string | RegExp): Promise<void> {
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
@@ -96,9 +97,18 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     }
 
-    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
-        return await getOrCreateFunctionApp(context)
-    });
+    let node: SlotTreeItem;
+    if (expectedContextValue && !arg1) {
+        // When deploying to a specific context (e.g., slot), use the picker with context filtering
+        node = await pickFunctionApp(context, {
+            expectedChildContextValue: expectedContextValue
+        });
+    } else {
+        // Use the regular deploy node logic for production deploys or when node is already provided
+        node = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
+            return await getOrCreateFunctionApp(context)
+        });
+    }
 
     await node.initSite(context);
     const site = node.site;
