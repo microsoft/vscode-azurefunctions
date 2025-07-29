@@ -23,9 +23,9 @@ protobuf==3.7.1
 six==1.12.0
 `;
 
-const defaultRequirements: string = `# DO NOT include azure-functions-worker in this file
-# The Python Worker is managed by Azure Functions platform
-# Manually managing azure-functions-worker may cause unexpected issues
+const defaultRequirements: string = `# Uncomment to enable Azure Monitor OpenTelemetry
+# Ref: aka.ms/functions-azure-monitor-python
+# azure-monitor-opentelemetry
 
 azure-functions
 `;
