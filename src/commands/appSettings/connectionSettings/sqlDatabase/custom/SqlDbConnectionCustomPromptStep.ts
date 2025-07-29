@@ -20,10 +20,10 @@ export class SqlDbConnectionCustomPromptStep<T extends ISqlDatabaseConnectionWiz
         return !context.newSQLStorageConnectionSettingValue && context.sqlDbConnectionType === ConnectionType.Custom;
     }
 
-    private validateInput(name: string | undefined): string | undefined {
-        name = name ? name.trim() : '';
+    private validateInput(value: string = ''): string | undefined {
+        value = value.trim();
 
-        if (!validationUtils.hasValidCharLength(name)) {
+        if (!validationUtils.hasValidCharLength(value)) {
             return validationUtils.getInvalidCharLengthMessage();
         }
         return undefined;
