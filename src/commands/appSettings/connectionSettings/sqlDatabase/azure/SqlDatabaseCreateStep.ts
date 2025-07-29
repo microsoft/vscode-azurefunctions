@@ -5,12 +5,13 @@
 
 import { type Database, type SqlManagementClient } from '@azure/arm-sql';
 import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, nonNullProp, nonNullValueAndProp, parseError } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { ext } from '../../../../../extensionVariables';
 import { localize } from '../../../../../localize';
 import { createSqlClient } from '../../../../../utils/azureClients';
 import { type ISqlDatabaseAzureConnectionWizardContext } from '../ISqlDatabaseConnectionWizardContext';
+
 
 export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 210;
@@ -36,9 +37,21 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardCo
         ext.outputChannel.appendLog(localize('createdDatabase', 'Successfully created new SQL database "{0}"', context.sqlDatabase.name));
 
         // Todo: This should be its own step
-        progress.report({ message: localize('configuringFirewallRules', 'Allowing all Azure IP\'s...') });
-        await client.firewallRules.createOrUpdate(parsedServer.resourceGroup, parsedServer.resourceName, 'AllowAllAzureIps', { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' });
-        ext.outputChannel.appendLog(localize('configureFirewall', 'Successfully configured new firewall rule for server "{0}" to allow all Azure IPs', context.sqlServer?.name));
+        try {
+            progress.report({ message: localize('configuringFirewallRules', 'Allowing all Azure IP\'s...') });
+            await client.firewallRules.createOrUpdate(parsedServer.resourceGroup, parsedServer.resourceName, 'AllowAllAzureIps', { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' });
+            ext.outputChannel.appendLog(localize('configureFirewall', 'Successfully configured new firewall rule for server "{0}" to allow all Azure IPs', context.sqlServer?.name));
+        } catch (e) {
+            const perr = parseError(e);
+            const customErrMessage = localize(
+                'sqlServerCreatedFirewallFailed',
+                'A SQL server "{0}" was created, but deployment was halted because firewall rules could not be configured to allow Azure traffic.',
+                parsedServer.resourceName,
+            );
+            ext.outputChannel.appendLog(customErrMessage);
+            ext.outputChannel.appendLog(perr.message);
+            throw new Error(customErrMessage);
+        }
     }
 
     public shouldExecute(context: T): boolean {
