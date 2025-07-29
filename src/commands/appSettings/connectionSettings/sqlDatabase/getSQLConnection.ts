@@ -46,7 +46,6 @@ export async function getSQLConnectionIfNeeded(context: SqlConnectionContext, ap
         suggestedSqlServerLocalSettings: serverName,
         suggestedSqlDbLocalSettings: dbName,
         newSQLStorageConnectionSettingKey: sqlDbConnectionKey,
-        newSQLStorageConnectionSettingValue: remoteSqlDbConnection,
     };
 
     LocationListStep.resetLocation(wizardContext);

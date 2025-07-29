@@ -20,7 +20,7 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardCo
 
         const client: SqlManagementClient = await createSqlClient(context);
 
-        const parsedServer = parseAzureResourceId(nonNullValueAndProp(context.sqlServer, 'id'))
+        const parsedServer = parseAzureResourceId(nonNullValueAndProp(context.sqlServer, 'id'));
         const newDatabaseName: string = nonNullProp(context, 'newSqlDatabaseName');
 
         const dbParams: Database = {
