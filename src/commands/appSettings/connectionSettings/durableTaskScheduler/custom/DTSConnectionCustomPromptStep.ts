@@ -20,11 +20,37 @@ export class DTSConnectionCustomPromptStep<T extends IDTSConnectionWizardContext
         return !context.newDTSConnectionSetting && context.dtsConnectionType === ConnectionType.Custom;
     }
 
-    private validateInput(name: string | undefined): string | undefined {
-        name = name ? name.trim() : '';
-        if (!validationUtils.hasValidCharLength(name)) {
+    private validateInput(connectionString: string | undefined): string | undefined {
+        connectionString = connectionString ? connectionString.trim() : '';
+        
+        // Check for basic character length validation
+        if (!validationUtils.hasValidCharLength(connectionString)) {
             return validationUtils.getInvalidCharLengthMessage();
         }
+
+        // Check if the connection string contains the required "Endpoint=" pattern
+        const endpointMatch = connectionString.match(/Endpoint=([^;]+)/);
+        if (!endpointMatch) {
+            return localize('invalidDTSConnectionStringFormat', 'DTS connection string must contain an "Endpoint=" parameter. Expected format: "Endpoint=<URL>;Authentication=<AuthType>"');
+        }
+
+        // Validate that the endpoint URL is properly formatted
+        const endpoint = endpointMatch[1];
+        try {
+            const url = new URL(endpoint);
+            // Ensure it's using a valid protocol
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                return localize('invalidDTSEndpointProtocol', 'DTS endpoint must use HTTP or HTTPS protocol. Found: {0}', url.protocol);
+            }
+        } catch (error) {
+            return localize('invalidDTSEndpointURL', 'DTS endpoint is not a valid URL: {0}', endpoint);
+        }
+
+        // Check if the connection string contains an Authentication parameter
+        if (!connectionString.match(/Authentication=/)) {
+            return localize('missingDTSAuthentication', 'DTS connection string must contain an "Authentication=" parameter. Expected format: "Endpoint=<URL>;Authentication=<AuthType>"');
+        }
+
         return undefined;
     }
 }
