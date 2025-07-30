@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
+import { ext } from '../../../../extensionVariables';
 import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { tryGetVariableSubstitutedKey } from '../getVariableSubstitutedKey';
@@ -23,7 +24,15 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
 
     public async execute(context: T): Promise<void> {
         if (!context.newDTSHubConnectionSettingKey) {
-            await this.configureHostJson(context, ConnectionKey.DTSHub);
+            try {
+                await this.configureHostJson(context, ConnectionKey.DTSHub);
+            } catch (e) {
+                context.telemetry.properties.dtsHostConfigFailed = 'true';
+                const message: string = localize('dtsHostHubConfigFailed', 'Unable to find and configure "{0}" in your project root. You may want to manually set your DTS hub name to "{1}".', hostFileName, ConnectionKey.DTSHub);
+                notifyFailedToConfigureHost(context, message);
+                ext.outputChannel.appendLog(parseError(e).message);
+            }
+
             context.newDTSHubConnectionSettingKey = tryGetVariableSubstitutedKey(ConnectionKey.DTSHub);
         }
 
@@ -44,15 +53,8 @@ export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> ext
 
     private async configureHostJson(context: T, hubName: string): Promise<void> {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
-
-        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
-            context.telemetry.properties.dtsHostConfigFailed = 'true';
-            const message: string = localize('dtsHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your DTS hub settings manually.', hostFileName);
-            notifyFailedToConfigureHost(context, message);
-            return;
-        }
-
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+
         hostJson.extensions ??= {};
         hostJson.extensions.durableTask ??= {};
         (hostJson.extensions.durableTask as IDTSTaskJson).hubName = hubName;

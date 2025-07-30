@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
+import { ext } from '../../../../extensionVariables';
 import { type IHostJsonV2, type ISqlTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
@@ -17,7 +18,15 @@ export class SqlDbConnectionSetSettingStep<T extends ISqlDatabaseConnectionWizar
 
     public async execute(context: T): Promise<void> {
         if (!context.newSQLStorageConnectionSettingKey) {
-            await this.configureHostJson(context, ConnectionKey.SQL);
+            try {
+                await this.configureHostJson(context, ConnectionKey.SQL);
+            } catch (e) {
+                context.telemetry.properties.sqlDbHostConfigFailed = 'true';
+                const message: string = localize('sqlDbHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to set your SQL connection string name to "{1}".', hostFileName, ConnectionKey.SQL);
+                notifyFailedToConfigureHost(context, message);
+                ext.outputChannel.appendLog(parseError(e).message);
+            }
+
             context.newSQLStorageConnectionSettingKey = ConnectionKey.SQL;
         }
 
@@ -38,15 +47,8 @@ export class SqlDbConnectionSetSettingStep<T extends ISqlDatabaseConnectionWizar
 
     private async configureHostJson(context: T, connectionStringName: string) {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
-
-        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
-            context.telemetry.properties.sqlDbHostConfigFailed = 'true';
-            const message: string = localize('sqlDbHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your SQL connection string settings manually.', hostFileName);
-            notifyFailedToConfigureHost(context, message);
-            return;
-        }
-
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+
         hostJson.extensions ??= {};
         hostJson.extensions.durableTask ??= {};
 
