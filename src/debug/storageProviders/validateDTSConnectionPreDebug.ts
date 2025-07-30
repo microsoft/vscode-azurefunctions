@@ -70,6 +70,6 @@ export async function isAliveConnection(context: IActionContext, dtsConnection: 
     } catch (e) {
         // Even if we get back an error, if we can read a status code, the connection provided a response and is still alive
         const statusCode = (e as { statusCode?: number })?.statusCode;
-        return statusCode ? true : false;
+        return !!statusCode;
     }
 }
