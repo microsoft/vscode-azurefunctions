@@ -30,6 +30,7 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext |
         const newDTSConnectionSettingKey = nonNullProp(context, 'newDTSConnectionSettingKey');
         let newDTSConnectionSettingValue = nonNullProp(context, 'newDTSConnectionSettingValue');
 
+        // Todo: Move this to `DurableTaskSchedulerGetConnectionStep` when we upgrade the azure package for new identity logic
         if ((context as IDTSAzureConnectionWizardContext).managedIdentity) {
             newDTSConnectionSettingValue = newDTSConnectionSettingValue.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
         }

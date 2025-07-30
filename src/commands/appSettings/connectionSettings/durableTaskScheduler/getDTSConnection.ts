@@ -44,7 +44,6 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, ap
 
     const availableDeployConnectionTypes = new Set([ConnectionType.Azure]);
 
-
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
         ...await createActivityContext({ withChildren: true }),
