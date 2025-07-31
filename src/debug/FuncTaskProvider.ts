@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
 import * as process from 'process';
-import { ShellExecution, Task, TaskScope, workspace, type CancellationToken, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
+import { CustomExecution, EventEmitter, ShellExecution, Task, TaskScope, workspace, type CancellationToken, type Pseudoterminal, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
+import { buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { ext } from '../extensionVariables';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -110,7 +112,9 @@ export class FuncTaskProvider implements TaskProvider {
 
         let problemMatcher: string | undefined;
         let options: ShellExecutionOptions | undefined;
-        if (/^\s*(host )?start/i.test(command)) {
+        const isFuncHostStart = /^\s*(host )?start/i.test(command);
+
+        if (isFuncHostStart) {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
         }
@@ -121,7 +125,61 @@ export class FuncTaskProvider implements TaskProvider {
         }
 
         definition = definition || { type: func, command };
-        return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
+        return isFuncHostStart ?
+            new Task(definition, folder, command, func, await this.createCustomFuncHostStartExecution(commandLine, options), problemMatcher) :
+            new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
+    }
+
+    private async createCustomFuncHostStartExecution(commandLine: string, options: ShellExecutionOptions): Promise<CustomExecution> {
+        // const formatText = (text: string) => `\r${text.split(/(\r?\n)/g).join("\r")}\r`;
+        const formatText = (text: string) => text;
+
+        return new CustomExecution(async (): Promise<Pseudoterminal> => {
+            const emitter = new EventEmitter<string>();
+            let cp: ChildProcessWithoutNullStreams | undefined;
+
+            return {
+                onDidWrite: emitter.event,
+                open: () => {
+                    // onDidWrite
+                    emitter.event((data: string) => {
+                        ext.outputChannel.appendLine(data);
+                    });
+
+                    const [cmd, ...args] = commandLine.split(' ');
+                    cp = spawn(cmd, args, {
+                        cwd: '/Users/mfisher/Projects/code-sandboxes/azure-functions/testbox',
+                        env: {
+                            ...process.env,
+                            ...options.env,
+                        },
+                    });
+
+                    cp.stdout.on('data', (data: Buffer) => {
+                        emitter.fire(formatText(data.toString('utf8')));
+                    });
+
+                    cp.stderr.on('data', (data: Buffer) => {
+                        emitter.fire(formatText(data.toString('utf8')));
+                    });
+
+                    cp.on('error', (err) => {
+                        const errorMsg = `Process error: ${err.message}`;
+                        emitter.fire(errorMsg);
+                    });
+
+                    cp.on('close', (code) => {
+                        emitter.fire(`Process exited with code ${code}`);
+                    });
+                },
+                close: () => {
+                    if (cp && !cp.killed) {
+                        cp.kill();
+                    }
+                    emitter.dispose();
+                },
+            };
+        });
     }
 
     private async getHostStartOptions(folder: WorkspaceFolder, language: string | undefined): Promise<ShellExecutionOptions | undefined> {
