@@ -131,8 +131,7 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     private async createCustomFuncHostStartExecution(commandLine: string, options: ShellExecutionOptions): Promise<CustomExecution> {
-        // const formatText = (text: string) => `\r${text.split(/(\r?\n)/g).join("\r")}\r`;
-        const formatText = (text: string) => text;
+        const formatText = (text: string) => `\r${text.split(/(\r?\n)/g).join("\r")}\r`;
 
         return new CustomExecution(async (): Promise<Pseudoterminal> => {
             const emitter = new EventEmitter<string>();
@@ -174,7 +173,7 @@ export class FuncTaskProvider implements TaskProvider {
                 },
                 close: () => {
                     if (cp && !cp.killed) {
-                        cp.kill();
+                        cp.kill('SIGKILL');
                     }
                     emitter.dispose();
                 },
