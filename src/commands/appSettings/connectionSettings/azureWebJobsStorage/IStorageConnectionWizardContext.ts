@@ -10,7 +10,7 @@ import { type ISetConnectionSettingContext } from "../ISetConnectionSettingConte
 export interface IStorageConnectionWizardContext extends ISetConnectionSettingContext {
     azureWebJobsStorageType?: StorageConnectionType;
 
-    // All properties from `IStorageSetSettingsContext` apply
+    // All properties from `IStorageConnectionSetSettingsContext` apply
 }
 
 export type IStorageAzureConnectionWizard = IStorageAccountWizardContext & IStorageConnectionWizardContext;

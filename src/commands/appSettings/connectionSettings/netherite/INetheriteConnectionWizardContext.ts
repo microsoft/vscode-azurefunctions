@@ -14,7 +14,7 @@ export interface INetheriteConnectionWizardContext extends ISetConnectionSetting
     suggestedNamespaceLocalSettings?: string;
     suggestedEventHubLocalSettings?: string;
 
-    // All properties from `IEventHubsSetSettingsContext` apply
+    // All properties from `IEventHubsConnectionsSetSettingsContext` apply
 }
 
 export type INetheriteAzureConnectionWizardContext = INetheriteConnectionWizardContext & IEventHubWizardContext;
