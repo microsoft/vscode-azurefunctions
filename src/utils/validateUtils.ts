@@ -4,19 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 export namespace validateUtils {
-    export function isValidLength(value: string, lower?: number, upper?: number): boolean {
-        const thirtyTwoBitMaxSafeInteger = 2147483647;
-
-        lower ??= 1;
-        upper = (!upper || upper > thirtyTwoBitMaxSafeInteger) ? thirtyTwoBitMaxSafeInteger : upper;
-
-        if (lower > upper || value.length < lower || value.length > upper) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
     export function isAlphanumericWithHypens(value: string): boolean {
         return /^[a-zA-z0-9]([-a-zA-z0-9]*[a-zA-z0-9])?$/.test(value);
     }
@@ -29,7 +16,7 @@ export namespace validateUtils {
         const lowerCaseAlpha = /[a-z]/;
         const upperCaseAlpha = /[A-Z]/;
         const numeric = /[0-9]/;
-        const symbols = /#?!@$%^&*-/;
+        const symbols = /[#?!@$%^&*-]/;
         let strengthCoefficient: number = 0;
 
         // Must include at least 3 of the 4 character groups

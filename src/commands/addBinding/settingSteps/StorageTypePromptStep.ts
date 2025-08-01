@@ -8,7 +8,7 @@ import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPic
 import { localize } from "../../../localize";
 import { type IBindingSetting } from "../../../templates/IBindingTemplate";
 import { type ParsedInput } from "../../../templates/script/parseScriptTemplatesV2";
-import { type IEventHubsConnectionWizardContext } from "../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
+import { type INetheriteConnectionWizardContext as IEventHubsConnectionWizardContext } from "../../appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
 import { type IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 import { StorageConnectionCreateStep } from "./StorageConnectionCreateStep";
 

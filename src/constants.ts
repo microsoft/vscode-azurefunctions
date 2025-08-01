@@ -92,16 +92,19 @@ export enum ScmType {
 
 export enum CodeAction {
     Deploy = 'Deploy',
-    Debug = 'Debug'
+    Debug = 'Debug',
 }
 
+/**
+ * Default host connection keys
+ */
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
-    DTSHub = 'TASKHUB_NAME',
-    SQL = 'SQLDB_Connection'
+    DTSHub = '%TASKHUB_NAME%',
+    SQL = 'SQLDB_Connection',
 }
 
 export enum ConnectionType {
@@ -114,7 +117,7 @@ export enum ConnectionType {
      */
     Emulator = 'Emulator',
     /**
-     * Represents the connection to any resource that the user provides through a direct connection string
+     * Represents the connection to any resource that the user provides through a manually entered connection string
      */
     Custom = 'Custom',
 }
@@ -200,6 +203,15 @@ export enum EventGridExecuteFunctionEntryPoint {
 
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
+
+export const StorageProvider: string = 'Microsoft.Storage';
+export const StorageAccountsResourceType: string = 'storageAccounts';
+
+export const SqlProvider: string = 'Microsoft.Sql';
+export const SqlServerResourceType: string = 'servers';
+
+export const EventHubsProvider: string = 'Microsoft.EventHub';
+export const EventHubsNamespaceResourceType: string = 'namespaces';
 
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';

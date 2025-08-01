@@ -67,7 +67,14 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
             ext.outputChannel.appendLog(localize('usingDTSHub', 'Using durable task hub "{0}".', context.dtsHub.name));
         }
 
-        ext.outputChannel.appendLog(localize('prioritizingSiteLocation', 'Prioritizing site location: "{0}".', context.site?.location));
+        if (context.newDTSConnectionSettingKey) {
+            ext.outputChannel.appendLog(localize('dtsConnectionKey', 'Using DTS host connection key "{0}"', context.newDTSConnectionSettingKey));
+        }
+
+        if (context.newDTSHubConnectionSettingKey) {
+            ext.outputChannel.appendLog(localize('dtsHubConnectionKey', 'Using DTS hub host connection key "{0}"', context.newDTSHubConnectionSettingKey));
+        }
+
         this.hasLogged = true;
     }
 

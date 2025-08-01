@@ -4,20 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../../constants';
 import { localize } from '../../../../../localize';
 import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DTSConnectionCustomPromptStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
-        context.newDTSConnectionSetting = (await context.ui.showInputBox({
+        context.newDTSConnectionSettingValue = (await context.ui.showInputBox({
             prompt: localize('customDTSConnectionPrompt', 'Provide a custom DTS connection string.'),
             validateInput: (value: string | undefined) => this.validateInput(value)
         })).trim();
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newDTSConnectionSetting && context.dtsConnectionType === ConnectionType.Custom;
+        return !context.newDTSConnectionSettingValue;
     }
 
     private validateInput(name: string | undefined): string | undefined {
