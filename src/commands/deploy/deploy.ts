@@ -25,6 +25,7 @@ import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { getStorageConnectionIfNeeded } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnection';
+import { getDTSConnectionIfNeeded } from '../appSettings/connectionSettings/durableTaskScheduler/getDTSConnection';
 import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSettings/netherite/getNetheriteConnection';
 import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlDatabase/getSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
@@ -167,9 +168,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (durableStorageType && !isFlexConsumption) {
         switch (durableStorageType) {
-            // case DurableBackend.DTS:
-            //     Object.assign(context, await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
-            // break;
+            case DurableBackend.DTS:
+                Object.assign(context, await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
             case DurableBackend.Netherite:
                 Object.assign(context, await getNetheriteConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
                 break;
