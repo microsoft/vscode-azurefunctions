@@ -38,6 +38,7 @@ export class FunctionAppResolver implements AppResourceResolver {
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
+            context.errorHandling.rethrow = true; // rethrow errors to ensure it bubbles up to the resolver
             if (this.siteCacheLastUpdated < Date.now() - 1000 * 3) {
                 // do this before the graph client is created because the async graph client create takes enough time to mess up the following resolves
                 this.loaded = false;
@@ -57,15 +58,16 @@ export class FunctionAppResolver implements AppResourceResolver {
                         });
 
                         const record = response.data as Record<string, FunctionQueryModel>;
+                        // seems as if properties can be null, so we need to check for that
                         Object.values(record).forEach(data => {
                             const dataModel: FunctionAppModel = {
-                                isFlex: data.properties.sku.toLocaleLowerCase() === 'flexconsumption',
+                                isFlex: data.properties?.sku?.toLocaleLowerCase() === 'flexconsumption',
                                 id: data.id,
                                 type: data.type,
                                 kind: data.kind,
                                 name: data.name,
                                 resourceGroup: data.resourceGroup,
-                                status: data.properties.state,
+                                status: data.properties?.state,
                                 location: data.location
                             }
                             resolver.siteCache.set(dataModel.id.toLowerCase(), dataModel);

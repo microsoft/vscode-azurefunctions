@@ -187,7 +187,7 @@ async function getFlexStacks(context: ISubscriptionActionContext & { _stacks?: F
     const client: ServiceClient = await createGenericClient(context, context);
     location = location ?? (await LocationListStep.getLocation(context)).name;
     const flexFunctionAppStacks: FunctionAppStack[] = [];
-    const stacks = ['dotnet', 'java', 'node', 'powershell', 'python'];
+    const stacks = ['dotnet', 'java', 'node', 'powershell', 'python', 'custom'];
     if (!context._stacks) {
         const getFlexStack = async (stack: string) => {
             const result: AzExtPipelineResponse = await client.sendRequest(createPipelineRequest({
