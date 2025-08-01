@@ -13,7 +13,7 @@ import { localize } from "../../../../localize";
 import { createActivityContext } from "../../../../utils/activityUtils";
 import { createEventHubClient } from "../../../../utils/azureClients";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
-import { type IEventHubsSetSettingsContext } from "../ISetConnectionSettingContext";
+import { type IEventHubsConnectionSetSettingsContext } from "../ISetConnectionSettingContext";
 import { EventHubsConnectionListStep } from "./EventHubsConnectionListStep";
 import { type INetheriteAzureConnectionWizardContext } from "./INetheriteConnectionWizardContext";
 import { EventHubNameStep } from "./azure/EventHubNameStep";
@@ -28,7 +28,7 @@ type NetheriteConnectionContext = IFuncDeployContext & ISubscriptionActionContex
  *
  * b) That new event hub resources are created and ready for connection to the function app
  */
-export async function getNetheriteConnectionIfNeeded(context: NetheriteConnectionContext, appSettings: StringDictionary, site: ParsedSite, projectPath: string): Promise<IEventHubsSetSettingsContext | undefined> {
+export async function getNetheriteConnectionIfNeeded(context: NetheriteConnectionContext, appSettings: StringDictionary, site: ParsedSite, projectPath: string): Promise<IEventHubsConnectionSetSettingsContext | undefined> {
     const { eventHubsNamespaceConnectionKey, eventHubConnectionKey } = await getNetheriteSettingsKeys(Object.assign(context, { projectPath })) ?? {};
     const {
         eventHubsNamespaceConnectionValue: localNamespaceConnection,
