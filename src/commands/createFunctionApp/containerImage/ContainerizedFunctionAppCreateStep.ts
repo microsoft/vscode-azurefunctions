@@ -13,7 +13,7 @@ import { type Progress } from "vscode";
 import { webProvider } from "../../../constants";
 import { localize } from "../../../localize";
 import { createWebSiteClient } from "../../../utils/azureClients";
-import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
+import { getStorageConnectionString } from "../../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 
 export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOutput<IFunctionAppWizardContext> {
