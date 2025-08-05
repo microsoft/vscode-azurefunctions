@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
-import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
-import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
 import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { funcToolsInstalled, validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -30,6 +31,7 @@ import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSetting
 import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlDatabase/getSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
+import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -218,54 +220,81 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             eolWarningMessage ? stackUpgradeLearnMoreLink : undefined);
     }
 
-    await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
-
-    if (isZipDeploy) {
-        void validateGlobSettings(context, context.effectiveDeployFsPath);
+    let isFuncToolsInstalled: boolean = await funcToolsInstalled(context, context.workspaceFolder.uri.fsPath);
+    if (language === ProjectLanguage.Custom && !isFuncToolsInstalled) {
+        await validateFuncCoreToolsInstalled(context, localize('validateFuncCoreToolsCustom', 'The Functions Core Tools are required to deploy to a custom runtime function app.'));
+        isFuncToolsInstalled = true;
     }
 
-    if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
-        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
-    }
 
-    // app settings shouldn't be checked with flex consumption plans
-    if (isZipDeploy && !isFlexConsumption) {
-        await verifyAppSettings({
-            context,
-            node,
-            projectPath: context.projectPath,
-            version,
-            language,
-            languageModel,
-            bools: { doRemoteBuild, isConsumption },
-            durableStorageType,
-            appSettings
-        });
-    }
+    if (!isFuncToolsInstalled) {
+        await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 
+        if (isZipDeploy) {
+            void validateGlobSettings(context, context.effectiveDeployFsPath);
+        }
+
+        if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
+            await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
+        }
+
+        // app settings shouldn't be checked with flex consumption plans
+        if (isZipDeploy && !isFlexConsumption) {
+            await verifyAppSettings({
+                context,
+                node,
+                projectPath: context.projectPath,
+                version,
+                language,
+                languageModel,
+                bools: { doRemoteBuild, isConsumption },
+                durableStorageType,
+                appSettings
+            });
+        }
+    }
+    let deployedWithFuncCli = false;
     await node.runWithTemporaryDescription(
         context,
         localize('deploying', 'Deploying...'),
         async () => {
-            // Stop function app here to avoid *.jar file in use on server side.
-            // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-            context.stopAppBeforeDeploy = language === ProjectLanguage.Java;
+            // prioritize func cli deployment if installed
+            if (isFuncToolsInstalled) {
+                context.telemetry.properties.funcCoreToolsInstalled = 'true';
+                context.telemetry.properties.deployMethod = 'funccli';
+                const deployContext = Object.assign(context, await createActivityContext(), { site }) as unknown as InnerDeployContext;
+                deployContext.activityChildren = [];
+                const wizard = new AzureWizard(deployContext, {
+                    executeSteps: [new DeployFunctionCoreToolsStep()],
+                });
 
-            // preDeploy tasks are only required for zipdeploy so subpath may not exist
-            let deployFsPath: string = context.effectiveDeployFsPath;
+                deployContext.activityTitle = site.isSlot
+                    ? localize('deploySlot', 'Deploy to slot "{0}"', site.fullName)
+                    : localize('deployApp', 'Deploy to app "{0}"', site.fullName);
+                await wizard.execute();
+                deployedWithFuncCli = true;
+                return;
+            } else {
+                // Stop function app here to avoid *.jar file in use on server side.
+                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                context.stopAppBeforeDeploy = language === ProjectLanguage.Java;
 
-            if (!isZipDeploy && !isPathEqual(context.effectiveDeployFsPath, context.originalDeployFsPath)) {
-                deployFsPath = context.originalDeployFsPath;
-                const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
-                ext.outputChannel.appendLog(noSubpathWarning);
+                // preDeploy tasks are only required for zipdeploy so subpath may not exist
+                let deployFsPath: string = context.effectiveDeployFsPath;
+
+                if (!isZipDeploy && !isPathEqual(context.effectiveDeployFsPath, context.originalDeployFsPath)) {
+                    deployFsPath = context.originalDeployFsPath;
+                    const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
+                    ext.outputChannel.appendLog(noSubpathWarning);
+                }
+                const deployContext = Object.assign(context, await createActivityContext());
+                deployContext.activityChildren = [];
+                await innerDeploy(site, deployFsPath, deployContext);
             }
-            const deployContext = Object.assign(context, await createActivityContext());
-            deployContext.activityChildren = [];
-            await innerDeploy(site, deployFsPath, deployContext);
         }
     );
 
-    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
+    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption, deployedWithFuncCli);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, site: ParsedSite, language: ProjectLanguage, durableStorageType: DurableBackend | undefined): Promise<void> {
@@ -310,3 +339,4 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
 }
+
