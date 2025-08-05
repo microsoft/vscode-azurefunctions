@@ -3,26 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ResourceGroup } from '@azure/arm-resources';
 import { type Database, type Server } from '@azure/arm-sql';
-import { type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type SqlDbConnectionType, type StorageConnectionType } from '../IConnectionTypesContext';
 import { type ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
 
-export interface ISqlDatabaseConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
-    resourceGroup?: ResourceGroup;
-
-    // Connection Types
+export interface ISqlDatabaseConnectionWizardContext extends IActionContext, ISetConnectionSettingContext {
     azureWebJobsStorageType?: StorageConnectionType;
     sqlDbConnectionType?: SqlDbConnectionType;
 
-    // SQL
+    suggestedSqlServerLocalSettings?: string;
+    suggestedSqlDbLocalSettings?: string;
+
+    // All properites from `ISqlDbConnectionSetSettingsContext` apply
+}
+
+export interface ISqlDatabaseAzureConnectionWizardContext extends IResourceGroupWizardContext, ISqlDatabaseConnectionWizardContext {
     newSqlServerName?: string;
     newSqlDatabaseName?: string;
     newSqlAdminUsername?: string;
     newSqlAdminPassword?: string;
+
     sqlServer?: Server;
     sqlDatabase?: Database;
-
-    customSqlConnection?: string;
 }
