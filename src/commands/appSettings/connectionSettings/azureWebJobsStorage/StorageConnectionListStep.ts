@@ -46,7 +46,7 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
 
         buttons.push(skipForNow);
 
-        const message: string = localize('connectAzureWebJobsStorage', 'Azure Functions needs to be configured to use an Azure Storage account.');
+        const message: string = localize('connectAzureWebJobsStorage', 'Azure Functions needs to be configured to use a storage account.');
         context.azureWebJobsStorageType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: Exclude<ConnectionType, 'Custom'>;
