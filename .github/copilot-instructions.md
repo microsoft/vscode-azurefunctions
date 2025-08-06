@@ -1,3 +1,3 @@
 # Coding Instructions for GitHub Copilot
 
-- Do not commit or suggest changes to `main.js` when they are automatically generated as part of our webpack build process.
+- Do not commit or suggest changes to `main.js` when those changes are automatically generated as part of the webpack build process.
