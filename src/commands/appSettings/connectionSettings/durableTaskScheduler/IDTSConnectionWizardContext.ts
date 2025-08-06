@@ -8,7 +8,7 @@ import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type ConnectionType } from "../../../../constants";
 import { type DurableTaskHubResource, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerEmulator } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient";
-import { type IFunctionAppUserAssignedIdentitiesContext } from "../../../identity/listUserAssignedIdentities/IFunctionAppUserAssignedIdentitiesContext";
+import { type ManagedIdentityAssignContext } from "../../../identity/ManagedIdentityAssignContext";
 import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
@@ -24,7 +24,7 @@ export interface IDTSConnectionWizardContext extends IActionContext, ISetConnect
     // All properties from `IDTSConnectionSetSettingsContext` apply
 }
 
-export interface IDTSAzureConnectionWizardContext extends IFunctionAppUserAssignedIdentitiesContext, IDTSConnectionWizardContext, Partial<ExecuteActivityContext> {
+export interface IDTSAzureConnectionWizardContext extends ManagedIdentityAssignContext, IDTSConnectionWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
 
     newDTSName?: string;
