@@ -211,8 +211,6 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
             const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink, modal: true, stepName: 'failedToConnectEmulator' }, debugAnyway, installOrRun);
             if (result === installOrRun) {
                 if (azuriteExtension) {
-                    // Start all Azurite services (Blob, Table, Queue) required for durable functions
-                    // Durable functions require Table service for orchestration state and Queue service for messaging
                     await vscode.commands.executeCommand('azurite.start_blob');
                     await vscode.commands.executeCommand('azurite.start_table');
                     await vscode.commands.executeCommand('azurite.start_queue');
