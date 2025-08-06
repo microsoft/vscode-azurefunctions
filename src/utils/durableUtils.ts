@@ -3,20 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, parseError, type IParsedError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { type Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
-import { ext } from "../extensionVariables";
-import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from "../funcConfig/host";
-import { localize } from "../localize";
-import { cpUtils } from "./cpUtils";
+import { DurableBackend, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
+import { type IHostJsonV2 } from "../funcConfig/host";
 import { dotnetUtils } from "./dotnetUtils";
 import { hasNodeJsDependency } from "./nodeJsUtils";
 import { pythonUtils } from "./pythonUtils";
-import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
@@ -75,8 +71,6 @@ export namespace durableUtils {
         }
     }
 
-    // #region Verify Durable Dependencies
-
     // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
     export async function verifyHasDurableStorage(language: string | undefined, projectPath: string): Promise<boolean> {
         switch (language) {
@@ -124,140 +118,4 @@ export namespace durableUtils {
         const requirementsPath: string = path.join(projectPath, requirementsFileName);
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
-
-    // #endregion Verify Durable Dependencies
-
-    // #region Install Durable Dependencies
-
-    export async function tryInstallDurableDependencies(context: IFunctionWizardContext): Promise<void> {
-        switch (context.language) {
-            case ProjectLanguage.Java:
-                // Todo: Revisit when adding Java implementation
-                break;
-            case ProjectLanguage.CSharp:
-            case ProjectLanguage.FSharp:
-                await installDotnetDependencies(context);
-                break;
-            case ProjectLanguage.JavaScript:
-            case ProjectLanguage.TypeScript:
-                await installNodeDependencies(context);
-                break;
-            case ProjectLanguage.Python:
-                await pythonUtils.addDependencyToRequirements(pythonDfPackage, context.projectPath);
-                await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
-                break;
-            case ProjectLanguage.PowerShell:
-                // Todo: Revisit when adding PowerShell implementation
-                break;
-            default:
-        }
-    }
-
-    async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
-        const packages: { name: string; prerelease?: boolean }[] = [];
-        const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
-
-        switch (context.newDurableStorageType) {
-            case DurableBackend.Netherite:
-                isDotnetIsolated ?
-                    packages.push({ name: dotnetIsolatedDfNetheritePackage }) :
-                    packages.push({ name: dotnetInProcDfNetheritePackage });
-                break;
-            case DurableBackend.DTS:
-                // Todo: Remove prerelease flag once this functionality is out of preview
-                isDotnetIsolated ?
-                    packages.push({ name: dotnetIsolatedDTSPackage, prerelease: true }) :
-                    packages.push({ name: dotnetInProcDTSPackage, prerelease: true });
-                break;
-            case DurableBackend.SQL:
-                isDotnetIsolated ?
-                    packages.push({ name: dotnetIsolatedDfSqlPackage }) :
-                    packages.push({ name: dotnetInProcDfSqlPackage });
-                break;
-            case DurableBackend.Storage:
-            default:
-        }
-
-        // Although the templates should incorporate this package already, it is often included with an out-dated version
-        // which can lead to errors on first run.  To improve this experience for our users, ensure that the latest version is used.
-        if (!isDotnetIsolated) {
-            packages.push({ name: dotnetInProcDfBasePackage });
-        }
-
-        const failedPackages: string[] = [];
-        for (const p of packages) {
-            try {
-                const packageArgs: string[] = [p.name];
-                if (p.prerelease) {
-                    packageArgs.push('--prerelease');
-                }
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', ...packageArgs);
-            } catch {
-                failedPackages.push(p.name);
-            }
-        }
-
-        if (failedPackages.length) {
-            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', failedPackages.join('", "')));
-        }
-    }
-
-    async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
-        try {
-            const packageVersion = context.languageModel === 4 ? '3' : '2';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${nodeDfPackage}@${packageVersion}`);
-        } catch (error) {
-            const pError: IParsedError = parseError(error);
-            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', nodeDfPackage);
-            ext.outputChannel.appendLog(pError.message);
-            ext.outputChannel.appendLog(dfDepInstallFailed);
-        }
-    }
-
-    // #endregion Install Durable Dependencies
-
-    // #region Durable Task Configs
-
-    export function getDefaultStorageTaskConfig(): IStorageTaskJson {
-        return {
-            storageProvider: {
-                type: DurableBackend.Storage,
-            }
-        };
-    }
-
-    export function getDefaultNetheriteTaskConfig(hubName: string = ''): INetheriteTaskJson {
-        return {
-            hubName,
-            useGracefulShutdown: true,
-            storageProvider: {
-                type: DurableBackend.Netherite,
-                StorageConnectionName: ConnectionKey.Storage,
-                EventHubsConnectionName: ConnectionKey.EventHubs,
-            }
-        };
-    }
-
-    export function getDefaultDTSTaskConfig(): IDTSTaskJson {
-        return {
-            hubName: '%TASKHUB_NAME%',
-            storageProvider: {
-                type: DurableBackend.DTS,
-                connectionStringName: ConnectionKey.DTS,
-            }
-        };
-    }
-
-    export function getDefaultSqlTaskConfig(): ISqlTaskJson {
-        return {
-            storageProvider: {
-                type: DurableBackend.SQL,
-                connectionStringName: ConnectionKey.SQL,
-                taskEventLockTimeout: "00:02:00",
-                createDatabaseIfNotExists: true,
-            }
-        };
-    }
-
-    // #endregion Durable Task Configs
 }
