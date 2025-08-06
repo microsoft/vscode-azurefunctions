@@ -44,7 +44,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
 
         buttons.push(skipForNow);
 
-        const message: string = localize('selectDTSConnection', 'Durable Functions needs to be configured to use a Durable Task Scheduler.');
+        const message: string = localize('selectDTSConnection', 'Durable Functions requires a Durable Task Scheduler connection.');
         context.dtsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: ConnectionType;

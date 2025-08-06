@@ -35,7 +35,7 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
 
         buttons.push(skipForNow);
 
-        const message: string = localize('selectSqlDatabaseConnection', 'Durable Functions needs to be configured to use a SQL database.');
+        const message: string = localize('selectSqlDatabaseConnection', 'Durable Functions requires a SQL database connection.');
         context.sqlDbConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: Exclude<ConnectionType, 'Emulator'> | undefined;
