@@ -89,7 +89,12 @@ export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDep
         const message = l10n.t('Publishing "{0}" to "{1}" with Functiontion Core Tools...', context.originalDeployFsPath, context.site.fullName);
         progress.report({ message });
         context.activityAttributes = context.activityAttributes ?? { logs: [] };
-        const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, 'func', 'azure', 'functionapp', 'publish', context.site.fullName)
+        const args = ['func', 'azure', 'functionapp', 'publish', context.site.siteName];
+        if (context.site.isSlot) {
+            // if there's no slotName, then just assume production
+            args.push('--slot', context.site.slotName ?? 'production');
+        }
+        const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, args.join(' '));
         context.activityAttributes.logs = [{ content: cmdOutput.cmdOutputIncludingStderr }];
     }
     public shouldExecute(_context: InnerDeployContext): boolean {
