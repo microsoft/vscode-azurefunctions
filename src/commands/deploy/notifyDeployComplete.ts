@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type IDeployContext } from '@microsoft/vscode-azext-azureappservice';
 import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import { window, type MessageItem, type WorkspaceFolder } from 'vscode';
@@ -16,7 +17,7 @@ import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
-export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean): Promise<void> {
+export async function notifyDeployComplete(context: IDeployContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean, deployedWithFuncCli?: boolean): Promise<void> {
     await node.initSite(context);
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
@@ -55,6 +56,10 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
     });
 
     try {
+        if (deployedWithFuncCli) {
+            // don't query triggers if we used the func cli to deploy
+            return;
+        }
         const retries: number = 4;
         await retry(
             async (currentAttempt: number) => {
