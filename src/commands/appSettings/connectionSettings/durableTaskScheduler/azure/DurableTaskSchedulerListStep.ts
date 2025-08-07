@@ -53,7 +53,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
         }
 
         const dtsContributorRole: Role = {
-            scopeId: context.dts?.id,
+            scopeId: context.dtsHub?.id,
             roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.durableTaskDataContributor),
             roleDefinitionName: CommonRoleDefinitions.durableTaskDataContributor.roleName,
         };
@@ -69,7 +69,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
                     ...role,
                     // This id may be missing when the role is initially passed in,
                     // but by the time we run the step, we should have the populated id ready.
-                    scopeId: context.dts?.id,
+                    scopeId: context.dtsHub?.id,
                 };
 
                 if (!roleAssignment.scopeId) {
