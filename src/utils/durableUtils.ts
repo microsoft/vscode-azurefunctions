@@ -23,6 +23,7 @@ export namespace durableUtils {
     export const dotnetInProcDTSPackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask.AzureManaged';
     export const dotnetIsolatedDTSPackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged';
     export const dotnetInProcDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
+    export const dotnetIsolatedBasePackage: string = 'Microsoft.Azure.Functions.Worker.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
 
