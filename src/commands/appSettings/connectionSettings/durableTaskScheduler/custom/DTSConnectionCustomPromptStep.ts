@@ -46,9 +46,16 @@ export class DTSConnectionCustomPromptStep<T extends IDTSConnectionWizardContext
             return localize('invalidDTSEndpointURL', 'DTS endpoint is not a valid URL: {0}', endpoint);
         }
 
-        // Check if the connection string contains an Authentication parameter
-        if (!connectionString.match(/Authentication=/)) {
+        // Check if the connection string contains an Authentication parameter with a non-empty value
+        const authMatch = connectionString.match(/Authentication=([^;]*)/);
+        if (!authMatch) {
             return localize('missingDTSAuthentication', 'DTS connection string must contain an "Authentication=" parameter. Expected format: "Endpoint=<URL>;Authentication=<AuthType>"');
+        }
+        
+        // Validate that the Authentication parameter has a non-empty value
+        const authValue = authMatch[1];
+        if (!authValue || authValue.trim() === '') {
+            return localize('emptyDTSAuthentication', 'DTS Authentication parameter cannot be empty. Expected format: "Endpoint=<URL>;Authentication=<AuthType>"');
         }
 
         return undefined;
