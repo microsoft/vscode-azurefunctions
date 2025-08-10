@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
@@ -16,6 +16,7 @@ import { cpUtils } from '../../../utils/cpUtils';
 import { durableUtils } from '../../../utils/durableUtils';
 import { pythonUtils } from '../../../utils/pythonUtils';
 import { venvUtils } from '../../../utils/venvUtils';
+import { tryGetVariableSubstitutedKey } from '../../appSettings/connectionSettings/getVariableSubstitutedKey';
 import { type IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -87,7 +88,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                     ext.outputChannel.appendLog(localize('extensionBundlePreview', 'Updated "host.json" extension bundle to preview version to enable new DTS features.'));
                 }
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
-                await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTSHub, '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), '', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = this.getDefaultSqlTaskConfig();
