@@ -43,9 +43,6 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext |
         } else {
             // No further action required
         }
-
-        context.newDTSConnectionSettingValue = newDTSConnectionSettingValue;
-        context.valuesToMask.push(context.newDTSConnectionSettingValue);
     }
 
     public shouldExecute(context: T): boolean {
