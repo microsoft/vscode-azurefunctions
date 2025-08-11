@@ -23,7 +23,7 @@ export class CommandAttributes {
         ],
     };
 
-    static readonly Deploy_DTSSetup: ActivityAttributes = {
+    static readonly DeployDTSSetup: ActivityAttributes = {
         description: "A preflight operation that ensures that a new Durable Task Scheduler (DTS) resource and hub is created, configured, and ready for connection to the function app.",
         troubleshooting: [
             "DTS resource creation takes a long time (25+ minutes) and then fails - possible temporary service issue; you should recommend that the user try again a short time later and delete any unused resources that were created.",
