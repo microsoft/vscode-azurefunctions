@@ -14,7 +14,7 @@ export class DurableTaskSchedulerGetConnectionStep<T extends IDTSAzureConnection
         context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
 
         if (context.managedIdentity) {
-            context.newDTSConnectionSettingValue = context.newDTSConnectionSettingValue.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
+            context.newDTSConnectionSettingValue = context.newDTSConnectionSettingValue.replace(clientIdKey, context.managedIdentity?.clientId ?? clientIdKey);
         }
 
         context.valuesToMask.push(context.newDTSConnectionSettingValue);
