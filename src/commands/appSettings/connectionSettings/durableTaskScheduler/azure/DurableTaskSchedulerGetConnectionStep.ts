@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
+import { clientIdKey, getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
 import { type IDTSAzureConnectionWizardContext } from '../IDTSConnectionWizardContext';
 
 export class DurableTaskSchedulerGetConnectionStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -12,6 +12,11 @@ export class DurableTaskSchedulerGetConnectionStep<T extends IDTSAzureConnection
 
     public async execute(context: T): Promise<void> {
         context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
+
+        if (context.managedIdentity) {
+            context.newDTSConnectionSettingValue = context.newDTSConnectionSettingValue.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
+        }
+
         context.valuesToMask.push(context.newDTSConnectionSettingValue);
     }
 
