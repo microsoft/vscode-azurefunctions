@@ -95,18 +95,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
             const amClient = await createAuthorizationManagementClient(context);
 
             let hasRoleAssignment: boolean = false;
-            if (context.dts) {
-                const taskSchedulerRoleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
-                    context.dts.id,
-                    {
-                        // $filter=principalId eq {id}
-                        filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
-                    }
-                ));
-                hasRoleAssignment = taskSchedulerRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
-            }
-
-            if (!hasRoleAssignment && context.dtsHub) {
+            if (context.dtsHub) {
                 const taskHubRoleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
                     context.dtsHub.id,
                     {
@@ -115,6 +104,17 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
                     }
                 ));
                 hasRoleAssignment = taskHubRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
+            }
+
+            if (!hasRoleAssignment && context.dts) {
+                const taskSchedulerRoleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
+                    context.dts.id,
+                    {
+                        // $filter=principalId eq {id}
+                        filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
+                    }
+                ));
+                hasRoleAssignment = taskSchedulerRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
             }
 
             if (hasRoleAssignment) {
