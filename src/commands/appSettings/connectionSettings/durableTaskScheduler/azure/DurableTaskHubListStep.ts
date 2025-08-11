@@ -108,7 +108,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
 
             if (!hasRoleAssignment && context.dtsHub) {
                 const taskHubRoleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
-                    roleAssignment.scopeId,
+                    context.dtsHub.id,
                     {
                         // $filter=principalId eq {id}
                         filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
