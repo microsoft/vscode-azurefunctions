@@ -61,14 +61,17 @@ export namespace bundleFeedUtils {
         }
     }
 
-    export async function getRelease(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesReleaseV1> {
-        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
-        return feed.templates.v1[templateVersion];
-    }
-
-    export async function getReleaseV2(templateVersion: string): Promise<ITemplatesReleaseV2> {
-        // build the url ourselves because the index-v2.json file is no longer publishing version updates for v2 templates
+    export async function getRelease(templateVersion: string, version: 'v1' | 'v2'): Promise<ITemplatesReleaseV1 | ITemplatesReleaseV2> {
+        // build the url ourselves because the index-v2.json file is no longer publishing version updates
         const functionsCdn: string = 'https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/';
+        if (version === 'v1') {
+            return {
+                functions: `${functionsCdn}${templateVersion}/StaticContent/v1/templates/templates.json`,
+                bindings: `${functionsCdn}${templateVersion}/StaticContent/v1/bindings/bindings.json`,
+                resources: `${functionsCdn}${templateVersion}/StaticContent/v1/resources/Resources.{locale}.json`,
+            };
+        }
+
         return {
             functions: `${functionsCdn}${templateVersion}/StaticContent/v2/templates/templates.json`,
             bindings: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
