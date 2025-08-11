@@ -212,6 +212,8 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
             if (result === installOrRun) {
                 if (azuriteExtension) {
                     await vscode.commands.executeCommand('azurite.start_blob');
+                    await vscode.commands.executeCommand('azurite.start_table');
+                    await vscode.commands.executeCommand('azurite.start_queue');
                 }
                 else {
                     await vscode.commands.executeCommand('workbench.extensions.installExtension', 'azurite.azurite');
