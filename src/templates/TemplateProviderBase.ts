@@ -11,6 +11,7 @@ import { type IProjectWizardContext } from '../commands/createNewProject/IProjec
 import { type ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { type IBindingTemplate } from './IBindingTemplate';
 import { type FunctionTemplateBase } from './IFunctionTemplate';
 import { type ITemplates } from './ITemplates';
