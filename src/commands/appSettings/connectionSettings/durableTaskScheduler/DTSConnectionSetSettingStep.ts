@@ -35,11 +35,12 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext |
             context.newDTSConnectionSettingKey = ConnectionKey.DTS;
         }
 
-        const newDTSConnectionSettingKey = nonNullProp(context, 'newDTSConnectionSettingKey');
-        const newDTSConnectionSettingValue = nonNullProp(context, 'newDTSConnectionSettingValue');
-
         if (context.action === CodeAction.Debug) {
-            await setLocalSetting(context, newDTSConnectionSettingKey, newDTSConnectionSettingValue);
+            await setLocalSetting(
+                context,
+                nonNullProp(context, 'newDTSConnectionSettingKey'),
+                nonNullProp(context, 'newDTSConnectionSettingValue'),
+            );
         } else {
             // No further action required
         }
