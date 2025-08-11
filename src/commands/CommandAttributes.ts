@@ -24,7 +24,7 @@ export class CommandAttributes {
     };
 
     static readonly Deploy_DTSSetup: ActivityAttributes = {
-        description: "A preflight operations that ensures that a new Durable Task Scheduler (DTS) resource and hub is created, configured, and ready for connection to the function app.",
+        description: "A preflight operation that ensures that a new Durable Task Scheduler (DTS) resource and hub is created, configured, and ready for connection to the function app.",
         troubleshooting: [
             "DTS resource creation takes a long time (25+ minutes) and then fails - possible temporary service issue; you should recommend that the user try again a short time later and delete any unused resources that were created.",
             "Task hub creation fails — if a parent DTS resource was selected, check that the parent DTS resource is not stuck in a provisioning state.",
