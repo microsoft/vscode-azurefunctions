@@ -32,7 +32,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     protected _language: string;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(latestTemplateVersion);
+        const release = await bundleFeedUtils.getRelease(latestTemplateVersion, 'v2') as bundleFeedUtils.ITemplatesReleaseV2;
         const language = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const urls: string[] = [release.userPrompts ?? release.bindings, resourcesUrl, release.functions];
