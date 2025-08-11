@@ -12,7 +12,7 @@ import type * as vscode from 'vscode';
 import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { funcToolsInstalled, validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -220,14 +220,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             eolWarningMessage ? stackUpgradeLearnMoreLink : undefined);
     }
 
-    let isFuncToolsInstalled: boolean = await funcToolsInstalled(context, context.workspaceFolder.uri.fsPath);
-    if (language === ProjectLanguage.Custom && !isFuncToolsInstalled) {
+    if (language === ProjectLanguage.Custom && isFlexConsumption) {
+        // don't run predeploy tasks and verify settings for a deployment with the CLI
         await validateFuncCoreToolsInstalled(context, localize('validateFuncCoreToolsCustom', 'The Functions Core Tools are required to deploy to a custom runtime function app.'));
-        isFuncToolsInstalled = true;
-    }
-
-
-    if (!isFuncToolsInstalled) {
+    } else {
         await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 
         if (isZipDeploy) {
@@ -253,13 +249,14 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             });
         }
     }
+
     let deployedWithFuncCli = false;
     await node.runWithTemporaryDescription(
         context,
         localize('deploying', 'Deploying...'),
         async () => {
-            // deply with func cli for custom runtimes on flex consumption due to additional requirements
-            if (isFuncToolsInstalled && language === ProjectLanguage.Custom && isFlexConsumption) {
+            // deploy with func cli for custom runtimes on flex consumption due to additional requirements
+            if (language === ProjectLanguage.Custom && isFlexConsumption) {
                 context.telemetry.properties.funcCoreToolsInstalled = 'true';
                 context.telemetry.properties.deployMethod = 'funccli';
                 const deployContext = Object.assign(context, await createActivityContext(), { site }) as unknown as InnerDeployContext;
