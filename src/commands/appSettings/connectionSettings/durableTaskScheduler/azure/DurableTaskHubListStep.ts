@@ -103,7 +103,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
                         filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
                     }
                 ));
-                hasRoleAssignment ||= taskSchedulerRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
+                hasRoleAssignment = taskSchedulerRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
             }
 
             if (!hasRoleAssignment && context.dtsHub) {
@@ -114,7 +114,7 @@ export class DurableTaskHubListStep<T extends IDTSAzureConnectionWizardContext> 
                         filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
                     }
                 ));
-                hasRoleAssignment ||= taskHubRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
+                hasRoleAssignment = taskHubRoleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
             }
 
             if (hasRoleAssignment) {
