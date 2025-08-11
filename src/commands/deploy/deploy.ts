@@ -258,8 +258,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context,
         localize('deploying', 'Deploying...'),
         async () => {
-            // prioritize func cli deployment if installed
-            if (isFuncToolsInstalled) {
+            // deply with func cli for custom runtimes on flex consumption due to additional requirements
+            if (isFuncToolsInstalled && language === ProjectLanguage.Custom && isFlexConsumption) {
                 context.telemetry.properties.funcCoreToolsInstalled = 'true';
                 context.telemetry.properties.deployMethod = 'funccli';
                 const deployContext = Object.assign(context, await createActivityContext(), { site }) as unknown as InnerDeployContext;
