@@ -52,7 +52,7 @@ export namespace requestUtils {
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise((resolve, reject): void => {
-            stream.pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
+            stream.pipe(fse.createWriteStream(filePath).on('finish', () => resolve(undefined)).on('error', reject));
         });
     }
 
