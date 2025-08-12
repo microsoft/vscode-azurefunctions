@@ -38,7 +38,7 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
 
         buttons.push(skipForNow);
 
-        const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hubs namespace for internal use by the Azure Functions runtime.');
+        const message: string = localize('selectEventHubsNamespace', 'Durable Functions requires an event hubs namespace to be configured.');
         context.eventHubsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: Exclude<ConnectionType, 'Custom'>;

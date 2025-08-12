@@ -35,7 +35,7 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
 
         buttons.push(skipForNow);
 
-        const message: string = localize('selectSqlDatabaseConnection', 'In order to proceed, you must connect a SQL database for internal use by the Azure Functions runtime.');
+        const message: string = localize('selectSqlDatabaseConnection', 'Durable Functions requires a SQL database to be configured.');
         context.sqlDbConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: Exclude<ConnectionType, 'Emulator'> | undefined;

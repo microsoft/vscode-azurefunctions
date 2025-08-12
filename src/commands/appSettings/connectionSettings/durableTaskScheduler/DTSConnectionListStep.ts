@@ -26,7 +26,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
     }
 
     public async prompt(context: T): Promise<void> {
-        const connectAzureButton = { title: localize('connectAzureTaskScheduler', 'Connect Azure Task Scheduler'), data: ConnectionType.Azure };
+        const connectAzureButton = { title: localize('connectDurableTaskScheduler', 'Connect Durable Task Scheduler'), data: ConnectionType.Azure };
         const connectEmulatorButton = { title: useEmulator, data: ConnectionType.Emulator };
         const connectCustomDTSButton = { title: localize('connectCustomTaskScheduler', 'Manually Set a Connection String'), data: ConnectionType.Custom };
         const skipForNow = { title: localize('skipForNow', 'Skip for now'), data: undefined };
@@ -44,7 +44,7 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
 
         buttons.push(skipForNow);
 
-        const message: string = localize('selectDTSConnection', 'Durable Functions needs to be configured to use a Durable Task Scheduler.');
+        const message: string = localize('selectDTSConnection', 'Durable Functions requires a durable task scheduler to be configured.');
         context.dtsConnectionType = (await context.ui.showWarningMessage(message, { modal: true }, ...buttons) as {
             title: string;
             data: ConnectionType;
