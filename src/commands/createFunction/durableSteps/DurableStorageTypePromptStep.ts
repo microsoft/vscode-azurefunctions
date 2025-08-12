@@ -36,7 +36,9 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
                 await openUrl('https://aka.ms/durable-storage-providers');
             }
         }
+
         context.newDurableStorageType = pick;
+        context.telemetry.properties.durableStorageType = pick;
     }
 
     public shouldPrompt(context: T): boolean {
