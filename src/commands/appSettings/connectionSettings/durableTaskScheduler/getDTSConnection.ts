@@ -13,6 +13,7 @@ import { ext } from "../../../../extensionVariables";
 import { localize } from "../../../../localize";
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { createActivityContext } from "../../../../utils/activityUtils";
+import { CommandAttributes } from "../../../CommandAttributes";
 import { type IFuncDeployContext } from "../../../deploy/deploy";
 import { type IDTSConnectionSetSettingsContext } from "../ISetConnectionSettingContext";
 import { DTSConnectionListStep } from "./DTSConnectionListStep";
@@ -47,6 +48,8 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, ap
     const wizardContext: IDTSAzureConnectionWizardContext = {
         ...context,
         ...await createActivityContext({ withChildren: true }),
+        activityAttributes: CommandAttributes.DeployDTSSetup,
+        callbackId: `${context.callbackId}.dtsSetup`,
         site,
         projectPath,
         action: CodeAction.Deploy,
