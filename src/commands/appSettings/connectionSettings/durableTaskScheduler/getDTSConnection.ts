@@ -58,6 +58,8 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, ap
         // If the local settings are pointing to an emulator (i.e. localhost), it's not a concern because it won't actually match up with any remote resources and thus won't show up as a suggestion.
         suggestedDTSEndpointLocalSettings: localDTSEndpoint ? tryGetDTSEndpoint(localDTSConnection) : undefined,
         suggestedDTSHubNameLocalSettings: localDTSHubName,
+        newDTSConnectionSettingKey: dtsConnectionKey,
+        newDTSHubConnectionSettingKey: dtsHubConnectionKey,
     };
 
     // Always reset location to avoid potential mismatches with the Durable Task provider offering. If a location was already set and is not valid for this resource type, deployment may fail.
