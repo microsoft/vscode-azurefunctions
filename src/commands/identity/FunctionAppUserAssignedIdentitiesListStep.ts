@@ -6,8 +6,7 @@
 import { type ManagedServiceIdentityClient } from '@azure/arm-msi';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { createAuthorizationManagementClient, createManagedServiceIdentityClient, parseAzureResourceId, uiUtils, UserAssignedIdentityListStep, type ParsedAzureResourceId, type Role } from '@microsoft/vscode-azext-azureutils';
-import { ActivityChildItem, ActivityChildType, activityInfoContext, activityInfoIcon, AzureWizardPromptStep, createContextValue, nonNullProp, prependOrInsertAfterLastInfoChild, type ActivityInfoChild, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { ext } from '../../extensionVariables';
+import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { type ManagedIdentityAssignContext } from './ManagedIdentityAssignContext';
 import { ManagedIdentityAssignStep } from './ManagedIdentityAssignStep';
@@ -65,21 +64,6 @@ export class FunctionAppUserAssignedIdentitiesListStep<T extends ManagedIdentity
         }
 
         context.telemetry.properties.functionAppHasIdentityWithTargetRole = String(hasTargetRole);
-
-        if (hasTargetRole) {
-            prependOrInsertAfterLastInfoChild(context,
-                new ActivityChildItem({
-                    stepId: this.id,
-                    label: localize('useIdentityWithRole', 'Use identity "{0}" with role "{1}"', context.managedIdentity?.name, this.targetRole.roleDefinitionName),
-                    contextValue: createContextValue(['functionAppUserAssignedIdentitiesListStepItem', activityInfoContext]),
-                    activityType: ActivityChildType.Info,
-                    iconPath: activityInfoIcon,
-                }) as ActivityInfoChild,
-            );
-            ext.outputChannel.appendLog(localize('foundIdentity', 'Located existing user assigned identity "{0}" with role "{1}".', context.managedIdentity?.name, this.targetRole.roleDefinitionName));
-        } else {
-            ext.outputChannel.appendLog(localize('foundNoIdentity', 'Found no existing user assigned identity with role "{0}".', this.targetRole.roleDefinitionName));
-        }
     }
 
     public async prompt(context: T): Promise<void> {

@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CommonRoleDefinitions, createAuthorizationManagementClient, createRoleId, LocationListStep, parseAzureResourceId, RoleAssignmentExecuteStep, uiUtils, type ILocationWizardContext, type Role } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, parseAzureResourceId, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
 import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerClient';
-import { FunctionAppUserAssignedIdentitiesListStep } from '../../../../identity/FunctionAppUserAssignedIdentitiesListStep';
 import { type IDTSAzureConnectionWizardContext } from '../IDTSConnectionWizardContext';
 import { DurableTaskHubListStep } from './DurableTaskHubListStep';
 import { DurableTaskSchedulerCreateStep } from './DurableTaskSchedulerCreateStep';
@@ -52,43 +51,7 @@ export class DurableTaskSchedulerListStep<T extends IDTSAzureConnectionWizardCon
             promptSteps.push(new DurableTaskHubListStep(this._schedulerClient));
         }
 
-        const dtsContributorRole: Role = {
-            scopeId: context.dts?.id,
-            roleDefinitionId: createRoleId(context.subscriptionId, CommonRoleDefinitions.durableTaskDataContributor),
-            roleDefinitionName: CommonRoleDefinitions.durableTaskDataContributor.roleName,
-        };
-
-        promptSteps.push(new FunctionAppUserAssignedIdentitiesListStep(dtsContributorRole /** targetRole */, { identityAssignStepPriority: 180 }));
-        executeSteps.push(new RoleAssignmentExecuteStep(getDTSRoleAssignmentCallback(context, dtsContributorRole), { priority: 190 }));
-
         return { promptSteps, executeSteps };
-
-        function getDTSRoleAssignmentCallback(context: T, role: Role): () => Promise<Role[]> {
-            return async () => {
-                const roleAssignment: Role = {
-                    ...role,
-                    // This id may be missing when the role is initially passed in,
-                    // but by the time we run the step, we should have the populated id ready.
-                    scopeId: context.dts?.id,
-                };
-
-                if (!roleAssignment.scopeId) {
-                    return [];
-                }
-
-                const amClient = await createAuthorizationManagementClient(context);
-                const roleAssignments = await uiUtils.listAllIterator(amClient.roleAssignments.listForScope(
-                    roleAssignment.scopeId,
-                    {
-                        // $filter=principalId eq {id}
-                        filter: `principalId eq '{${context.managedIdentity?.principalId}}'`,
-                    }
-                ));
-
-                const hasRoleAssignment = roleAssignments.some(r => !!r.roleDefinitionId?.endsWith(role.roleDefinitionId));
-                return hasRoleAssignment ? [] : [roleAssignment];
-            };
-        }
     }
 
     private async getPicks(context: T): Promise<IAzureQuickPickItem<DurableTaskSchedulerResource | undefined>[]> {

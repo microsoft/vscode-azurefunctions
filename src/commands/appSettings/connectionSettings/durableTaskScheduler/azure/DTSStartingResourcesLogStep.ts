@@ -12,16 +12,12 @@ const startingResourcesContext: string = 'startingResourcesLogStepItem';
 
 export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public hideStepCount: boolean = true;
-    protected hasLogged: boolean = false;
 
     public async configureBeforePrompt(context: T): Promise<void> {
-        if (this.hasLogged) {
-            return;
-        }
-
         if (context.resourceGroup) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
+                    stepId: this.id,
                     contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
                     label: localize('useResourceGroup', 'Use resource group "{0}"', context.resourceGroup.name),
                     activityType: ActivityChildType.Info,
@@ -34,6 +30,7 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
         if (context.site) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
+                    stepId: this.id,
                     label: localize('useFunctionApp', 'Use function app "{0}"', context.site.fullName),
                     contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
                     activityType: ActivityChildType.Info,
@@ -46,6 +43,7 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
         if (context.dts) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
+                    stepId: this.id,
                     label: localize('useDTS', 'Use durable task scheduler "{0}"', context.dts.name),
                     contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
                     activityType: ActivityChildType.Info,
@@ -58,6 +56,7 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
         if (context.dtsHub) {
             prependOrInsertAfterLastInfoChild(context,
                 new ActivityChildItem({
+                    stepId: this.id,
                     label: localize('useDTSHub', 'Use durable task hub "{0}"', context.dtsHub.name),
                     contextValue: createContextValue([startingResourcesContext, activityInfoContext]),
                     activityType: ActivityChildType.Info,
@@ -74,8 +73,6 @@ export class DTSStartingResourcesLogStep<T extends IDTSAzureConnectionWizardCont
         if (context.newDTSHubConnectionSettingKey) {
             ext.outputChannel.appendLog(localize('dtsHubConnectionKey', 'Using DTS hub host connection key "{0}"', context.newDTSHubConnectionSettingKey));
         }
-
-        this.hasLogged = true;
     }
 
     public async prompt(): Promise<void> {

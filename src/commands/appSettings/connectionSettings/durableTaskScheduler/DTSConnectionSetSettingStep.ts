@@ -9,7 +9,6 @@ import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
 import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
-import { clientIdKey } from '../../../durableTaskScheduler/copySchedulerConnectionString';
 import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
 import { setLocalSetting } from '../setConnectionSetting';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
@@ -36,22 +35,15 @@ export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext |
             context.newDTSConnectionSettingKey = ConnectionKey.DTS;
         }
 
-        const newDTSConnectionSettingKey = nonNullProp(context, 'newDTSConnectionSettingKey');
-        let newDTSConnectionSettingValue = nonNullProp(context, 'newDTSConnectionSettingValue');
-
-        // Todo: Move this to `DurableTaskSchedulerGetConnectionStep` when we upgrade the azure package for new identity logic
-        if ((context as IDTSAzureConnectionWizardContext).managedIdentity) {
-            newDTSConnectionSettingValue = newDTSConnectionSettingValue.replace(clientIdKey, (context as IDTSAzureConnectionWizardContext).managedIdentity?.clientId ?? clientIdKey);
-        }
-
         if (context.action === CodeAction.Debug) {
-            await setLocalSetting(context, newDTSConnectionSettingKey, newDTSConnectionSettingValue);
+            await setLocalSetting(
+                context,
+                nonNullProp(context, 'newDTSConnectionSettingKey'),
+                nonNullProp(context, 'newDTSConnectionSettingValue'),
+            );
         } else {
             // No further action required
         }
-
-        context.newDTSConnectionSettingValue = newDTSConnectionSettingValue;
-        context.valuesToMask.push(context.newDTSConnectionSettingValue);
     }
 
     public shouldExecute(context: T): boolean {
