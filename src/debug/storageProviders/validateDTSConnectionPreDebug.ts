@@ -11,9 +11,6 @@ import { CodeAction, ConnectionType } from "../../constants";
 import { localize } from "../../localize";
 import { requestUtils } from "../../utils/requestUtils";
 
-// If the user previously chose to debug using the emulator, leverage that preference for the remaining VS Code session
-let useDTSEmulator: boolean;
-
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
@@ -32,7 +29,6 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
     const wizardContext: IDTSConnectionWizardContext = Object.assign(context, {
         projectPath,
         action: CodeAction.Debug,
-        dtsConnectionType: useDTSEmulator ? ConnectionType.Emulator : undefined,
         newDTSConnectionSettingKey: dtsConnectionKey,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
         newDTSConnectionSettingValue: isAliveDTSConnection ? dtsConnection : undefined,
@@ -49,8 +45,6 @@ export async function validateDTSConnectionPreDebug(context: IActionContext, pro
     if (wizardContext.dtsConnectionType) {
         await wizard.execute();
     }
-
-    useDTSEmulator = wizardContext.dtsConnectionType === ConnectionType.Emulator;
 }
 
 /**
