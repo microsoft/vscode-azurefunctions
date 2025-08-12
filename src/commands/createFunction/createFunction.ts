@@ -72,6 +72,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
 
     const { language, languageModel, version, templateSchemaVersion } = await verifyInitForVSCode(context, projectPath, options.language, options.languageModel, options.version);
     const hasDurableStorage: boolean = await durableUtils.verifyHasDurableStorage(language, projectPath);
+    context.telemetry.properties.hasExistingDurableStorageProject = String(hasDurableStorage);
 
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
     const wizardContext: IFunctionWizardContext = Object.assign(context, options, await createActivityContext(),
