@@ -5,7 +5,6 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { ext, TemplateSource } from '../extensionVariables';
 import { type IBundleMetadata, type IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { type IBindingTemplate } from '../templates/IBindingTemplate';
@@ -86,7 +85,7 @@ export namespace bundleFeedUtils {
     }
 
     export async function getLatestVersionRange(context: IActionContext): Promise<string> {
-        const feed: IBundleFeed = await getBundleFeed(context, undefined);
+        const feed: IBundleFeed = await getBundleFeed(context);
         return feed.defaultVersionRange;
     }
 
@@ -108,21 +107,8 @@ export namespace bundleFeedUtils {
         return !!template.id?.toLowerCase().includes(templateType.toLowerCase());
     }
 
-    async function getBundleFeed(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
-        const bundleId: string = bundleMetadata && bundleMetadata.id || defaultBundleId;
-
-        const envVarUri: string | undefined = process.env.FUNCTIONS_EXTENSIONBUNDLE_SOURCE_URI;
-        // Only use an aka.ms link for the most common case, otherwise we will dynamically construct the url
-        let url: string;
-        const templateProvider = ext.templateProvider.get(context);
-        if (!envVarUri && bundleId === defaultBundleId && templateProvider.templateSource !== TemplateSource.Staging) {
-            url = 'https://aka.ms/bundleFeedUtilsV2';
-        } else {
-            const suffix: string = templateProvider.templateSource === TemplateSource.Staging ? '-staging' : '';
-            const baseUrl: string = envVarUri || `https://cdn${suffix}.functions.azure.com/public`;
-            url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
-        }
-
+    async function getBundleFeed(context: IActionContext): Promise<IBundleFeed> {
+        const url: string = 'https://aka.ms/funcStaticProperties';
         return feedUtils.getJsonFeed(context, url);
     }
 
