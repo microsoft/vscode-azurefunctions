@@ -172,7 +172,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (durableStorageType && durableStorageType !== DurableBackend.Storage && isFlexConsumption) {
         // https://github.com/Azure/azure-functions-durable-extension/issues/2957
-        const warning: string = localize('durableStorageTypeWarning', 'Detected a flex consumption app using an incompatible Durable Functions storage provider. Only the Azure Storage backend is supported for Durable Function apps hosted in the Flex Consumption plan.');
+        const warning: string = localize('durableStorageTypeWarning', 'Detected a flex consumption app using an incompatible Durable Functions storage provider. Only the Azure Storage backend type is supported for Durable Function apps hosted with a flex consumption plan.');
         ext.outputChannel.appendLog(warning);
         void context.ui.showWarningMessage(warning);
     }
