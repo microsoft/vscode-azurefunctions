@@ -14,7 +14,7 @@ export async function validateStorageConnectionPreDebug(context: IActionContext,
     const projectPathContext = Object.assign(context, { projectPath });
     const storageConnectionKey: string = ConnectionKey.Storage;
     const storageConnection: string | undefined = await getStorageLocalSettingsValue(projectPathContext, storageConnectionKey);
-    const storageIdentityConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath);
+    const storageIdentityConnection: string | undefined = (await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath))[0];
 
     if (storageConnection || storageIdentityConnection) {
         return;
