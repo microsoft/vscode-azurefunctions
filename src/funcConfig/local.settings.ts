@@ -8,9 +8,10 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
-import { localSettingsFileName, type ConnectionKey } from '../constants';
+import { localSettingsFileName, localStorageEmulatorConnectionString, type ConnectionKey } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
@@ -19,14 +20,49 @@ export interface ILocalSettingsJson {
     ConnectionStrings?: { [key: string]: string };
 }
 
-export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKey, projectPath: string): Promise<string | undefined> {
+export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKey, projectPath: string): Promise<[string | undefined, boolean]> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[connectionKey]) {
-        return process.env[connectionKey];
+        return [process.env[connectionKey], true];
     }
 
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-    return settings.Values && settings.Values[connectionKey];
+    let connectionString = settings.Values && settings.Values[connectionKey];
+    if (connectionString === localStorageEmulatorConnectionString) {
+        // check for azurite settings and build the connection string if it's an emulator
+        connectionString = getLocalSettingsEmulatorConnectionString();
+    }
+    const isEmulator = isConnectionStringEmulator(connectionString);
+    return [connectionString, isEmulator];
+}
+
+function getLocalSettingsEmulatorConnectionString(): string {
+    const blobHost = getWorkspaceSetting('blobHost', undefined, 'azurite') || '127.0.0.1';
+    const blobPort = getWorkspaceSetting('blobPort', undefined, 'azurite') || '10000';
+    const queueHost = getWorkspaceSetting('queueHost', undefined, 'azurite') || '127.0.0.1';
+    const queuePort = getWorkspaceSetting('queuePort', undefined, 'azurite') || '10001';
+    const tableHost = getWorkspaceSetting('tableHost', undefined, 'azurite') || '127.0.0.1';
+    const tablePort = getWorkspaceSetting('tablePort', undefined, 'azurite') || '10002';
+
+    const protocol = getTransferProtocol();
+    return `DefaultEndpointsProtocol=${protocol};AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=${protocol}://${blobHost}:${blobPort}/devstoreaccount1;QueueEndpoint=${protocol}://${queueHost}:${queuePort}/devstoreaccount1;TableEndpoint=${protocol}://${tableHost}:${tablePort}/devstoreaccount1;`;
+}
+
+function isConnectionStringEmulator(connectionString: string | undefined): boolean {
+    const blobHost: string = getWorkspaceSetting('blobHost', undefined, 'azurite') || '127.0.0.1';
+    const queueHost: string = getWorkspaceSetting('queueHost', undefined, 'azurite') || '127.0.0.1';
+    const tableHost: string = getWorkspaceSetting('tableHost', undefined, 'azurite') || '127.0.0.1';
+
+    return !!connectionString &&
+        (connectionString.includes(blobHost) ||
+            connectionString.includes(queueHost) ||
+            connectionString.includes(tableHost) ||
+            connectionString.includes('localhost')
+        );
+}
+
+function getTransferProtocol(): string {
+    return getWorkspaceSetting('cert', undefined, 'azurite') && getWorkspaceSetting('key', undefined, 'azurite') ? 'https' : 'http';
 }
 
 export enum MismatchBehavior {
