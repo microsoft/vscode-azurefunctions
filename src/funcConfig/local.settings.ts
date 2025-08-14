@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
-import { localSettingsFileName, localStorageEmulatorConnectionString, type ConnectionKey } from '../constants';
+import { azuriteAccountKey, localSettingsFileName, localStorageEmulatorConnectionString, type ConnectionKey } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -23,7 +23,7 @@ export interface ILocalSettingsJson {
 export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKey, projectPath: string): Promise<[string | undefined, boolean]> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[connectionKey]) {
-        return [process.env[connectionKey], true];
+        return [process.env[connectionKey], isConnectionStringEmulator(process.env[connectionKey])];
     }
 
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
@@ -45,7 +45,7 @@ function getLocalSettingsEmulatorConnectionString(): string {
     const tablePort = getWorkspaceSetting('tablePort', undefined, 'azurite') || '10002';
 
     const protocol = getTransferProtocol();
-    return `DefaultEndpointsProtocol=${protocol};AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=${protocol}://${blobHost}:${blobPort}/devstoreaccount1;QueueEndpoint=${protocol}://${queueHost}:${queuePort}/devstoreaccount1;TableEndpoint=${protocol}://${tableHost}:${tablePort}/devstoreaccount1;`;
+    return `DefaultEndpointsProtocol=${protocol};AccountName=devstoreaccount1;AccountKey=${azuriteAccountKey}/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=${protocol}://${blobHost}:${blobPort}/devstoreaccount1;QueueEndpoint=${protocol}://${queueHost}:${queuePort}/devstoreaccount1;TableEndpoint=${protocol}://${tableHost}:${tablePort}/devstoreaccount1;`;
 }
 
 function isConnectionStringEmulator(connectionString: string | undefined): boolean {
@@ -56,8 +56,7 @@ function isConnectionStringEmulator(connectionString: string | undefined): boole
     return !!connectionString &&
         (connectionString.includes(blobHost) ||
             connectionString.includes(queueHost) ||
-            connectionString.includes(tableHost) ||
-            connectionString.includes('localhost')
+            connectionString.includes(tableHost)
         );
 }
 
