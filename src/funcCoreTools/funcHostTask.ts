@@ -102,7 +102,6 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            stopFuncTaskIfRunning(e.execution.task.scope, undefined, true, true);
         }
     });
 
