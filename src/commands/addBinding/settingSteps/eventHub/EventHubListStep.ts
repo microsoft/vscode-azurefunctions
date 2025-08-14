@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type EventHubManagementClient, type Eventhub } from '@azure/arm-eventhub';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullValueAndProp, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -21,7 +21,7 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
         }
 
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
+        const resourceGroupName: string = getResourceGroupFromId(nonNullValueAndProp(context.eventHubsNamespace, 'id'));
 
         const placeHolder: string = localize('placeHolder', 'Select an event hub');
         const picks: IAzureQuickPickItem<Eventhub | undefined>[] = [{
@@ -37,6 +37,7 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
         const result: Eventhub | undefined = (await context.ui.showQuickPick(picks, { placeHolder })).data;
 
         if (result) {
+            context.eventHub = result;
             context.eventhubname = nonNullProp(result, 'name');
         }
     }
