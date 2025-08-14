@@ -146,6 +146,8 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
+// standard Azurite emulator account key
+export const azuriteAccountKey: string = 'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq';
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
 export const localEventHubsEmulatorConnectionString: string = 'SingleHost';
 export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionString}|MemoryF|Memory`);

@@ -10,7 +10,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
+import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -196,8 +196,8 @@ async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLan
  * If AzureWebJobsStorage is set, pings the emulator to make sure it's actually running
  */
 async function validateEmulatorIsRunning(context: IActionContext, projectPath: string): Promise<boolean> {
-    const azureWebJobsStorage: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
-    if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localStorageEmulatorConnectionString.toLowerCase()) {
+    const [azureWebJobsStorage, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
+    if (azureWebJobsStorage && isEmulator) {
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
