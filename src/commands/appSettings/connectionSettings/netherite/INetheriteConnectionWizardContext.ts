@@ -20,6 +20,8 @@ export interface INetheriteConnectionWizardContext extends ISetConnectionSetting
 
 export type INetheriteAzureConnectionWizardContext = INetheriteConnectionWizardContext & IEventHubWizardContext;
 
+// Todo: We should create more generalized event hub creation steps with context
+// https://github.com/microsoft/vscode-azurefunctions/pull/4680#discussion_r2286177513
 interface IEventHubWizardContext extends IResourceGroupWizardContext {
     newEventHubsNamespaceName?: string;
     eventHubsNamespace?: EHNamespace;
