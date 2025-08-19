@@ -126,7 +126,7 @@ export function registerFuncHostTaskEvents(): void {
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
             // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
-            stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true);
+            stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, true);
         }
     });
 }
