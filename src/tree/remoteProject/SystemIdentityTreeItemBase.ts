@@ -38,7 +38,7 @@ class SystemIdentityTreeItem extends AzExtParentTreeItem {
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const msiClient = await createManagedServiceIdentityClient([context, this.subscription]);
         const systemIdentity = await msiClient.systemAssignedIdentities.getByScope(this.parent.parent.id);
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, systemIdentity, this.parent.site.id);
+        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, systemIdentity, this.parent.parent.site.id);
         return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
     }
 
