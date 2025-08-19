@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type EHNamespace, type EventHubManagementClient } from '@azure/arm-eventhub';
-import { LocationListStep, uiUtils, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, ResourceGroupListStep, uiUtils, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { EventHubsNamespaceResourceType, EventHubsProvider } from '../../../../../constants';
 import { localSettingsDescription } from '../../../../../constants-nls';
@@ -40,7 +40,10 @@ export class EventHubsNamespaceListStep<T extends INetheriteAzureConnectionWizar
         const promptSteps: AzureWizardPromptStep<T>[] = [];
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
-        promptSteps.push(new EventHubsNamespaceNameStep());
+        promptSteps.push(
+            new EventHubsNamespaceNameStep(),
+            new ResourceGroupListStep(),
+        );
         executeSteps.push(new EventHubsNamespaceCreateStep());
 
         LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, EventHubsProvider, EventHubsNamespaceResourceType);
