@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LocationListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { ConnectionType, EventHubsNamespaceResourceType, EventHubsProvider, } from '../../../../constants';
+import { ConnectionType, EventHubsProvider } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -64,9 +64,6 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
                 if (!azureContext.subscriptionId) {
                     Object.assign(azureContext, createSubscriptionContext(await subscriptionExperience(azureContext, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
-
-                // Make sure this is added ahead of time because location might get prompted during `ResourceGroupListStep`
-                LocationListStep.addProviderForFiltering(azureContext as unknown as ILocationWizardContext, EventHubsProvider, EventHubsNamespaceResourceType);
 
                 promptSteps.push(
                     new EventHubsNamespaceListStep(),
