@@ -60,9 +60,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
 
         switch (context.eventHubsConnectionType) {
             case ConnectionType.Azure:
-                const azureContext = context as INetheriteAzureConnectionWizardContext;
-                if (!azureContext.subscriptionId) {
-                    Object.assign(azureContext, createSubscriptionContext(await subscriptionExperience(azureContext, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
+                if (!(context as INetheriteAzureConnectionWizardContext).subscriptionId) {
+                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
                 promptSteps.push(
