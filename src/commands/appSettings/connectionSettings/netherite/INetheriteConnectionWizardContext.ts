@@ -18,7 +18,9 @@ export interface INetheriteConnectionWizardContext extends ISetConnectionSetting
     // All properties from `IEventHubsConnectionsSetSettingsContext` apply
 }
 
-export interface INetheriteAzureConnectionWizardContext extends IResourceGroupWizardContext, INetheriteConnectionWizardContext {
+export type INetheriteAzureConnectionWizardContext = INetheriteConnectionWizardContext & IEventHubWizardContext;
+
+interface IEventHubWizardContext extends IResourceGroupWizardContext {
     newEventHubsNamespaceName?: string;
     eventHubsNamespace?: EHNamespace;
 
