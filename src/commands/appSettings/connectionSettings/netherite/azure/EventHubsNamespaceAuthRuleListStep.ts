@@ -29,8 +29,6 @@ export class EventHubsNamespaceAuthRuleListStep<T extends INetheriteAzureConnect
         context.authRule = (await context.ui.showQuickPick(await this.getPicks(manageAccessRules), {
             placeHolder: localize('chooseSharedAccessPolicy', 'Choose a shared access policy for "{0}".', context.eventHubsNamespace.name),
         })).data;
-        // Set the flag indicating this is a namespace-level auth rule since we are listing from the namespaces
-        context.isNamespaceAuthRule = true;
     }
 
     public shouldPrompt(context: T): boolean {

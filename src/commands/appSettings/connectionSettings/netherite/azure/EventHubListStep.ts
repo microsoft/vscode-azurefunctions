@@ -29,8 +29,6 @@ export class EventHubListStep<T extends INetheriteAzureConnectionWizardContext> 
 
         if (context.eventHub?.name) {
             context.valuesToMask.push(context.eventHub.name);
-            context.newEventHubConnectionSettingValue = context.eventHub.name;
-            context.eventhubname = nonNullProp(context.eventHub, 'name');
         }
     }
 

@@ -13,6 +13,9 @@ import { localize } from '../../../../localize';
 import { EventHubSetSettingStep } from './EventHubSetSettingStep';
 import { EventHubsNamespaceSetSettingStep } from './EventHubsNamespaceSetSettingStep';
 import { type INetheriteAzureConnectionWizardContext, type INetheriteConnectionWizardContext } from './INetheriteConnectionWizardContext';
+import { EventHubGetConnectionStep } from './azure/EventHubGetConnectionStep';
+import { EventHubListStep } from './azure/EventHubListStep';
+import { EventHubsNamespaceAuthRuleListStep } from './azure/EventHubsNamespaceAuthRuleListStep';
 import { EventHubsNamespaceGetConnectionStep } from './azure/EventHubsNamespaceGetConnectionStep';
 import { EventHubsNamespaceListStep } from './azure/EventHubsNamespaceListStep';
 import { NetheriteEmulatorGetConnectionStep } from './emulator/NetheriteEmulatorGetConnectionStep';
@@ -57,20 +60,25 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
 
         switch (context.eventHubsConnectionType) {
             case ConnectionType.Azure:
-                if (!(context as INetheriteAzureConnectionWizardContext).subscriptionId) {
-                    Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
+                const azureContext = context as INetheriteAzureConnectionWizardContext;
+                if (!azureContext.subscriptionId) {
+                    Object.assign(azureContext, createSubscriptionContext(await subscriptionExperience(azureContext, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }
 
-                LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, EventHubsProvider, EventHubsNamespaceResourceType);
+                // Make sure this is added ahead of time because location might get prompted during `ResourceGroupListStep`
+                LocationListStep.addProviderForFiltering(azureContext as unknown as ILocationWizardContext, EventHubsProvider, EventHubsNamespaceResourceType);
 
                 promptSteps.push(
                     new ResourceGroupListStep() as AzureWizardPromptStep<INetheriteAzureConnectionWizardContext>,
                     new EventHubsNamespaceListStep(),
+                    new EventHubsNamespaceAuthRuleListStep(),
+                    new EventHubListStep(),
                 );
 
                 executeSteps.push(
                     new VerifyProvidersStep<INetheriteAzureConnectionWizardContext>([EventHubsProvider]),
                     new EventHubsNamespaceGetConnectionStep(),
+                    new EventHubGetConnectionStep(),
                 );
                 break;
             case ConnectionType.Emulator:
