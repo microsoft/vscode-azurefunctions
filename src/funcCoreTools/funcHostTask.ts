@@ -10,6 +10,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
+import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
@@ -105,7 +106,7 @@ export function registerFuncHostTaskEvents(): void {
         }
     });
 
-    registerEvent('azureFunctions.onDidTerminateDebugSession', vscode.debug.onDidTerminateDebugSession, (context: IActionContext, debugSession: vscode.DebugSession) => {
+    registerEvent('azureFunctions.onDidTerminateDebugSession', vscode.debug.onDidTerminateDebugSession, async (context: IActionContext, debugSession: vscode.DebugSession) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
 
@@ -118,7 +119,7 @@ export function registerFuncHostTaskEvents(): void {
                 throw new Error(localize('noWorkspaceFolderForBuildPath', 'No workspace folder found for path "{0}".', buildPathUri.fsPath));
             }
 
-            stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, true)
+            await stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, false);
 
             buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath)
         }
@@ -126,12 +127,13 @@ export function registerFuncHostTaskEvents(): void {
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
             // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
-            stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, true);
+            await stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, false);
+
         }
     });
 }
 
-export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, killAll?: boolean, terminate?: boolean): void {
+export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string, killAll?: boolean, terminate?: boolean): Promise<void> {
     let runningFuncTask: (IRunningFuncTask | undefined)[] | undefined;
     if (killAll) {
         // get all is needed here
@@ -146,11 +148,11 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | 
             if (terminate) {
                 runningFuncTaskItem.taskExecution.terminate()
             } else {
-                // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
-                // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
-                process.kill(runningFuncTaskItem.processId);
+                // Try to find the real func process by port first, fall back to shell PID
+                await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
             }
         }
+
         if (buildPath) {
             runningFuncTaskMap.delete(workspaceFolder, buildPath);
         }
@@ -158,6 +160,27 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder | 
 
     if (killAll) {
         runningFuncTaskMap.delete(workspaceFolder);
+    }
+}
+
+/**
+ * Kills the func process by first trying to find it by port or throws an error if it couldn't find it
+ * @param runningFuncTask The running func task information
+ */
+async function killFuncProcessByPortOrPid(runningFuncTask: IRunningFuncTask, workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope): Promise<void> {
+    try {
+        // First, try to find the real func process by looking for what's listening on the port
+        const realFuncPid = await findPidByPort(runningFuncTask.portNumber);
+
+        if (realFuncPid && realFuncPid !== runningFuncTask.processId) {
+            console.log(`Found real func process PID ${realFuncPid} listening on port ${runningFuncTask.portNumber} (shell PID: ${runningFuncTask.processId})`);
+            process.kill(realFuncPid);
+            return;
+        }
+
+        throw new Error(`Could not find func process for port ${runningFuncTask.portNumber}`);
+    } catch (error) {
+        await stopFuncTaskIfRunning(workspaceFolder, undefined, true, true);
     }
 }
 
@@ -194,6 +217,64 @@ export async function getFuncPortFromTaskOrProject(context: IActionContext, func
 
     // Finally, fall back to the default port
     return defaultFuncPort;
+}
+
+/**
+ * Finds the process ID that is listening on the specified port
+ * @param port The port number to search for
+ * @returns Promise that resolves with the PID, or undefined if not found
+ */
+async function findPidByPort(port: string | number): Promise<number | undefined> {
+    try {
+        const portNumber = typeof port === 'string' ? port : port.toString();
+
+        if (process.platform === 'win32') {
+            // Windows: Use netstat to find the process using the port
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', '-ano');
+            if (result.code === 0) {
+                const lines = result.cmdOutput.split('\n');
+                for (const line of lines) {
+                    // Look for lines like: TCP    127.0.0.1:7071    0.0.0.0:0    LISTENING    12345
+                    const match = line.match(new RegExp(`\\s+TCP\\s+[^:]+:${portNumber}\\s+[^\\s]+\\s+LISTENING\\s+(\\d+)`));
+                    if (match) {
+                        return parseInt(match[1], 10);
+                    }
+                }
+            }
+
+            // Fallback: Try PowerShell Get-NetTCPConnection (Windows 8+)
+            try {
+                const psResult = await cpUtils.tryExecuteCommand(
+                    undefined,
+                    undefined,
+                    'powershell',
+                    '-Command',
+                    `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`
+                );
+                if (psResult.code === 0 && psResult.cmdOutput.trim()) {
+                    const pid = parseInt(psResult.cmdOutput.trim(), 10);
+                    if (!isNaN(pid)) {
+                        return pid;
+                    }
+                }
+            } catch {
+                // Ignore PowerShell errors, netstat should work on older Windows
+            }
+        } else {
+            // Linux/Mac: Use lsof to find the process using the port
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', '-ti', `:${portNumber}`);
+            if (result.code === 0 && result.cmdOutput.trim()) {
+                const pid = parseInt(result.cmdOutput.trim(), 10);
+                if (!isNaN(pid)) {
+                    return pid;
+                }
+            }
+        }
+    } catch (error) {
+        console.log(`Error finding PID for port ${port}:`, error);
+    }
+
+    return undefined;
 }
 
 function normalizePath(fsPath: string): string {
