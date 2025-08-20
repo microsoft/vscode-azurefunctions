@@ -22,7 +22,6 @@ import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSCon
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
 import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
 import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
-import path = require('path');
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
