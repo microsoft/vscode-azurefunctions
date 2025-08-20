@@ -179,6 +179,7 @@ async function killFuncProcessByPortOrPid(runningFuncTask: IRunningFuncTask, wor
 
         throw new Error(`Could not find func process for port ${runningFuncTask.portNumber}`);
     } catch (error) {
+        // don't look for the port and just terminate the whole process
         await stopFuncTaskIfRunning(workspaceFolder, undefined, true, true);
     }
 }
@@ -270,7 +271,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
             }
         }
     } catch (error) {
-        console.log(`Error finding PID for port ${port}:`, error);
+        // ignore error
     }
 
     return undefined;
