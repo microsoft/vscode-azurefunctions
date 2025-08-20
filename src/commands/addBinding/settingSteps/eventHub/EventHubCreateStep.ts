@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { getRandomHexString } from '../../../../utils/fs';
@@ -15,7 +15,7 @@ export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardCo
     public priority: number = 191;
     public async execute(context: IEventHubWizardContext): Promise<void> {
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
+        const resourceGroupName: string = getResourceGroupFromId(nonNullValueAndProp(context.eventHubsNamespace, 'id'));
 
         const client: EventHubManagementClient = await createEventHubClient(context);
         // TODO: use randomUtils when the utils package is updated

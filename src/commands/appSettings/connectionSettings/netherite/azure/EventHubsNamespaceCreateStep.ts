@@ -16,7 +16,7 @@ export class EventHubsNamespaceCreateStep<T extends INetheriteAzureConnectionWiz
     public priority: number = 190;
 
     public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const rgName: string = nonNullValueAndProp(context.resourceGroup, 'name');
+        const rgName: string = context.newResourceGroupName ?? nonNullValueAndProp(context.resourceGroup, 'name');
         const newNamespaceName: string = nonNullValue(context.newEventHubsNamespaceName);
         const creating: string = localize('creatingEventHubsNamespace', 'Creating new event hubs namespace "{0}"...', newNamespaceName);
         progress.report({ message: creating });
