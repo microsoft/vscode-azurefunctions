@@ -20,7 +20,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, boolean, RegExp | undefined]>[] = [
             { label: localize('flexConsumption', 'Flex Consumption'), data: [false, true, undefined] },
-            { label: localize('consumption', 'Linux Consumption'), description: localize('legacy', 'Legacy'), data: [true, false, undefined] },
+            { label: localize('consumption', 'Consumption'), description: localize('legacy', 'Legacy'), data: [true, false, undefined] },
             { label: localize('premium', 'Premium'), data: [false, false, premiumSkuFilter] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, false, /^((?!EP|Y|FC).)*$/i] }
         ];
