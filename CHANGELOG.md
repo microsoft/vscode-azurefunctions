@@ -1,5 +1,29 @@
 # Change Log
 
+## 1.19.0 - 2025-08-21
+
+### Overview
+This release delivers major improvements to durable functions, including better configuration handling, and enhanced validation for DTS. It also adds improved identity assignment support, and stronger reliability for local development with Azurite.
+
+### Added
+* [[4625](https://github.com/microsoft/vscode-azurefunctions/pull/4625)] Improve support for assigning a **user-assigned identity and roles** to a Function App.
+* [[4650](https://github.com/microsoft/vscode-azurefunctions/pull/4650)] Deploy with **Functions CLI** for **custom runtimes on Flex Consumption** plans.
+* [[4667](https://github.com/microsoft/vscode-azurefunctions/pull/4667)] Add **dynamic Azurite connection string generation** using workspace settings.
+* [[4660](https://github.com/microsoft/vscode-azurefunctions/pull/4660)] Add **warning popup** when incompatible Function App plans are used for durable projects.
+* [[4618](https://github.com/microsoft/vscode-azurefunctions/pull/4618)] Update **Python requirements.txt**.
+
+### Fixed
+* [[4622](https://github.com/microsoft/vscode-azurefunctions/pull/4622)] Fix `host.json` version not showing for **AzureExtensionsBundle**.
+* [[4632](https://github.com/microsoft/vscode-azurefunctions/pull/4632)] Fix **Azurite Table/Queue services** not starting during durable function debugging.
+* [[4652](https://github.com/microsoft/vscode-azurefunctions/pull/4652)] Use the v1 **index.json** for retrieving all templates
+* [[4661](https://github.com/microsoft/vscode-azurefunctions/pull/4661)] Update templates with **userPrompt tokens** so tokens are replaced.
+* [[4682](https://github.com/microsoft/vscode-azurefunctions/pull/4682)] Use **port number** to find the func PID.
+
+## 1.18.1 - 2025-07-24
+
+### Fixed
+* [[4609]](https://github.com/microsoft/vscode-azurefunctions/pull/4609) Fix bug with function app resolving that assumed access to certain properties
+
 ## 1.18.0 - 2025-07-14
 
 ### Overview
