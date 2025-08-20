@@ -173,7 +173,6 @@ async function killFuncProcessByPortOrPid(runningFuncTask: IRunningFuncTask, wor
         const realFuncPid = await findPidByPort(runningFuncTask.portNumber);
 
         if (realFuncPid && realFuncPid !== runningFuncTask.processId) {
-            console.log(`Found real func process PID ${realFuncPid} listening on port ${runningFuncTask.portNumber} (shell PID: ${runningFuncTask.processId})`);
             process.kill(realFuncPid);
             return;
         }
