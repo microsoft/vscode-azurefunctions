@@ -4,21 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzExtFsExtra, maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
-import * as path from 'path';
+import { maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
-import { ParsedFunctionJson } from "../funcConfig/function";
+import { CodeAction, ConnectionKey, DurableBackend, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
-import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { durableUtils } from '../utils/durableUtils';
-import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
+import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
@@ -83,7 +80,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 }
 
                 context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, projectLanguage, projectLanguageModel, context.projectPath, !!durableStorageType);
+                await validateAzureWebJobsStorage(context, context.projectPath);
 
                 context.telemetry.properties.lastValidateStep = 'emulatorRunning';
                 shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
@@ -103,18 +100,6 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     context.telemetry.properties.shouldContinue = String(shouldContinue);
 
     return { workspace, shouldContinue };
-}
-
-export function canValidateAzureWebJobStorageOnDebug(projectLanguage: string | undefined): boolean {
-    switch (projectLanguage) {
-        case ProjectLanguage.CSharp:
-        case ProjectLanguage.FSharp:
-        case ProjectLanguage.Java:
-            // We know if we need `AzureWebJobStorage` based on the function.json files, but those files don't exist until after a build for languages that need to be compiled
-            return false;
-        default:
-            return true;
-    }
 }
 
 function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {
@@ -171,25 +156,9 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
     }
 }
 
-async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
-    if (!canValidateAzureWebJobStorageOnDebug(projectLanguage) && !requiresDurableStorage) {
-        return;
-    }
-
-    const functionFolders: string[] = await getFunctionFolders(context, projectPath);
-    const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
-        const functionJsonPath: string = path.join(projectPath, ff, functionJsonFileName);
-        return new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
-    }));
-
-    // NOTE: Currently, Python V2+ and Node.js V4 requires storage to be configured, even for HTTP triggers.
-    if (functions.some(f => !f.isHttpTrigger) ||
-        isPythonV2Plus(projectLanguage, projectLanguageModel) ||
-        isNodeV4Plus({ language: projectLanguage, languageModel: projectLanguageModel }) ||
-        requiresDurableStorage) {
-
-        await validateStorageConnectionPreDebug(context, projectPath);
-    }
+async function validateAzureWebJobsStorage(context: IPreDebugContext, projectPath: string): Promise<void> {
+    // most programming models require the `AzureWebJobsStorage` connection now so we should just validate it for every runtime/trigger
+    await validateStorageConnectionPreDebug(context, projectPath);
 }
 
 /**
