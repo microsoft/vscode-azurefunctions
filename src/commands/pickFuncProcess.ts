@@ -99,7 +99,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder, buildPath?: string): Promise<void> {
-    stopFuncTaskIfRunning(workspaceFolder, buildPath);
+    await stopFuncTaskIfRunning(workspaceFolder, buildPath);
 
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
