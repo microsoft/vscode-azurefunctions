@@ -18,8 +18,7 @@ import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
-import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
-import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
+import { DurableStorageTypeListStep } from './durableSteps/DurableStorageTypePromptStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -71,13 +70,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
         if (context.functionTemplate?.templateSchemaVersion === TemplateSchemaVersion.v2) {
             return requiresDurableStorageSetup ?
-                { promptSteps: [new JobsListStep(this._isProjectWizard), new DurableStorageTypePromptStep()], executeSteps: [new DurableProjectConfigureStep()] } :
+                { promptSteps: [new DurableStorageTypeListStep(), new JobsListStep(this._isProjectWizard)] } :
                 { promptSteps: [new JobsListStep(this._isProjectWizard)] };
         }
 
         const { promptSteps = [], executeSteps = [] } = await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard) ?? { promptSteps: [], executeSteps: [] };
         if (requiresDurableStorageSetup) {
-            promptSteps.unshift(new DurableStorageTypePromptStep());
+            promptSteps.unshift(new DurableStorageTypeListStep());
         }
 
         return { promptSteps, executeSteps };

@@ -3,13 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { DurableBackend } from "../../../constants";
 import { defaultDescription, previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
+import { DurableProjectConfigureStep } from "./DurableProjectConfigureStep";
 
-export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
+export class DurableStorageTypeListStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
@@ -35,5 +36,9 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
 
     public shouldPrompt(context: T): boolean {
         return !context.hasDurableStorage && !context.newDurableStorageType;
+    }
+
+    public async getSubWizard(): Promise<IWizardOptions<T> | undefined> {
+        return { executeSteps: [new DurableProjectConfigureStep()] };
     }
 }
