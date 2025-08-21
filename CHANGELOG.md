@@ -6,6 +6,7 @@
 This release delivers major improvements to durable functions, including better configuration handling, and enhanced validation for DTS. It also adds improved identity assignment support, and stronger reliability for local development with Azurite.
 
 ### Added
+* [[4566](https://github.com/microsoft/vscode-azurefunctions/pull/4566)] Add Azure deployment support for DTS projects
 * [[4625](https://github.com/microsoft/vscode-azurefunctions/pull/4625)] Improve support for assigning a **user-assigned identity and roles** to a Function App.
 * [[4650](https://github.com/microsoft/vscode-azurefunctions/pull/4650)] Deploy with **Functions CLI** for **custom runtimes on Flex Consumption** plans.
 * [[4667](https://github.com/microsoft/vscode-azurefunctions/pull/4667)] Add **dynamic Azurite connection string generation** using workspace settings.
