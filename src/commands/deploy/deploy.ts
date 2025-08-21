@@ -92,6 +92,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await node.initSite(context);
     const site = node.site;
 
+    // Check if the function app is stopped and block deployment with a clear error message
+    if (site.rawSite.state?.toLowerCase() === 'stopped') {
+        throw new Error(localize('functionAppStoppedError', 'Cannot deploy to function app "{0}" because it is currently stopped. Please start the function app before deploying.', site.fullName));
+    }
+
     const subscriptionContext: ISubscriptionContext & { subscription: AzureSubscription } = {
         ...node.subscription,
         subscription: await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider, {
