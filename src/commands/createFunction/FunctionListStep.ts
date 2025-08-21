@@ -18,6 +18,7 @@ import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
@@ -66,17 +67,20 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        if (context.functionTemplate?.templateSchemaVersion === TemplateSchemaVersion.v2) {
-            return { promptSteps: [new JobsListStep(this._isProjectWizard)] };
-        }
-
         const requiresDurableStorageSetup: boolean = durableUtils.requiresDurableStorageSetup(context);
-        if (requiresDurableStorageSetup) {
-            return { promptSteps: [new DurableStorageTypePromptStep()] };
-        } else {
-            return await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard);
+
+        if (context.functionTemplate?.templateSchemaVersion === TemplateSchemaVersion.v2) {
+            return requiresDurableStorageSetup ?
+                { promptSteps: [new JobsListStep(this._isProjectWizard), new DurableStorageTypePromptStep()], executeSteps: [new DurableProjectConfigureStep()] } :
+                { promptSteps: [new JobsListStep(this._isProjectWizard)] };
         }
 
+        const { promptSteps = [], executeSteps = [] } = await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard) ?? { promptSteps: [], executeSteps: [] };
+        if (requiresDurableStorageSetup) {
+            promptSteps.unshift(new DurableStorageTypePromptStep());
+        }
+
+        return { promptSteps, executeSteps };
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {

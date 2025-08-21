@@ -3,21 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { DurableBackend } from "../../../constants";
 import { defaultDescription, previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
-import { FunctionSubWizard } from "../FunctionSubWizard";
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 
 export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
-    private readonly _functionSettings: { [key: string]: string | undefined };
-
-    public constructor(functionSettings?: { [key: string]: string | undefined }) {
-        super();
-        this._functionSettings = functionSettings || {};
-    }
-
     public async prompt(context: T): Promise<void> {
         const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
@@ -43,9 +35,5 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
 
     public shouldPrompt(context: T): boolean {
         return !context.hasDurableStorage && !context.newDurableStorageType;
-    }
-
-    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
-        return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
     }
 }
