@@ -7,17 +7,10 @@ import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardO
 import { DurableBackend } from "../../../constants";
 import { defaultDescription, previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
-import { FunctionSubWizard } from "../FunctionSubWizard";
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
+import { DurableProjectConfigureStep } from "./DurableProjectConfigureStep";
 
-export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
-    private readonly _functionSettings: { [key: string]: string | undefined };
-
-    public constructor(functionSettings?: { [key: string]: string | undefined }) {
-        super();
-        this._functionSettings = functionSettings || {};
-    }
-
+export class DurableStorageTypeListStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
@@ -45,7 +38,7 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
         return !context.hasDurableStorage && !context.newDurableStorageType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
-        return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+    public async getSubWizard(): Promise<IWizardOptions<T> | undefined> {
+        return { executeSteps: [new DurableProjectConfigureStep()] };
     }
 }
