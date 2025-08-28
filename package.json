@@ -1481,11 +1481,11 @@
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^3.6.5",
-        "@microsoft/vscode-azext-azureappsettings": "^0.2.8",
-        "@microsoft/vscode-azext-azureutils": "^3.5.0",
-        "@microsoft/vscode-azext-utils": "^3.4.0",
-        "@microsoft/vscode-azureresources-api": "^2.5.1",
+        "@microsoft/vscode-azext-azureappservice": "^3.6.6",
+        "@microsoft/vscode-azext-azureappsettings": "^0.2.10",
+        "@microsoft/vscode-azext-azureutils": "^3.5.1",
+        "@microsoft/vscode-azext-utils": "^3.4.1",
+        "@microsoft/vscode-azureresources-api": "^2.6.1",
         "@microsoft/vscode-container-client": "^0.1.2",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",
@@ -1513,7 +1513,6 @@
         "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs"
     },
     "enabledApiProposals": [
-        "authenticationChallenges",
-        "authLearnMore"
+        "authenticationChallenges"
     ]
 }
