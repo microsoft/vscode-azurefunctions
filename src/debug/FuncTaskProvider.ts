@@ -7,7 +7,8 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microso
 import * as process from 'process';
 import { ShellExecution, Task, TaskScope, workspace, type CancellationToken, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
+import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
+import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -118,6 +119,13 @@ export class FuncTaskProvider implements TaskProvider {
         options = options || {};
         if (projectRoot) {
             options.cwd = projectRoot;
+        }
+
+        const [azureWebJobsStorage, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, folder.uri.fsPath);
+        if (azureWebJobsStorage && isEmulator) {
+            options.env = {
+                "AzureWebJobsStorage": azureWebJobsStorage
+            }
         }
 
         definition = definition || { type: func, command };
