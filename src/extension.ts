@@ -103,6 +103,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         // These don't actually overwrite "node", "python", etc. - they just add to it
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', nodeDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('python', pythonDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('debugpy', pythonDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('ballerina', ballerinaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
