@@ -11,7 +11,7 @@ import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeIt
 import { findFiles, getRootWorkspaceFolder } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
-export async function detectAndConfigureContainerizedProject(context: ICreateFunctionAppContext): Promise<void> {
+export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<void> {
     if (!vscode.workspace.workspaceFolders?.length) {
         return;
     }

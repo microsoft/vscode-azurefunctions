@@ -20,7 +20,7 @@ import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
 import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
 import { DeployWorkspaceProjectStep } from "./containerImage/DeployWorkspaceProjectStep";
-import { detectAndConfigureContainerizedProject } from "./containerImage/detectContainerizedProject";
+import { detectDockerfile } from "./containerImage/detectDockerfile";
 import { FunctionAppStackStep } from "./stacks/FunctionAppStackStep";
 
 export async function createCreateFunctionAppComponents(context: ICreateFunctionAppContext,
@@ -53,7 +53,8 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         replication: StorageAccountReplication.LRS
     };
 
-    await detectAndConfigureContainerizedProject(context);
+    await detectDockerfile(context);
+
     if (wizardContext.workspaceFolder) {
         wizardContext.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(language, wizardContext.workspaceFolder.uri.fsPath);
         wizardContext.telemetry.properties.durableStorageType = wizardContext.durableStorageType;
