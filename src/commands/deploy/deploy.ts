@@ -34,6 +34,7 @@ import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
+import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
@@ -204,6 +205,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (eolWarningMessage) {
         deploymentWarningMessages.push(eolWarningMessage);
+    }
+
+    const extensionBundleWarningMessage: string | undefined = await getWarningForExtensionBundle(context);
+
+    if (extensionBundleWarningMessage) {
+        deploymentWarningMessages.push(extensionBundleWarningMessage);
     }
 
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
