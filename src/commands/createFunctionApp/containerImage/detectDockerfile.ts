@@ -4,56 +4,45 @@
 *--------------------------------------------------------------------------------------------*/
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { dockerfileGlobPattern, hostFileName } from '../../../constants';
+import { dockerfileGlobPattern } from '../../../constants';
 import { getAzureContainerAppsApi } from '../../../getExtensionApi';
 import { localize } from '../../../localize';
 import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeItem';
-import { findFiles } from '../../../utils/workspace';
-import { isFunctionProject } from '../../createNewProject/verifyIsProject';
-import path = require('path');
+import { findFiles, getRootWorkspaceFolder } from '../../../utils/workspace';
+import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
 export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<void> {
-    // don't overwrite the workspace folder on the context if it's already set
-    if (vscode.workspace.workspaceFolders && !context.workspaceFolder) {
-        context.workspaceFolder = vscode.workspace.workspaceFolders[0];
-        const workspacePath = context.workspaceFolder.uri.fsPath;
-        let dockerfilePath: string = workspacePath
-        context.rootPath = workspacePath;
+    if (!vscode.workspace.workspaceFolders?.length) {
+        return;
+    }
 
-        //check for dockerfile location
-        if (await isFunctionProject(workspacePath)) {
-            const files = (await findFiles(context.workspaceFolder, `**/${dockerfileGlobPattern}`));
-            if (files.length === 0) {
-                return;
-            }
-            dockerfilePath = path.dirname(files[0].fsPath);
-        }
+    context.workspaceFolder ??= await getRootWorkspaceFolder() as vscode.WorkspaceFolder;
+    context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'modalPrompt') ?? context.workspaceFolder.uri.fsPath;
 
-        // check if host.json is in the same directory as the Dockerfile
-        if ((await findFiles(dockerfilePath, hostFileName)).length > 0) {
-            context.dockerfilePath = (await findFiles(dockerfilePath, dockerfileGlobPattern))[0].fsPath;
-        } else {
-            context.dockerfilePath = undefined;
-        }
+    const dockerfiles = (await findFiles(context.rootPath, `**/${dockerfileGlobPattern}`));
+    if (dockerfiles.length === 0) {
+        return;
+    }
 
-        // prompt user to proceed with containerized function app creation
-        if (context.dockerfilePath) {
-            const placeHolder: string = localize('detectedDockerfile', 'Dockerfile detected. What would you like to deploy?');
-            const containerImageButton: vscode.MessageItem = { title: localize('containerImage', 'Container Image') };
-            const codeButton: vscode.MessageItem = { title: localize('code', 'Code') };
-            const buttons: vscode.MessageItem[] = [containerImageButton, codeButton];
-            const result: vscode.MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
+    // Todo: If there's multiple dockerfiles, we should probably prompt
+    context.dockerfilePath = dockerfiles[0].fsPath;
 
-            // if yes, ensure container apps extension is installed before proceeding
-            if (result === containerImageButton) {
-                await getAzureContainerAppsApi(context);
-            } else if (result === codeButton) {
-                context.dockerfilePath = undefined;
-            }
-        }
+    // prompt user to proceed with containerized function app creation
+    const placeHolder: string = localize('detectedDockerfile', 'Dockerfile detected. What would you like to deploy?');
+    const containerImageButton: vscode.MessageItem = { title: localize('containerImage', 'Container Image') };
+    const codeButton: vscode.MessageItem = { title: localize('code', 'Code') };
+    const buttons: vscode.MessageItem[] = [containerImageButton, codeButton];
+    const result: vscode.MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
+
+    // if yes, ensure container apps extension is installed before proceeding
+    if (result === containerImageButton) {
+        await getAzureContainerAppsApi(context);
+    } else if (result === codeButton) {
+        context.dockerfilePath = undefined;
     }
 }
 
+// Todo: Seems like this isn't being used, but could use to filter which dockerfiles to show
 export async function detectFunctionsDockerfile(file: string): Promise<boolean> {
     const content = await AzExtFsExtra.readFile(file);
     const lines: string[] = content.split('\n');
