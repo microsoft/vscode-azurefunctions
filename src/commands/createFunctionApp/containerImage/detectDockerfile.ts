@@ -2,50 +2,87 @@
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
-import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
-import { dockerfileGlobPattern } from '../../../constants';
+import { AzExtFsExtra, nonNullProp, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import * as path from 'path';
+import { RelativePattern, workspace, type MessageItem, type Uri, type WorkspaceFolder } from 'vscode';
+import { browseItem, dockerfileGlobPattern } from '../../../constants';
 import { getAzureContainerAppsApi } from '../../../getExtensionApi';
 import { localize } from '../../../localize';
 import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeItem';
-import { findFiles, getRootWorkspaceFolder } from '../../../utils/workspace';
+import { getRootWorkspaceFolder } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
 export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<void> {
-    if (!vscode.workspace.workspaceFolders?.length) {
+    if (!workspace.workspaceFolders?.length) {
         return;
     }
 
-    context.workspaceFolder ??= await getRootWorkspaceFolder() as vscode.WorkspaceFolder;
+    context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
     context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'modalPrompt') ?? context.workspaceFolder.uri.fsPath;
 
-    const dockerfiles = (await findFiles(context.rootPath, `**/${dockerfileGlobPattern}`));
+    const pattern: RelativePattern = new RelativePattern(
+        nonNullProp(context, 'workspaceFolder'),
+        `**/${dockerfileGlobPattern}`,
+    );
+
+    const dockerfiles: Uri[] = await workspace.findFiles(pattern);
+    context.telemetry.properties.dockerfileCount = String(dockerfiles.length);
+
     if (dockerfiles.length === 0) {
         return;
     }
 
-    const useContainerImage: boolean = await askUseContainerImage(context);
+    const useContainerImage: boolean = await promptUseContainerImage(context);
     if (!useContainerImage) {
         return;
     }
 
-    // Todo: If there's multiple dockerfiles, we should probably prompt
-    context.dockerfilePath = dockerfiles[0].fsPath;
+    if (dockerfiles.length === 1) {
+        context.dockerfilePath = dockerfiles[0].fsPath;
+    } else {
+        context.dockerfilePath = await promptChooseDockerfile(context, dockerfiles);
+    }
 
     // ensure container apps extension is installed before proceeding
     await getAzureContainerAppsApi(context);
 }
 
-async function askUseContainerImage(context: IActionContext): Promise<boolean> {
+async function promptUseContainerImage(context: IActionContext): Promise<boolean> {
     const placeHolder: string = localize('detectedDockerfile', 'Dockerfile detected. What would you like to deploy?');
-    const containerImageButton: vscode.MessageItem = { title: localize('containerImage', 'Container Image') };
-    const codeButton: vscode.MessageItem = { title: localize('code', 'Code') };
-    const buttons: vscode.MessageItem[] = [containerImageButton, codeButton];
-    const result: vscode.MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
+    const containerImageButton: MessageItem = { title: localize('containerImage', 'Container Image') };
+    const codeButton: MessageItem = { title: localize('code', 'Code') };
+    const buttons: MessageItem[] = [containerImageButton, codeButton];
+    const result: MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
     return result === containerImageButton;
 }
 
-// Todo: Seems like this isn't being used, but could use to filter which dockerfiles to show
+export async function promptChooseDockerfile(context: ICreateFunctionAppContext, dockerfiles: Uri[]): Promise<string> {
+    const containerizedDockerfile: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
+    await Promise.all(containerizedDockerfile);
+
+    const picks: IAzureQuickPickItem<string | undefined>[] = [];
+    context.telemetry.properties.containerizedDockerfileCount = String(containerizedDockerfile.filter(v => v).length);
+
+    for (const [i, dockerfile] of dockerfiles.entries()) {
+        const isContainerizedDockerfile: boolean = (containerizedDockerfile as unknown as boolean[])[i];
+        const relativeDirectory: string = path.relative(dockerfile.fsPath, path.basename(dockerfile.fsPath));
+
+        picks.push({
+            label: path.basename(dockerfile.fsPath),
+            description: isContainerizedDockerfile ? `${relativeDirectory} (functions image)` : relativeDirectory,
+            data: dockerfile.fsPath,
+        });
+    }
+
+    picks.push(browseItem);
+
+    const dockerfilePath: string | undefined = (await context.ui.showQuickPick(picks, {
+        placeHolder: localize('dockerFilePick', 'Choose a Dockerfile from your source code directory.'),
+    })).data;
+
+    return dockerfilePath || (await context.ui.showOpenDialog({ filters: {} }))[0].fsPath;
+}
+
 export async function detectFunctionsDockerfile(file: string): Promise<boolean> {
     const content = await AzExtFsExtra.readFile(file);
     const lines: string[] = content.split('\n');
@@ -55,5 +92,5 @@ export async function detectFunctionsDockerfile(file: string): Promise<boolean> 
             return true;
         }
     }
-    return false
+    return false;
 }
