@@ -57,14 +57,14 @@ async function promptUseContainerImage(context: IActionContext): Promise<boolean
 }
 
 export async function promptChooseDockerfile(context: ICreateFunctionAppContext, dockerfiles: Uri[]): Promise<string> {
-    const containerizedDockerfile: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
-    await Promise.all(containerizedDockerfile);
+    const containerizedDockerfiles: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
+    await Promise.all(containerizedDockerfiles);
 
     const picks: IAzureQuickPickItem<string | undefined>[] = [];
-    context.telemetry.properties.containerizedDockerfileCount = String(containerizedDockerfile.filter(v => v).length);
+    context.telemetry.properties.containerizedDockerfileCount = String(containerizedDockerfiles.filter(v => v).length);
 
     for (const [i, dockerfile] of dockerfiles.entries()) {
-        const isContainerizedDockerfile: boolean = (containerizedDockerfile as unknown as boolean[])[i];
+        const isContainerizedDockerfile: boolean = (containerizedDockerfiles as unknown as boolean[])[i];
         const relativeDirectory: string = path.relative(dockerfile.fsPath, path.basename(dockerfile.fsPath));
 
         picks.push({
