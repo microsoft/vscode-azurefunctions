@@ -28,17 +28,19 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     context.dockerfilePath = dockerfiles[0].fsPath;
 
     // prompt user to proceed with containerized function app creation
-    const placeHolder: string = localize('detectedDockerfile', 'Dockerfile detected. What would you like to deploy?');
-    const containerImageButton: vscode.MessageItem = { title: localize('containerImage', 'Container Image') };
-    const codeButton: vscode.MessageItem = { title: localize('code', 'Code') };
-    const buttons: vscode.MessageItem[] = [containerImageButton, codeButton];
-    const result: vscode.MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
+    if (context.dockerfilePath) {
+        const placeHolder: string = localize('detectedDockerfile', 'Dockerfile detected. What would you like to deploy?');
+        const containerImageButton: vscode.MessageItem = { title: localize('containerImage', 'Container Image') };
+        const codeButton: vscode.MessageItem = { title: localize('code', 'Code') };
+        const buttons: vscode.MessageItem[] = [containerImageButton, codeButton];
+        const result: vscode.MessageItem = await context.ui.showWarningMessage(placeHolder, { modal: true }, ...buttons);
 
-    // if yes, ensure container apps extension is installed before proceeding
-    if (result === containerImageButton) {
-        await getAzureContainerAppsApi(context);
-    } else if (result === codeButton) {
-        context.dockerfilePath = undefined;
+        // if yes, ensure container apps extension is installed before proceeding
+        if (result === containerImageButton) {
+            await getAzureContainerAppsApi(context);
+        } else if (result === codeButton) {
+            context.dockerfilePath = undefined;
+        }
     }
 }
 
