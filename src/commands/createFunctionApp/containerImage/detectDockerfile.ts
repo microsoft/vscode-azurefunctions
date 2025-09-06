@@ -29,6 +29,8 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     }
 
     const useContainerImage: boolean = await promptUseContainerImage(context);
+    context.telemetry.properties.useContainerImage = String(useContainerImage);
+
     if (!useContainerImage) {
         return;
     }
