@@ -20,11 +20,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
     context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'prompt') ?? context.workspaceFolder.uri.fsPath;
 
-    const pattern: RelativePattern = new RelativePattern(
-        nonNullProp(context, 'workspaceFolder'),
-        `**/${dockerfileGlobPattern}`,
-    );
-
+    const pattern: RelativePattern = new RelativePattern(context.rootPath, `**/${dockerfileGlobPattern}`);
     const dockerfiles: Uri[] = await workspace.findFiles(pattern);
     context.telemetry.properties.dockerfileCount = String(dockerfiles.length);
 
