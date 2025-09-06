@@ -69,11 +69,11 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
         }
 
         const relativeDirectory: string = '.' + path.sep + path.relative(nonNullProp(context, 'rootPath'), dockerfile.fsPath);
-        const detectedFunctionsImage: string = localize('detectedFunctionsImage', 'Detected: Functions Image');
+        const functionsImage: string = localize('functionsImage', 'Functions Image');
 
         picks.push({
             label: path.basename(dockerfile.fsPath),
-            description: isContainerizedDockerfile ? `${relativeDirectory} (${detectedFunctionsImage})` : relativeDirectory,
+            description: isContainerizedDockerfile ? `${relativeDirectory} (${functionsImage})` : relativeDirectory,
             data: dockerfile.fsPath,
         });
     }
@@ -83,6 +83,7 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
 
     const dockerfilePath: string | undefined = (await context.ui.showQuickPick(picks, {
         placeHolder: localize('dockerfilePick', 'Choose a Dockerfile from your source code directory.'),
+        suppressPersistence: true,
     })).data;
 
     return dockerfilePath || (await context.ui.showOpenDialog({ filters: {} }))[0].fsPath;
@@ -91,14 +92,8 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
 export async function detectFunctionsDockerfile(file: string): Promise<boolean> {
     try {
         const content = await AzExtFsExtra.readFile(file);
-        const lines: string[] = content.split('\n');
-
-        for (const line of lines) {
-            if (line.includes('mcr.microsoft.com/azure-functions')) {
-                return true;
-            }
-        }
-    } catch { /** return false */ }
-
-    return false;
+        return content.includes('mcr.microsoft.com/azure-functions');
+    } catch {
+        return false;
+    }
 }

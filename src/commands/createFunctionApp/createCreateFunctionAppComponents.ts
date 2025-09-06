@@ -53,16 +53,16 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         replication: StorageAccountReplication.LRS
     };
 
-    await detectDockerfile(context);
+    await detectDockerfile(wizardContext);
 
     if (wizardContext.workspaceFolder) {
         wizardContext.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(language, wizardContext.workspaceFolder.uri.fsPath);
         wizardContext.telemetry.properties.durableStorageType = wizardContext.durableStorageType;
     }
 
-    promptSteps.push(new SiteNameStep(context.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
+    promptSteps.push(new SiteNameStep(wizardContext.dockerfilePath ? "containerizedFunctionApp" : "functionApp"));
 
-    if (context.dockerfilePath) {
+    if (wizardContext.dockerfilePath) {
         const containerizedfunctionAppWizard = await createContainerizedFunctionAppWizard();
         promptSteps.push(...containerizedfunctionAppWizard.promptSteps);
         executeSteps.push(...containerizedfunctionAppWizard.executeSteps);
@@ -76,13 +76,13 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
         // if the user is deploying to a container app, do not use a flex consumption plan
-        wizardContext.useFlexConsumptionPlan = true && !context.dockerfilePath;
+        wizardContext.useFlexConsumptionPlan = !wizardContext.dockerfilePath;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
         executeSteps.push(new AppInsightsCreateStep());
-        if (!context.dockerfilePath) {
+        if (!wizardContext.dockerfilePath) {
             executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new LogAnalyticsCreateStep());
         }
