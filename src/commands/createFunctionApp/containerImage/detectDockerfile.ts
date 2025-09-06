@@ -56,7 +56,7 @@ async function promptUseContainerImage(context: IActionContext): Promise<boolean
     return result === containerImageButton;
 }
 
-export async function promptChooseDockerfile(context: ICreateFunctionAppContext, dockerfiles: Uri[]): Promise<string> {
+async function promptChooseDockerfile(context: ICreateFunctionAppContext, dockerfiles: Uri[]): Promise<string> {
     const checkContainerizedDockerfiles: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
 
     let containerizedDockerfileCount: number = 0;
@@ -89,7 +89,7 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
     return dockerfilePath || (await context.ui.showOpenDialog({ filters: {} }))[0].fsPath;
 }
 
-export async function detectFunctionsDockerfile(file: string): Promise<boolean> {
+async function detectFunctionsDockerfile(file: string): Promise<boolean> {
     try {
         const content = await AzExtFsExtra.readFile(file);
         return content.includes('mcr.microsoft.com/azure-functions');
