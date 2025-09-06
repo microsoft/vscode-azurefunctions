@@ -67,9 +67,11 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
         }
 
         const relativeDirectory: string = '.' + path.sep + path.relative(nonNullProp(context, 'rootPath'), dockerfile.fsPath);
+        const detectedFunctionsImage: string = localize('detectedFunctionsImage', 'Detected: Functions Image');
+
         picks.push({
             label: path.basename(dockerfile.fsPath),
-            description: isContainerizedDockerfile ? `${relativeDirectory} (Functions Image)` : relativeDirectory,
+            description: isContainerizedDockerfile ? `${relativeDirectory} (${detectedFunctionsImage})` : relativeDirectory,
             data: dockerfile.fsPath,
         });
     }
