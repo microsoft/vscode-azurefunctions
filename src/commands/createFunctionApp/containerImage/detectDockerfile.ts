@@ -18,7 +18,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     }
 
     context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
-    context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'modalPrompt') ?? context.workspaceFolder.uri.fsPath;
+    context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'prompt') ?? context.workspaceFolder.uri.fsPath;
 
     const pattern: RelativePattern = new RelativePattern(
         nonNullProp(context, 'workspaceFolder'),
