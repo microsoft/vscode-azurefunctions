@@ -25,6 +25,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     context.telemetry.properties.dockerfileCount = String(dockerfiles.length);
 
     if (dockerfiles.length === 0) {
+        context.telemetry.properties.containerizedDockerfileCount = '0';
         return;
     }
 
@@ -37,6 +38,7 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
 
     if (dockerfiles.length === 1) {
         context.dockerfilePath = dockerfiles[0].fsPath;
+        context.telemetry.properties.containerizedDockerfileCount = await detectFunctionsDockerfile(context.dockerfilePath) ? '1' : '0';
     } else {
         context.dockerfilePath = await promptChooseDockerfile(context, dockerfiles);
     }
@@ -87,13 +89,16 @@ export async function promptChooseDockerfile(context: ICreateFunctionAppContext,
 }
 
 export async function detectFunctionsDockerfile(file: string): Promise<boolean> {
-    const content = await AzExtFsExtra.readFile(file);
-    const lines: string[] = content.split('\n');
+    try {
+        const content = await AzExtFsExtra.readFile(file);
+        const lines: string[] = content.split('\n');
 
-    for (const line of lines) {
-        if (line.includes('mcr.microsoft.com/azure-functions')) {
-            return true;
+        for (const line of lines) {
+            if (line.includes('mcr.microsoft.com/azure-functions')) {
+                return true;
+            }
         }
-    }
+    } catch { /** return false */ }
+
     return false;
 }
