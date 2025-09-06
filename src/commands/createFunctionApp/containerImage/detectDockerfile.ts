@@ -57,27 +57,30 @@ async function promptUseContainerImage(context: IActionContext): Promise<boolean
 }
 
 export async function promptChooseDockerfile(context: ICreateFunctionAppContext, dockerfiles: Uri[]): Promise<string> {
-    const containerizedDockerfiles: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
-    await Promise.all(containerizedDockerfiles);
+    const checkContainerizedDockerfiles: Promise<boolean>[] = dockerfiles.map(d => detectFunctionsDockerfile(d.fsPath));
 
+    let containerizedDockerfileCount: number = 0;
     const picks: IAzureQuickPickItem<string | undefined>[] = [];
-    context.telemetry.properties.containerizedDockerfileCount = String(containerizedDockerfiles.filter(v => v).length);
 
     for (const [i, dockerfile] of dockerfiles.entries()) {
-        const isContainerizedDockerfile: boolean = (containerizedDockerfiles as unknown as boolean[])[i];
-        const relativeDirectory: string = path.relative(dockerfile.fsPath, path.basename(dockerfile.fsPath));
+        const isContainerizedDockerfile: boolean = await checkContainerizedDockerfiles[i];
+        if (isContainerizedDockerfile) {
+            containerizedDockerfileCount++;
+        }
 
+        const relativeDirectory: string = '.' + path.sep + path.relative(nonNullProp(context, 'rootPath'), dockerfile.fsPath);
         picks.push({
             label: path.basename(dockerfile.fsPath),
-            description: isContainerizedDockerfile ? `${relativeDirectory} (functions image)` : relativeDirectory,
+            description: isContainerizedDockerfile ? `${relativeDirectory} (Functions Image)` : relativeDirectory,
             data: dockerfile.fsPath,
         });
     }
+    context.telemetry.properties.containerizedDockerfileCount = String(containerizedDockerfileCount);
 
     picks.push(browseItem);
 
     const dockerfilePath: string | undefined = (await context.ui.showQuickPick(picks, {
-        placeHolder: localize('dockerFilePick', 'Choose a Dockerfile from your source code directory.'),
+        placeHolder: localize('dockerfilePick', 'Choose a Dockerfile from your source code directory.'),
     })).data;
 
     return dockerfilePath || (await context.ui.showOpenDialog({ filters: {} }))[0].fsPath;
