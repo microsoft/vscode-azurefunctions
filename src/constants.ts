@@ -23,6 +23,8 @@ export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
 
+export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
+
 export enum ProjectLanguage {
     CSharp = 'C#',
     CSharpScript = 'C#Script',
