@@ -89,9 +89,9 @@ async function promptChooseDockerfile(context: ICreateFunctionAppContext, docker
     return dockerfilePath || (await context.ui.showOpenDialog({ filters: {} }))[0].fsPath;
 }
 
-async function detectFunctionsDockerfile(file: string): Promise<boolean> {
+async function detectFunctionsDockerfile(dockerfilePath: string): Promise<boolean> {
     try {
-        const content = await AzExtFsExtra.readFile(file);
+        const content = await AzExtFsExtra.readFile(dockerfilePath);
         return content.includes('mcr.microsoft.com/azure-functions');
     } catch {
         return false;
