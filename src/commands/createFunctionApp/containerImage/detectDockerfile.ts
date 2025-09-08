@@ -39,15 +39,13 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
     // ensure container apps extension is installed before proceeding
     await getAzureContainerAppsApi(context);
 
-    let dockerfilePath: string;
     if (dockerfiles.length === 1) {
-        dockerfilePath = dockerfiles[0].fsPath;
+        const dockerfilePath: string = dockerfiles[0].fsPath;
         context.telemetry.properties.containerizedDockerfileCount = await detectFunctionsDockerfile(dockerfilePath) ? '1' : '0';
+        return dockerfilePath;
     } else {
-        dockerfilePath = await promptChooseDockerfile(context, dockerfiles);
+        return await promptChooseDockerfile(context, dockerfiles);
     }
-
-    return dockerfilePath;
 }
 
 async function promptUseContainerImage(context: IActionContext): Promise<boolean> {
