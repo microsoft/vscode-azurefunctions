@@ -82,7 +82,7 @@ async function promptChooseDockerfile(context: ICreateFunctionAppContext, docker
     picks.push(browseItem);
 
     const dockerfilePath: string | undefined = (await context.ui.showQuickPick(picks, {
-        placeHolder: localize('dockerfilePick', 'Choose a Dockerfile from your source code directory.'),
+        placeHolder: localize('dockerfilePick', 'Choose a Dockerfile from your current workspace.'),
         suppressPersistence: true,
     })).data;
 
