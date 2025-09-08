@@ -12,9 +12,9 @@ import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeIt
 import { getRootWorkspaceFolder } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
-export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<void> {
+export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<string | undefined> {
     if (!workspace.workspaceFolders?.length) {
-        return;
+        return undefined;
     }
 
     context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
@@ -26,25 +26,28 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
 
     if (dockerfiles.length === 0) {
         context.telemetry.properties.containerizedDockerfileCount = '0';
-        return;
+        return undefined;
     }
 
     const useContainerImage: boolean = await promptUseContainerImage(context);
     context.telemetry.properties.useContainerImage = String(useContainerImage);
 
     if (!useContainerImage) {
-        return;
-    }
-
-    if (dockerfiles.length === 1) {
-        context.dockerfilePath = dockerfiles[0].fsPath;
-        context.telemetry.properties.containerizedDockerfileCount = await detectFunctionsDockerfile(context.dockerfilePath) ? '1' : '0';
-    } else {
-        context.dockerfilePath = await promptChooseDockerfile(context, dockerfiles);
+        return undefined;
     }
 
     // ensure container apps extension is installed before proceeding
     await getAzureContainerAppsApi(context);
+
+    let dockerfilePath: string;
+    if (dockerfiles.length === 1) {
+        dockerfilePath = dockerfiles[0].fsPath;
+        context.telemetry.properties.containerizedDockerfileCount = await detectFunctionsDockerfile(dockerfilePath) ? '1' : '0';
+    } else {
+        dockerfilePath = await promptChooseDockerfile(context, dockerfiles);
+    }
+
+    return dockerfilePath;
 }
 
 async function promptUseContainerImage(context: IActionContext): Promise<boolean> {

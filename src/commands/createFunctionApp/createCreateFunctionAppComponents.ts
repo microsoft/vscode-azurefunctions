@@ -53,7 +53,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         replication: StorageAccountReplication.LRS
     };
 
-    await detectDockerfile(wizardContext);
+    wizardContext.dockerfilePath = await detectDockerfile(wizardContext);
 
     if (wizardContext.workspaceFolder) {
         wizardContext.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(language, wizardContext.workspaceFolder.uri.fsPath);
