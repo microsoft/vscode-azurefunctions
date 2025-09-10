@@ -50,7 +50,9 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
         }
 
         if (isFlex) {
-            context.newFlexSku = result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku && result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku[0];
+            if (result.minorVersion.stackSettings.linuxRuntimeSettings?.Sku?.length) {
+                context.newFlexSku = result.minorVersion.stackSettings.linuxRuntimeSettings.Sku.find(s => s.skuCode === context.newPlanSku?.name);
+            }
         }
     }
 
