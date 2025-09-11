@@ -195,6 +195,7 @@ async function getFlexStacks(context: ISubscriptionActionContext & { _stacks?: F
                 url: requestUtils.createRequestUrl(`providers/Microsoft.Web/locations/${location}/functionAppStacks`, {
                     'api-version': '2023-12-01',
                     stack,
+                    'sku': 'FC1',
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
                 }),
             }));
