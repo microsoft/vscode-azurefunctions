@@ -38,6 +38,7 @@ export class DeployWorkspaceProjectStep extends AzureWizardExecuteStepWithActivi
         context.deployWorkspaceResult = await containerAppsApi.deployWorkspaceProject({
             resourceGroupId: context.resourceGroup?.id,
             rootPath: context.rootPath,
+            srcPath: context.rootPath,
             dockerfilePath: context.dockerfilePath,
             suppressConfirmation: true,
             suppressContainerAppCreation: true,

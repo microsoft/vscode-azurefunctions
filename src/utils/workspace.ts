@@ -7,6 +7,7 @@ import { AzExtFsExtra, UserCancelledError, type IActionContext, type IAzureQuick
 import * as globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { browseItem } from '../constants';
 import { localize } from '../localize';
 import * as fsUtils from './fs';
 
@@ -101,7 +102,7 @@ export async function selectWorkspaceItem(context: IActionContext, placeHolder: 
                 folderPicks.push({ label: path.basename(fsPath), description: fsPath, data: fsPath });
             }
         }
-        folderPicks.push({ label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined });
+        folderPicks.push(browseItem);
         folder = await context.ui.showQuickPick(folderPicks, { placeHolder });
     }
     return folder && folder.data ? folder.data : (await context.ui.showOpenDialog(options))[0].fsPath;
