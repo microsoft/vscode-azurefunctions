@@ -25,12 +25,12 @@ export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFlexFunct
     public configureBeforePrompt(context: IFlexFunctionAppWizardContext): void | Promise<void> {
         // use default instance memory size if not using advanced creation
         if (!context.advancedCreation) {
-            context.newFlexInstanceMemoryMB = context.newFlexSku?.instanceMemoryMB.find(im => im.isDefault)?.size;
+            context.newFlexInstanceMemoryMB = Number.parseInt(context.newFlexSku?.instanceMemoryMB.find(im => im.isDefault)?.size ?? '2048');
         }
     }
 
     private getPicks(flexSku: Sku): IAzureQuickPickItem<number>[] {
-        const picks = flexSku.instanceMemoryMB.map(im => { return { label: im.size.toString(), data: im.size, description: im.isDefault ? 'Default' : undefined } });
+        const picks = flexSku.instanceMemoryMB.map(im => { return { label: im.size.toString(), data: Number.parseInt(im.size), description: im.isDefault ? 'Default' : undefined } });
         return picks.sort((a, b) => Number(!!b.description) - Number(!!a.description));
     }
 }
