@@ -105,11 +105,11 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             },
             scaleAndConcurrency: {
                 maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? Number.parseInt(sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? '2048'),
                 alwaysReady: [],
                 triggers: undefined
             },
-        }
+        };
 
         return site;
 
