@@ -7,7 +7,13 @@ import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import { localize } from "../localize";
 
 export interface ILinuxErrorMessages {
+    /**
+     * Linux message to display when no known package managers are detected to install Functions Core Tools
+     */
     noPackageManager: string;
+    /**
+     * Linux error message to display when we fail to successfully install Functions Core Tools
+     */
     failedInstall: string;
 }
 

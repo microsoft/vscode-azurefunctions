@@ -8,7 +8,7 @@ import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
-import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
+import { validatePreDebug, type IPreDebugValidateResult } from '../debug/validatePreDebug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
@@ -76,7 +76,7 @@ export async function startFuncProcessFromApi(
 }
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
-    const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
+    const result: IPreDebugValidateResult = await validatePreDebug(context, debugConfig);
     if (!result.shouldContinue) {
         throw new UserCancelledError('preDebugValidate');
     }

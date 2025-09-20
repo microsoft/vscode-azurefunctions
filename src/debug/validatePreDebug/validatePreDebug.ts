@@ -4,87 +4,101 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
-import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
-import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../funcConfig/local.settings";
-import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
-import { localize } from '../localize';
-import { durableUtils } from '../utils/durableUtils';
-import { isPythonV2Plus } from '../utils/programmingModelUtils';
-import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
-import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
-import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
-import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
-import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
-import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
+import { tryGetFunctionProjectRoot } from '../../commands/createNewProject/verifyIsProject';
+import { CodeAction, ConnectionKey, DurableBackend, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../../constants";
+import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../../funcConfig/local.settings";
+import { getLocalFuncCoreToolsVersion } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
+import { localize } from '../../localize';
+import { createActivityContext } from '../../utils/activityUtils';
+import { durableUtils } from '../../utils/durableUtils';
+import { isPythonV2Plus } from '../../utils/programmingModelUtils';
+import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
+import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../../vsCodeConfig/settings";
+import { validateDTSConnectionPreDebug } from '../storageProviders/validateDTSConnectionPreDebug';
+import { validateNetheriteConnectionPreDebug } from '../storageProviders/validateNetheriteConnectionPreDebug';
+import { validateSQLConnectionPreDebug } from '../storageProviders/validateSQLConnectionPreDebug';
+import { validateStorageConnectionPreDebug } from '../storageProviders/validateStorageConnectionPreDebug';
+import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep';
+import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
     shouldContinue: boolean;
 }
 
-export interface IPreDebugContext extends Omit<ISetConnectionSettingContext, 'projectPath'> {
-    projectPath?: string;
-}
+export async function validatePreDebug(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
+    const workspaceFolder: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
 
-export async function preDebugValidate(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
-    const context: IPreDebugContext = Object.assign(actionContext, { action: CodeAction.Debug });
-    const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
-    let shouldContinue: boolean;
+    const context: IPreDebugValidateContext = Object.assign(actionContext, {
+        ...await createActivityContext(),
+        action: CodeAction.Debug,
+        workspaceFolder,
+        projectPath: await tryGetFunctionProjectRoot(actionContext, workspaceFolder) ?? workspaceFolder.uri.fsPath,
+    });
+
+    const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(context, {
+        title: localize('prepareDebugSessionTitle', 'Validate connections and prepare Azure Functions Core Tools for debug session'),
+        promptSteps: [new FuncCoreToolsInstallPromptStep()],
+        executeSteps: [],
+    });
+
+    // `getMatchingWorkspace` - prepare before wizard runs, doesn't need to be a step
+    // 1. `validateFuncCoreToolsInstalled` - Could probably be an execute step?
+    // 2. `tryGetFunctionProjectRoot` - Does this need to come so late? I would think we could just have this be a precursor check before the wizard runs
+    // 3. `validateFuncCoreToolsInstalled` - Could probably be an prompt step followed by execute step
+
+    // Should we detect and validate connections as part of the initial wizard, if they aren't valid, then we spin off the future connection setup wizards...
+    // When should we check for emulator stuff?  How can we combine prompts for starting the emulators and prompting connections
+
     context.telemetry.properties.debugType = debugConfig.type;
 
+    let shouldContinue: boolean;
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
-        shouldContinue = await validateFuncCoreToolsInstalled(context, message, workspace.uri.fsPath);
+        shouldContinue = await validateFuncCoreToolsInstalled(context, message, context.workspace.uri.fsPath);
 
-        if (shouldContinue) {
-            context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            context.projectPath = await tryGetFunctionProjectRoot(context, workspace);
+        if (shouldContinue && context.projectPath) {
+            const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
+            const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, context.projectPath);
+            const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, context.projectPath);
 
-            if (context.projectPath) {
-                const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
-                const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, context.projectPath);
-                const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, context.projectPath);
+            context.telemetry.properties.projectLanguage = projectLanguage;
+            context.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
+            context.telemetry.properties.durableStorageType = durableStorageType;
 
-                context.telemetry.properties.projectLanguage = projectLanguage;
-                context.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
-                context.telemetry.properties.durableStorageType = durableStorageType;
+            context.telemetry.properties.lastValidateStep = 'functionVersion';
+            shouldContinue = await validateFunctionVersion(context, projectLanguage, projectLanguageModel, workspace.uri.fsPath);
 
-                context.telemetry.properties.lastValidateStep = 'functionVersion';
-                shouldContinue = await validateFunctionVersion(context, projectLanguage, projectLanguageModel, workspace.uri.fsPath);
+            context.telemetry.properties.lastValidateStep = 'workerRuntime';
+            await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
-                context.telemetry.properties.lastValidateStep = 'workerRuntime';
-                await validateWorkerRuntime(context, projectLanguage, context.projectPath);
-
-                switch (durableStorageType) {
-                    case DurableBackend.DTS:
-                        context.telemetry.properties.lastValidateStep = 'dtsConnection';
-                        await validateDTSConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Netherite:
-                        context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                        await validateNetheriteConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.SQL:
-                        context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSQLConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Storage:
-                    default:
-                }
-
-                context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, context.projectPath);
-
-                context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
+            switch (durableStorageType) {
+                case DurableBackend.DTS:
+                    context.telemetry.properties.lastValidateStep = 'dtsConnection';
+                    await validateDTSConnectionPreDebug(context, context.projectPath);
+                    break;
+                case DurableBackend.Netherite:
+                    context.telemetry.properties.lastValidateStep = 'netheriteConnection';
+                    await validateNetheriteConnectionPreDebug(context, context.projectPath);
+                    break;
+                case DurableBackend.SQL:
+                    context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
+                    await validateSQLConnectionPreDebug(context, context.projectPath);
+                    break;
+                case DurableBackend.Storage:
+                default:
             }
+
+            context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
+            await validateAzureWebJobsStorage(context, context.projectPath);
+
+            context.telemetry.properties.lastValidateStep = 'emulatorRunning';
+            shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
         }
     } catch (error) {
         const pe = parseError(error);
