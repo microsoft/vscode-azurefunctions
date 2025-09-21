@@ -39,7 +39,7 @@ export class FuncCoreToolsInstallPromptStep<T extends IPreDebugValidateContext> 
                 // context.telemetry.properties.validateFuncCoreTools = 'false';
                 context.telemetry.properties.funcCliInstallType = FuncCliInstallType.Bypass;
                 context.shouldInstallFuncCoreTools = false;
-                context.isFuncCoreToolsInstalled = undefined;  // Bypass - i.e. don't know, don't care
+                context.isFuncCoreToolsInstalled = undefined;
                 break;
             case await funcToolsInstalled(context, context.projectPath):
                 context.telemetry.properties.funcCliInstallType = FuncCliInstallType.AlreadyInstalled;

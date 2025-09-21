@@ -6,10 +6,12 @@
 import { type WorkspaceFolder } from "vscode";
 import { type ISetConnectionSettingContext } from "../../commands/appSettings/connectionSettings/ISetConnectionSettingContext";
 
-export interface IPreDebugValidateContext extends Omit<ISetConnectionSettingContext, 'projectPath'> {
-    workspaceFolder?: WorkspaceFolder;
-    projectPath?: string;
+export interface IPreDebugValidateContext extends ISetConnectionSettingContext {
+    workspaceFolder: WorkspaceFolder;
+    projectPath: string;
 
     shouldInstallFuncCoreTools?: boolean;
     isFuncCoreToolsInstalled?: boolean;
+
+    shouldAbortDebug?: boolean;
 }

@@ -18,7 +18,7 @@ import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath?: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, projectPath?: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will have to be installed manually.');
@@ -34,10 +34,10 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (innerContext: IActionContext) => {
         innerContext.errorHandling.suppressDisplay = true;
 
-        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath)) {
+        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', projectPath)) {
             innerContext.telemetry.properties.validateFuncCoreTools = 'false';
             installed = true;
-        } else if (await funcToolsInstalled(innerContext, workspacePath)) {
+        } else if (await funcToolsInstalled(innerContext, projectPath)) {
             installed = true;
         } else {
             const items: MessageItem[] = [];
@@ -63,7 +63,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
             innerContext.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
-                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, workspacePath));
+                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                 await installFuncCoreTools(innerContext, packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
@@ -95,10 +95,10 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     return installed;
 }
 
-export async function funcToolsInstalled(context: IActionContext, workspacePath: string | undefined): Promise<boolean> {
+export async function funcToolsInstalled(context: IActionContext, projectPath: string | undefined): Promise<boolean> {
     try {
-        const funcCliPath = await getFuncCliPath(context, workspacePath);
-        await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, '--version');
+        const funcCliPath = await getFuncCliPath(context, projectPath);
+        await cpUtils.executeCommand(undefined, projectPath, funcCliPath, '--version');
         return true;
     } catch (error) {
         return false;

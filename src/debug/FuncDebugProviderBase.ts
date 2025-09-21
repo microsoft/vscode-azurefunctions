@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microso
 import { type CancellationToken, type DebugConfiguration, type DebugConfigurationProvider, type WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskNameRegExp } from '../constants';
-import { validatePreDebug, type IPreDebugValidateResult } from './validatePreDebug/validatePreDebug';
+import { preDebugValidate, type IPreDebugValidateResult } from './validatePreDebug/preDebugValidate';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     public abstract workerArgKey: string;
@@ -50,7 +50,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
                 context.telemetry.properties.isActivationEvent = 'false';
                 context.telemetry.suppressIfSuccessful = false;
 
-                const preDebugResult: IPreDebugValidateResult = await validatePreDebug(context, debugConfiguration);
+                const preDebugResult: IPreDebugValidateResult = await preDebugValidate(context, debugConfiguration);
                 if (!preDebugResult.shouldContinue) {
                     // Stop debugging only in this case
                     result = undefined;
