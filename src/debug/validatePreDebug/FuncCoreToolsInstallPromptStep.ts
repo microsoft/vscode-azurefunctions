@@ -22,7 +22,7 @@ enum FuncCliInstallType {
     Prompt = 'prompt',
 }
 
-// Todo: Should we pass context.projectPath or context.workspacePath?
+// Todo: Should these by project path or workspace path?
 export class FuncCoreToolsInstallPromptStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         switch (true) {
@@ -34,14 +34,14 @@ export class FuncCoreToolsInstallPromptStep<T extends IPreDebugValidateContext> 
                 context.shouldInstallFuncCoreTools = false;
                 context.isFuncCoreToolsInstalled = true;
                 break;
-            case !getWorkspaceSetting<boolean>('validateFuncCoreTools', context.projectPath):
+            case !getWorkspaceSetting<boolean>('validateFuncCoreTools', context.workspaceFolder.uri.fsPath):
                 // User wants to bypass the pre-check for Azure Functions Core Tools
                 // context.telemetry.properties.validateFuncCoreTools = 'false';
                 context.telemetry.properties.funcCliInstallType = FuncCliInstallType.Bypass;
                 context.shouldInstallFuncCoreTools = false;
                 context.isFuncCoreToolsInstalled = undefined;
                 break;
-            case await funcToolsInstalled(context, context.projectPath):
+            case await funcToolsInstalled(context, context.workspaceFolder.uri.fsPath):
                 context.telemetry.properties.funcCliInstallType = FuncCliInstallType.AlreadyInstalled;
                 context.shouldInstallFuncCoreTools = false;
                 context.isFuncCoreToolsInstalled = true;

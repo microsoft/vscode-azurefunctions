@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzureWizard, maskUserInfo, parseError, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, maskUserInfo, parseError, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../../commands/createNewProject/verifyIsProject';
@@ -36,6 +36,13 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsInstallPromptStep(),
+        // FuncCoreToolsVersionValidateStep
+    ];
+
+    const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
+        new FuncCoreToolsInstallStep(),
+        // Validate worker runtime setting
+        // Required connections validate step(s)
     ];
 
     const wizardContext: IPreDebugValidateContext = {
@@ -48,17 +55,12 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, wizardContext.projectPath);
     const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, wizardContext.projectPath);
-    const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, wizardContext.projectPath);
+    // const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, wizardContext.projectPath);
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
         title: localize('prepareDebugSessionTitle', 'Validate connections and prepare Azure Functions Core Tools for debug session'),
         promptSteps,
-        executeSteps: [
-            new FuncCoreToolsInstallStep(),
-            // Validate storage connections step (checklist), for missing connections, we call the appropriate create connection workflow.  We can return any emulator setting preferences each time.
-            //
-            // At end, we can read the local settings and prompt / start emulators as necessary.  We can easily combine the prompts this way.
-        ],
+        executeSteps,
     });
 
     await wizard.prompt();

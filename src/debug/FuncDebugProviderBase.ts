@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microso
 import { type CancellationToken, type DebugConfiguration, type DebugConfigurationProvider, type WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskNameRegExp } from '../constants';
-import { preDebugValidate, type IPreDebugValidateResult } from './validatePreDebug/preDebugValidate';
+import { preDebugValidate, type IPreDebugValidateResult } from './validatePreDebug/validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     public abstract workerArgKey: string;
