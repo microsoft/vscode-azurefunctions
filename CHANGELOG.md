@@ -8,7 +8,7 @@
 * [[4703](https://github.com/microsoft/vscode-azurefunctions/pull/4703)] Dynamically add `AzureWebJobsStorage` to tasks when using the **emulator**.
 
 ### Changed
-* [[4714](https://github.com/microsoft/vscode-azurefunctions/pull/4714)] Update for **MFA shapes**, remove unneeded proposed flags, and confirm **CUD operations** behave as expected.
+* [[4714](https://github.com/microsoft/vscode-azurefunctions/pull/4714)] Changes were made to support the upcoming multi-factor authentication requirements for Azure
 
 ### Fixed
 * [[4702](https://github.com/microsoft/vscode-azurefunctions/pull/4702)] Register **debugpy** as a Python debug provider to resolve Python pre-debugging issues.
