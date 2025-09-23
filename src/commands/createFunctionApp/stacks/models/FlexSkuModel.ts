@@ -16,7 +16,7 @@ export interface Sku {
 }
 
 interface InstanceMemoryMB {
-    size: number;
+    size: string;
     isDefault: boolean;
 }
 
