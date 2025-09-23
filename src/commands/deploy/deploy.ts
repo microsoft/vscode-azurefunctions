@@ -176,11 +176,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     }
 
-    if (durableStorageType && durableStorageType !== DurableBackend.Storage && isFlexConsumption) {
-        // https://github.com/Azure/azure-functions-durable-extension/issues/2957
-        const warning: string = localize('durableStorageTypeWarning', 'This flex consumption app is using an unsupported durable functions storage provider. For a flex consumption plan, durable functions are only supported with an Azure Storage backend.');
+    if (durableStorageType === DurableBackend.DTS && isFlexConsumption) {
+        const warning: string = localize('durableStorageTypeWarning', 'The Durable Task Scheduler (DTS) storage provider is not yet supported for apps on a flex consumption plan.');
         ext.outputChannel.appendLog(warning);
-        await context.ui.showWarningMessage(warning, { modal: true, learnMoreLink: 'https://aka.ms/durable-storage-flex-consumption' }, { title: localize('continue', 'Continue') });
+        await context.ui.showWarningMessage(warning, { modal: true }, { title: localize('continue', 'Continue') });
     }
 
     Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
