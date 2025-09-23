@@ -1,5 +1,21 @@
 # Change Log
 
+## 1.19.1 - 2025-09-25
+
+### Added
+* [[4688](https://github.com/microsoft/vscode-azurefunctions/pull/4688)] Enable **durable configuration path** for **Python v2** projects.
+* [[4706](https://github.com/microsoft/vscode-azurefunctions/pull/4706)] Show **warning** when running a **deprecated extension bundle version**.
+* [[4703](https://github.com/microsoft/vscode-azurefunctions/pull/4703)] Dynamically add `AzureWebJobsStorage` to tasks when using the **emulator**.
+
+### Changed
+* [[4714](https://github.com/microsoft/vscode-azurefunctions/pull/4714)] Update for **MFA shapes**, remove unneeded proposed flags, and confirm **CUD operations** behave as expected.
+
+### Fixed
+* [[4702](https://github.com/microsoft/vscode-azurefunctions/pull/4702)] Register **debugpy** as a Python debug provider to resolve Python pre-debugging issues.
+* [[4708](https://github.com/microsoft/vscode-azurefunctions/pull/4708)] Fix **containerized functions deployment regression** and apply miscellaneous improvements.
+* [[4712](https://github.com/microsoft/vscode-azurefunctions/pull/4712)] Fix **custom handler runtimes** response due to Stacks API regression.
+* [[4716](https://github.com/microsoft/vscode-azurefunctions/pull/4716)] Ensure storage shared access key is disabled in the deployment entry point when required.
+
 ## 1.19.0 - 2025-08-21
 
 ### Overview
