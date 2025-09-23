@@ -5,57 +5,59 @@
 
 import { BlobServiceClient } from '@azure/storage-blob';
 import { AzureWizard, maskUserInfo, parseError, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
-import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../../constants";
-import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../../funcConfig/local.settings";
-import { getLocalFuncCoreToolsVersion } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { CodeAction, ConnectionKey, localSettingsFileName, projectLanguageModelSetting, validateFuncCoreToolsSetting } from "../../constants";
+import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
 import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
-import { durableUtils } from '../../utils/durableUtils';
-import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
-import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../../vsCodeConfig/settings";
-import { validateDTSConnectionPreDebug } from '../storageProviders/validateDTSConnectionPreDebug';
-import { validateNetheriteConnectionPreDebug } from '../storageProviders/validateNetheriteConnectionPreDebug';
-import { validateSQLConnectionPreDebug } from '../storageProviders/validateSQLConnectionPreDebug';
-import { validateStorageConnectionPreDebug } from '../storageProviders/validateStorageConnectionPreDebug';
-import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep';
-import { FuncCoreToolsInstallStep } from './FuncCoreToolsInstallStep';
+import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
+import { FuncCoreToolsPromptAndInstallStep } from './funcCoreTools/FuncCoreToolsPromptAndInstallStep';
+import { FuncCoreToolsValidateStep } from './funcCoreTools/FuncCoreToolsValidateStep';
+import { FuncCoreToolsVersionConfirmStep } from './funcCoreTools/FuncCoreToolsVersionConfirmStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
+import { validateStorageProviderConnectionsPreDebug } from './storageProviderConnections/validateStorageProviderConnectionsPreDebug';
+import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
     shouldContinue: boolean;
 }
 
-export async function preDebugValidate(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
+export async function preDebugValidate(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
     const workspaceFolder: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
-    actionContext.telemetry.properties.debugType = debugConfig.type;
-
-    const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
-        new FuncCoreToolsInstallPromptStep(),
-        // FuncCoreToolsVersionValidateStep
-    ];
-
-    const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
-        new FuncCoreToolsInstallStep(),
-        // Validate worker runtime setting
-        // Required connections validate step(s)
-    ];
+    const projectPath: string = await tryGetFunctionProjectRoot(context, workspaceFolder) ?? workspaceFolder.uri.fsPath;
 
     const wizardContext: IPreDebugValidateContext = {
-        ...actionContext,
+        ...context,
         ...await createActivityContext({ withChildren: true }),
         action: CodeAction.Debug,
         workspaceFolder,
-        projectPath: await tryGetFunctionProjectRoot(actionContext, workspaceFolder) ?? workspaceFolder.uri.fsPath,
+        projectPath,
+        projectLanguage: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
+        projectLanguageModel: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
+        validateFuncCoreTools: getWorkspaceSetting(validateFuncCoreToolsSetting, workspaceFolder.uri.fsPath) !== false /** This setting defaults to 'true' */,
     };
 
-    const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, wizardContext.projectPath);
-    const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, wizardContext.projectPath);
-    // const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, wizardContext.projectPath);
+    wizardContext.telemetry.properties.debugType = debugConfig.type;
+    wizardContext.telemetry.properties.projectLanguage = wizardContext.projectLanguage;
+    wizardContext.telemetry.properties.projectLanguageModel = wizardContext.projectLanguageModel?.toString();
+    wizardContext.telemetry.properties.validateFuncCoreTools = wizardContext.validateFuncCoreTools ? String(wizardContext.validateFuncCoreTools) : undefined;
+
+    await validateStorageProviderConnectionsPreDebug(wizardContext);
+
+    const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
+        new FuncCoreToolsPromptAndInstallStep(),
+        new FuncCoreToolsVersionConfirmStep(),
+        // Prompt for emulators
+    ];
+
+    const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
+        new FuncCoreToolsValidateStep(),
+        new WorkerRuntimeSettingValidateStep(),
+        // Start emulators
+    ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
         title: localize('prepareDebugSessionTitle', 'Validate connections and prepare Azure Functions Core Tools for debug session'),
@@ -66,49 +68,10 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     await wizard.prompt();
     await wizard.execute();
 
-    // Should we detect and validate connections as part of the initial wizard, if they aren't valid, then we spin off the future connection setup wizards...
-    // When should we check for emulator stuff?  How can we combine prompts for starting the emulators and prompting connections
-
     let shouldContinue: boolean;
     try {
-        if (shouldContinue && wizardContext.projectPath) {
-            const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, wizardContext.projectPath);
-            const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, wizardContext.projectPath);
-            const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, wizardContext.projectPath);
-
-            wizardContext.telemetry.properties.projectLanguage = projectLanguage;
-            wizardContext.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
-            wizardContext.telemetry.properties.durableStorageType = durableStorageType;
-
-            wizardContext.telemetry.properties.lastValidateStep = 'functionVersion';
-            shouldContinue = await validateFunctionVersion(wizardContext, projectLanguage, projectLanguageModel, wizardContext.workspace.uri.fsPath);
-
-            wizardContext.telemetry.properties.lastValidateStep = 'workerRuntime';
-            await validateWorkerRuntime(wizardContext, projectLanguage, wizardContext.projectPath);
-
-            switch (durableStorageType) {
-                case DurableBackend.DTS:
-                    wizardContext.telemetry.properties.lastValidateStep = 'dtsConnection';
-                    await validateDTSConnectionPreDebug(wizardContext, wizardContext.projectPath);
-                    break;
-                case DurableBackend.Netherite:
-                    wizardContext.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                    await validateNetheriteConnectionPreDebug(wizardContext, wizardContext.projectPath);
-                    break;
-                case DurableBackend.SQL:
-                    wizardContext.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                    await validateSQLConnectionPreDebug(wizardContext, wizardContext.projectPath);
-                    break;
-                case DurableBackend.Storage:
-                default:
-            }
-
-            wizardContext.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-            await validateAzureWebJobsStorage(wizardContext, wizardContext.projectPath);
-
-            wizardContext.telemetry.properties.lastValidateStep = 'emulatorRunning';
-            shouldContinue = await validateEmulatorIsRunning(wizardContext, wizardContext.projectPath);
-        }
+        wizardContext.telemetry.properties.lastValidateStep = 'emulatorRunning';
+        shouldContinue = await validateEmulatorIsRunning(wizardContext, wizardContext.projectPath);
     } catch (error) {
         const pe = parseError(error);
         if (pe.isUserCancelledError) {
@@ -140,48 +103,6 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
     }
 
     throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
-}
-
-/**
- * Ensure that that Python V2+ projects have an appropriate version of Functions tools installed.
- */
-async function validateFunctionVersion(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, workspacePath: string): Promise<boolean> {
-    const validateTools = getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath) !== false;
-
-    if (validateTools && isPythonV2Plus(projectLanguage, projectLanguageModel)) {
-        const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
-
-        // NOTE: This is the latest version available as of this commit,
-        //       but not necessarily the final "preview release" version.
-        //       The Functions team is ok with using this version as the
-        //       minimum bar.
-        const expectedVersionRange = '>=4.0.4742';
-
-        if (version && !semver.satisfies(version, expectedVersionRange)) {
-            const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}").', version, expectedVersionRange);
-            const debugAnyway: vscode.MessageItem = { title: localize('debugWithInvalidFunctionVersionAnyway', 'Debug anyway') };
-            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'failedWithInvalidFunctionVersion' }, debugAnyway);
-            return result === debugAnyway;
-        }
-    }
-
-    return true;
-}
-
-/**
- * Automatically add worker runtime setting since it's required to debug, but often gets deleted since it's stored in "local.settings.json" which isn't tracked in source control
- */
-async function validateWorkerRuntime(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<void> {
-    const runtime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, projectLanguage, projectPath);
-    if (runtime) {
-        // Not worth handling mismatched runtimes since it's so unlikely
-        await setLocalAppSetting(context, projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
-    }
-}
-
-async function validateAzureWebJobsStorage(context: IPreDebugContext, projectPath: string): Promise<void> {
-    // most programming models require the `AzureWebJobsStorage` connection now so we should just validate it for every runtime/trigger
-    await validateStorageConnectionPreDebug(context, projectPath);
 }
 
 /**

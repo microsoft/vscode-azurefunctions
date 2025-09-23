@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
-import { type ISqlDatabaseConnectionWizardContext } from "../../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
-import { SqlConnectionListStep } from "../../commands/appSettings/connectionSettings/sqlDatabase/SqlConnectionListStep";
-import { CodeAction, ConnectionType } from "../../constants";
-import { localize } from "../../localize";
-import { createActivityContext } from "../../utils/activityUtils";
+import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
+import { type ISqlDatabaseConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
+import { SqlConnectionListStep } from "../../../commands/appSettings/connectionSettings/sqlDatabase/SqlConnectionListStep";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
 
 export async function validateSQLConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });

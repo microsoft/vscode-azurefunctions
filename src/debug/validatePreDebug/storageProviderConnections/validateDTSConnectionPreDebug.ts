@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { DTSConnectionListStep } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
-import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
-import { type IDTSConnectionWizardContext } from "../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
-import { CodeAction, ConnectionType } from "../../constants";
-import { localize } from "../../localize";
-import { requestUtils } from "../../utils/requestUtils";
+import { DTSConnectionListStep } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
+import { type IDTSConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
 
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });

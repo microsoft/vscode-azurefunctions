@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { getStorageLocalSettingsValue } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
-import { type IStorageConnectionWizardContext } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
-import { StorageConnectionListStep } from "../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
-import { CodeAction, ConnectionKey, ConnectionType } from "../../constants";
-import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
+import { getStorageLocalSettingsValue } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
+import { type IStorageConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
+import { StorageConnectionListStep } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
+import { CodeAction, ConnectionKey, ConnectionType } from "../../../constants";
+import { getLocalSettingsConnectionString } from "../../../funcConfig/local.settings";
 
 export async function validateStorageConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });

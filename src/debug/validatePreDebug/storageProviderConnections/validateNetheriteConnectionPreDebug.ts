@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { EventHubsConnectionListStep } from "../../commands/appSettings/connectionSettings/netherite/EventHubsConnectionListStep";
-import { parseEventHubsNamespaceName } from "../../commands/appSettings/connectionSettings/netherite/getNetheriteConnection";
-import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
-import { type INetheriteConnectionWizardContext } from "../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
-import { CodeAction, ConnectionType } from "../../constants";
-import { localize } from "../../localize";
-import { createActivityContext } from "../../utils/activityUtils";
+import { EventHubsConnectionListStep } from "../../../commands/appSettings/connectionSettings/netherite/EventHubsConnectionListStep";
+import { parseEventHubsNamespaceName } from "../../../commands/appSettings/connectionSettings/netherite/getNetheriteConnection";
+import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
+import { type INetheriteConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
 
 export async function validateNetheriteConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });

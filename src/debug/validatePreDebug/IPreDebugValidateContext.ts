@@ -10,8 +10,12 @@ export interface IPreDebugValidateContext extends ISetConnectionSettingContext {
     workspaceFolder: WorkspaceFolder;
     projectPath: string;
 
-    shouldInstallFuncCoreTools?: boolean;
-    isFuncCoreToolsInstalled?: boolean;
+    // Project workspace settings
+    projectLanguage: string | undefined;
+    projectLanguageModel: number | undefined;
+    validateFuncCoreTools: boolean;
+
+    funcCoreToolsVersion?: string | null;
 
     shouldAbortDebug?: boolean;
 }
