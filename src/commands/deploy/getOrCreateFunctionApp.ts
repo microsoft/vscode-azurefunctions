@@ -37,6 +37,7 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
     // if there was no node, then the user is creating a new function app
     if (!node) {
         context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'))
+        context.disableSharedKeyAccess = context.useManagedIdentity && context.useFlexConsumptionPlan;
         await wizard.execute();
 
         const resolved = context.dockerfilePath ? new ResolvedContainerizedFunctionAppResource(context as ISubscriptionContext, nonNullProp(context, 'site')) :
