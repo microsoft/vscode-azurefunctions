@@ -9,6 +9,7 @@
 
 ### Changed
 * [[4714](https://github.com/microsoft/vscode-azurefunctions/pull/4714)] Changes were made to support the upcoming multi-factor authentication requirements for Azure
+* [[4718](https://github.com/microsoft/vscode-azurefunctions/pull/4718)] Only provide Durable flex consumption warning for apps using DTS storage provider
 
 ### Fixed
 * [[4702](https://github.com/microsoft/vscode-azurefunctions/pull/4702)] Register **debugpy** as a Python debug provider to resolve Python pre-debugging issues.
