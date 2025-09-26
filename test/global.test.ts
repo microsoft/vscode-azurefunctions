@@ -30,7 +30,10 @@ let oldRequestTimeout: number | undefined;
 
 let testWorkspaceFolders: string[];
 let workspaceFolderIndex = 0;
-export function getTestWorkspaceFolder(): string {
+export function getTestWorkspaceFolder(folder?: string): string {
+    if (folder) {
+        return testWorkspaceFolders.find(f => f.toLowerCase().includes(folder.toLowerCase())) || testWorkspaceFolders[0];
+    }
     if (workspaceFolderIndex >= testWorkspaceFolders.length) {
         throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".')
     }
@@ -171,6 +174,12 @@ async function initTestWorkspaceFolders(): Promise<string[]> {
         for (let i = 0; i < workspaceFolders.length; i++) {
             const workspacePath: string = workspaceFolders[i].uri.fsPath;
             const folderName = path.basename(workspacePath);
+            if (folderName === 'containerizedFunctionProject') {
+                await AzExtFsExtra.ensureDir(workspacePath);
+                await AzExtFsExtra.emptyDir(workspacePath);
+                folders.push(workspacePath);
+                continue;
+            }
             assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
             await AzExtFsExtra.ensureDir(workspacePath);
             await AzExtFsExtra.emptyDir(workspacePath);
