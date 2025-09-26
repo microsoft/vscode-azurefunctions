@@ -11,7 +11,7 @@ import { localize } from '../../localize';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
 /**
- * @remarks
+ * @remarks A hybrid prompt and execute step
  */
 export class FuncCoreToolsPromptAndInstallStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async configureBeforePrompt(context: T): Promise<void> {

@@ -17,8 +17,8 @@ import { FuncCoreToolsPromptAndInstallStep } from './FuncCoreToolsPromptAndInsta
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { FuncCoreToolsVersionConfirmStep } from './FuncCoreToolsVersionConfirmStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
-import { validateStorageProviderConnectionsPreDebug } from './storageProviders/validateStorageProviderConnectionsPreDebug';
-import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/wizard/StorageProviderConnectionsValidateSteps';
+import { setStorageProviderConnectionsPreDebugIfNeeded } from './storageProviders/setStorageProviderConnectionsPreDebug';
+import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/wizard/GetStorageProviderConnectionsValidateSteps';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 
 export interface IPreDebugValidateResult {
@@ -46,7 +46,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     wizardContext.telemetry.properties.projectLanguageModel = wizardContext.projectLanguageModel?.toString();
     wizardContext.telemetry.properties.validateFuncCoreTools = wizardContext.validateFuncCoreTools ? String(wizardContext.validateFuncCoreTools) : undefined;
 
-    await validateStorageProviderConnectionsPreDebug(wizardContext);
+    await setStorageProviderConnectionsPreDebugIfNeeded(wizardContext);
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsPromptAndInstallStep(),

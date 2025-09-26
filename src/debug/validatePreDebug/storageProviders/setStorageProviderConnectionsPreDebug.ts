@@ -6,32 +6,32 @@
 import { DurableBackend } from "../../../constants";
 import { durableUtils } from "../../../utils/durableUtils";
 import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
-import { validateDTSConnectionPreDebug } from "./validateDTSConnectionPreDebug";
-import { validateNetheriteConnectionPreDebug } from "./validateNetheriteConnectionPreDebug";
-import { validateSQLConnectionPreDebug } from "./validateSQLConnectionPreDebug";
-import { validateStorageConnectionPreDebug } from "./validateStorageConnectionPreDebug";
+import { setDTSConnectionPreDebugIfNeeded } from "./setDTSConnectionPreDebug";
+import { setNetheriteConnectionPreDebugIfNeeded } from "./setNetheriteConnectionPreDebug";
+import { setSQLConnectionPreDebugIfNeeded } from "./setSQLConnectionPreDebug";
+import { setStorageConnectionPreDebugIfNeeded } from "./setStorageConnectionPreDebug";
 
-export async function validateStorageProviderConnectionsPreDebug(context: IPreDebugValidateContext): Promise<void> {
+export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPreDebugValidateContext): Promise<void> {
     context.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(context.projectLanguage, context.projectPath);
     context.telemetry.properties.durableStorageType = context.durableStorageType;
 
     switch (context.durableStorageType) {
         case DurableBackend.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
-            await validateDTSConnectionPreDebug(context, context.projectPath);
+            await setDTSConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
         case DurableBackend.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-            await validateNetheriteConnectionPreDebug(context, context.projectPath);
+            await setNetheriteConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
         case DurableBackend.SQL:
             context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-            await validateSQLConnectionPreDebug(context, context.projectPath);
+            await setSQLConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
         case DurableBackend.Storage:
         default:
     }
 
     context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-    await validateStorageConnectionPreDebug(context, context.projectPath);
+    await setStorageConnectionPreDebugIfNeeded(context, context.projectPath);
 }

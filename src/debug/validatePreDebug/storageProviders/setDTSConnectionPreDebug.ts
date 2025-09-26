@@ -11,7 +11,7 @@ import { CodeAction, ConnectionType } from "../../../constants";
 import { localize } from "../../../localize";
 import { requestUtils } from "../../../utils/requestUtils";
 
-export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
+export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
     const {

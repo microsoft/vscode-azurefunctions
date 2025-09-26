@@ -11,7 +11,7 @@ import { CodeAction, ConnectionType } from "../../../constants";
 import { localize } from "../../../localize";
 import { createActivityContext } from "../../../utils/activityUtils";
 
-export async function validateSQLConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
+export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const sqlDbConnectionKey: string | undefined = await getSqlDbSettingsKey(Object.assign(context, { projectPath }));
     const sqlDbConnectionValue: string | undefined = await getSqlDbLocalSettingsValue(projectPathContext, sqlDbConnectionKey);

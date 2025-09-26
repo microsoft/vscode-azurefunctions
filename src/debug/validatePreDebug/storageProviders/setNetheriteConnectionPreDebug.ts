@@ -12,7 +12,7 @@ import { CodeAction, ConnectionType } from "../../../constants";
 import { localize } from "../../../localize";
 import { createActivityContext } from "../../../utils/activityUtils";
 
-export async function validateNetheriteConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
+export async function setNetheriteConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { eventHubsNamespaceConnectionKey, eventHubConnectionKey } = await getNetheriteSettingsKeys(projectPathContext) ?? {};
     const {

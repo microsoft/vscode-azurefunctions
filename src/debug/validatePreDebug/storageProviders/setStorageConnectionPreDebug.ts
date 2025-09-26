@@ -10,7 +10,7 @@ import { StorageConnectionListStep } from "../../../commands/appSettings/connect
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../constants";
 import { getLocalSettingsConnectionString } from "../../../funcConfig/local.settings";
 
-export async function validateStorageConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
+export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const storageConnectionKey: string = ConnectionKey.Storage;
     const storageConnection: string | undefined = await getStorageLocalSettingsValue(projectPathContext, storageConnectionKey);

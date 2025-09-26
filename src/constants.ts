@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { ThemeColor, ThemeIcon } from "vscode";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -220,3 +221,5 @@ export const EventHubsNamespaceResourceType: string = 'namespaces';
 
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';
+
+export const warningIcon: ThemeIcon = new ThemeIcon('warning', new ThemeColor('charts.orange'));
