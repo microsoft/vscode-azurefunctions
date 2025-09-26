@@ -3,10 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 import { type WorkspaceFolder } from "vscode";
 import { type ISetConnectionSettingContext } from "../../commands/appSettings/connectionSettings/ISetConnectionSettingContext";
+import { type DurableBackend } from "../../constants";
 
-export interface IPreDebugValidateContext extends ISetConnectionSettingContext {
+export interface IPreDebugValidateContext extends ISetConnectionSettingContext, ExecuteActivityContext {
     workspaceFolder: WorkspaceFolder;
     projectPath: string;
 
@@ -15,7 +17,7 @@ export interface IPreDebugValidateContext extends ISetConnectionSettingContext {
     projectLanguageModel: number | undefined;
     validateFuncCoreTools: boolean;
 
+    abortDebug?: boolean;
+    durableStorageType?: DurableBackend;
     funcCoreToolsVersion?: string | null;
-
-    shouldAbortDebug?: boolean;
 }

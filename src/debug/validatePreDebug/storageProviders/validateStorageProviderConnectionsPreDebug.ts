@@ -12,10 +12,10 @@ import { validateSQLConnectionPreDebug } from "./validateSQLConnectionPreDebug";
 import { validateStorageConnectionPreDebug } from "./validateStorageConnectionPreDebug";
 
 export async function validateStorageProviderConnectionsPreDebug(context: IPreDebugValidateContext): Promise<void> {
-    const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(context.projectLanguage, context.projectPath);
-    context.telemetry.properties.durableStorageType = durableStorageType;
+    context.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(context.projectLanguage, context.projectPath);
+    context.telemetry.properties.durableStorageType = context.durableStorageType;
 
-    switch (durableStorageType) {
+    switch (context.durableStorageType) {
         case DurableBackend.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
             await validateDTSConnectionPreDebug(context, context.projectPath);

@@ -81,6 +81,12 @@ export enum MismatchBehavior {
     DontChange
 }
 
+export async function getLocalAppSetting(context: IActionContext, functionAppPath: string, key: string): Promise<string | undefined> {
+    const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
+    return settings.Values?.[key];
+}
+
 export async function setLocalAppSetting(context: IActionContext, functionAppPath: string, key: string, value: string, behavior: MismatchBehavior = MismatchBehavior.Prompt): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);

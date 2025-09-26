@@ -9,6 +9,7 @@ import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands
 import { type IDTSConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
 import { CodeAction, ConnectionType } from "../../../constants";
 import { localize } from "../../../localize";
+import { requestUtils } from "../../../utils/requestUtils";
 
 export async function validateDTSConnectionPreDebug(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });

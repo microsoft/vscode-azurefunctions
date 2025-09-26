@@ -13,11 +13,12 @@ import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
-import { FuncCoreToolsPromptAndInstallStep } from './funcCoreTools/FuncCoreToolsPromptAndInstallStep';
-import { FuncCoreToolsValidateStep } from './funcCoreTools/FuncCoreToolsValidateStep';
-import { FuncCoreToolsVersionConfirmStep } from './funcCoreTools/FuncCoreToolsVersionConfirmStep';
+import { FuncCoreToolsPromptAndInstallStep } from './FuncCoreToolsPromptAndInstallStep';
+import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
+import { FuncCoreToolsVersionConfirmStep } from './FuncCoreToolsVersionConfirmStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
-import { validateStorageProviderConnectionsPreDebug } from './storageProviderConnections/validateStorageProviderConnectionsPreDebug';
+import { validateStorageProviderConnectionsPreDebug } from './storageProviders/validateStorageProviderConnectionsPreDebug';
+import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/wizard/StorageProviderConnectionsValidateSteps';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 
 export interface IPreDebugValidateResult {
@@ -50,42 +51,41 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsPromptAndInstallStep(),
         new FuncCoreToolsVersionConfirmStep(),
-        // Prompt for emulators
+        // new LocalEmulatorsListStep(),
     ];
 
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsValidateStep(),
         new WorkerRuntimeSettingValidateStep(),
-        // Start emulators
+        new GetStorageProviderConnectionsValidateSteps(),
     ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDebugSessionTitle', 'Validate connections and prepare Azure Functions Core Tools for debug session'),
+        title: localize('prepareDebugSessionTitle', 'Prepare debug session for Azure Functions workspace project'),
         promptSteps,
         executeSteps,
     });
 
-    await wizard.prompt();
-    await wizard.execute();
+    let shouldContinue: boolean = true;
 
-    let shouldContinue: boolean;
     try {
-        wizardContext.telemetry.properties.lastValidateStep = 'emulatorRunning';
-        shouldContinue = await validateEmulatorIsRunning(wizardContext, wizardContext.projectPath);
+        await wizard.prompt();
+        await wizard.execute();
     } catch (error) {
         const pe = parseError(error);
+
         if (pe.isUserCancelledError) {
             shouldContinue = false;
         } else {
-            // Don't block debugging for "unexpected" errors. The func cli might still work
-            shouldContinue = true;
+            // Don't block debugging for "unexpected" errors, only block if the abort flag is explicitly set. The func cli might still work.
+            shouldContinue = !wizardContext.abortDebug;
             wizardContext.telemetry.properties.preDebugValidateError = maskUserInfo(pe.message, []);
         }
     }
 
     wizardContext.telemetry.properties.shouldContinue = String(shouldContinue);
 
-    return { workspace, shouldContinue };
+    return { workspace: wizardContext.workspaceFolder, shouldContinue };
 }
 
 function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {

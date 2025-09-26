@@ -6,10 +6,10 @@
 import { AzureWizardPromptStep, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import { type MessageItem } from 'vscode';
-import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { localize } from '../../../localize';
-import { isPythonV2Plus } from '../../../utils/programmingModelUtils';
-import { type IPreDebugValidateContext } from '../IPreDebugValidateContext';
+import { getLocalFuncCoreToolsVersion } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { localize } from '../../localize';
+import { isPythonV2Plus } from '../../utils/programmingModelUtils';
+import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
 export class FuncCoreToolsVersionConfirmStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
@@ -36,6 +36,6 @@ export class FuncCoreToolsVersionConfirmStep<T extends IPreDebugValidateContext>
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.validateFuncCoreTools;
+        return context.validateFuncCoreTools;
     }
 }
