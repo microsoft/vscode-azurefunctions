@@ -6,7 +6,7 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { type Progress } from 'vscode';
-import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
+import { ConnectionKey, hostFileName, ProjectLanguage, StorageProviderType } from '../../../constants';
 import { viewOutput } from '../../../constants-nls';
 import { ext } from '../../../extensionVariables';
 import { type IDTSTaskJson, type IHostJsonV2, type INetheriteTaskJson, type ISqlTaskJson, type IStorageTaskJson } from '../../../funcConfig/host';
@@ -68,15 +68,15 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         hostJson.extensions ??= {};
 
         switch (context.newDurableStorageType) {
-            case DurableBackend.Storage:
+            case StorageProviderType.Storage:
                 hostJson.extensions.durableTask = this.getDefaultStorageTaskConfig();
                 // Omit setting azureWebJobsStorage since it should already be initialized during 'createNewProject'
                 break;
-            case DurableBackend.Netherite:
+            case StorageProviderType.Netherite:
                 hostJson.extensions.durableTask = this.getDefaultNetheriteTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, '', MismatchBehavior.Overwrite);
                 break;
-            case DurableBackend.DTS:
+            case StorageProviderType.DTS:
                 hostJson.extensions.durableTask = this.getDefaultDTSTaskConfig();
                 // Non- .NET projects require a special preview extension bundle to work properly
                 // Todo: Remove once this functionality is out of preview
@@ -90,7 +90,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
                 await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), '', MismatchBehavior.Overwrite);
                 break;
-            case DurableBackend.SQL:
+            case StorageProviderType.SQL:
                 hostJson.extensions.durableTask = this.getDefaultSqlTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.SQL, '', MismatchBehavior.Overwrite);
                 break;
@@ -103,7 +103,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
     private getDefaultStorageTaskConfig(): IStorageTaskJson {
         return {
             storageProvider: {
-                type: DurableBackend.Storage,
+                type: StorageProviderType.Storage,
             }
         };
     }
@@ -113,7 +113,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
             hubName: '',
             useGracefulShutdown: true,
             storageProvider: {
-                type: DurableBackend.Netherite,
+                type: StorageProviderType.Netherite,
                 StorageConnectionName: ConnectionKey.Storage,
                 EventHubsConnectionName: ConnectionKey.EventHubs,
             }
@@ -124,7 +124,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         return {
             hubName: '%TASKHUB_NAME%',
             storageProvider: {
-                type: DurableBackend.DTS,
+                type: StorageProviderType.DTS,
                 connectionStringName: ConnectionKey.DTS,
             }
         };
@@ -133,7 +133,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
     private getDefaultSqlTaskConfig(): ISqlTaskJson {
         return {
             storageProvider: {
-                type: DurableBackend.SQL,
+                type: StorageProviderType.SQL,
                 connectionStringName: ConnectionKey.SQL,
                 taskEventLockTimeout: "00:02:00",
                 createDatabaseIfNotExists: true,
@@ -174,23 +174,23 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
-            case DurableBackend.Netherite:
+            case StorageProviderType.Netherite:
                 isDotnetIsolated ?
                     packages.push({ name: durableUtils.dotnetIsolatedDfNetheritePackage }) :
                     packages.push({ name: durableUtils.dotnetInProcDfNetheritePackage });
                 break;
-            case DurableBackend.DTS:
+            case StorageProviderType.DTS:
                 // Todo: Remove prerelease flag once this functionality is out of preview
                 isDotnetIsolated ?
                     packages.push({ name: durableUtils.dotnetIsolatedDTSPackage, prerelease: true }) :
                     packages.push({ name: durableUtils.dotnetInProcDTSPackage, prerelease: true });
                 break;
-            case DurableBackend.SQL:
+            case StorageProviderType.SQL:
                 isDotnetIsolated ?
                     packages.push({ name: durableUtils.dotnetIsolatedDfSqlPackage }) :
                     packages.push({ name: durableUtils.dotnetInProcDfSqlPackage });
                 break;
-            case DurableBackend.Storage:
+            case StorageProviderType.Storage:
             default:
         }
 

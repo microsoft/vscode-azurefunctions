@@ -5,10 +5,10 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { getStorageLocalSettingsValue } from "../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, warningIcon } from "../../../../constants";
-import { localize } from "../../../../localize";
-import { type IPreDebugValidateContext } from "../../IPreDebugValidateContext";
+import { getStorageLocalSettingsValue } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, warningIcon } from "../../../../../constants";
+import { localize } from "../../../../../localize";
+import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 
 export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:

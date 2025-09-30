@@ -5,37 +5,37 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { DurableBackend, warningIcon } from "../../../../constants";
-import { localize } from "../../../../localize";
-import { type IPreDebugValidateContext } from "../../IPreDebugValidateContext";
+import { StorageProviderType, warningIcon } from "../../../../../constants";
+import { localize } from "../../../../../localize";
+import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 
-export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
+export class EventHubConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:
     public priority: number = 351;
-    public stepName: string = 'dtsHubConnectionValidateStep';
+    public stepName: string = 'eventHubConnectionValidateStep';
 
-    protected getOutputLogSuccess = () => localize('validateDTSHubSuccess', 'Successfully found a DTS Hub connection.');
-    protected getOutputLogFail = () => localize('validateDTSHubFail', 'Failed to find a DTS Hub connection.');
-    protected getTreeItemLabel = () => this._dtsHubConnectionValue ?
-        localize('validateDTSLabelWithValue', 'Validate: DTS Hub "{0}"', this._dtsHubConnectionValue) :
-        localize('validateDTSLabel', 'Validate: DTS Hub');
+    protected getOutputLogSuccess = () => localize('validateEHNHubSuccess', 'Successfully found Event Hub "{0}".', this._eventHubConnectionValue);
+    protected getOutputLogFail = () => localize('validateEHNHubFail', 'Failed to find a valid Event Hub.');
+    protected getTreeItemLabel = () => this._eventHubConnectionValue ?
+        localize('validateEHNLabelWithValue', 'Validate: Event Hub "{0}"', this._eventHubConnectionValue) :
+        localize('validateEHNLabel', 'Validate: Event Hub');
 
-    constructor(readonly _dtsHubConnectionKey: string | undefined, readonly _dtsHubConnectionValue: string | undefined) {
+    constructor(readonly _eventHubConnectionKey: string | undefined, readonly _eventHubConnectionValue: string | undefined) {
         super();
     }
 
     public async execute(_: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         this.options.continueOnFail = true;
 
-        progress.report({ message: localize('checkingDTSConnection', 'Checking for DTS hub connection...') });
+        progress.report({ message: localize('checkingEventHubConnection', 'Checking for event hub connection...') });
 
-        if (!this._dtsHubConnectionValue) {
+        if (!this._eventHubConnectionValue) {
             throw new Error();
         }
     }
 
     public shouldExecute(context: T): boolean {
-        return context.durableStorageType === DurableBackend.DTS;
+        return context.durableStorageType === StorageProviderType.Netherite;
     }
 
     public createFailOutput(): ExecuteActivityOutput {

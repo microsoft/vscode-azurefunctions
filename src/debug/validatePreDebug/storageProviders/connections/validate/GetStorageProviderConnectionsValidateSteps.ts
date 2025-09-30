@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { DurableBackend } from '../../../../constants';
-import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
+import { StorageProviderType } from '../../../../../constants';
+import { type IPreDebugValidateContext } from '../../../IPreDebugValidateContext';
 import { DTSConnectionValidateStep } from './DTSConnectionValidateStep';
 import { EventHubsNamespaceConnectionValidateStep } from './EventHubsNamespaceConnectionValidateStep';
 import { SQLConnectionValidateStep } from './SQLConnectionValidateStep';
@@ -26,16 +26,16 @@ export class GetStorageProviderConnectionsValidateSteps<T extends IPreDebugValid
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         switch (context.durableStorageType) {
-            case DurableBackend.DTS:
+            case StorageProviderType.DTS:
                 executeSteps.push(new DTSConnectionValidateStep());
                 break;
-            case DurableBackend.Netherite:
+            case StorageProviderType.Netherite:
                 executeSteps.push(new EventHubsNamespaceConnectionValidateStep());
                 break;
-            case DurableBackend.SQL:
+            case StorageProviderType.SQL:
                 executeSteps.push(new SQLConnectionValidateStep());
                 break;
-            case DurableBackend.Storage:
+            case StorageProviderType.Storage:
             default:
         }
 

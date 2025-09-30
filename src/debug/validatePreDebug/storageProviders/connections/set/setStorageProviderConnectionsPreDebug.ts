@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DurableBackend } from "../../../constants";
-import { durableUtils } from "../../../utils/durableUtils";
-import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
+import { StorageProviderType } from "../../../../../constants";
+import { durableUtils } from "../../../../../utils/durableUtils";
+import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 import { setDTSConnectionPreDebugIfNeeded } from "./setDTSConnectionPreDebug";
 import { setNetheriteConnectionPreDebugIfNeeded } from "./setNetheriteConnectionPreDebug";
 import { setSQLConnectionPreDebugIfNeeded } from "./setSQLConnectionPreDebug";
@@ -16,19 +16,19 @@ export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPr
     context.telemetry.properties.durableStorageType = context.durableStorageType;
 
     switch (context.durableStorageType) {
-        case DurableBackend.DTS:
+        case StorageProviderType.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
             await setDTSConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case DurableBackend.Netherite:
+        case StorageProviderType.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
             await setNetheriteConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case DurableBackend.SQL:
+        case StorageProviderType.SQL:
             context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
             await setSQLConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case DurableBackend.Storage:
+        case StorageProviderType.Storage:
         default:
     }
 

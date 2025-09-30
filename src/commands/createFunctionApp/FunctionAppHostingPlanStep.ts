@@ -8,7 +8,7 @@ import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipel
 import { setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { DurableBackend } from '../../constants';
+import { StorageProviderType } from '../../constants';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
@@ -39,7 +39,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     }
 
     public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
-        if (context.durableStorageType === DurableBackend.DTS) {
+        if (context.durableStorageType === StorageProviderType.DTS) {
             // premium is required for DTS
             if (context.advancedCreation) {
                 // allows users to select/create a Elastic Premium plan

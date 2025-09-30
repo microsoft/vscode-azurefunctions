@@ -126,7 +126,7 @@ export enum ConnectionType {
     Custom = 'Custom',
 }
 
-export enum DurableBackend {
+export enum StorageProviderType {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
     DTS = 'azureManaged',

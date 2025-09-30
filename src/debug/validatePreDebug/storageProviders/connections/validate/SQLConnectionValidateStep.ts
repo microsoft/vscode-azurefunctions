@@ -5,10 +5,10 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
-import { ConnectionType, DurableBackend, warningIcon } from "../../../../constants";
-import { localize } from "../../../../localize";
-import { type IPreDebugValidateContext } from "../../IPreDebugValidateContext";
+import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../../../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
+import { ConnectionType, StorageProviderType, warningIcon } from "../../../../../constants";
+import { localize } from "../../../../../localize";
+import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 
 export class SQLConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:
@@ -43,7 +43,7 @@ export class SQLConnectionValidateStep<T extends IPreDebugValidateContext> exten
     }
 
     public shouldExecute(context: T): boolean {
-        return context.durableStorageType === DurableBackend.DTS;
+        return context.durableStorageType === StorageProviderType.DTS;
     }
 
     private classifyConnectionType(sqlConnection: string): ConnectionType {
