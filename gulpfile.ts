@@ -7,7 +7,6 @@ import * as msRest from '@azure/ms-rest-js';
 import { gulp_webpack } from '@microsoft/vscode-azext-dev';
 import { exec } from 'child_process';
 import * as extract from 'extract-zip';
-import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as https from 'https';
@@ -90,7 +89,7 @@ function download(url: string, targetPath: string): Promise<void> {
             }
             response.on('error', (error) => reject(new Error('Response error: ' + error.message)));
 
-            const pipeline = response.pipe(fs.createWriteStream(targetPath));
+            const pipeline = response.pipe(fse.createWriteStream(targetPath));
             pipeline.on('error', (error) => reject(new Error('Write error: ' + error.message)));
             pipeline.on('finish', resolve);
         });
