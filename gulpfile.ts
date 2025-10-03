@@ -58,21 +58,21 @@ async function cleanReadme() {
     await fse.writeFile(readmePath, data);
 }
 
-const funcDir = path.join(os.homedir(), 'tools', 'func');
-const funcZip = 'funccli.zip';
-const funcExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
+const FuncDir = path.join(os.homedir(), 'tools', 'func');
+const FuncZip = 'funccli.zip';
+const FuncExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
 
 async function downloadFuncCli() {
-    if (fse.pathExistsSync(funcDir)) {
+    if (fse.pathExistsSync(FuncDir)) {
         console.log('Removing old install of func.');
-        fse.removeSync(funcDir);
+        fse.removeSync(FuncDir);
     }
 
-    const fullFuncZipPath = path.join(funcDir, funcZip);
+    const fullFuncZipPath = path.join(FuncDir, FuncZip);
     await fse.ensureFile(fullFuncZipPath);
 
     try {
-        await doFuncDownload(downloadLink, fullFuncZipPath);
+        await download(downloadLink, fullFuncZipPath);
         console.log('Successfully downloaded the func CLI zip at ' + fullFuncZipPath);
     } catch (e) {
         console.log('Failed to download the func CLI zip at ' + fullFuncZipPath);
@@ -81,7 +81,7 @@ async function downloadFuncCli() {
     }
 }
 
-function doFuncDownload(url: string, targetPath: string): Promise<void> {
+function download(url: string, targetPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = https.get(url, (response) => {
             if (response.statusCode !== 200) {
@@ -100,16 +100,16 @@ function doFuncDownload(url: string, targetPath: string): Promise<void> {
 }
 
 async function extractFuncCli() {
-    const fullFuncZipPath: string = path.join(funcDir, funcZip);
+    const fullFuncZipPath: string = path.join(FuncDir, FuncZip);
 
     try {
         // Extract
-        await extract(fullFuncZipPath, { dir: funcDir });
+        await extract(fullFuncZipPath, { dir: FuncDir });
         console.log('Successfully extracted func CLI.');
 
         // chmod +x
         console.log('Verifying func executable...');
-        await fse.chmod(path.join(funcDir, funcExecutable), 755);
+        await fse.chmod(path.join(FuncDir, FuncExecutable), 755);
         console.log('Successfully verified func executable.');
     } catch (e) {
         console.log('Failed to install func CLI.')
@@ -121,7 +121,7 @@ async function extractFuncCli() {
 }
 
 async function printFuncVersion() {
-    const funcExecutablePath = path.join(funcDir, funcExecutable);
+    const funcExecutablePath = path.join(FuncDir, FuncExecutable);
 
     await new Promise<void>((resolve, reject) => {
         exec(`"${funcExecutablePath}" --version`, (error, stdout, stderr) => {
