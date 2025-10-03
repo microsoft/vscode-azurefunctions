@@ -99,13 +99,13 @@ function getFuncDownload(url: string, targetPath: string): Promise<void> {
     });
 }
 
-async function installFuncCli() {
+async function extractFuncCli() {
     const fullFuncZipPath: string = path.join(funcDir, funcZip);
 
     try {
-        // Install
+        // Extract
         await extract(fullFuncZipPath, { dir: funcDir });
-        console.log('Successfully installed func CLI.');
+        console.log('Successfully extracted func CLI.');
 
         // chmod +x
         console.log('Verifying func executable...');
@@ -139,5 +139,5 @@ async function printFuncVersion() {
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp.series(getFuncLink, downloadFuncCli, installFuncCli, printFuncVersion);
+exports.preTest = gulp.series(getFuncLink, downloadFuncCli, extractFuncCli, printFuncVersion);
 exports.cleanReadme = cleanReadme;
