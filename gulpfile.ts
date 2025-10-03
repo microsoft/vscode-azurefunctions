@@ -5,16 +5,14 @@
 
 import * as msRest from '@azure/ms-rest-js';
 import { gulp_webpack } from '@microsoft/vscode-azext-dev';
+import { exec } from 'child_process';
+import * as extract from 'extract-zip';
+import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
-import * as chmod from 'gulp-chmod';
-import * as decompress from 'gulp-decompress';
-import * as filter from 'gulp-filter';
 import * as https from 'https';
 import * as os from 'os';
 import * as path from 'path';
-import * as buffer from 'vinyl-buffer';
-import * as source from 'vinyl-source-stream';
 
 async function prepareForWebpack(): Promise<void> {
     const mainJsPath: string = path.join(__dirname, 'main.js');
@@ -60,44 +58,40 @@ async function cleanReadme() {
     await fse.writeFile(readmePath, data);
 }
 
-async function installFuncCli() {
-    const funcDir = path.join(os.homedir(), 'tools', 'func');
+const funcDir = path.join(os.homedir(), 'tools', 'func');
+const funcZip = 'funccli.zip';
+const funcExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
+
+async function downloadFuncCli() {
     if (fse.pathExistsSync(funcDir)) {
         console.log('Removing old install of func.');
         fse.removeSync(funcDir);
     }
 
+    const fullFuncZipPath = path.join(funcDir, funcZip);
+    await fse.ensureFile(fullFuncZipPath);
+
     try {
-        await httpsGetAndInstallFuncCli(downloadLink, funcDir);
-        console.log('Successfully installed the func CLI at ' + funcDir);
+        await getFuncDownload(downloadLink, fullFuncZipPath);
+        console.log('Successfully downloaded the func CLI zip at ' + fullFuncZipPath);
     } catch (e) {
-        console.log('Failed to install the func CLI at ' + funcDir);
+        console.log('Failed to download the func CLI zip at ' + fullFuncZipPath);
         console.error(e);
+        throw e;
     }
 }
 
-function httpsGetAndInstallFuncCli(url: string, funcDir: string): Promise<void> {
-    const funcFilter = filter('func', { restore: true });
-
+function getFuncDownload(url: string, targetPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = https.get(url, (response) => {
-            if (response.statusCode && (response.statusCode < 200 || response.statusCode >= 300)) {
+            if (response.statusCode !== 200) {
                 reject(new Error('Request for func CLI responded with status code: ' + response.statusCode));
                 return;
             }
-
-            const pipeline: NodeJS.ReadWriteStream = response
-                .pipe(source('funccli.zip'))
-                .pipe(buffer())
-                .pipe(decompress())
-                .pipe(funcFilter)
-                .pipe(chmod({ execute: true }))
-                .pipe(funcFilter.restore)
-                .pipe(gulp.dest(funcDir));
-
             response.on('error', (error) => reject(new Error('Response error: ' + error.message)));
-            pipeline.on('error', (error) => reject(new Error('Pipeline processing error: ' + error.message)));
-            pipeline.on('end', resolve);
+
+            const pipeline = response.pipe(fs.createWriteStream(targetPath));
+            pipeline.on('error', (error) => reject(new Error('Write error: ' + error.message)));
             pipeline.on('finish', resolve);
         });
 
@@ -105,7 +99,45 @@ function httpsGetAndInstallFuncCli(url: string, funcDir: string): Promise<void> 
     });
 }
 
+async function installFuncCli() {
+    const fullFuncZipPath: string = path.join(funcDir, funcZip);
+
+    try {
+        // Install
+        await extract(fullFuncZipPath, { dir: funcDir });
+        console.log('Successfully installed func CLI.');
+
+        // chmod +x
+        console.log('Verifying func executable...');
+        await fse.chmod(path.join(funcDir, funcExecutable), 755);
+        console.log('Successfully verified func executable.');
+    } catch (e) {
+        console.log('Failed to install func CLI.')
+        console.error(e);
+        throw e;
+    } finally {
+        await fse.remove(fullFuncZipPath);
+    }
+}
+
+async function printFuncVersion() {
+    const funcExecutablePath = path.join(funcDir, funcExecutable);
+
+    await new Promise<void>((resolve, reject) => {
+        exec(`"${funcExecutablePath}" --version`, (error, stdout, stderr) => {
+            if (stderr || error) {
+                const failed = new Error(`Failed to verify: ${stderr || error}`);
+                console.error(failed);
+                reject(failed);
+            } else {
+                console.log(`Verified func CLI version:\n${stdout}`);
+                resolve();
+            }
+        });
+    });
+}
+
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp.series(getFuncLink, installFuncCli);
+exports.preTest = gulp.series(getFuncLink, downloadFuncCli, installFuncCli, printFuncVersion);
 exports.cleanReadme = cleanReadme;
