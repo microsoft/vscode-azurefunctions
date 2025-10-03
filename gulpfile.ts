@@ -58,17 +58,17 @@ async function cleanReadme() {
     await fse.writeFile(readmePath, data);
 }
 
-const FuncDir = path.join(os.homedir(), 'tools', 'func');
-const FuncZip = 'funccli.zip';
-const FuncExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
+const FUNC_DIR = path.join(os.homedir(), 'tools', 'func');
+const FUNC_ZIP = 'funccli.zip';
+const FUNC_EXECUTABLE = process.platform === 'win32' ? 'func.exe' : 'func';
 
 async function downloadFuncCli() {
-    if (fse.pathExistsSync(FuncDir)) {
+    if (fse.pathExistsSync(FUNC_DIR)) {
         console.log('Removing old install of func.');
-        fse.removeSync(FuncDir);
+        fse.removeSync(FUNC_DIR);
     }
 
-    const fullFuncZipPath = path.join(FuncDir, FuncZip);
+    const fullFuncZipPath = path.join(FUNC_DIR, FUNC_ZIP);
     await fse.ensureFile(fullFuncZipPath);
 
     try {
@@ -100,16 +100,16 @@ function download(url: string, targetPath: string): Promise<void> {
 }
 
 async function extractFuncCli() {
-    const fullFuncZipPath: string = path.join(FuncDir, FuncZip);
+    const fullFuncZipPath: string = path.join(FUNC_DIR, FUNC_ZIP);
 
     try {
         // Extract
-        await extract(fullFuncZipPath, { dir: FuncDir });
+        await extract(fullFuncZipPath, { dir: FUNC_DIR });
         console.log('Successfully extracted func CLI.');
 
         // chmod +x
         console.log('Verifying func executable...');
-        await fse.chmod(path.join(FuncDir, FuncExecutable), 755);
+        await fse.chmod(path.join(FUNC_DIR, FUNC_EXECUTABLE), 755);
         console.log('Successfully verified func executable.');
     } catch (e) {
         console.log('Failed to install func CLI.')
@@ -121,7 +121,7 @@ async function extractFuncCli() {
 }
 
 async function printFuncVersion() {
-    const funcExecutablePath = path.join(FuncDir, FuncExecutable);
+    const funcExecutablePath = path.join(FUNC_DIR, FUNC_EXECUTABLE);
 
     await new Promise<void>((resolve, reject) => {
         exec(`"${funcExecutablePath}" --version`, (error, stdout, stderr) => {
