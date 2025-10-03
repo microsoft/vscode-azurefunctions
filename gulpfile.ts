@@ -72,7 +72,7 @@ async function downloadFuncCli() {
     await fse.ensureFile(fullFuncZipPath);
 
     try {
-        await getFuncDownload(downloadLink, fullFuncZipPath);
+        await doFuncDownload(downloadLink, fullFuncZipPath);
         console.log('Successfully downloaded the func CLI zip at ' + fullFuncZipPath);
     } catch (e) {
         console.log('Failed to download the func CLI zip at ' + fullFuncZipPath);
@@ -81,7 +81,7 @@ async function downloadFuncCli() {
     }
 }
 
-function getFuncDownload(url: string, targetPath: string): Promise<void> {
+function doFuncDownload(url: string, targetPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = https.get(url, (response) => {
             if (response.statusCode !== 200) {
