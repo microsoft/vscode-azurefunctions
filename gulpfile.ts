@@ -107,9 +107,9 @@ async function extractFuncCli() {
         console.log('Successfully extracted func CLI.');
 
         // chmod +x
-        console.log('Verifying func executable...');
+        console.log('Setting executable permissions...');
         await fse.chmod(path.join(FUNC_DIR, FUNC_EXECUTABLE), 755);
-        console.log('Successfully verified func executable.');
+        console.log('Successfully set executable permissions.');
     } catch (e) {
         console.log('Failed to install func CLI.')
         console.error(e);
