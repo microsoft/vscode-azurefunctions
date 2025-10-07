@@ -124,8 +124,12 @@ export class FuncTaskProvider implements TaskProvider {
         const [azureWebJobsStorage, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, folder.uri.fsPath);
         if (azureWebJobsStorage && isEmulator) {
             options.env = {
+                ...options.env,
+                // The purpose of setting this manually is so that we can honor any custom Azurite connection settings that the user may have already set up
+                // See: https://github.com/microsoft/vscode-azurefunctions/pull/4703
+                // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/4735
                 "AzureWebJobsStorage": azureWebJobsStorage
-            }
+            };
         }
 
         definition = definition || { type: func, command };
