@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.19.2 - 2025-10-08
+
+### Fix
+* [[4734](https://github.com/microsoft/vscode-azurefunctions/pull/4734)] Fix an issue where required debug environment settings were being overwritten
+
 ## 1.19.1 - 2025-09-25
 
 ### Added
