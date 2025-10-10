@@ -93,8 +93,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await node.initSite(context);
     const site = node.site;
 
-    // Check if the function app is stopped and block deployment with a clear error message
-    if (site.rawSite.state?.toLowerCase() === 'stopped') {
+    // Check if the function app is stopped and block deployment with a clear error message if it is not a containerized function app
+    if (!node.contextValue.includes('container') && (site.rawSite.state?.toLowerCase() === 'stopped')) {
         throw new Error(localize('functionAppStoppedError', 'Cannot deploy to function app "{0}" because it is currently stopped. Please start the function app before deploying.', site.fullName));
     }
 
