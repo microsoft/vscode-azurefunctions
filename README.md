@@ -6,7 +6,7 @@
 
 <!-- endregion exclude-from-marketplace -->
 
-Use the Azure Functions extension to quickly create, debug, manage, and deploy serverless apps directly from VS Code. Check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
+Use the Azure Functions extension to quickly create, debug, manage, and deploy serverless apps directly from VS Code.
 
 **Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for more information about Azure Functions and how to use the advanced features of this extension.**
 
