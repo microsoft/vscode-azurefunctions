@@ -112,7 +112,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     });
 
     const credentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
-    return exportAzureFunctionsApiProvider(credentialManager, { dts: nonNullValue(dts, localize('failedToInitDTS', 'Failed to initialize DTS service provider.')) });
+    return exportAzureFunctionsApiProvider(credentialManager, { dts: nonNullValue(dts, localize('noDTS', 'Failed to initialize DTS service.')) });
 }
 
 export async function deactivateInternal(): Promise<void> {

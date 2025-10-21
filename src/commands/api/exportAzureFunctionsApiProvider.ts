@@ -3,10 +3,10 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type AzureAccountTreeItemBase } from "@microsoft/vscode-azext-azureutils";
+import { type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, type apiUtils, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
-import { AzExtResourceType, prepareAzureResourcesHandshake, type AzExtCredentialManager, type AzureExtensionApi, type AzureResourcesExtensionApi, type AzureResourcesHandshakeContext } from "@microsoft/vscode-azureresources-api";
+import { AzExtResourceType, prepareAzureResourcesApiRequest, type AzExtCredentialManager, type AzureExtensionApi, type AzureResourcesApiRequestContext, type AzureResourcesExtensionApi, type AzureResourcesHandshakeError } from "@microsoft/vscode-azureresources-api";
 import { ext } from "../../extensionVariables";
 import { validateFuncCoreToolsInstalled } from "../../funcCoreTools/validateFuncCoreToolsInstalled";
 import { FunctionAppResolver } from "../../FunctionAppResolver";
@@ -31,36 +31,37 @@ export function exportAzureFunctionsApiProvider(
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
             emulatorClient: DurableTaskSchedulerEmulatorClient,
-            schedulerClient: DurableTaskSchedulerClient
-        }
+            schedulerClient: DurableTaskSchedulerClient,
+        },
     },
 ): apiUtils.AzureExtensionApiProvider {
 
-    const context: AzureResourcesHandshakeContext = {
+    const context: AzureResourcesApiRequestContext = {
         azureResourcesApiVersions: ['0.0.1', '2.0.0'],
         clientExtensionId: ext.context.extension.id,
         clientCredentialManager: credentialManager,
-        onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi)[]) => {
-            for (const api of azureResourcesApis) {
-                if (api.apiVersion === '0.0.1') {
-                    ext.rgApi = api as AzureHostExtensionApi;
-                    ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
-                    ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsLocalResourceProvider());
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore
-                    ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
-                }
-
-                if (api.apiVersion === '2.0.0') {
-                    const azureResourcesApi = api as AzureResourcesExtensionApi;
-                    ext.rgApiV2 = azureResourcesApi;
-                    azureResourcesApi.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, services.dts.dataBranchProvider);
-                    azureResourcesApi.resources.registerWorkspaceResourceProvider(new DurableTaskSchedulerWorkspaceResourceProvider());
-                    azureResourcesApi.resources.registerWorkspaceResourceBranchDataProvider(
-                        'DurableTaskSchedulerEmulator',
-                        new DurableTaskSchedulerWorkspaceDataBranchProvider(services.dts.emulatorClient));
-                }
+        onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[]) => {
+            const [rgApi, rgApiV2] = azureResourcesApis;
+            if (!rgApi || !rgApiV2) {
+                throw new Error();
             }
+
+            ext.rgApi = rgApi as AzureHostExtensionApi;
+            ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
+            ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsLocalResourceProvider());
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
+
+            ext.rgApiV2 = rgApiV2 as AzureResourcesExtensionApi;
+            ext.rgApiV2.resources.registerAzureResourceBranchDataProvider('DurableTaskScheduler' as AzExtResourceType, services.dts.dataBranchProvider);
+            ext.rgApiV2.resources.registerWorkspaceResourceProvider(new DurableTaskSchedulerWorkspaceResourceProvider());
+            ext.rgApiV2.resources.registerWorkspaceResourceBranchDataProvider(
+                'DurableTaskSchedulerEmulator',
+                new DurableTaskSchedulerWorkspaceDataBranchProvider(services.dts.emulatorClient));
+        },
+        onHandshakeError: (error: AzureResourcesHandshakeError) => {
+            console.log(error);
         },
     };
 
@@ -80,7 +81,7 @@ export function exportAzureFunctionsApiProvider(
         startFuncProcess: startFuncProcessFromApi,
     };
 
-    const { api, initiateHandshake } = prepareAzureResourcesHandshake(context, functionAppsApi);
-    void initiateHandshake();
-    return createApiProvider([api]);
+    const { clientApi, requestResourcesApis } = prepareAzureResourcesApiRequest(context, functionAppsApi);
+    requestResourcesApis();
+    return createApiProvider([clientApi]);
 }
