@@ -1,8 +1,12 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 export type AsyncStreamHandler = {
     stream: AsyncIterable<string>;
     write: (chunk: string) => void;
     end: () => void;
-    done: boolean;
 };
 
 export function createAsyncStringStream(): AsyncStreamHandler {
@@ -53,5 +57,5 @@ export function createAsyncStringStream(): AsyncStreamHandler {
         }
     }
 
-    return { stream, write, end, done };
+    return { stream, write, end };
 }
