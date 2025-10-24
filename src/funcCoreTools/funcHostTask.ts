@@ -19,6 +19,7 @@ export interface IRunningFuncTask {
     processId: number;
     portNumber: string;
     streamHandler: AsyncStreamHandler;
+    outputReader: vscode.Disposable;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -95,7 +96,19 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
             const streamHandler = createAsyncStringStream();
-            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber, streamHandler };
+            const terminalName = e.execution.task.name;
+            const outputReader = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
+                const terminal = vscode.window.terminals.find(t => terminalName === t.name);
+                if (event.terminal === terminal) {
+                    runningFuncTask.streamHandler.write(event.data);
+                }
+
+                if (runningFuncTask.streamHandler.done) {
+                    outputReader.dispose();
+                }
+            });
+
+            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber, streamHandler, outputReader };
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
@@ -154,6 +167,12 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
                 // Try to find the real func process by port first, fall back to shell PID
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
                 runningFuncTaskItem.streamHandler.end();
+                runningFuncTaskItem.outputReader.dispose();
+            }
+
+            for await (const chunk of runningFuncTaskItem.streamHandler.stream) {
+                // Process each chunk of the stream
+                console.log(chunk);
             }
         }
 

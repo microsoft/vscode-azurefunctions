@@ -150,7 +150,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const debugModeOn = funcTask.name.includes('--dotnet-isolated-debug') && funcTask.name.includes('--enable-json-output');
         let eventDisposable: vscode.Disposable | undefined;
         let parentPid: number | undefined;
-        let asyncStreamIsSet: boolean = false;
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -159,21 +158,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
-                // set up the stream on first try to capture terminal output
-                if (!asyncStreamIsSet) {
-                    const outputReader = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
-                        const terminal = vscode.window.terminals.find(t => funcTask.name === t.name);
-                        if (event.terminal === terminal) {
-                            taskInfo.streamHandler.write(event.data);
-                        }
-
-                        if (taskInfo.streamHandler.done) {
-                            outputReader.dispose();
-                        }
-                    });
-                    asyncStreamIsSet = true;
-                }
-
                 if (debugModeOn) {
                     // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
                     if (!eventDisposable) {
