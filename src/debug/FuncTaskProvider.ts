@@ -105,7 +105,7 @@ export class FuncTaskProvider implements TaskProvider {
     private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
         const funcCliPath = await getFuncCliPath(context, folder);
         const args = (definition?.args || []) as string[];
-        if (args) {
+        if (args.length > 0) {
             command = `${command} ${args.join(' ')}`;
         }
 
