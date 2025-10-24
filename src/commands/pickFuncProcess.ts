@@ -161,10 +161,14 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             if (taskInfo) {
                 // set up the stream on first try to capture terminal output
                 if (!asyncStreamIsSet) {
-                    vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
+                    const outputReader = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
                         const terminal = vscode.window.terminals.find(t => funcTask.name === t.name);
                         if (event.terminal === terminal) {
                             taskInfo.streamHandler.write(event.data);
+                        }
+
+                        if (taskInfo.streamHandler.done) {
+                            outputReader.dispose();
                         }
                     });
                     asyncStreamIsSet = true;

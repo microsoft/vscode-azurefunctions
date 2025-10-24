@@ -2,6 +2,7 @@ export type AsyncStreamHandler = {
     stream: AsyncIterable<string>;
     write: (chunk: string) => void;
     end: () => void;
+    done: boolean;
 };
 
 export function createAsyncStringStream(): AsyncStreamHandler {
@@ -52,5 +53,5 @@ export function createAsyncStringStream(): AsyncStreamHandler {
         }
     }
 
-    return { stream, write, end };
+    return { stream, write, end, done };
 }
