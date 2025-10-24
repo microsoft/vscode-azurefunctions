@@ -25,11 +25,17 @@ export async function startFuncProcessFromApi(
     buildPath: string,
     args: string[],
     env: { [key: string]: string }
-): Promise<{ processId: string; success: boolean; error: string }> {
-    const result = {
+): Promise<{ processId: string; success: boolean; error: string, stream: AsyncIterable<string> | undefined }> {
+    const result: {
+        processId: string;
+        success: boolean;
+        error: string;
+        stream: AsyncIterable<string> | undefined;
+    } = {
         processId: '',
         success: false,
-        error: ''
+        error: '',
+        stream: undefined
     };
 
     let funcHostStartCmd: string = 'func host start';
@@ -66,6 +72,7 @@ export async function startFuncProcessFromApi(
             const taskInfo = await startFuncTask(context, workspaceFolder, buildPath, funcTask);
             result.processId = await pickChildProcess(taskInfo);
             result.success = true;
+            result.stream = taskInfo.streamHandler.stream;
         } catch (err) {
             const pError = parseError(err);
             result.error = pError.message;
@@ -140,6 +147,11 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+        const debugModeOn = funcTask.name.includes('--dotnet-isolated-debug') && funcTask.name.includes('--enable-json-output');
+        let eventDisposable: vscode.Disposable | undefined;
+        let parentPid: number | undefined;
+        let asyncStreamIsSet: boolean = false;
+
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
                 throw taskError;
@@ -147,27 +159,54 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
-                for (const scheme of ['http', 'https']) {
-                    const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
-                    if (scheme === 'https') {
-                        statusRequest.rejectUnauthorized = false;
+                // set up the stream on first try to capture terminal output
+                if (!asyncStreamIsSet) {
+                    vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
+                        const terminal = vscode.window.terminals.find(t => funcTask.name === t.name);
+                        if (event.terminal === terminal) {
+                            taskInfo.streamHandler.write(event.data);
+                        }
+                    });
+                    asyncStreamIsSet = true;
+                }
+
+                if (debugModeOn) {
+                    // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
+                    if (!eventDisposable) {
+                        // preserve the old pid to detect changes
+                        parentPid = taskInfo.processId;
+                        eventDisposable = await setEventPidByJsonOutput(taskInfo, funcTask.name);
                     }
 
-                    try {
-                        // wait for status url to indicate functions host is running
-                        const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                        if (response.parsedBody.state.toLowerCase() === 'running') {
-                            funcTaskReadyEmitter.fire(workspaceFolder);
-                            return taskInfo;
+                    // if we are starting a dotnet isolated func host with json output enabled, we can find the pid directly from the output
+                    if (taskInfo.processId !== parentPid) {
+                        // we have to wait for the process id to be set from the terminal output
+                        return taskInfo;
+                    }
+                } else {
+                    // otherwise, we have to wait for the status url to indicate the host is running
+                    for (const scheme of ['http', 'https']) {
+                        const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
+                        if (scheme === 'https') {
+                            statusRequest.rejectUnauthorized = false;
                         }
-                    } catch (error) {
-                        if (requestUtils.isTimeoutError(error)) {
-                            // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
-                            statusRequestTimeout *= 2;
-                            context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
-                        } else {
-                            // ignore
+
+                        try {
+                            // wait for status url to indicate functions host is running
+                            const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                            if (response.parsedBody.state.toLowerCase() === 'running') {
+                                funcTaskReadyEmitter.fire(workspaceFolder);
+                                return taskInfo;
+                            }
+                        } catch (error) {
+                            if (requestUtils.isTimeoutError(error)) {
+                                // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                                statusRequestTimeout *= 2;
+                                context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                            } else {
+                                // ignore
+                            }
                         }
                     }
                 }
@@ -180,6 +219,23 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     } finally {
         errorListener.dispose();
     }
+}
+
+async function setEventPidByJsonOutput(taskInfo: IRunningFuncTask, taskName: string): Promise<vscode.Disposable> {
+    const setPidByJsonOutputListener = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
+        const terminal = vscode.window.terminals.find(t => taskName === t.name);
+        if (event.terminal === terminal) {
+            if (event.data.includes(`{ "name":"dotnet-worker-startup", "workerProcessId" :`)) {
+                const matches = event.data.match(/"workerProcessId"\s*:\s*(\d+)/);
+                if (matches && matches.length > 1) {
+                    taskInfo.processId = Number(matches[1]);
+                    setPidByJsonOutputListener.dispose();
+                }
+            }
+        }
+    });
+
+    return setPidByJsonOutputListener;
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };

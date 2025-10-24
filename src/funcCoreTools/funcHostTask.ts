@@ -11,12 +11,14 @@ import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { createAsyncStringStream, type AsyncStreamHandler } from '../utils/stream';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
+    streamHandler: AsyncStreamHandler;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -92,7 +94,8 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber };
+            const streamHandler = createAsyncStringStream();
+            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber, streamHandler };
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
@@ -146,10 +149,11 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
         for (const runningFuncTaskItem of runningFuncTask) {
             if (!runningFuncTaskItem) break;
             if (terminate) {
-                runningFuncTaskItem.taskExecution.terminate()
+                runningFuncTaskItem.taskExecution.terminate();
             } else {
                 // Try to find the real func process by port first, fall back to shell PID
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
+                runningFuncTaskItem.streamHandler.end();
             }
         }
 

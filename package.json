@@ -985,6 +985,12 @@
                 "properties": {
                     "command": {
                         "type": "string"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1504,5 +1510,8 @@
         "runWizardCommandWithoutExecutionCommandId": "azureFunctions.agent.runWizardCommandWithoutExecution",
         "runWizardCommandWithInputsCommandId": "azureFunctions.agent.runWizardCommandWithInputs",
         "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs"
-    }
+    },
+    "enabledApiProposals": [
+        "terminalDataWriteEvent"
+    ]
 }
