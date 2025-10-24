@@ -169,11 +169,6 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
                 runningFuncTaskItem.streamHandler.end();
                 runningFuncTaskItem.outputReader.dispose();
             }
-
-            for await (const chunk of runningFuncTaskItem.streamHandler.stream) {
-                // Process each chunk of the stream
-                console.log(chunk);
-            }
         }
 
         if (buildPath) {
