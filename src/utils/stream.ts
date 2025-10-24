@@ -34,7 +34,7 @@ export function createAsyncStringStream(): AsyncStreamHandler {
     };
 
     function write(chunk: string) {
-        if (done) throw new Error("Cannot write to a ended stream");
+        if (done) throw new Error("Cannot write to an ended stream");
         if (resolveNext) {
             resolveNext({ value: chunk, done: false });
             resolveNext = null;
