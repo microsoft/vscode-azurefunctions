@@ -102,10 +102,6 @@ export function registerFuncHostTaskEvents(): void {
                 if (event.terminal === terminal) {
                     runningFuncTask.streamHandler.write(event.data);
                 }
-
-                if (runningFuncTask.streamHandler.done) {
-                    outputReader.dispose();
-                }
             });
 
             const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber, streamHandler, outputReader };
