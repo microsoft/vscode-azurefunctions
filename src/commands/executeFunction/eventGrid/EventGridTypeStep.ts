@@ -8,10 +8,13 @@ import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
 import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
 
+// Using a specific commit SHA to fetch EventGrid sample files since they were removed from main branch
+// See: https://github.com/Azure/azure-rest-api-specs/issues/38235
+// See: https://github.com/Azure/azure-rest-api-specs/pull/38236
 const sampleFilesUrl =
     'https://api.github.com/repos/Azure/azure-rest-api-specs/contents/specification/eventgrid/data-plane/' +
     '{eventSource}' +
-    '/stable/2018-01-01/examples/cloud-events-schema/';
+    '/stable/2018-01-01/examples/cloud-events-schema?ref=752dade436619ed28bd03ca2e77cfa5acf6222dd';
 
 type FileMetadata = {
     name: string;
