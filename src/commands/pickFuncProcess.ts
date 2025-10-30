@@ -20,6 +20,9 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
+// flag used by func core tools to indicate to wait for the debugger to attach before starting the worker
+const dotnetIsolatedDebugFlag = '--dotnet-isolated-debug';
+const enableJsonOutput = '--enable-json-output';
 
 export async function startFuncProcessFromApi(
     buildPath: string,
@@ -147,7 +150,8 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-        const debugModeOn = funcTask.name.includes('--dotnet-isolated-debug') && funcTask.name.includes('--enable-json-output');
+        const funcShellExecution = funcTask.execution as vscode.ShellExecution;
+        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcTask.name.includes(enableJsonOutput);
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
