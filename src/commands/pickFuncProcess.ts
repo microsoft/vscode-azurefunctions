@@ -72,7 +72,7 @@ export async function startFuncProcessFromApi(
             const taskInfo = await startFuncTask(context, workspaceFolder, buildPath, funcTask);
             result.processId = await pickChildProcess(taskInfo);
             result.success = true;
-            result.stream = taskInfo.streamHandler.stream;
+            result.stream = taskInfo.stream;
         } catch (err) {
             const pError = parseError(err);
             result.error = pError.message;
@@ -148,8 +148,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         const debugModeOn = funcTask.name.includes('--dotnet-isolated-debug') && funcTask.name.includes('--enable-json-output');
-        let eventDisposable: vscode.Disposable | undefined;
-        let parentPid: number | undefined;
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -160,15 +158,10 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             if (taskInfo) {
                 if (debugModeOn) {
                     // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
-                    if (!eventDisposable) {
-                        // preserve the old pid to detect changes
-                        parentPid = taskInfo.processId;
-                        eventDisposable = await setEventPidByJsonOutput(taskInfo, funcTask.name);
-                    }
-
-                    // if we are starting a dotnet isolated func host with json output enabled, we can find the pid directly from the output
-                    if (taskInfo.processId !== parentPid) {
-                        // we have to wait for the process id to be set from the terminal output
+                    // if there is no pid yet, keep waiting
+                    const newPid = await setEventPidByJsonOutput(taskInfo);
+                    if (newPid) {
+                        taskInfo.processId = newPid;
                         return taskInfo;
                     }
                 } else {
@@ -209,21 +202,21 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
 }
 
-async function setEventPidByJsonOutput(taskInfo: IRunningFuncTask, taskName: string): Promise<vscode.Disposable> {
-    const setPidByJsonOutputListener = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
-        const terminal = vscode.window.terminals.find(t => taskName === t.name);
-        if (event.terminal === terminal) {
-            if (event.data.includes(`{ "name":"dotnet-worker-startup", "workerProcessId" :`)) {
-                const matches = event.data.match(/"workerProcessId"\s*:\s*(\d+)/);
-                if (matches && matches.length > 1) {
-                    taskInfo.processId = Number(matches[1]);
-                    setPidByJsonOutputListener.dispose();
-                }
+async function setEventPidByJsonOutput(taskInfo: IRunningFuncTask): Promise<number | undefined> {
+    // if there is no stream yet or if the output doesn't include the workerProcessId yet, then keep waiting
+    if (!taskInfo.stream) {
+        return;
+    }
+
+    for await (const chunk of taskInfo.stream) {
+        if (chunk.includes(`{ "name":"dotnet-worker-startup", "workerProcessId" :`)) {
+            const matches = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
+            if (matches && matches.length > 1) {
+                return Number(matches[1]);
             }
         }
-    });
-
-    return setPidByJsonOutputListener;
+    }
+    return;
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };

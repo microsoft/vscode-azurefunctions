@@ -11,15 +11,16 @@ import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
-import { createAsyncStringStream, type AsyncStreamHandler } from '../utils/stream';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
-    streamHandler: AsyncStreamHandler;
-    outputReader: vscode.Disposable;
+    // there is always an event handler listening to `onDidStartTerminalShellExecution` when a func task starts to populate stream
+    terminalEventReader: vscode.Disposable;
+    // stream for reading `func host start`  output
+    stream: AsyncIterable<string> | undefined;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -93,62 +94,39 @@ export function isFuncHostTerminalShell(shell: vscode.TerminalShellExecutionStar
     const commandLine: string | undefined = shell.execution && shell.execution.commandLine.value;
     return /func (host )?start/i.test(commandLine || '');
 }
-
-const streamHandlerMap: Map<string, AsyncStreamHandler> = new Map();
+let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
 export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
-        const startHandler = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
-            console.log(`Terminal name: ${terminalShellExecEvent.terminal.name}`);
-            console.log(`Task name: ${terminalShellExecEvent.execution.commandLine.value}`);
-            console.log(`Process ID: ${e.processId}`);
-            console.log(`Terminal PID: ${await terminalShellExecEvent.terminal.processId}`);
-            if (isFuncHostTerminalShell(terminalShellExecEvent)) {
-                if (!streamHandlerMap.has(e.processId.toString())) {
-                    // only set it up the first time we are seeing this pid
-                    const streamHandler = createAsyncStringStream();
-                    streamHandler.stream = terminalShellExecEvent.execution.read();
-                    streamHandlerMap.set(e.processId.toString(), streamHandler);
-                }
-            }
+        const terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
+            latestTerminalShellExecutionEvent = terminalShellExecEvent;
         });
 
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
 
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const terminalName = e.execution.task.name;
-            // const terminal = vscode.window.terminals.find(t => terminalName === t.name);
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const endHandler = vscode.window.onDidEndTerminalShellExecution(async (terminalShellExecEvent) => {
-                // reserved for closing the event handlers
-                if (isFuncHostTerminalShell(terminalShellExecEvent)) {
-                    for await (const chunk of runningFuncTask.streamHandler.stream) {
-                        console.log(chunk);
-                    }
+            const runningFuncTask = {
+                processId: e.processId,
+                taskExecution: e.execution,
+                portNumber,
+                terminalEventReader,
+                stream: latestTerminalShellExecutionEvent?.execution.read()
+            };
 
-                    startHandler.dispose();
-                    endHandler.dispose();
-                }
-            });
-
-            const outputReader = vscode.window.onDidWriteTerminalData(async (event: vscode.TerminalDataWriteEvent) => {
-                const terminal = vscode.window.terminals.find(t => terminalName === t.name);
-                if (event.terminal === terminal) {
-                    // runningFuncTask.streamHandler.write(event.data);
-                }
-            });
-
-            const streamHandler = streamHandlerMap.get(e.processId.toString()) || createAsyncStringStream();
-            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber, streamHandler, outputReader };
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
 
-    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
+    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            const runningFuncTask = runningFuncTaskMap.get(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            if (runningFuncTask) {
+                runningFuncTask.terminalEventReader.dispose();
+            }
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
         }
     });
@@ -197,8 +175,6 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
             } else {
                 // Try to find the real func process by port first, fall back to shell PID
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
-                runningFuncTaskItem.streamHandler.end();
-                runningFuncTaskItem.outputReader.dispose();
             }
         }
 
