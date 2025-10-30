@@ -151,7 +151,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         const funcShellExecution = funcTask.execution as vscode.ShellExecution;
-        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcTask.name.includes(enableJsonOutput);
+        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutput);
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
