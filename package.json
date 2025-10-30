@@ -1510,8 +1510,5 @@
         "runWizardCommandWithoutExecutionCommandId": "azureFunctions.agent.runWizardCommandWithoutExecution",
         "runWizardCommandWithInputsCommandId": "azureFunctions.agent.runWizardCommandWithInputs",
         "getAgentBenchmarkConfigsCommandId": "azureFunctions.agent.getAgentBenchmarkConfigs"
-    },
-    "enabledApiProposals": [
-        "terminalDataWriteEvent"
-    ]
+    }
 }
