@@ -90,10 +90,6 @@ export function isFuncHostTask(task: vscode.Task): boolean {
     return /func (host )?start/i.test(commandLine || '');
 }
 
-export function isFuncHostTerminalShell(shell: vscode.TerminalShellExecutionStartEvent): boolean {
-    const commandLine: string | undefined = shell.execution && shell.execution.commandLine.value;
-    return /func (host )?start/i.test(commandLine || '');
-}
 let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
 export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
