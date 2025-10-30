@@ -98,6 +98,12 @@ let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent |
 export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         const terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
+            /**
+             * NOTE: there is no reliable way to link a terminal to a task due to the name and PID not updating in real time,
+             * so just keep updating to the latest event since the func task and its dependencies run in the same
+             * terminal (the terminal that we want to output)
+             * New tasks will create new `terminalShellExecutionEvents`, so we don't need to worry about picking up output from other terminals
+             * */
             latestTerminalShellExecutionEvent = terminalShellExecEvent;
         });
 
