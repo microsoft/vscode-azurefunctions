@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ProjectLanguage } from '../constants';
+import { type ProjectLanguage, type TemplateFilter } from '../constants';
 import { type IBindingSetting } from './IBindingTemplate';
 import { type TemplateSchemaVersion } from './TemplateProviderBase';
 import { type ParsedJob, type RawTemplateV2 } from './script/parseScriptTemplatesV2';
@@ -44,5 +44,6 @@ export interface FunctionTemplateBase {
     language: ProjectLanguage;
     isHttpTrigger: boolean;
     isTimerTrigger: boolean;
-    templateSchemaVersion: TemplateSchemaVersion
+    templateSchemaVersion: TemplateSchemaVersion;
+    templateFilter?: TemplateFilter; // defaults to All
 }
