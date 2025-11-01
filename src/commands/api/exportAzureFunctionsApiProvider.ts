@@ -6,7 +6,7 @@
 import { type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, type apiUtils, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
-import { AzExtResourceType, prepareAzureResourcesApiRequest, type AzExtCredentialManager, type AzureExtensionApi, type AzureResourcesApiRequestContext, type AzureResourcesExtensionApi, type AzureResourcesHandshakeError } from "@microsoft/vscode-azureresources-api";
+import { AzExtResourceType, prepareAzureResourcesApiRequest, type AzureExtensionApi, type AzureResourcesApiRequestContext, type AzureResourcesExtensionApi, type AzureResourcesHandshakeError } from "@microsoft/vscode-azureresources-api";
 import { ext } from "../../extensionVariables";
 import { validateFuncCoreToolsInstalled } from "../../funcCoreTools/validateFuncCoreToolsInstalled";
 import { FunctionAppResolver } from "../../FunctionAppResolver";
@@ -26,7 +26,6 @@ import { revealTreeItem } from "./revealTreeItem";
 import { uploadAppSettingsFromApi } from "./uploadAppSettingsFromApi";
 
 export function exportAzureFunctionsApiProvider(
-    credentialManager: AzExtCredentialManager<unknown>,
     services: {
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
@@ -39,7 +38,6 @@ export function exportAzureFunctionsApiProvider(
     const context: AzureResourcesApiRequestContext = {
         azureResourcesApiVersions: ['0.0.1', '2.0.0'],
         clientExtensionId: ext.context.extension.id,
-        clientCredentialManager: credentialManager,
         onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[]) => {
             const [rgApi, rgApiV2] = azureResourcesApis;
             if (!rgApi || !rgApiV2) {

@@ -8,7 +8,6 @@
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createAzExtOutputChannel, createExperimentationService, nonNullValue, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
-import { AzExtSignatureCredentialManager, type AzExtCredentialManager } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { exportAzureFunctionsApiProvider } from './commands/api/exportAzureFunctionsApiProvider';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
@@ -111,8 +110,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.experimentationService = await createExperimentationService(context);
     });
 
-    const credentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
-    return exportAzureFunctionsApiProvider(credentialManager, { dts: nonNullValue(dts, localize('noDTS', 'Failed to initialize DTS service.')) });
+    return exportAzureFunctionsApiProvider({ dts: nonNullValue(dts, localize('noDTS', 'Failed to initialize DTS service.')) });
 }
 
 export async function deactivateInternal(): Promise<void> {
