@@ -17,8 +17,6 @@ export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
-    // there is always an event handler listening to `onDidStartTerminalShellExecution` when a func task starts to populate stream
-    terminalEventReader: vscode.Disposable;
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
 }
@@ -91,20 +89,25 @@ export function isFuncHostTask(task: vscode.Task): boolean {
 }
 
 let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
+export let terminalEventReader: vscode.Disposable;
 export function registerFuncHostTaskEvents(): void {
+    // we need to register this listener before the func host task starts, so we can capture the terminal output stream
+    terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
+        /**
+         * NOTE: there is no reliable way to link a terminal to a task due to the name and PID not updating in real time,
+         * so just keep updating to the latest event since the func task and its dependencies run in the same
+         * terminal (the terminal that we want to output)
+         * New tasks will create new `terminalShellExecutionEvents`, so we don't need to worry about picking up output from other terminals
+         * BUG: There's a current issue where if there is _only_ a func task in the tasks.json (as in it doesn't dependOn any other tasks),
+         * the onDidStartTerminalShellExecution does not fire at all. This should not impact most runtimes as they all have some sort of
+         * build task as a dependency. This is a bug on VS Code that I am working with Daniel to fix.
+         * */
+        latestTerminalShellExecutionEvent = terminalShellExecEvent;
+    });
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
-        const terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
-            /**
-             * NOTE: there is no reliable way to link a terminal to a task due to the name and PID not updating in real time,
-             * so just keep updating to the latest event since the func task and its dependencies run in the same
-             * terminal (the terminal that we want to output)
-             * New tasks will create new `terminalShellExecutionEvents`, so we don't need to worry about picking up output from other terminals
-             * */
-            latestTerminalShellExecutionEvent = terminalShellExecEvent;
-        });
-
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
+
 
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
@@ -112,7 +115,6 @@ export function registerFuncHostTaskEvents(): void {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
-                terminalEventReader,
                 stream: latestTerminalShellExecutionEvent?.execution.read()
             };
 
@@ -125,10 +127,6 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const runningFuncTask = runningFuncTaskMap.get(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            if (runningFuncTask) {
-                runningFuncTask.terminalEventReader.dispose();
-            }
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
         }
     });
