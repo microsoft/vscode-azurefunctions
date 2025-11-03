@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels } from '../../constants';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
-import { openUrl } from '../../utils/openUrl';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { type IProjectWizardContext } from './IProjectWizardContext';
@@ -39,7 +38,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // Only display 'supported' languages that can be debugged in VS Code
-        let languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number } | undefined>[] = [
+        let languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [
             { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
@@ -50,23 +49,16 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
         ];
 
-        languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });
-
         if (context.languageFilter) {
             languagePicks = languagePicks.filter(p => {
-                return p.data !== undefined && context.languageFilter?.test(p.data.language);
+                return context.languageFilter?.test(p.data.language);
             });
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
-        if (result === undefined) {
-            await openUrl('https://aka.ms/AA4ul9b');
-            throw new UserCancelledError('viewSampleProjects');
-        } else {
-            context.language = result.language;
-            this.setTemplateSchemaVersion(context);
-        }
+        context.language = result.language;
+        this.setTemplateSchemaVersion(context);
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {
