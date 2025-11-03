@@ -163,7 +163,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                 if (debugModeOn) {
                     // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
                     // if there is no pid yet, keep waiting
-                    const newPid = await setEventPidByJsonOutput(taskInfo);
+                    const newPid = await getWorkerPidFromJsonOutput(taskInfo);
                     if (newPid) {
                         taskInfo.processId = newPid;
                         return taskInfo;
@@ -206,7 +206,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
 }
 
-async function setEventPidByJsonOutput(taskInfo: IRunningFuncTask): Promise<number | undefined> {
+async function getWorkerPidFromJsonOutput(taskInfo: IRunningFuncTask): Promise<number | undefined> {
     // if there is no stream yet or if the output doesn't include the workerProcessId yet, then keep waiting
     if (!taskInfo.stream) {
         return;
