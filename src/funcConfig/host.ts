@@ -8,6 +8,7 @@ import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
+    configurationProfile?: string;
     customHandler?: {};
     // https://github.com/Azure/azure-functions-templates/issues/906
     logging?: {

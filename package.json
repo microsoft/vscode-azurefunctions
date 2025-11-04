@@ -1118,7 +1118,6 @@
                             "PowerShell",
                             "Python",
                             "TypeScript",
-                            "Ballerina",
                             "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
@@ -1364,6 +1363,11 @@
                     "azureFunctions.allowProgrammingModelSelection": {
                         "type": "boolean",
                         "description": "%azureFunctions.allowProgrammingModelSelection%",
+                        "default": false
+                    },
+                    "azureFunctions.showBallerinaProjectCreation": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showBallerinaProjectCreation%",
                         "default": false
                     }
                 }

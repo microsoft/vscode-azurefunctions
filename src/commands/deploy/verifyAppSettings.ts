@@ -9,7 +9,7 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import type * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
+import { azureWebJobsFeatureFlags, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -48,6 +48,10 @@ export async function verifyAppSettings(options: {
             updateAppSettings ||= remoteBuildSettingsChanged;
         } else {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+        }
+
+        if (true /*check for mcp*/) {
+            updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
@@ -164,6 +168,25 @@ function verifyRunFromPackage(context: IActionContext, site: ParsedSite, remoteP
     }
 
     context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
+    return shouldAddSetting;
+}
+
+function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
+    const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+
+    // Feature flags are comma-delimited lists of beta features
+    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
+    const featureFlagArray = !featureFlagString ? [] : featureFlagString.split(',');
+    const enableWorkerIndexingValue = 'EnableWorkerIndexing';
+    const shouldAddSetting: boolean = !featureFlagArray.includes(enableWorkerIndexingValue);
+
+    if (shouldAddSetting) {
+        featureFlagArray.push(enableWorkerIndexingValue);
+        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the new programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
+        remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
+    }
+
+    context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
     return shouldAddSetting;
 }
 
