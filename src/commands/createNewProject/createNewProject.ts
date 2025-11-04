@@ -47,7 +47,12 @@ export async function createNewProjectFromCommand(
     });
 }
 
-export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
+export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions & {
+    externalRuntimeConfig?: {
+        runtimeName: string;
+        runtimeVersion: string;
+    };
+}): Promise<void> {
     addLocalFuncTelemetry(context, undefined);
 
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
@@ -59,7 +64,8 @@ export async function createNewProjectInternal(context: IActionContext, options:
         {
             language,
             version: tryParseFuncVersion(version),
-            projectTemplateKey
+            projectTemplateKey,
+            externalRuntimeConfig: options.externalRuntimeConfig
         },
         await createActivityContext()
     );
