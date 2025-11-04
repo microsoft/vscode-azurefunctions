@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, nonNullValue, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { createAzureFunctionsApiProvider } from './commands/api/createAzureFunctionsApiProvider';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
@@ -23,12 +23,11 @@ import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { localize } from './localize';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
-import { HttpDurableTaskSchedulerClient, type DurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
+import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
-import { DockerDurableTaskSchedulerEmulatorClient, type DurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
@@ -43,12 +42,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
-
-    let dts: {
-        dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
-        emulatorClient: DurableTaskSchedulerEmulatorClient,
-        schedulerClient: DurableTaskSchedulerClient,
-    } | undefined;
 
     return await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
         activateContext.errorHandling.rethrow = true;
@@ -78,7 +71,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
 
-        dts = {
+        const dts = {
             dataBranchProvider,
             emulatorClient,
             schedulerClient
@@ -109,7 +102,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerContentProvider();
         ext.experimentationService = await createExperimentationService(context);
 
-        return createAzureFunctionsApiProvider({ dts: nonNullValue(dts, localize('noDTS', 'Failed to initialize DTS service.')) });
+        return createAzureFunctionsApiProvider({ dts });
 
     }) ?? createApiProvider([]);
 }
