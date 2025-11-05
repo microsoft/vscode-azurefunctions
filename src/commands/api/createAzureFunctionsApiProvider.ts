@@ -72,7 +72,7 @@ export function createAzureFunctionsApiProvider(
         },
 
         onApiRequestError: async (error: AzureResourcesApiRequestError) => {
-            await callWithTelemetryAndErrorHandling('azureFunctions.hostApiRequestSucceeded', (actionContext: IActionContext) => {
+            await callWithTelemetryAndErrorHandling('azureFunctions.hostApiRequestFailed', (actionContext: IActionContext) => {
                 actionContext.telemetry.properties.hostApiRequestErrorCode = error.code;
                 actionContext.telemetry.properties.hostApiRequestError = maskUserInfo(error.message, []);
             });
