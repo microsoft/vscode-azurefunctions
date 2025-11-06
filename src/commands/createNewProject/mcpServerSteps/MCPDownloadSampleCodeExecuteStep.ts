@@ -6,29 +6,13 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
+import { type GitHubFileMetadata } from '../../../constants';
 import { localize } from "../../../localize";
 import { feedUtils } from '../../../utils/feedUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { parseJson } from '../../../utils/parseJson';
 import { requestUtils } from '../../../utils/requestUtils';
 import { type MCPProjectWizardContext } from '../IProjectWizardContext';
-
-type FileMetadata = {
-    name: string;
-    path: string;
-    sha: string;
-    size: number;
-    url: string;
-    html_url: string;
-    git_url: string;
-    download_url: string;
-    type: string;
-    _links: {
-        self: string;
-        git: string;
-        html: string;
-    };
-};
 
 export class MCPDownloadSampleCodeExecuteStep extends AzureWizardExecuteStepWithActivityOutput<MCPProjectWizardContext> {
     stepName: string = 'MCPDownloadSampleCodeExecuteStep';
@@ -52,11 +36,11 @@ export class MCPDownloadSampleCodeExecuteStep extends AzureWizardExecuteStepWith
         // TODO: change this to aka.ms link when samples repo is available, this is a placeholder
         const sampleFilesUrl =
             'https://api.github.com/repos/Azure-Samples/mcp-sdk-functions-hosting-python/contents';
-        const sampleFiles: FileMetadata[] = await feedUtils.getJsonFeed(context, sampleFilesUrl);
+        const sampleFiles: GitHubFileMetadata[] = await feedUtils.getJsonFeed(context, sampleFilesUrl);
         await this.downloadFilesRecursively(context, sampleFiles, context.projectPath);
     }
 
-    private async downloadFilesRecursively(context: MCPProjectWizardContext, items: FileMetadata[], basePath: string): Promise<void> {
+    private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
         for (const item of items) {
             if (item.type === 'file') {
                 // Download file content
@@ -72,7 +56,7 @@ export class MCPDownloadSampleCodeExecuteStep extends AzureWizardExecuteStepWith
 
                 // Get directory contents
                 const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: item.url });
-                const dirContents: FileMetadata[] = parseJson<FileMetadata[]>(nonNullProp(response, 'bodyAsText'));
+                const dirContents: GitHubFileMetadata[] = parseJson<GitHubFileMetadata[]>(nonNullProp(response, 'bodyAsText'));
 
                 // Recursively download directory contents
                 await this.downloadFilesRecursively(context, dirContents, dirPath);
