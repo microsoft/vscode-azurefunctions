@@ -24,6 +24,7 @@ import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProje
 import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { MCPDownloadSampleCodeExecuteStep } from './mcpServerSteps/MCPDownloadSampleCodeExecuteStep';
 import { MCPIncludeSampleCodePromptStep } from './mcpServerSteps/MCPIncludeSampleCodePromptStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
@@ -125,9 +126,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(new CustomProjectCreateStep());
                 break;
             case ProjectLanguage.SelfHostedMCPServer:
-                // remove the add a new trigger prompt
                 promptSteps.push(new MCPServerLanguagePromptStep(), new MCPIncludeSampleCodePromptStep());
-                executeSteps.push(new MCPProjectCreateStep());
+                executeSteps.push(new MCPDownloadSampleCodeExecuteStep(), new MCPProjectCreateStep());
                 break;
             default:
                 executeSteps.push(new ScriptProjectCreateStep());

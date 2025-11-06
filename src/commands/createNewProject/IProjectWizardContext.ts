@@ -34,7 +34,7 @@ export interface IProjectWizardContext extends IActionContext {
 }
 
 export interface MCPProjectWizardContext extends IProjectWizardContext {
-    serverLanguage?: string;
+    serverLanguage?: ProjectLanguage;
     includeSampleCode?: boolean;
 }
 

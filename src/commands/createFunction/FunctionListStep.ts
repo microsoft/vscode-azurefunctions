@@ -123,7 +123,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        return !context.functionTemplate && context['buildTool'] !== JavaBuildTool.maven;
+        return !context.functionTemplate &&
+            context['buildTool'] !== JavaBuildTool.maven &&
+            context.language !== ProjectLanguage.SelfHostedMCPServer;
     }
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[]> {

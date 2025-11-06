@@ -8,11 +8,12 @@ import { type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, previewPythonModel } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
-import { type IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
+import { type IProjectWizardContext, type MCPProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { BallerinaInitVSCodeStep } from './InitVSCodeStep/BallerinaInitVSCodeStep';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
+import { MCPServerInitVSCodeStep } from './InitVSCodeStep/MCPServerInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
 import { ScriptInitVSCodeStep } from './InitVSCodeStep/ScriptInitVSCodeStep';
 import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeStep';
@@ -58,7 +59,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
 }
 
 export async function addInitVSCodeSteps(
-    context: IProjectWizardContext,
+    context: IProjectWizardContext & Partial<MCPProjectWizardContext>,
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
 
@@ -88,6 +89,9 @@ export async function addInitVSCodeSteps(
             break;
         case ProjectLanguage.Ballerina:
             executeSteps.push(new BallerinaInitVSCodeStep());
+            break;
+        case ProjectLanguage.SelfHostedMCPServer:
+            executeSteps.push(new MCPServerInitVSCodeStep());
             break;
         default:
             executeSteps.push(new ScriptInitVSCodeStep());
