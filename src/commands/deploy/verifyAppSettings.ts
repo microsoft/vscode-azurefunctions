@@ -50,7 +50,7 @@ export async function verifyAppSettings(options: {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
-        if (false /*TODO: check for mcp on deploy*/) {
+        if (context /*TODO: check for mcp on deploy*/) {
             updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
         }
 
