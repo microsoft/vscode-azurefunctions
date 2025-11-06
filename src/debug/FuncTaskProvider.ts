@@ -133,7 +133,6 @@ export class FuncTaskProvider implements TaskProvider {
         }
 
         definition = definition || { type: func, command };
-
         return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
     }
 

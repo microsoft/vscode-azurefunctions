@@ -8,9 +8,6 @@ import { azureWebJobsFeatureFlags, enableMcpCustomHandlerPreview, ProjectLanguag
 import { type IHostJsonV2 } from "../../../funcConfig/host";
 import { type MCPProjectWizardContext } from "../IProjectWizardContext";
 import { ScriptProjectCreateStep } from "../ProjectCreateStep/ScriptProjectCreateStep";
-
-
-
 export class MCPProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(context: MCPProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         this.localSettingsJson.Values = this.localSettingsJson.Values || {};

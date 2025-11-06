@@ -8,9 +8,6 @@ import { type ProjectLanguage } from '../../../constants';
 import { type MCPProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
-/**
- * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
- */
 export class MCPServerInitVSCodeStep extends InitVSCodeStepBase {
     stepName: string = 'MCPServerInitVSCodeStep';
 
@@ -29,6 +26,7 @@ export class MCPServerInitVSCodeStep extends InitVSCodeStepBase {
     }
 
     protected async executeCore(context: MCPProjectWizardContext): Promise<void> {
+        // the VSCode project language setting needs to match the server runtime, not SelfHostedMCPServer
         context.language = context.serverLanguage;
     }
 }
