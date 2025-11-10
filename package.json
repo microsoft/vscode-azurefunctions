@@ -1477,7 +1477,7 @@
         "@microsoft/vscode-azext-azureappservice": "^3.6.7",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.11",
         "@microsoft/vscode-azext-azureutils": "^3.5.2",
-        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-4.0.1.tgz",
+        "@microsoft/vscode-azext-utils": "^3.5.0",
         "@microsoft/vscode-azureresources-api": "file:../vscode-azureresourcegroups/api/microsoft-vscode-azureresources-api-3.0.0.tgz",
         "@microsoft/vscode-container-client": "^0.4.3",
         "cross-fetch": "^4.0.0",
