@@ -139,5 +139,6 @@
     "azureFunctions.durableTaskScheduler.emulatorRegistry": "The registry of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorImage": "The name of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image.",
-    "azureFunctions.showBallerinaProjectCreation": "Show the option to create a Ballerina Function projects when creating a new Function project."
+    "azureFunctions.showBallerinaProjectCreation": "Show the option to create a Ballerina Function projects when creating a new Function project.",
+    "azureFunctions.getDefaultHostKey": "Get the default host key for the Function App."
 }

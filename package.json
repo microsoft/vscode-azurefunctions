@@ -462,6 +462,11 @@
                 "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
                 "category": "Azure Functions",
                 "icon": "$(debug-stop)"
+            },
+            {
+                "command": "azureFunctions.getDefaultHostKey",
+                "title": "%azureFunctions.getDefaultHostKey%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [

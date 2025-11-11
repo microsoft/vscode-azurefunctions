@@ -12,13 +12,16 @@ import { type IFuncDeployContext } from "./deploy/deploy";
 export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployContext> {
     private _picks: IAzureQuickPickItem<AzureSubscription>[] = [];
     private _oneSubscription: boolean = false;
+    constructor(readonly findBySubId?: string) {
+        super();
+    }
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.subscription = (await context.ui.showQuickPick(this._picks, { placeHolder: l10n.t("Select a subscription") })).data;
         context.telemetry.properties.subscriptionId = context.subscription.subscriptionId;
     }
 
-    public shouldPrompt(_: IFuncDeployContext): boolean {
-        return !this._oneSubscription;
+    public shouldPrompt(context: IFuncDeployContext): boolean {
+        return !this._oneSubscription && !context.subscription;
     }
 
     public async configureBeforePrompt(context: IFuncDeployContext): Promise<void> {
@@ -28,6 +31,8 @@ export class SubscriptionListStep extends AzureWizardPromptStep<IFuncDeployConte
             this._oneSubscription = true;
             context.subscription = this._picks[0].data;
             context.telemetry.properties.subscriptionId = context.subscription.subscriptionId;
+        } else if (this.findBySubId && this._picks.length > 0) {
+            context.subscription = this._picks.find(s => s.data.subscriptionId === this.findBySubId)?.data;
         }
     }
 

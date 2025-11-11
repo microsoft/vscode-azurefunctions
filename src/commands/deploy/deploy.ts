@@ -234,8 +234,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
         }
 
-        // app settings shouldn't be checked with flex consumption plans
-        if (isZipDeploy && !isFlexConsumption) {
+        if (isZipDeploy) {
             await verifyAppSettings({
                 context,
                 node,
@@ -243,7 +242,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 version,
                 language,
                 languageModel,
-                bools: { doRemoteBuild, isConsumption },
+                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
                 durableStorageType,
                 appSettings
             });

@@ -164,6 +164,7 @@ export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNE
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
 export const enableMcpCustomHandlerPreview: string = 'EnableMcpCustomHandlerPreview';
+export const mcpSelfHostedConfigurationProfile: string = 'mcp-custom-handler';
 
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).

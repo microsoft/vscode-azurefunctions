@@ -7,22 +7,25 @@ import { type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { azureWebJobsFeatureFlags, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { tryGetLocalSettingsFileNoPrompt } from '../appSettings/localSettings/getLocalSettingsFile';
+import { type IFuncDeployContext } from './deploy';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
-type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
+type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean, isFlexConsumption: boolean };
 
 export async function verifyAppSettings(options: {
-    context: IActionContext,
+    context: IFuncDeployContext,
     node: SlotTreeItem,
     projectPath: string | undefined,
     version: FuncVersion,
@@ -37,12 +40,14 @@ export async function verifyAppSettings(options: {
     await node.initSite(context);
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = options.appSettings;
-    if (appSettings.properties) {
+    let updateAppSettings: boolean = false;
+    // these were checks for consumption and app service hosted plans
+    if (appSettings.properties && !bools.isFlexConsumption) {
         const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
         // update the settings if the remote runtime was changed
-        let updateAppSettings: boolean = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
+        updateAppSettings = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
         if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings ||= remoteBuildSettingsChanged;
@@ -50,24 +55,27 @@ export async function verifyAppSettings(options: {
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
-        if (context /*TODO: check for mcp on deploy*/) {
-            updateAppSettings ||= verifyFeatureFlagSetting(context, node.site, appSettings.properties);
-        }
-
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
 
-        if (updateAppSettings) {
-            await client.updateApplicationSettings(appSettings);
-            try {
-                await verifyAppSettingsPropagated(context, client, appSettings);
-            } catch (e) {
-                // don't throw if we can't verify the settings were updated
-            }
 
-            // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
-            await node.appSettingsTreeItem?.refresh(context);
+    } else if (appSettings.properties && bools.isFlexConsumption) {
+        const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(context.originalDeployFsPath));
+        const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, workspace);
+        const localSettings = localSettingsPath ? await getLocalSettingsJson(context, localSettingsPath, false) : {};
+        updateAppSettings = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
+    }
+
+    if (updateAppSettings) {
+        await client.updateApplicationSettings(appSettings);
+        try {
+            await verifyAppSettingsPropagated(context, client, appSettings);
+        } catch (e) {
+            // don't throw if we can't verify the settings were updated
         }
+
+        // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
+        await node.appSettingsTreeItem?.refresh(context);
     }
 }
 
@@ -171,23 +179,32 @@ function verifyRunFromPackage(context: IActionContext, site: ParsedSite, remoteP
     return shouldAddSetting;
 }
 
-function verifyFeatureFlagSetting(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
-    const featureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+async function verifyFeatureFlagSetting(context: IActionContext, remoteProperties: { [propertyName: string]: string }, localSettings: ILocalSettingsJson): Promise<boolean> {
+    const remoteFeatureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+    const localFeatureFlagString = localSettings.Values?.[azureWebJobsFeatureFlags] || '';
 
     // Feature flags are comma-delimited lists of beta features
     // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
-    const featureFlagArray = !featureFlagString ? [] : featureFlagString.split(',');
-    const enableWorkerIndexingValue = 'EnableWorkerIndexing';
-    const shouldAddSetting: boolean = !featureFlagArray.includes(enableWorkerIndexingValue);
+    // Split on commas, trim whitespace, and filter out empties
+    const remoteFlags = remoteFeatureFlagString
+        .split(',')
+        .map(f => f.trim())
+        .filter(Boolean);
+    const localFlags = localFeatureFlagString
+        .split(',')
+        .map(f => f.trim())
+        .filter(Boolean);
 
-    if (shouldAddSetting) {
-        featureFlagArray.push(enableWorkerIndexingValue);
-        ext.outputChannel.appendLog(localize('addedFeatureFlag', 'Added feature flag "{0}" because it is required for the new programming model', enableWorkerIndexingValue), { resourceName: site.fullName });
-        remoteProperties[azureWebJobsFeatureFlags] = featureFlagArray.join(',');
+    if (remoteFlags.length === 0 && localFlags.length === 0) {
+        // No flags to verify
+        return false;
     }
 
-    context.telemetry.properties.addedFeatureFlagSetting = String(shouldAddSetting);
-    return shouldAddSetting;
+    // merge flags, but remove any duplicates
+    const mergedFlags = Array.from(new Set([...remoteFlags, ...localFlags]));
+    remoteProperties[azureWebJobsFeatureFlags] = mergedFlags.join(',');
+    context.telemetry.properties.addedFeatureFlagSetting = String(true);
+    return true;
 }
 
 function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {

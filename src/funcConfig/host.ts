@@ -9,7 +9,18 @@ import { FuncVersion } from "../FuncVersion";
 export interface IHostJsonV2 {
     version?: string;
     configurationProfile?: string;
-    customHandler?: {};
+    // Custom handler settings for MCP servers
+    customHandler?: {
+        enableProxyingHttpRequest?: boolean;
+        http?: {
+            routes?: { route: string }[];
+        };
+        description: {
+            defaultExecutablePath: string;
+            workingDirectory: string;
+            arguments: string[];
+        }
+    };
     // https://github.com/Azure/azure-functions-templates/issues/906
     logging?: {
         applicationInsights?: {
