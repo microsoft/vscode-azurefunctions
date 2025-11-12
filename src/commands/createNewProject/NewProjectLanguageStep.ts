@@ -64,7 +64,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
+        const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
         context.language = result.language;
         this.setTemplateSchemaVersion(context);

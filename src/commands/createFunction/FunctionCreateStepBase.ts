@@ -6,7 +6,7 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
-import { hostFileName } from '../../constants';
+import { hostFileName, McpProjectType, mcpProjectTypeSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
@@ -14,6 +14,7 @@ import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
+import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
@@ -68,6 +69,11 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(context);
+        if (context.hasMcpTrigger) {
+            // indicate that this is a MCP Extension Server project
+            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+        }
+
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
@@ -78,6 +84,24 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 hostJson.concurrency = {
                     dynamicConcurrencyEnabled: true,
                     snapshotPersistenceEnabled: true
+                }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+            } else if (context.hasMcpTrigger) {
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.extensions = hostJson.extensions ?? {};
+                if (!hostJson.extensions.mcp) {
+                    hostJson.extensions.mcp = {
+                        instructions: "Some test instructions on how to use the server",
+                        serverName: "TestServer",
+                        serverVersion: "2.0.0",
+                        encryptClientState: true,
+                        messageOptions: {
+                            useAbsoluteUriForEndpoint: false
+                        },
+                        system: {
+                            webhookAuthorizationLevel: "System"
+                        }
+                    }
                 }
                 await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }

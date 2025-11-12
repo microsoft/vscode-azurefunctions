@@ -27,8 +27,8 @@ export class MCPIncludeSampleCodePromptStep extends AzureWizardPromptStep<MCPPro
 
     public getPicks(): IAzureQuickPickItem<{ includeSampleCode: boolean }>[] {
         return [
-            { label: localize('yes', 'Yes'), data: { includeSampleCode: true } },
-            { label: localize('no', 'No'), data: { includeSampleCode: false } }
+            { label: localize('yes', 'Yes'), description: localize('includeSampleCodeYesDescription', 'Starting from scratch'), data: { includeSampleCode: true } },
+            { label: localize('no', 'No'), description: localize('includeSampleCodeNoDescription', 'Have an existing MCP server to host remotely'), data: { includeSampleCode: false } }
         ];
     }
 }

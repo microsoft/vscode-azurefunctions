@@ -1369,6 +1369,20 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showBallerinaProjectCreation%",
                         "default": false
+                    },
+                    "azureFunctions.mcpProjectType": {
+                        "type": "string",
+                        "description": "%azureFunctions.templateSource%",
+                        "enum": [
+                            "",
+                            "McpExtensionServer",
+                            "SelfHostedMcpServer"
+                        ],
+                        "enumDescriptions": [
+                            "%azureFunctions.mcpProjectType.default%",
+                            "%azureFunctions.mcpProjectType.McpExtensionServer%",
+                            "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
+                        ]
                     }
                 }
             }
@@ -1493,7 +1507,7 @@
         "open": "^8.0.4",
         "p-retry": "^4.6.2",
         "ps-tree": "^1.1.1",
-        "semver": "^7.5.2",
+        "semver": "^7.7.3",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
         "xml2js": "^0.5.0",

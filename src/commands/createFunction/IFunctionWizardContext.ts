@@ -20,6 +20,7 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
     newDurableStorageType?: DurableBackend;
 
     useStorageEmulator?: boolean;
+    hasMcpTrigger?: boolean;
 }
 
 export interface FunctionV2WizardContext extends IFunctionWizardContext {
