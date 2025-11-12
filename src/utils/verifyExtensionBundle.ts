@@ -51,15 +51,6 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
             } else {
                 context.telemetry.properties.bundleResult = 'alreadyHasBundle';
             }
-            // TODO: This isn't working, need to debug it
-            if (context.hasMcpTrigger && hostJson.extensionBundle?.version) {
-                if (bundleFeedUtils.isRangeLessThan(hostJson.extensionBundle?.version, '4.29.0')) {
-                    // MCP triggers need at least 4.29.0
-                    bundleFeedUtils.overwriteExtensionBundleVersion(hostJson,
-                        await bundleFeedUtils.getLatestVersionRange(context),
-                        '[4.29.0, 5.0.0)');
-                }
-            }
         }
     }
 }

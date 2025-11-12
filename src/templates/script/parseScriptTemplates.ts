@@ -197,7 +197,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         return undefined;
     }
 
-    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function);
+    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
     // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
@@ -251,6 +251,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         functionJson,
         isHttpTrigger: functionJson.isHttpTrigger,
         isTimerTrigger: functionJson.isTimerTrigger,
+        isMcpTrigger: functionJson.isMcpTrigger,
         isSqlBindingTemplate: sqlBindingTemplateRegex.test(rawTemplate.id),
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),

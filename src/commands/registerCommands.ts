@@ -65,7 +65,7 @@ import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
 import { executeFunction } from './executeFunction/executeFunction';
-import { getDefaultHostKey } from './getDefaultHostKey';
+import { getMcpHostKey } from './getMcpHostKey';
 import { assignManagedIdentity } from './identity/assignManagedIdentity';
 import { enableSystemIdentity } from './identity/enableSystemIdentity';
 import { unassignManagedIdentity } from './identity/unassignManagedIdentity';
@@ -194,7 +194,7 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.assignManagedIdentity', assignManagedIdentity);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.unassignManagedIdentity', unassignManagedIdentity);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableSystemIdentity', enableSystemIdentity);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.getDefaultHostKey', getDefaultHostKey);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.getMcpHostKey', getMcpHostKey);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copyEmulatorConnectionString', copyEmulatorConnectionStringCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));

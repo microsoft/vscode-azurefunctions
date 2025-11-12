@@ -464,8 +464,8 @@
                 "icon": "$(debug-stop)"
             },
             {
-                "command": "azureFunctions.getDefaultHostKey",
-                "title": "%azureFunctions.getDefaultHostKey%",
+                "command": "azureFunctions.getMcpHostKey",
+                "title": "%azureFunctions.getMcpHostKey%",
                 "category": "Azure Functions"
             }
         ],
@@ -1379,12 +1379,12 @@
                         "type": "string",
                         "description": "%azureFunctions.templateSource%",
                         "enum": [
-                            "",
+                            "NoMcpServer",
                             "McpExtensionServer",
                             "SelfHostedMcpServer"
                         ],
                         "enumDescriptions": [
-                            "%azureFunctions.mcpProjectType.default%",
+                            "%azureFunctions.mcpProjectType.NoMcpServer%",
                             "%azureFunctions.mcpProjectType.McpExtensionServer%",
                             "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
                         ]

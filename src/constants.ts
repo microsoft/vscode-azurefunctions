@@ -243,7 +243,7 @@ export type GitHubFileMetadata = {
 };
 
 export enum McpProjectType {
-    Default = 'Default',
+    NoMcpServer = 'NoMcpServer',
     McpExtensionServer = 'McpExtensionServer',
     SelfHostedMcpServer = 'SelfHostedMcpServer'
 }

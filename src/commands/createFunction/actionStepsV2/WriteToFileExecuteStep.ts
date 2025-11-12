@@ -30,7 +30,7 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         const source = context[sourceKey] as string;
 
         await AzExtFsExtra.writeFile(filePath, source);
-        if (context.hasMcpTrigger) {
+        if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
             await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
             const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
@@ -38,25 +38,23 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
 
             const hostFilePath: string = path.join(context.projectPath, hostFileName);
             if (await AzExtFsExtra.pathExists(hostFilePath)) {
-                if (context.hasMcpTrigger) {
-                    const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
-                    hostJson.extensions = hostJson.extensions ?? {};
-                    if (!hostJson.extensions.mcp) {
-                        hostJson.extensions.mcp = {
-                            instructions: "Some test instructions on how to use the server",
-                            serverName: "TestServer",
-                            serverVersion: "2.0.0",
-                            encryptClientState: true,
-                            messageOptions: {
-                                useAbsoluteUriForEndpoint: false
-                            },
-                            system: {
-                                webhookAuthorizationLevel: "System"
-                            }
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.extensions = hostJson.extensions ?? {};
+                if (!hostJson.extensions.mcp) {
+                    hostJson.extensions.mcp = {
+                        instructions: "Some test instructions on how to use the server",
+                        serverName: "TestServer",
+                        serverVersion: "2.0.0",
+                        encryptClientState: true,
+                        messageOptions: {
+                            useAbsoluteUriForEndpoint: false
+                        },
+                        system: {
+                            webhookAuthorizationLevel: "System"
                         }
                     }
-                    await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
                 }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }
         }
     }

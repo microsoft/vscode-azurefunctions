@@ -117,20 +117,4 @@ export namespace bundleFeedUtils {
             hostJson.extensionBundle.version = newRange;
         }
     }
-
-    export function isRangeLessThan(range1: string, targetRange: string): boolean {
-        // Extract minimum version from '[4.*, 5.0.0)' -> '4.*'
-        const min1Match = range1.match(/\[([^,\]]+)/);
-        const minTargetMatch = targetRange.match(/\[([^,\]]+)/);
-
-        if (!min1Match || !minTargetMatch) return false;
-
-        // Convert '4.*' to '4.0.0', '4.29.0' stays '4.29.0'
-        const min1 = semver.coerce(min1Match[1]);
-        const minTarget = semver.coerce(minTargetMatch[1]);
-
-        if (!min1 || !minTarget) return false;
-
-        return semver.lt(min1.version, minTarget.version);
-    }
 }

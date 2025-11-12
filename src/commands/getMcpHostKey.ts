@@ -8,9 +8,11 @@ import { parseAzureResourceId, type ParsedAzureResourceId } from '@microsoft/vsc
 import { AzureWizard, createSubscriptionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import { l10n } from 'vscode';
+import { McpProjectType } from '../constants';
 import { SubscriptionListStep } from './SubscriptionListStep';
 
-export async function getDefaultHostKey(context: IActionContext & { subscription?: AzureSubscription }, args: { resourceId: string }): Promise<string> {
+export async function getMcpHostKey(context: IActionContext & { subscription?: AzureSubscription },
+    args: { resourceId: string, projectType: McpProjectType }): Promise<string> {
     const parsedId: ParsedAzureResourceId = parseAzureResourceId(args.resourceId);
     const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(context, {
         promptSteps: [new SubscriptionListStep(parsedId.subscriptionId)],
@@ -26,7 +28,11 @@ export async function getDefaultHostKey(context: IActionContext & { subscription
     const subContext = createSubscriptionContext(context.subscription)
     const client = await createWebSiteClient([context, subContext]);
     const keys = await client.webApps.listHostKeys(parsedId.resourceGroup, parsedId.resourceName);
-    if (keys.functionKeys?.['default']) {
+
+    if (args.projectType === McpProjectType.McpExtensionServer && keys.systemKeys?.['mcp_extension']) {
+        return keys.systemKeys['mcp_extension'];
+    } else if (keys.functionKeys?.['default']) {
+        // if the system key isn't there, just default to the default function key
         return keys.functionKeys['default'];
     } else {
         throw new Error(l10n.t('No default host key found.'));

@@ -116,14 +116,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.telemetry.properties.reloaded = 'true';
             } else {
                 context.functionTemplate = result;
-
-                // python and node.js use different IDs for Mcp Triggers... because of course they do
-                context.hasMcpTrigger = result.id.toLocaleLowerCase().includes('mcptooltrigger') ||
-                    result.id.toLocaleLowerCase().includes('mcptrigger');
             }
-        }
 
-        context.telemetry.properties.templateFilter = templateFilter;
+            context.telemetry.properties.templateFilter = templateFilter;
+        }
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {

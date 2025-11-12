@@ -8,13 +8,15 @@ import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionCont
 import * as retry from 'p-retry';
 import * as path from 'path';
 import { Uri, window, type MessageItem, type WorkspaceFolder } from 'vscode';
+import { McpProjectType, mcpProjectTypeSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
-import { addRemoteMcpServer, getOrCreateMcpJson, isMcpProject, saveMcpJson } from '../../utils/mcpUtils';
+import { addRemoteMcpServer, checkIfMcpServerExists, getOrCreateMcpJson, getRemoteServerName, isMcpProject, saveMcpJson } from '../../utils/mcpUtils';
 import { nonNullValue } from '../../utils/nonNull';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
@@ -25,19 +27,32 @@ export async function notifyDeployComplete(context: IDeployContext, node: SlotTr
     if (await isMcpProject(workspaceFolder)) {
         const mcpRecommendedActions: string = `Recommended actions: Learn more about [built-in server authorization](https://aka.ms/mcp-easy-auth) and authentication and Azure Functions [MCP server integration](https://aka.ms/mcp-integration).`;
 
-        const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect to MCP Server') };
+        const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect MCP Server') };
         void window.showInformationMessage(`${deployComplete} ${mcpRecommendedActions}`, connectMcpServer).then(async result => {
             await callWithTelemetryAndErrorHandling('postMcpDeploy', async (postDeployContext: IActionContext) => {
                 postDeployContext.valuesToMask.push(...context.valuesToMask);
                 context.telemetry.eventVersion = 2;
                 await node.initSite(context);
+                const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
+                if (mcpProjectType === McpProjectType.McpExtensionServer) {
+                    postDeployContext.telemetry.properties.projectType = 'McpExtensionServer';
+                } else if (mcpProjectType === McpProjectType.SelfHostedMcpServer) {
+                    postDeployContext.telemetry.properties.projectType = 'SelfHostedMcpServer';
+                } else {
+                    // not sure how we got here so just return;
+                    return;
+                }
+
+                const workspace = context.workspaceFolder;
+                const mcpJson = await getOrCreateMcpJson(workspace);
+                const serverName = getRemoteServerName(node);
+                // only add if it doesn't already exist
+                if (!checkIfMcpServerExists(mcpJson, serverName)) {
+                    const newMcpJson = await addRemoteMcpServer(mcpJson, node, mcpProjectType);
+                    await saveMcpJson(workspace, newMcpJson);
+                }
 
                 if (result === connectMcpServer) {
-                    // check for doubles
-                    const workspace = context.workspaceFolder;
-                    const mcpJson = await getOrCreateMcpJson(workspace);
-                    const newMcpJson = await addRemoteMcpServer(mcpJson, node);
-                    await saveMcpJson(workspace, newMcpJson);
                     const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
                     await window.showTextDocument(Uri.file(mcpJsonFilePath));
                 }

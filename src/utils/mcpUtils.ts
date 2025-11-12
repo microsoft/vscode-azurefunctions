@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, DialogResponses, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { type WorkspaceFolder } from "vscode";
-import { hostFileName, mcpSelfHostedConfigurationProfile } from "../constants";
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, mcpSelfHostedConfigurationProfile } from "../constants";
 import { type IHostJsonV2 } from "../funcConfig/host";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
+import { getWorkspaceSetting, updateWorkspaceSetting } from "../vsCodeConfig/settings";
 
 export type McpJson = {
     servers?: {
@@ -35,7 +36,13 @@ type McpServerDefinition = {
 }
 
 export async function isMcpProject(workspaceFolder: WorkspaceFolder): Promise<boolean> {
-    // TODO: Add a workspace setting that gets added on creation, other prompt the user if we detect the custom handler. Or MCP profile, we can assume it is MCP
+    const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
+    if (mcpProjectType === McpProjectType.SelfHostedMcpServer || mcpProjectType === McpProjectType.McpExtensionServer) {
+        return true;
+    } else if (mcpProjectType === McpProjectType.NoMcpServer) {
+        return false;
+    }
+
     const hostFilePath: string = path.join(workspaceFolder.uri.fsPath, hostFileName);
     if (!(await AzExtFsExtra.pathExists(hostFilePath))) {
         return false;
@@ -43,8 +50,24 @@ export async function isMcpProject(workspaceFolder: WorkspaceFolder): Promise<bo
 
     const hostJson = await AzExtFsExtra.readJSON(hostFilePath) as IHostJsonV2;
     if (hostJson.configurationProfile === mcpSelfHostedConfigurationProfile) {
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, workspaceFolder.uri.fsPath);
         return true;
     } else if (hostJson?.customHandler?.description?.defaultExecutablePath) {
+        const infoMsg = vscode.l10n.t('This project appears to be using a custom handler which may indicate a Self-Hosted MCP Server project. Set the project type accordingly?');
+        const result = await vscode.window.showInformationMessage(infoMsg, { modal: true }, DialogResponses.yes, DialogResponses.dontWarnAgain);
+        if (result === DialogResponses.yes) {
+            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, workspaceFolder.uri.fsPath);
+            return true;
+        } else if (result === DialogResponses.dontWarnAgain) {
+            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.NoMcpServer, workspaceFolder.uri.fsPath);
+            return false;
+        } else {
+            throw new UserCancelledError();
+        }
+    }
+
+    if (hostJson.extensions?.mcp) {
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, workspaceFolder.uri.fsPath);
         return true;
     }
 
@@ -79,14 +102,55 @@ export async function saveMcpJson(workspaceFolder: WorkspaceFolder, mcpJson: Mcp
     await AzExtFsExtra.writeFile(mcpJsonFilePath, mcpJsonContent);
 }
 
-export async function addRemoteMcpServer(mcpJson: McpJson, ti: SlotTreeItem): Promise<McpJson> {
+export function checkIfMcpServerExists(mcpJson: McpJson, serverName: string): boolean {
     if (!mcpJson.servers) {
         mcpJson.servers = {};
+        return false;
     }
 
-    mcpJson.servers[`${ti.site.fullName}-remote-server`] = {
+    if (mcpJson.servers[serverName]) {
+        return true;
+    }
+
+    return false;
+}
+
+export function getLocalServerName(workspace: WorkspaceFolder): string {
+    return `${workspace.name}-local-server`;
+}
+
+export function getRemoteServerName(ti: SlotTreeItem): string {
+    return `${ti.site.fullName}-remote-server`;
+}
+
+export async function addLocalMcpServer(mcpJson: McpJson, serverName: string, projectType: McpProjectType): Promise<McpJson> {
+    const url = projectType === McpProjectType.SelfHostedMcpServer ?
+        'http://localhost:7071/mcp' :
+        'http://localhost:7071/runtime/webhooks/mcp';
+
+    if (!mcpJson.servers) {
+        throw new Error(vscode.l10n.t('Internal error: mcp.json servers property is undefined.'));
+    }
+    mcpJson.servers[serverName] = {
         type: "http",
-        url: ti.site.defaultHostUrl + '/mcp',
+        url
+    };
+
+    return mcpJson;
+}
+
+export async function addRemoteMcpServer(mcpJson: McpJson, ti: SlotTreeItem, projectType: McpProjectType): Promise<McpJson> {
+    const url = projectType === McpProjectType.SelfHostedMcpServer ?
+        ti.site.defaultHostUrl + '/mcp' :
+        ti.site.defaultHostUrl + '/runtime/webhooks/mcp';
+    const serverName = getRemoteServerName(ti);
+    if (!mcpJson.servers) {
+        throw new Error(vscode.l10n.t('Internal error: mcp.json servers property is undefined.'));
+    }
+
+    mcpJson.servers[serverName] = {
+        type: "http",
+        url,
         headers: {
             'x-functions-key': `$\{input:${ti.site.fullName}McpHostKey\}`
         }
@@ -96,9 +160,10 @@ export async function addRemoteMcpServer(mcpJson: McpJson, ti: SlotTreeItem): Pr
     mcpJson.inputs.push({
         type: "command",
         id: `${ti.site.fullName}McpHostKey`,
-        command: `azureFunctions.getDefaultHostKey`,
+        command: `azureFunctions.getMcpHostKey`,
         args: {
-            resourceId: ti.site.id
+            resourceId: ti.site.id,
+            projectType
         }
     });
 
