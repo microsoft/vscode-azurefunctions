@@ -3,10 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
+import { hostFileName, McpProjectType, mcpProjectTypeSetting } from "../../../constants";
+import { type IHostJsonV2 } from "../../../funcConfig/host";
+import { type FunctionTemplateBase } from "../../../templates/IFunctionTemplate";
 import { isDocumentOpened } from "../../../utils/textUtils";
+import { verifyExtensionBundle } from "../../../utils/verifyExtensionBundle";
+import { updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
@@ -25,6 +30,35 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         const source = context[sourceKey] as string;
 
         await AzExtFsExtra.writeFile(filePath, source);
+        if (context.hasMcpTrigger) {
+            // indicate that this is a MCP Extension Server project
+            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+            const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
+            await verifyExtensionBundle(context, template);
+
+            const hostFilePath: string = path.join(context.projectPath, hostFileName);
+            if (await AzExtFsExtra.pathExists(hostFilePath)) {
+                if (context.hasMcpTrigger) {
+                    const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                    hostJson.extensions = hostJson.extensions ?? {};
+                    if (!hostJson.extensions.mcp) {
+                        hostJson.extensions.mcp = {
+                            instructions: "Some test instructions on how to use the server",
+                            serverName: "TestServer",
+                            serverVersion: "2.0.0",
+                            encryptClientState: true,
+                            messageOptions: {
+                                useAbsoluteUriForEndpoint: false
+                            },
+                            system: {
+                                webhookAuthorizationLevel: "System"
+                            }
+                        }
+                    }
+                    await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+                }
+            }
+        }
     }
 
     protected async getFilePath(context: T): Promise<string> {

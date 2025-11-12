@@ -15,11 +15,20 @@ export function createRefreshFileWatcher(ti: AzExtTreeItem, globPattern: string)
         });
     };
 
+    const refreshMethodForDelete: () => Promise<void> = async (): Promise<void> => {
+        await callWithTelemetryAndErrorHandling('refreshFileWatcher', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
+            // need to refresh the parent on delete, as the deleted file's tree item no longer exists
+            await ti.parent?.refresh(context);
+        });
+    };
+
     const watcher: FileSystemWatcher = workspace.createFileSystemWatcher(globPattern);
     return Disposable.from(
         watcher,
         watcher.onDidChange(refreshMethod),
         watcher.onDidCreate(refreshMethod),
-        watcher.onDidDelete(refreshMethod)
+        watcher.onDidDelete(refreshMethodForDelete)
     );
 }

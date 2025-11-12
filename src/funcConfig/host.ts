@@ -8,6 +8,7 @@ import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
+    configurationProfile?: string;
     customHandler?: {};
     // https://github.com/Azure/azure-functions-templates/issues/906
     logging?: {
@@ -27,7 +28,19 @@ export interface IHostJsonV2 {
         http?: {
             routePrefix?: string;
         };
-    };
+        mcp?: {
+            instructions: string,
+            serverName: string,
+            serverVersion: string,
+            encryptClientState: boolean,
+            messageOptions: {
+                useAbsoluteUriForEndpoint: boolean
+            },
+            system: {
+                webhookAuthorizationLevel: string
+            }
+        };
+    }
     concurrency?: {
         dynamicConcurrencyEnabled: boolean;
         snapshotPersistenceEnabled: boolean;

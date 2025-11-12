@@ -13,6 +13,7 @@ import { BallerinaInitVSCodeStep } from './InitVSCodeStep/BallerinaInitVSCodeSte
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
+import { MCPServerInitVSCodeStep } from './InitVSCodeStep/MCPServerInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
 import { ScriptInitVSCodeStep } from './InitVSCodeStep/ScriptInitVSCodeStep';
 import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeStep';
@@ -88,6 +89,9 @@ export async function addInitVSCodeSteps(
             break;
         case ProjectLanguage.Ballerina:
             executeSteps.push(new BallerinaInitVSCodeStep());
+            break;
+        case ProjectLanguage.SelfHostedMCPServer:
+            executeSteps.push(new MCPServerInitVSCodeStep());
             break;
         default:
             executeSteps.push(new ScriptInitVSCodeStep());

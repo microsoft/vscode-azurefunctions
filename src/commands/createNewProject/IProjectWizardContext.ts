@@ -33,4 +33,9 @@ export interface IProjectWizardContext extends IActionContext {
     containerizedProject?: boolean;
 }
 
+export interface MCPProjectWizardContext extends IProjectWizardContext {
+    serverLanguage?: ProjectLanguage;
+    includeSampleCode?: boolean;
+}
+
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';

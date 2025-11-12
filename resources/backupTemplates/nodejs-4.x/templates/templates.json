@@ -619,12 +619,12 @@
         "id": "McpToolTrigger-JavaScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.js": "const { app, output, trigger } = require('@azure\/functions');\r\n\r\n\/**\r\n * Sample Dapr Service Invocation Trigger\r\n * See https:\/\/aka.ms\/azure-functions-dapr for more information about using this binding\r\n *\r\n * These tasks should be completed prior to running :\r\n *      1. Install Dapr\r\n * Run the app with below steps\r\n *      1. Start function app with Dapr: dapr run --app-id functionapp --app-port 3001 --dapr-http-port 3501 -- func host start\r\n *      2. Invoke function app: dapr publish --pubsub pubsub --publish-app-id functionapp --topic A --data '{\"value\": { \"orderId\": \"42\" } }'\r\n *\/\r\nconst daprStateOuput = output.generic({\r\n    type: \"daprState\",\r\n    stateStore: \"statestore\",\r\n    direction: \"out\",\r\n    key: \"product\"\r\n});\r\n\r\napp.generic('%functionName%', {\r\n    trigger: trigger.generic({\r\n        type: \"daprTopicTrigger\",\r\n        pubsubname: \"pubsub\",\r\n        topic: \"A\",\r\n        name: \"subEvent\"\r\n    }),\r\n    return: daprStateOuput,\r\n    handler: async (request, context) => {\r\n        context.log(\"JavaScript DaprTopic trigger with DaprState output binding function processed a request.\");\r\n        context.log(context.triggerMetadata.subEvent.data);\r\n\r\n        return context.triggerMetadata.subEvent.data;\r\n    }\r\n});"
+            "%functionName%.js": "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
             "description": "$McpToolTrigger_description",
-            "name": "Mcp Tool trigger",
+            "name": "MCP Tool trigger",
             "language": "JavaScript",
             "triggerType": "mcpToolTrigger",
             "category": [
@@ -640,12 +640,12 @@
         "id": "McpToolTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts":  "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
+            "%functionName%.ts": "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
             "description": "$McpToolTrigger_description",
-            "name": "Mcp Tool trigger",
+            "name": "MCP Tool trigger",
             "language": "TypeScript",
             "triggerType": "mcpToolTrigger",
             "category": [
