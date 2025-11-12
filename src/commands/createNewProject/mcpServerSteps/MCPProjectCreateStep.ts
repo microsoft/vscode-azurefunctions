@@ -14,30 +14,11 @@ export class MCPProjectCreateStep extends ScriptProjectCreateStep {
         this.localSettingsJson.Values[azureWebJobsFeatureFlags] = enableMcpCustomHandlerPreview;
         // TODO: need to fix this to be plain strings: "python", "node", "dotnet-isolated"
         this.localSettingsJson.Values[workerRuntimeKey] = context.serverLanguage ?? 'custom'
-        // TODO: We may need to create the mcp.json like this, unclear atm
-        /* {
-        "servers": {
-            "local-mcp-server": {
-                "type": "http",
-                "url": "http://localhost:7071/mcp"
-            },
-            "remote-mcp-server": {
-                "type": "http",
-                "url": "https://${input:functionapp-domain}/mcp",
-            }
-        },
-        "inputs": [
-            {
-                "type": "promptString",
-                "id": "functionapp-domain",
-                "description": "The domain of the function app."
-            }
-        ]
-    } */
+        // TODO: Have this download the host.json and local.settings.json from the sample repo instead of creating new ones
         await super.executeCore(context, _progress);
         return;
     }
-
+    // TODO: Delete this
     protected async getHostContent(context: MCPProjectWizardContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = await super.getHostContent(context);
         let defaultExecutablePath: string = '';

@@ -23,6 +23,7 @@ export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
 export const showBallerinaProjectCreationSetting: string = 'showBallerinaProjectCreation';
+export const mcpProjectTypeSetting: string = 'mcpProjectType';
 
 export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
 
@@ -240,3 +241,9 @@ export type GitHubFileMetadata = {
         html: string;
     };
 };
+
+export enum McpProjectType {
+    Default = 'Default',
+    McpExtensionServer = 'McpExtensionServer',
+    SelfHostedMcpServer = 'SelfHostedMcpServer'
+}

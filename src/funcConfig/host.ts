@@ -39,7 +39,19 @@ export interface IHostJsonV2 {
         http?: {
             routePrefix?: string;
         };
-    };
+        mcp?: {
+            instructions: string,
+            serverName: string,
+            serverVersion: string,
+            encryptClientState: boolean,
+            messageOptions: {
+                useAbsoluteUriForEndpoint: boolean
+            },
+            system: {
+                webhookAuthorizationLevel: string
+            }
+        };
+    }
     concurrency?: {
         dynamicConcurrencyEnabled: boolean;
         snapshotPersistenceEnabled: boolean;

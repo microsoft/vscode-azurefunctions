@@ -22,7 +22,7 @@ export class MCPServerLanguagePromptStep extends AzureWizardPromptStep<MCPProjec
 
     public async prompt(context: MCPProjectWizardContext): Promise<void> {
         // Only display 'supported' languages that can be debugged in VS Code
-        const options: QuickPickOptions = { placeHolder: localize('selectServerLanguage', 'Select a language for the MCP server') };
+        const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
         const result = (await context.ui.showQuickPick(this.getPicks(), options)).data;
         context.serverLanguage = result.language;
     }
