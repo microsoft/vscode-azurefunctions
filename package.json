@@ -462,6 +462,11 @@
                 "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
                 "category": "Azure Functions",
                 "icon": "$(debug-stop)"
+            },
+            {
+                "command": "azureFunctions.getMcpHostKey",
+                "title": "%azureFunctions.getMcpHostKey%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [
@@ -1118,7 +1123,6 @@
                             "PowerShell",
                             "Python",
                             "TypeScript",
-                            "Ballerina",
                             "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
@@ -1365,6 +1369,25 @@
                         "type": "boolean",
                         "description": "%azureFunctions.allowProgrammingModelSelection%",
                         "default": false
+                    },
+                    "azureFunctions.showBallerinaProjectCreation": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showBallerinaProjectCreation%",
+                        "default": false
+                    },
+                    "azureFunctions.mcpProjectType": {
+                        "type": "string",
+                        "description": "%azureFunctions.templateSource%",
+                        "enum": [
+                            "NoMcpServer",
+                            "McpExtensionServer",
+                            "SelfHostedMcpServer"
+                        ],
+                        "enumDescriptions": [
+                            "%azureFunctions.mcpProjectType.NoMcpServer%",
+                            "%azureFunctions.mcpProjectType.McpExtensionServer%",
+                            "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
+                        ]
                     }
                 }
             }
