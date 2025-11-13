@@ -7,7 +7,7 @@ import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, type IActionCon
 import * as path from 'path';
 import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
+import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
@@ -249,6 +249,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
 
         if (this.preDeployTask) {
             settings.push({ key: preDeployTaskSetting, value: this.preDeployTask });
+        }
+
+        if (context.mcpProjectType) {
+            settings.push({ key: mcpProjectTypeSetting, value: context.mcpProjectType });
         }
 
         if (context.workspaceFolder) { // Use VS Code api to update config if folder is open

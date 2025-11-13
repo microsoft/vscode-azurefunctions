@@ -3,19 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
-import { hostFileName, McpProjectType, mcpProjectTypeSetting } from '../../constants';
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { confirmEditJsonFile } from '../../utils/fs';
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
@@ -73,15 +74,24 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         const newFilePath: string = await this.executeCore(context);
         if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
-            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+            context.mcpProjectType = McpProjectType.McpExtensionServer;
+            if (context.workspaceFolder) {
+                // can only update workspace setting if a workspaceFolder is opened
+                const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, context.workspaceFolder);
+                if (mcpProjectType !== McpProjectType.McpExtensionServer) {
+                    await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+                }
+            } else {
+                // otherwise write to settings.json in .vscode
+                await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
+            }
             // add the local server to the mcp.json if it doesn't already exist
-            const workspace = nonNullProp(context, 'workspaceFolder');
-            const mcpJson = await getOrCreateMcpJson(workspace);
-            const serverName = getLocalServerName(workspace);
+            const mcpJson = await getOrCreateMcpJson(context.projectPath);
+            const serverName = getLocalServerName(context.projectPath);
             // only add if it doesn't already exist
             if (!checkIfMcpServerExists(mcpJson, serverName)) {
                 const newMcpJson = await addLocalMcpServer(mcpJson, serverName, McpProjectType.McpExtensionServer);
-                await saveMcpJson(workspace, newMcpJson);
+                await saveMcpJson(context.projectPath, newMcpJson);
             }
         }
 
@@ -130,6 +140,22 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
+    }
+
+    private async writeToSettingsJson(context: T, vscodePath: string): Promise<void> {
+        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
+        const settings = [{ key: mcpProjectTypeSetting, value: context.mcpProjectType }];
+        await confirmEditJsonFile(
+            context,
+            settingsJsonPath,
+            (data: {}): {} => {
+                for (const setting of settings) {
+                    const key: string = `${ext.prefix}.${setting.key}`;
+                    data[key] = setting.value;
+                }
+                return data;
+            }
+        );
     }
 }
 

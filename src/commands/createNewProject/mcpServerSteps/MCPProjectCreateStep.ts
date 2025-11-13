@@ -6,16 +6,15 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { l10n, type Progress } from "vscode";
-import { McpProjectType, mcpProjectTypeSetting, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
+import { McpProjectType, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
 import { feedUtils } from "../../../utils/feedUtils";
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from "../../../utils/mcpUtils";
 import { requestUtils } from "../../../utils/requestUtils";
-import { updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type MCPProjectWizardContext } from "../IProjectWizardContext";
 import { ProjectCreateStepBase } from "../ProjectCreateStep/ProjectCreateStepBase";
 export class MCPProjectCreateStep extends ProjectCreateStepBase {
     public async executeCore(context: MCPProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
-        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, context.projectPath);
+        context.mcpProjectType = McpProjectType.SelfHostedMcpServer;
         this.setSampleMcpRepoUrl(context);
         await this.addLocalMcpServer(context);
 
@@ -51,7 +50,7 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
     }
 
     private async addLocalMcpServer(context: MCPProjectWizardContext): Promise<void> {
-        const workspace = nonNullProp(context, 'workspaceFolder');
+        const workspace = context.projectPath;
         const mcpJson = await getOrCreateMcpJson(workspace);
         const serverName = getLocalServerName(workspace);
         // only add if it doesn't already exist
