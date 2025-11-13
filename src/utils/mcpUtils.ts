@@ -3,18 +3,10 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-<<<<<<< HEAD
-import { AzExtFsExtra, DialogResponses, UserCancelledError } from "@microsoft/vscode-azext-utils";
-import * as jsonc from 'jsonc-parser';
-import * as path from 'path';
-import * as vscode from 'vscode';
-=======
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type WorkspaceFolder } from "vscode";
->>>>>>> f1ea2b825b2b83206fc51769450aff7c6172fae1
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, mcpSelfHostedConfigurationProfile } from "../constants";
 import { type IHostJsonV2 } from "../funcConfig/host";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
