@@ -68,6 +68,7 @@ import { executeFunction } from './executeFunction/executeFunction';
 import { assignManagedIdentity } from './identity/assignManagedIdentity';
 import { enableSystemIdentity } from './identity/enableSystemIdentity';
 import { unassignManagedIdentity } from './identity/unassignManagedIdentity';
+import { initializeProjectForSlashAzure } from './initializeProjectForSlashAzure';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
@@ -81,6 +82,7 @@ import { restartFunctionApp } from './restartFunctionApp';
 import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
+import { testExternalRuntimeCommand } from './testExternalRuntime';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
@@ -154,6 +156,10 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
+    registerCommand('azureFunctions.initializeProjectForSlashAzure', initializeProjectForSlashAzure);
+
+    // Test commands for external runtime initialization
+    registerCommand('azureFunctions.testExternalRuntime', testExternalRuntimeCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openFile', openFile);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openInPortal', openDeploymentInPortal);

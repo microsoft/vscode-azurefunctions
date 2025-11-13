@@ -92,6 +92,11 @@
         },
         "commands": [
             {
+                "command": "azureFunctions.initializeProjectForSlashAzure",
+                "title": "initializeProjectForSlashAzure",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
                 "category": "Azure Functions",
@@ -209,6 +214,12 @@
                 "command": "azureFunctions.createNewProjectWithDockerfile",
                 "title": "%azureFunctions.createNewProjectWithDockerfile%",
                 "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
+                "command": "azureFunctions.testExternalRuntime",
+                "title": "Test External Runtime Configuration",
+                "category": "Azure Functions (Test)",
                 "enablement": "!virtualWorkspace"
             },
             {
@@ -875,6 +886,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.initializeProjectForSlashAzure",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.deployByFunctionAppId",
                     "when": "never"

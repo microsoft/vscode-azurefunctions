@@ -219,3 +219,26 @@ export const EventHubsNamespaceResourceType: string = 'namespaces';
 
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';
+
+/**
+ * External runtime configuration types for programmatic project initialization
+ */
+export interface IExternalRuntimeConfig {
+    readonly runtimeName: string;
+    readonly runtimeVersion: string;
+    readonly projectPath?: string;
+}
+
+export interface IRuntimeVersionMapping {
+    language: string; // Using string to match API ProjectLanguage
+    version: string;
+    languageModel?: number;
+    targetFramework?: string;
+    javaVersion?: string;
+    pythonAlias?: string;
+}
+
+export const RuntimeNameToLanguageMapping: Record<string, ProjectLanguage> = {
+    'node': ProjectLanguage.TypeScript,
+    'python': ProjectLanguage.Python,
+};

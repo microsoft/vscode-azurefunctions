@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { gt, satisfies } from "semver";
 import { localize } from "../../../localize";
 import { getGlobalSetting } from "../../../vsCodeConfig/settings";
 import { EnterPythonAliasStep } from "./EnterPythonAliasStep";
@@ -14,6 +15,21 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
     public hideStepCount: boolean = true;
 
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
+
+
+        if (context.externalRuntimeConfig) {
+            const installedVersions = await getInstalledPythonVersions(context);
+            const matchingVersion = findBestMatchingVersion(context.externalRuntimeConfig.runtimeVersion, installedVersions);
+
+            if (matchingVersion) {
+                context.pythonAlias = matchingVersion.alias;
+                context.telemetry.properties.pythonAliasBehavior = 'externalRuntimeConfigMatch';
+                return;
+            } else {
+                return;
+            }
+        }
+
         const placeHolder: string = localize('selectAlias', 'Select a Python interpreter to create a virtual environment');
         const result: string | boolean = (await context.ui.showQuickPick(getPicks(context), { placeHolder })).data;
         if (typeof result === 'string') {
@@ -26,6 +42,7 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
     }
 
     public shouldPrompt(context: IPythonVenvWizardContext): boolean {
+        // Skip prompting if external runtime configuration is provided
         return !context.useExistingVenv && !context.pythonAlias;
     }
 
@@ -55,26 +72,12 @@ async function getPicks(context: IPythonVenvWizardContext): Promise<IAzureQuickP
     }
 
     const picks: IAzureQuickPickItem<string | boolean>[] = [];
-    const versions: string[] = [];
-    for (const alias of aliasesToTry) {
-        let version: string;
-        try {
-            version = await getPythonVersion(alias);
-        } catch {
-            continue;
-        }
-
-        if (isSupportedPythonVersion(supportedVersions, version) && !versions.some(v => v === version)) {
-            picks.push({
-                label: alias,
-                description: version,
-                data: alias
-            });
-            versions.push(version);
-        }
-    }
-
-    context.telemetry.properties.detectedPythonVersions = versions.join(',');
+    const pythonVersions = await getInstalledPythonVersions(context);
+    pythonVersions.forEach(pv => picks.push({
+        label: pv.alias,
+        description: pv.version,
+        data: pv.alias
+    }));
 
     picks.push({ label: localize('enterAlias', '$(keyboard) Manually enter Python interpreter or full path'), data: true });
 
@@ -83,4 +86,58 @@ async function getPicks(context: IPythonVenvWizardContext): Promise<IAzureQuickP
     }
 
     return picks;
+}
+
+interface InstalledPythonVersion {
+    alias: string;
+    version: string;
+}
+
+// use this method to preselect python version if runtime version is provided externally
+
+async function getInstalledPythonVersions(context: IPythonVenvWizardContext): Promise<InstalledPythonVersion[]> {
+    const supportedVersions: string[] = await getSupportedPythonVersions(context, context.version);
+
+    const aliasesToTry: string[] = ['python', 'python3', 'py'];
+    for (const version of supportedVersions) {
+        aliasesToTry.push(`python${version}`, `py -${version}`);
+    }
+
+    const globalPythonPathSetting: string | undefined = getGlobalSetting('pythonPath', 'python');
+    if (globalPythonPathSetting) {
+        aliasesToTry.unshift(globalPythonPathSetting);
+    }
+
+    const versions: InstalledPythonVersion[] = [];
+    for (const alias of aliasesToTry) {
+        let version: string;
+        try {
+            version = await getPythonVersion(alias);
+        } catch {
+            continue;
+        }
+
+        if (isSupportedPythonVersion(supportedVersions, version) && !versions.some(v => v.version === version)) {
+            versions.push({
+                alias,
+                version,
+            });
+        }
+    }
+
+    context.telemetry.properties.detectedPythonVersions = versions.join(',');
+    return versions;
+}
+
+// use semver to find a matching python version
+function findMatchingVersion(requestedVersion: string, versions: InstalledPythonVersion[]): InstalledPythonVersion | undefined {
+    return versions.find(v => satisfies(v.version, requestedVersion));
+}
+
+function findBestMatchingVersion(requestedVersion: string, versions: InstalledPythonVersion[]): InstalledPythonVersion | undefined {
+    let matchingVersion = findMatchingVersion(requestedVersion, versions);
+    if (!matchingVersion) {
+        matchingVersion = versions.reduce((prev, current) => (gt(current.version, prev.version) ? current : prev));
+    }
+    return matchingVersion;
 }

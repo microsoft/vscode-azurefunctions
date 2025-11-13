@@ -31,6 +31,12 @@ export interface IProjectWizardContext extends IActionContext {
     targetFramework?: string | string[];
 
     containerizedProject?: boolean;
+
+    // External runtime configuration from Azure APIs
+    externalRuntimeConfig?: {
+        runtimeName: string;
+        runtimeVersion: string;
+    };
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';

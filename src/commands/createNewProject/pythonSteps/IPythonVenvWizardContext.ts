@@ -14,4 +14,10 @@ export interface IPythonVenvWizardContext extends IActionContext {
     useExistingVenv?: boolean;
     venvName?: string;
     suppressSkipVenv?: boolean;
+
+    // External runtime configuration from Azure APIs
+    externalRuntimeConfig?: {
+        runtimeName: string;
+        runtimeVersion: string;
+    };
 }
