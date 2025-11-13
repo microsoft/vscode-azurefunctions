@@ -3,23 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
-import { hostFileName } from '../../constants';
+import { hostFileName, McpProjectType, mcpProjectTypeSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
+import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
+import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
     projectPath: string;
     newFilePath: string;
     isHttpTrigger: boolean;
+    isMcpTrigger: boolean;
 }
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
@@ -68,9 +71,23 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(context);
+        if (context.functionTemplate?.isMcpTrigger) {
+            // indicate that this is a MCP Extension Server project
+            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+            // add the local server to the mcp.json if it doesn't already exist
+            const workspace = nonNullProp(context, 'workspaceFolder');
+            const mcpJson = await getOrCreateMcpJson(workspace);
+            const serverName = getLocalServerName(workspace);
+            // only add if it doesn't already exist
+            if (!checkIfMcpServerExists(mcpJson, serverName)) {
+                const newMcpJson = await addLocalMcpServer(mcpJson, serverName, McpProjectType.McpExtensionServer);
+                await saveMcpJson(workspace, newMcpJson);
+            }
+        }
+
         await verifyExtensionBundle(context, template);
 
-        const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
+        const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger, isMcpTrigger: template.isMcpTrigger };
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         if (await AzExtFsExtra.pathExists(hostFilePath)) {
             if (verifyTemplateIsV1(context.functionTemplate) && context.functionTemplate?.isDynamicConcurrent) {
@@ -78,6 +95,24 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 hostJson.concurrency = {
                     dynamicConcurrencyEnabled: true,
                     snapshotPersistenceEnabled: true
+                }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+            } else if (context.functionTemplate?.isMcpTrigger) {
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.extensions = hostJson.extensions ?? {};
+                if (!hostJson.extensions.mcp) {
+                    hostJson.extensions.mcp = {
+                        instructions: "Some test instructions on how to use the server",
+                        serverName: "TestServer",
+                        serverVersion: "2.0.0",
+                        encryptClientState: true,
+                        messageOptions: {
+                            useAbsoluteUriForEndpoint: false
+                        },
+                        system: {
+                            webhookAuthorizationLevel: "System"
+                        }
+                    }
                 }
                 await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }
@@ -105,7 +140,15 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
 
         // If function creation created a new file, open it in an editor...
         if (func.newFilePath && getContainingWorkspace(func.projectPath)) {
-            if (await AzExtFsExtra.pathExists(func.newFilePath)) {
+            const mcpJsonFilePath: string = path.join(func.projectPath, '.vscode', 'mcp.json');
+            if (await AzExtFsExtra.pathExists(func.newFilePath) && await AzExtFsExtra.pathExists(mcpJsonFilePath) && func.isMcpTrigger) {
+                // show the func new file path and the mcp json file in a split editor
+                const templateFile = await workspace.openTextDocument(Uri.file(func.newFilePath));
+                const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
+                await window.showTextDocument(templateFile, { viewColumn: 1, preserveFocus: false });
+                await window.showTextDocument(mcpJsonFile, { viewColumn: 2, preserveFocus: true });
+            }
+            else if (await AzExtFsExtra.pathExists(func.newFilePath)) {
                 await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
             }
         }
