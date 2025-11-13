@@ -12,7 +12,10 @@ import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { confirmEditJsonFile } from '../../utils/fs';
+import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
+import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
+import { getContainingWorkspace } from '../../utils/workspace';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
