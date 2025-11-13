@@ -24,7 +24,7 @@ import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEv
 export async function notifyDeployComplete(context: IDeployContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean, deployedWithFuncCli?: boolean): Promise<void> {
     await node.initSite(context);
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
-    if (await isMcpProject(workspaceFolder)) {
+    if (await isMcpProject(workspaceFolder.uri.fsPath)) {
         const mcpRecommendedActions: string = `Recommended actions: Learn more about [built-in server authorization](https://aka.ms/mcp-easy-auth) and authentication and Azure Functions [MCP server integration](https://aka.ms/mcp-integration).`;
 
         const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect MCP Server') };
@@ -43,13 +43,12 @@ export async function notifyDeployComplete(context: IDeployContext, node: SlotTr
                     return;
                 }
 
-                const workspace = context.workspaceFolder;
-                const mcpJson = await getOrCreateMcpJson(workspace);
+                const mcpJson = await getOrCreateMcpJson(workspaceFolder.uri.fsPath);
                 const serverName = getRemoteServerName(node);
                 // only add if it doesn't already exist
                 if (!checkIfMcpServerExists(mcpJson, serverName)) {
                     const newMcpJson = await addRemoteMcpServer(mcpJson, node, mcpProjectType);
-                    await saveMcpJson(workspace, newMcpJson);
+                    await saveMcpJson(workspaceFolder.uri.fsPath, newMcpJson);
                 }
 
                 if (result === connectMcpServer) {

@@ -1377,7 +1377,7 @@
                     },
                     "azureFunctions.mcpProjectType": {
                         "type": "string",
-                        "description": "%azureFunctions.templateSource%",
+                        "description": "%azureFunctions.mcpProjectType%",
                         "enum": [
                             "NoMcpServer",
                             "McpExtensionServer",

@@ -3,11 +3,18 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+<<<<<<< HEAD
 import { AzExtFsExtra, DialogResponses, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import * as vscode from 'vscode';
+=======
+import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import * as jsonc from 'jsonc-parser';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { type WorkspaceFolder } from "vscode";
+>>>>>>> f1ea2b825b2b83206fc51769450aff7c6172fae1
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, mcpSelfHostedConfigurationProfile } from "../constants";
 import { type IHostJsonV2 } from "../funcConfig/host";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
@@ -35,47 +42,33 @@ type McpServerDefinition = {
     };
 }
 
-export async function isMcpProject(workspaceFolder: WorkspaceFolder): Promise<boolean> {
-    const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
+export async function isMcpProject(projectPath: string): Promise<boolean> {
+    const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, projectPath);
     if (mcpProjectType === McpProjectType.SelfHostedMcpServer || mcpProjectType === McpProjectType.McpExtensionServer) {
         return true;
-    } else if (mcpProjectType === McpProjectType.NoMcpServer) {
-        return false;
     }
 
-    const hostFilePath: string = path.join(workspaceFolder.uri.fsPath, hostFileName);
+    const hostFilePath: string = path.join(projectPath, hostFileName);
     if (!(await AzExtFsExtra.pathExists(hostFilePath))) {
         return false;
     }
 
     const hostJson = await AzExtFsExtra.readJSON(hostFilePath) as IHostJsonV2;
     if (hostJson.configurationProfile === mcpSelfHostedConfigurationProfile) {
-        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, workspaceFolder.uri.fsPath);
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, projectPath);
         return true;
-    } else if (hostJson?.customHandler?.description?.defaultExecutablePath) {
-        const infoMsg = vscode.l10n.t('This project appears to be using a custom handler which may indicate a Self-Hosted MCP Server project. Set the project type accordingly?');
-        const result = await vscode.window.showInformationMessage(infoMsg, { modal: true }, DialogResponses.yes, DialogResponses.dontWarnAgain);
-        if (result === DialogResponses.yes) {
-            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, workspaceFolder.uri.fsPath);
-            return true;
-        } else if (result === DialogResponses.dontWarnAgain) {
-            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.NoMcpServer, workspaceFolder.uri.fsPath);
-            return false;
-        } else {
-            throw new UserCancelledError();
-        }
     }
 
     if (hostJson.extensions?.mcp) {
-        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, workspaceFolder.uri.fsPath);
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, projectPath);
         return true;
     }
 
     return false;
 }
 
-export async function getOrCreateMcpJson(workspaceFolder: WorkspaceFolder): Promise<McpJson> {
-    const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
+export async function getOrCreateMcpJson(projectPath: string): Promise<McpJson> {
+    const mcpJsonFilePath: string = path.join(projectPath, '.vscode', 'mcp.json');
     if (await AzExtFsExtra.pathExists(mcpJsonFilePath)) {
         const mcpJsonContent: string = await AzExtFsExtra.readFile(mcpJsonFilePath);
         const errors: jsonc.ParseError[] = [];
@@ -96,8 +89,8 @@ export async function getOrCreateMcpJson(workspaceFolder: WorkspaceFolder): Prom
     }
 }
 
-export async function saveMcpJson(workspaceFolder: WorkspaceFolder, mcpJson: McpJson): Promise<void> {
-    const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
+export async function saveMcpJson(projectPath: string, mcpJson: McpJson): Promise<void> {
+    const mcpJsonFilePath: string = path.join(projectPath, '.vscode', 'mcp.json');
     const mcpJsonContent: string = JSON.stringify(mcpJson, undefined, 4);
     await AzExtFsExtra.writeFile(mcpJsonFilePath, mcpJsonContent);
 }
@@ -115,8 +108,8 @@ export function checkIfMcpServerExists(mcpJson: McpJson, serverName: string): bo
     return false;
 }
 
-export function getLocalServerName(workspace: WorkspaceFolder): string {
-    return `${workspace.name}-local-server`;
+export function getLocalServerName(projectPath: string): string {
+    return `${path.basename(projectPath)}-local-server`;
 }
 
 export function getRemoteServerName(ti: SlotTreeItem): string {
