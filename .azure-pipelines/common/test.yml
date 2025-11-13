@@ -7,30 +7,6 @@ steps:
   displayName: 'Start X Virtual Frame Buffer'
   condition: eq(variables['Agent.OS'], 'Linux')
 
-# Tempoary workaround for https://github.com/ballerina-platform/ballerina-distribution/issues/4537
-- script: |
-    curl -o ballerina.deb 'https://dist.ballerina.io/downloads/2201.6.0/ballerina-2201.6.0-swan-lake-linux-x64.deb'
-    sudo dpkg -i ballerina.deb
-    rm -f ballerina.deb
-  displayName: Install Ballerina(Linux)
-  condition: eq(variables['Agent.OS'], 'Linux')
-
-- script: |
-    curl -o ballerina.pkg 'https://dist.ballerina.io/downloads/2201.6.0/ballerina-2201.6.0-swan-lake-macos-x64.pkg'
-    sudo installer -pkg ballerina.pkg -target /
-    rm -f ballerina.pkg
-    echo '##vso[task.prependpath]/Library/Ballerina/bin'
-  displayName: Install Ballerina(MacOS)
-  condition: eq(variables['Agent.OS'], 'Darwin')
-
-- script: |
-      curl -o ballerina.msi https://dist.ballerina.io/downloads/2201.6.0/ballerina-2201.6.0-swan-lake-windows-x64.msi
-      msiexec /i ballerina.msi /quiet /qr /L*V "C:\Temp\msilog.log"
-      del ballerina.msi
-      echo "##vso[task.setvariable variable=PATH]C:\Program Files\Ballerina\bin;$(PATH)"
-  displayName: Install Ballerina(Windows)
-  condition: eq(variables['Agent.OS'], 'Windows_NT')
-
 - task: UsePythonVersion@0
   displayName: 'Use Python 3.7.x'
   inputs:

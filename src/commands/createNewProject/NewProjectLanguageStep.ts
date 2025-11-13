@@ -5,10 +5,11 @@
 
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type QuickPickOptions } from 'vscode';
-import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels } from '../../constants';
+import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { type IProjectWizardContext } from './IProjectWizardContext';
@@ -23,6 +24,10 @@ import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProje
 import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { MCPDownloadSnippetsExecuteStep } from './mcpServerSteps/MCPDownloadSnippetsExecuteStep';
+import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnippetsPromptStep';
+import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
+import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -44,10 +49,14 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
-            { label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
-            { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
+            { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } },
+            { label: localize('selfHostedMCPServer', 'Self-hosted MCP server'), data: { language: ProjectLanguage.SelfHostedMCPServer } }
         ];
+
+        if (getWorkspaceSetting(showBallerinaProjectCreationSetting)) {
+            languagePicks.push({ label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } });
+        }
 
         if (context.languageFilter) {
             languagePicks = languagePicks.filter(p => {
@@ -55,7 +64,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
+        const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
@@ -115,6 +124,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Custom:
                 executeSteps.push(new CustomProjectCreateStep());
+                break;
+            case ProjectLanguage.SelfHostedMCPServer:
+                promptSteps.push(new MCPServerLanguagePromptStep(), new MCPDownloadSnippetsPromptStep());
+                executeSteps.push(new MCPDownloadSnippetsExecuteStep(), new MCPProjectCreateStep());
                 break;
             default:
                 executeSteps.push(new ScriptProjectCreateStep());

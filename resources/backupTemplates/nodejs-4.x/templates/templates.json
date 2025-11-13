@@ -624,7 +624,7 @@
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
             "description": "$McpToolTrigger_description",
-            "name": "Mcp Tool trigger",
+            "name": "MCP Tool trigger",
             "language": "JavaScript",
             "triggerType": "mcpToolTrigger",
             "category": [
@@ -640,12 +640,12 @@
         "id": "McpToolTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts":  "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
+            "%functionName%.ts": "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
             "description": "$McpToolTrigger_description",
-            "name": "Mcp Tool trigger",
+            "name": "MCP Tool trigger",
             "language": "TypeScript",
             "triggerType": "mcpToolTrigger",
             "category": [
