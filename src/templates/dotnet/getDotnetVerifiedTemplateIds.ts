@@ -21,7 +21,8 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         //TODO: Add unit test for EventGridBlobTrigger
         'EventGridBlobTrigger',
         'SqlInputBinding',
-        'SqlOutputBinding'
+        'SqlOutputBinding',
+        'McpToolTrigger'
     ];
 
     if (version === FuncVersion.v1) {
