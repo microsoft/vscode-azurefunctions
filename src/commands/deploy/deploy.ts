@@ -63,7 +63,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
-    await isMcpProject(deployPaths.workspaceFolder);
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
     if (projectPath === undefined) {
         const message: string = localize('functionProjectRootNotFound', 'No azure function project root could be found. This can be caused by a missing {0} file.', hostFileName);
