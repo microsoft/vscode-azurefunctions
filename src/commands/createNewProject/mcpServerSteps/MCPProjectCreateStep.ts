@@ -26,7 +26,7 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
             }
             const functionArtifactFiles: GitHubFileMetadata[] = sampleFiles.filter(f => essentialFileNames.includes(f.name));
             for (const file of functionArtifactFiles) {
-                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, file);
+                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, file, context.projectPath);
             }
         }
         return;
