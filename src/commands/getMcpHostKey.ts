@@ -34,7 +34,6 @@ export async function getMcpHostKey(context: IActionContext & { subscription?: A
     }
 
     if (args.projectType === McpProjectType.SelfHostedMcpServer && keys.functionKeys?.['default']) {
-        // if the system key isn't there, just default to the default function key
         return keys.functionKeys['default'];
     }
 

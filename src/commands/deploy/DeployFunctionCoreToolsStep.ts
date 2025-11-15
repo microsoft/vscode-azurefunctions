@@ -86,7 +86,7 @@ export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDep
     }
     public priority: number = 100;
     public async execute(context: InnerDeployContext, progress: Progress<{ message?: string; increment?: number; }>): Promise<void> {
-        const message = l10n.t('Publishing "{0}" to "{1}" with Functiontion Core Tools...', context.originalDeployFsPath, context.site.fullName);
+        const message = l10n.t('Publishing "{0}" to "{1}" with Function Core Tools...', context.originalDeployFsPath, context.site.fullName);
         progress.report({ message });
         context.activityAttributes = context.activityAttributes ?? { logs: [] };
         const args = ['func', 'azure', 'functionapp', 'publish', context.site.siteName];
