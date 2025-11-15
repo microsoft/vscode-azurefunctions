@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
-import * as path from 'path';
+import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import { l10n, type Progress } from "vscode";
 import { McpProjectType, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
 import { feedUtils } from "../../../utils/feedUtils";
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from "../../../utils/mcpUtils";
-import { requestUtils } from "../../../utils/requestUtils";
 import { type MCPProjectWizardContext } from "../IProjectWizardContext";
 import { ProjectCreateStepBase } from "../ProjectCreateStep/ProjectCreateStepBase";
+import { MCPDownloadSnippetsExecuteStep } from "./MCPDownloadSnippetsExecuteStep";
 export class MCPProjectCreateStep extends ProjectCreateStepBase {
     public async executeCore(context: MCPProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         context.mcpProjectType = McpProjectType.SelfHostedMcpServer;
@@ -27,7 +26,7 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
             }
             const functionArtifactFiles: GitHubFileMetadata[] = sampleFiles.filter(f => essentialFileNames.includes(f.name));
             for (const file of functionArtifactFiles) {
-                await this.downloadSingleFile(context, file);
+                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, file);
             }
         }
         return;
@@ -58,13 +57,5 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
             const newMcpJson = await addLocalMcpServer(mcpJson, serverName, McpProjectType.SelfHostedMcpServer);
             await saveMcpJson(workspace, newMcpJson);
         }
-    }
-
-    private async downloadSingleFile(context: MCPProjectWizardContext, item: GitHubFileMetadata): Promise<void> {
-        const fileUrl: string = item.download_url;
-        const destinationPath: string = path.join(context.projectPath, item.name);
-        const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: fileUrl });
-        const fileContent = response.bodyAsText;
-        await AzExtFsExtra.writeFile(destinationPath, fileContent ?? '');
     }
 }
