@@ -21,7 +21,6 @@ import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
-import { isMcpProject } from '../../utils/mcpUtils';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
