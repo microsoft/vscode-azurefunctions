@@ -31,10 +31,12 @@ export async function getMcpHostKey(context: IActionContext & { subscription?: A
 
     if (args.projectType === McpProjectType.McpExtensionServer && keys.systemKeys?.['mcp_extension']) {
         return keys.systemKeys['mcp_extension'];
-    } else if (keys.functionKeys?.['default']) {
+    }
+
+    if (args.projectType === McpProjectType.SelfHostedMcpServer && keys.functionKeys?.['default']) {
         // if the system key isn't there, just default to the default function key
         return keys.functionKeys['default'];
-    } else {
-        throw new Error(l10n.t('No default host key found.'));
     }
+
+    throw new Error(l10n.t('No appropriate host key found for MCP project type "{0}".', args.projectType));
 }
