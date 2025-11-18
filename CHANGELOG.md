@@ -1,5 +1,31 @@
 # Change Log
 
+# Change Log
+
+## 1.20.0 - 2025-11-17
+
+### Overview
+This release introduces support for creating and deploying Model Context Protocol (MCP) servers using Azure Functions and brings support for building MCP servers across multiple languages including TypeScript, JavaScript, Python, and .NET.
+
+### Added
+* [[4789](https://github.com/microsoft/vscode-azurefunctions/pull/4789)] Add support for creating **self-hosted MCP servers** with Azure Functions as a new project type
+* [[4790](https://github.com/microsoft/vscode-azurefunctions/pull/4790)] Add **MCP Tool Trigger** templates for extension-based MCP function apps
+* [[4791](https://github.com/microsoft/vscode-azurefunctions/pull/4791)] Add **MCP deployment** support for both extension triggers and self-hosted servers
+
+### Changed
+* [[4772](https://github.com/microsoft/vscode-azurefunctions/pull/4772)] Update minimum **Azure Container Apps API** version to `v1.0.0`
+* [[4773](https://github.com/microsoft/vscode-azurefunctions/pull/4773)] Improve template filtering with **grouping by category** instead of hiding templates
+* [[4783](https://github.com/microsoft/vscode-azurefunctions/pull/4783)] Add support for **Python 3.13 and 3.14** and remove deprecated Python versions (3.7, 3.8, 3.9)
+
+### Fixed
+* [[4739](https://github.com/microsoft/vscode-azurefunctions/pull/4739)] Fix incorrect error message displayed when deploying to **containerized function apps**
+
+### Engineering
+* [[4731](https://github.com/microsoft/vscode-azurefunctions/pull/4731)] Refactor **Functions Core Tools** installation and pretest logic
+
+## 1.19.2 - 2025-10-08
+...
+
 ## 1.19.2 - 2025-10-08
 
 ### Fix
