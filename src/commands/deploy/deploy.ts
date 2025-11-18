@@ -289,7 +289,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 }
                 const deployContext = Object.assign(context, await createActivityContext());
                 deployContext.activityChildren = [];
-                deployContext.wizardActivity
                 await innerDeploy(site, deployFsPath, deployContext, [new CreateRemoteMcpServerExecuteStep()]);
             }
         }

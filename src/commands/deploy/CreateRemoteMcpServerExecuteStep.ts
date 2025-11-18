@@ -26,7 +26,6 @@ export class CreateRemoteMcpServerExecuteStep<T extends IFuncDeployContext> exte
             const newMcpJson = await addRemoteMcpServer(mcpJson, node, mcpProjectType);
             await saveMcpJson(context.workspaceFolder.uri.fsPath, newMcpJson);
         }
-        return;
     }
 
     public createSuccessOutput(context: T): ExecuteActivityOutput {

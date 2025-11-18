@@ -23,11 +23,6 @@ import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEv
 export async function notifyDeployComplete(context: IFuncDeployContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean, deployedWithFuncCli?: boolean): Promise<void> {
     await node.initSite(context);
     let deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
-    const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
-    const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
-    const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
-    const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect to MCP Server') };
-
     try {
         const shouldCheckEventSystemTopics = isFlexConsumption && await hasRemoteEventGridBlobTrigger(context, node);
         if (shouldCheckEventSystemTopics) {
@@ -37,6 +32,10 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
         // ignore this error, don't block deploy for this check
     }
     const messageItems: MessageItem[] = [];
+    const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
+    const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
+    const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
+    const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect to MCP Server') };
     if (context.isMcpProject) {
         messageItems.push(connectMcpServer);
         const mcpRecommendedActions: string = `Recommended actions: Learn more about [built-in server authorization](https://aka.ms/mcp-easy-auth) and authentication and Azure Functions [MCP server integration](https://aka.ms/mcp-integration).`;
