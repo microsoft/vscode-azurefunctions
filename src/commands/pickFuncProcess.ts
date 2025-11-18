@@ -20,16 +20,25 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
+// flag used by func core tools to indicate to wait for the debugger to attach before starting the worker
+const dotnetIsolatedDebugFlag = '--dotnet-isolated-debug';
+const enableJsonOutput = '--enable-json-output';
 
 export async function startFuncProcessFromApi(
     buildPath: string,
     args: string[],
     env: { [key: string]: string }
-): Promise<{ processId: string; success: boolean; error: string }> {
-    const result = {
+): Promise<{ processId: string; success: boolean; error: string, stream: AsyncIterable<string> | undefined }> {
+    const result: {
+        processId: string;
+        success: boolean;
+        error: string;
+        stream: AsyncIterable<string> | undefined;
+    } = {
         processId: '',
         success: false,
-        error: ''
+        error: '',
+        stream: undefined
     };
 
     let funcHostStartCmd: string = 'func host start';
@@ -66,6 +75,7 @@ export async function startFuncProcessFromApi(
             const taskInfo = await startFuncTask(context, workspaceFolder, buildPath, funcTask);
             result.processId = await pickChildProcess(taskInfo);
             result.success = true;
+            result.stream = taskInfo.stream;
         } catch (err) {
             const pError = parseError(err);
             result.error = pError.message;
@@ -140,6 +150,9 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+        const funcShellExecution = funcTask.execution as vscode.ShellExecution;
+        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutput);
+
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
                 throw taskError;
@@ -147,27 +160,38 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
-                for (const scheme of ['http', 'https']) {
-                    const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
-                    if (scheme === 'https') {
-                        statusRequest.rejectUnauthorized = false;
+                if (debugModeOn) {
+                    // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
+                    // if there is no pid yet, keep waiting
+                    const newPid = await getWorkerPidFromJsonOutput(taskInfo);
+                    if (newPid) {
+                        taskInfo.processId = newPid;
+                        return taskInfo;
                     }
-
-                    try {
-                        // wait for status url to indicate functions host is running
-                        const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                        if (response.parsedBody.state.toLowerCase() === 'running') {
-                            funcTaskReadyEmitter.fire(workspaceFolder);
-                            return taskInfo;
+                } else {
+                    // otherwise, we have to wait for the status url to indicate the host is running
+                    for (const scheme of ['http', 'https']) {
+                        const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
+                        if (scheme === 'https') {
+                            statusRequest.rejectUnauthorized = false;
                         }
-                    } catch (error) {
-                        if (requestUtils.isTimeoutError(error)) {
-                            // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
-                            statusRequestTimeout *= 2;
-                            context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
-                        } else {
-                            // ignore
+
+                        try {
+                            // wait for status url to indicate functions host is running
+                            const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                            if (response.parsedBody.state.toLowerCase() === 'running') {
+                                funcTaskReadyEmitter.fire(workspaceFolder);
+                                return taskInfo;
+                            }
+                        } catch (error) {
+                            if (requestUtils.isTimeoutError(error)) {
+                                // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                                statusRequestTimeout *= 2;
+                                context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                            } else {
+                                // ignore
+                            }
                         }
                     }
                 }
@@ -180,6 +204,23 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     } finally {
         errorListener.dispose();
     }
+}
+
+async function getWorkerPidFromJsonOutput(taskInfo: IRunningFuncTask): Promise<number | undefined> {
+    // if there is no stream yet or if the output doesn't include the workerProcessId yet, then keep waiting
+    if (!taskInfo.stream) {
+        return;
+    }
+
+    for await (const chunk of taskInfo.stream) {
+        if (chunk.includes(`{ "name":"dotnet-worker-startup", "workerProcessId" :`)) {
+            const matches = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
+            if (matches && matches.length > 1) {
+                return Number(matches[1]);
+            }
+        }
+    }
+    return;
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };

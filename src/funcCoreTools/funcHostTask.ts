@@ -17,6 +17,8 @@ export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
+    // stream for reading `func host start`  output
+    stream: AsyncIterable<string> | undefined;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -86,13 +88,36 @@ export function isFuncHostTask(task: vscode.Task): boolean {
     return /(?:^|[\\/])(func(?:\.exe)?)\s+host\s+start$/i.test(commandLine || '');
 }
 
+let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
+export let terminalEventReader: vscode.Disposable;
 export function registerFuncHostTaskEvents(): void {
+    // we need to register this listener before the func host task starts, so we can capture the terminal output stream
+    terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
+        /**
+         * NOTE: there is no reliable way to link a terminal to a task due to the name and PID not updating in real time,
+         * so just keep updating to the latest event since the func task and its dependencies run in the same
+         * terminal (the terminal that we want to output)
+         * New tasks will create new `terminalShellExecutionEvents`, so we don't need to worry about picking up output from other terminals
+         * BUG: There's a current issue where if there is _only_ a func task in the tasks.json (as in it doesn't dependOn any other tasks),
+         * the onDidStartTerminalShellExecution does not fire at all. This should not impact most runtimes as they all have some sort of
+         * build task as a dependency. This is a bug on VS Code that I am working with Daniel to fix.
+         * */
+        latestTerminalShellExecutionEvent = terminalShellExecEvent;
+    });
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
+
+
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber };
+            const runningFuncTask = {
+                processId: e.processId,
+                taskExecution: e.execution,
+                portNumber,
+                stream: latestTerminalShellExecutionEvent?.execution.read()
+            };
+
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
@@ -146,7 +171,7 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
         for (const runningFuncTaskItem of runningFuncTask) {
             if (!runningFuncTaskItem) break;
             if (terminate) {
-                runningFuncTaskItem.taskExecution.terminate()
+                runningFuncTaskItem.taskExecution.terminate();
             } else {
                 // Try to find the real func process by port first, fall back to shell PID
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
