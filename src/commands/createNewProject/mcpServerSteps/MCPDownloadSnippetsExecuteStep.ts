@@ -43,9 +43,9 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
             if (item.type === 'file') {
                 await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
                     context, item,
-                    dirPath: basePath,
+                    destDirPath: basePath,
                     serverLanguage: context.serverLanguage,
-                    projectPath: context.projectPath
+                    projectName: path.basename(context.projectPath)
                 });
             } else if (item.type === 'dir') {
                 // Create directory
@@ -69,25 +69,25 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
     public static async downloadSingleFile(options: {
         context: IActionContext,
         item: GitHubFileMetadata,
-        dirPath: string,
-        projectPath: string
+        destDirPath: string,
+        projectName: string
         serverLanguage?: ProjectLanguage,
     }): Promise<void> {
-        const { context, item, dirPath, serverLanguage, projectPath } = options;
+        const { context, item, destDirPath, serverLanguage, projectName } = options;
         const fileUrl: string = item.download_url;
-        let destinationPath: string = path.join(dirPath, item.name);
+        let destinationPath: string = path.join(destDirPath, item.name);
         const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: fileUrl });
         let fileContent = response.bodyAsText;
         if (serverLanguage === ProjectLanguage.CSharp) {
             if (item.name === hostFileName) {
                 // for C#, we need to replace the host.json
                 // "arguments": ["<path to the compiled DLL, e.g. HelloWorld.dll>"] with the name of the actual DLL
-                const dllName: string = `${path.basename(projectPath)}.dll`;
+                const dllName: string = `${projectName}.dll`;
                 fileContent = fileContent?.replace('<path to the compiled DLL, e.g. HelloWorld.dll>', dllName);
             } else if (item.name === 'dotnet.csproj') {
                 // for C#, the project file needs to be named after the project folder
-                const csprojFileName: string = `${path.basename(projectPath)}.csproj`;
-                destinationPath = path.join(dirPath, csprojFileName);
+                const csprojFileName: string = `${projectName}.csproj`;
+                destinationPath = path.join(destDirPath, csprojFileName);
             }
         }
         await AzExtFsExtra.writeFile(destinationPath, fileContent ?? '');

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
+import * as path from 'path';
 import { l10n, type Progress } from "vscode";
 import { McpProjectType, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
 import { feedUtils } from "../../../utils/feedUtils";
@@ -29,8 +30,8 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
                 await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
                     context,
                     item: file,
-                    dirPath: context.projectPath,
-                    projectPath: context.projectPath,
+                    destDirPath: context.projectPath,
+                    projectName: path.basename(context.projectPath),
                     serverLanguage: context.serverLanguage
                 });
             }
