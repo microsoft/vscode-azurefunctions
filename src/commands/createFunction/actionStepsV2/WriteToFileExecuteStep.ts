@@ -10,6 +10,7 @@ import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, 
 import { ext } from "../../../extensionVariables";
 import { type IHostJsonV2 } from "../../../funcConfig/host";
 import { confirmEditJsonFile } from "../../../utils/fs";
+import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from "../../../utils/mcpUtils";
 import { isDocumentOpened } from "../../../utils/textUtils";
 import { getWorkspaceSetting, updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
@@ -43,7 +44,14 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
                 // otherwise write to settings.json in .vscode
                 await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
             }
-
+            // add the local server to the mcp.json if it doesn't already exist
+            const mcpJson = await getOrCreateMcpJson(context.projectPath);
+            const serverName = getLocalServerName(context.projectPath);
+            // only add if it doesn't already exist
+            if (!checkIfMcpServerExists(mcpJson, serverName)) {
+                const newMcpJson = await addLocalMcpServer(mcpJson, serverName, McpProjectType.McpExtensionServer);
+                await saveMcpJson(context.projectPath, newMcpJson);
+            }
 
             const hostFilePath: string = path.join(context.projectPath, hostFileName);
             if (await AzExtFsExtra.pathExists(hostFilePath)) {
