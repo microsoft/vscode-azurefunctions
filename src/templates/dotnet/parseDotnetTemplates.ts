@@ -86,8 +86,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         userPromptedSettings: userPromptedSettings,
         categories: [TemplateCategory.Core], // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
         isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false,
-        templateSchemaVersion: TemplateSchemaVersion.v1,
-        templateFilter: TemplateFilter.All
+        templateSchemaVersion: TemplateSchemaVersion.v1
     };
 }
 
@@ -124,7 +123,7 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
         const templateProvider = ext.templateProvider.get(jsContext);
-        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, undefined);
+        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
             assertTemplateIsV1(csharpTemplate);
             csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;

@@ -8,7 +8,7 @@ import * as path from 'path';
 import type * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -38,7 +38,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
                         const templateProvider = ext.templateProvider.get(templatesContext);
-                        await templateProvider.getFunctionTemplates(templatesContext, projectPath, language, languageModel, version, undefined);
+                        await templateProvider.getFunctionTemplates(templatesContext, projectPath, language, languageModel, version, TemplateFilter.Verified, undefined);
                     });
 
                     let isDotnet: boolean = false;

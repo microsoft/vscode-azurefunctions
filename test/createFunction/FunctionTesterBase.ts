@@ -8,7 +8,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { type Disposable } from 'vscode';
-import { createFunctionInternal, getRandomHexString, type FunctionTemplateBase, type FuncVersion, type ProjectLanguage, type TemplateSource } from '../../extension.bundle';
+import { createFunctionInternal, getRandomHexString, TemplateFilter, type FunctionTemplateBase, type FuncVersion, type ProjectLanguage, type TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, type ParallelSuiteOptions, type ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
 
@@ -47,7 +47,7 @@ export abstract class FunctionTesterBase implements Disposable {
                 await this.initializeTestFolder(this.projectPath);
 
                 // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
-                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, undefined);
+                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
             });
         });
     }
@@ -55,7 +55,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             await runForTemplateSource(context, this.source, async (templateProvider) => {
-                const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, undefined);
+                const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
         });
