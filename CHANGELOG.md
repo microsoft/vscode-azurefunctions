@@ -1,7 +1,5 @@
 # Change Log
 
-# Change Log
-
 ## 1.20.0 - 2025-11-17
 
 ### Overview
@@ -22,9 +20,6 @@ This release introduces support for creating and deploying Model Context Protoco
 
 ### Engineering
 * [[4731](https://github.com/microsoft/vscode-azurefunctions/pull/4731)] Refactor **Functions Core Tools** installation and pretest logic
-
-## 1.19.2 - 2025-10-08
-...
 
 ## 1.19.2 - 2025-10-08
 

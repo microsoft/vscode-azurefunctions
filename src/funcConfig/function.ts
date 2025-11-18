@@ -40,7 +40,7 @@ export class ParsedFunctionJson {
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
     public constructor(data: any) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (typeof data === 'object' && data !== null && (data.functions?.bindings !== undefined || data.functions?.bindings instanceof Array)) {
+        if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
             // this is to preserve the old template structure where function.json was nested under 'functions'
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             this.data = <IFunctionJson>data.functions;
