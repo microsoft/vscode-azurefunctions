@@ -6,17 +6,16 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
-import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from '../../constants';
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
-import { confirmEditJsonFile } from '../../utils/fs';
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
@@ -83,7 +82,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 }
             } else {
                 // otherwise write to settings.json in .vscode
-                await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
+                await writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName), mcpProjectTypeSetting, McpProjectType.McpExtensionServer);
             }
             // add the local server to the mcp.json if it doesn't already exist
             const mcpJson = await getOrCreateMcpJson(context.projectPath);
@@ -140,22 +139,6 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
-    }
-
-    private async writeToSettingsJson(context: T, vscodePath: string): Promise<void> {
-        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
-        const settings = [{ key: mcpProjectTypeSetting, value: context.mcpProjectType }];
-        await confirmEditJsonFile(
-            context,
-            settingsJsonPath,
-            (data: {}): {} => {
-                for (const setting of settings) {
-                    const key: string = `${ext.prefix}.${setting.key}`;
-                    data[key] = setting.value;
-                }
-                return data;
-            }
-        );
     }
 }
 

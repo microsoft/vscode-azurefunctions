@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { hostFileName, ProjectLanguage, type GitHubFileMetadata } from '../../../constants';
@@ -41,7 +41,12 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
     private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
         for (const item of items) {
             if (item.type === 'file') {
-                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, item, basePath);
+                await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
+                    context, item,
+                    destDirPath: basePath,
+                    serverLanguage: context.serverLanguage,
+                    projectName: path.basename(context.projectPath)
+                });
             } else if (item.type === 'dir') {
                 // Create directory
                 const dirPath: string = path.join(basePath, item.name);
@@ -61,21 +66,28 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         return context.includeSnippets === true;
     }
 
-    public static async downloadSingleFile(context: MCPProjectWizardContext, item: GitHubFileMetadata, dirPath: string): Promise<void> {
+    public static async downloadSingleFile(options: {
+        context: IActionContext,
+        item: GitHubFileMetadata,
+        destDirPath: string,
+        projectName: string
+        serverLanguage?: ProjectLanguage,
+    }): Promise<void> {
+        const { context, item, destDirPath, serverLanguage, projectName } = options;
         const fileUrl: string = item.download_url;
-        let destinationPath: string = path.join(dirPath, item.name);
+        let destinationPath: string = path.join(destDirPath, item.name);
         const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: fileUrl });
         let fileContent = response.bodyAsText;
-        if (context.serverLanguage === ProjectLanguage.CSharp) {
+        if (serverLanguage === ProjectLanguage.CSharp) {
             if (item.name === hostFileName) {
                 // for C#, we need to replace the host.json
                 // "arguments": ["<path to the compiled DLL, e.g. HelloWorld.dll>"] with the name of the actual DLL
-                const dllName: string = `${path.basename(context.projectPath)}.dll`;
+                const dllName: string = `${projectName}.dll`;
                 fileContent = fileContent?.replace('<path to the compiled DLL, e.g. HelloWorld.dll>', dllName);
             } else if (item.name === 'dotnet.csproj') {
                 // for C#, the project file needs to be named after the project folder
-                const csprojFileName: string = `${path.basename(context.projectPath)}.csproj`;
-                destinationPath = path.join(dirPath, csprojFileName);
+                const csprojFileName: string = `${projectName}.csproj`;
+                destinationPath = path.join(destDirPath, csprojFileName);
             }
         }
         await AzExtFsExtra.writeFile(destinationPath, fileContent ?? '');

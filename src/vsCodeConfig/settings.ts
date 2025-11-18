@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import * as path from 'path';
 import { ConfigurationTarget, Uri, workspace, type WorkspaceConfiguration, type WorkspaceFolder } from "vscode";
-import { ProjectLanguage } from '../constants';
+import { ProjectLanguage, settingsFileName } from '../constants';
 import { ext } from "../extensionVariables";
 import { dotnetUtils } from "../utils/dotnetUtils";
+import { confirmEditJsonFile } from "../utils/fs";
 
 /**
  * Uses ext.prefix 'azureFunctions' unless otherwise specified
@@ -126,4 +128,20 @@ export function promptToUpdateDotnetRuntime(azureRuntime: string | undefined, lo
 export function getFuncWatchProblemMatcher(language: string | undefined): string {
     const runtime: string | undefined = getRootFunctionsWorkerRuntime(language);
     return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
+}
+
+export async function writeToSettingsJson(context: IActionContext, vscodePath: string, key: string, value: string): Promise<void> {
+    const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
+    const settings = [{ key, value }];
+    await confirmEditJsonFile(
+        context,
+        settingsJsonPath,
+        (data: {}): {} => {
+            for (const setting of settings) {
+                const key: string = `${ext.prefix}.${setting.key}`;
+                data[key] = setting.value;
+            }
+            return data;
+        }
+    );
 }

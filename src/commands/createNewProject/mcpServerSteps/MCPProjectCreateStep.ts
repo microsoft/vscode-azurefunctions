@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { nonNullProp } from "@microsoft/vscode-azext-utils";
+import * as path from 'path';
 import { l10n, type Progress } from "vscode";
 import { McpProjectType, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
 import { feedUtils } from "../../../utils/feedUtils";
@@ -26,7 +27,13 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
             }
             const functionArtifactFiles: GitHubFileMetadata[] = sampleFiles.filter(f => essentialFileNames.includes(f.name));
             for (const file of functionArtifactFiles) {
-                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, file, context.projectPath);
+                await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
+                    context,
+                    item: file,
+                    destDirPath: context.projectPath,
+                    projectName: path.basename(context.projectPath),
+                    serverLanguage: context.serverLanguage
+                });
             }
         }
         return;
