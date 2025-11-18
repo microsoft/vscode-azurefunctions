@@ -26,7 +26,7 @@ export async function getWarningForExtensionBundle(context: IFuncDeployContext):
                 return;
             }
             if (!semver.intersects(hostRange, defaultRange)) {
-                const warningMessage: string = localize('warningMessage', `Your apps is using a deprecated version {0} of extension bundles. Upgrade to [4.*, 5.0.0).`, hostJson.extensionBundle?.version);
+                const warningMessage: string = localize('warningMessage', `Your app is using a deprecated version {0} of extension bundles. Upgrade to [4.*, 5.0.0).`, hostJson.extensionBundle?.version);
                 return warningMessage;
             }
         }

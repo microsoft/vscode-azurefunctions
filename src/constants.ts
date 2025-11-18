@@ -21,6 +21,8 @@ export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
+export const showBallerinaProjectCreationSetting: string = 'showBallerinaProjectCreation';
+export const mcpProjectTypeSetting: string = 'mcpProjectType';
 
 export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
 
@@ -35,7 +37,8 @@ export enum ProjectLanguage {
     Python = 'Python',
     TypeScript = 'TypeScript',
     Ballerina = 'Ballerina',
-    Custom = 'Custom'
+    Custom = 'Custom',
+    SelfHostedMCPServer = 'SelfHostedMCPServer'
 }
 
 /**
@@ -159,6 +162,9 @@ export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
 export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
+export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
+export const enableMcpCustomHandlerPreview: string = 'EnableMcpCustomHandlerPreview';
+export const mcpSelfHostedConfigurationProfile: string = 'mcp-custom-handler';
 
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).
@@ -218,3 +224,24 @@ export const EventHubsNamespaceResourceType: string = 'namespaces';
 
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';
+export type GitHubFileMetadata = {
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    url: string;
+    html_url: string;
+    git_url: string;
+    download_url: string;
+    type: string;
+    _links: {
+        self: string;
+        git: string;
+        html: string;
+    };
+};
+
+export enum McpProjectType {
+    McpExtensionServer = 'McpExtensionServer',
+    SelfHostedMcpServer = 'SelfHostedMcpServer'
+}

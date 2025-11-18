@@ -21,6 +21,7 @@ import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
+import { isMcpProject } from '../../utils/mcpUtils';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -32,6 +33,7 @@ import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSetting
 import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlDatabase/getSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
+import { CreateRemoteMcpServerExecuteStep } from './CreateRemoteMcpServerExecuteStep';
 import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
@@ -43,7 +45,7 @@ import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
 // context that is used for deployment but since creation is an option in the deployment command, include ICreateFunctionAppContext
-export type IFuncDeployContext = { site?: Site, subscription?: AzureSubscription } &
+export type IFuncDeployContext = { site?: Site, subscription?: AzureSubscription, isMcpProject?: boolean, deployedNode?: SlotTreeItem } &
     Partial<ICreateFunctionAppContext> & IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem): Promise<void> {
@@ -62,7 +64,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
-
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
     if (projectPath === undefined) {
         const message: string = localize('functionProjectRootNotFound', 'No azure function project root could be found. This can be caused by a missing {0} file.', hostFileName);
@@ -234,8 +235,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
         }
 
-        // app settings shouldn't be checked with flex consumption plans
-        if (isZipDeploy && !isFlexConsumption) {
+        if (isZipDeploy) {
             await verifyAppSettings({
                 context,
                 node,
@@ -243,7 +243,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 version,
                 language,
                 languageModel,
-                bools: { doRemoteBuild, isConsumption },
+                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
                 durableStorageType,
                 appSettings
             });
@@ -251,6 +251,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     let deployedWithFuncCli = false;
+    context.isMcpProject = await isMcpProject(context.effectiveDeployFsPath);
+    context.deployedNode = node;
     await node.runWithTemporaryDescription(
         context,
         localize('deploying', 'Deploying...'),
@@ -286,11 +288,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 }
                 const deployContext = Object.assign(context, await createActivityContext());
                 deployContext.activityChildren = [];
-                await innerDeploy(site, deployFsPath, deployContext);
+                await innerDeploy(site, deployFsPath, deployContext, [new CreateRemoteMcpServerExecuteStep()]);
             }
         }
     );
-
     await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption, deployedWithFuncCli);
 }
 

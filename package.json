@@ -462,6 +462,11 @@
                 "title": "%azureFunctions.durableTaskScheduler.stopEmulator%",
                 "category": "Azure Functions",
                 "icon": "$(debug-stop)"
+            },
+            {
+                "command": "azureFunctions.getMcpHostKey",
+                "title": "%azureFunctions.getMcpHostKey%",
+                "category": "Azure Functions"
             }
         ],
         "submenus": [
@@ -1119,7 +1124,6 @@
                             "PowerShell",
                             "Python",
                             "TypeScript",
-                            "Ballerina",
                             "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
@@ -1366,6 +1370,25 @@
                         "type": "boolean",
                         "description": "%azureFunctions.allowProgrammingModelSelection%",
                         "default": false
+                    },
+                    "azureFunctions.showBallerinaProjectCreation": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showBallerinaProjectCreation%",
+                        "default": false
+                    },
+                    "azureFunctions.mcpProjectType": {
+                        "type": "string",
+                        "description": "%azureFunctions.mcpProjectType%",
+                        "enum": [
+                            "NoMcpServer",
+                            "McpExtensionServer",
+                            "SelfHostedMcpServer"
+                        ],
+                        "enumDescriptions": [
+                            "%azureFunctions.mcpProjectType.NoMcpServer%",
+                            "%azureFunctions.mcpProjectType.McpExtensionServer%",
+                            "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
+                        ]
                     }
                 }
             }
@@ -1475,7 +1498,7 @@
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^3.6.7",
+        "@microsoft/vscode-azext-azureappservice": "^3.6.9",
         "@microsoft/vscode-azext-azureappsettings": "^0.2.11",
         "@microsoft/vscode-azext-azureutils": "^3.5.2",
         "@microsoft/vscode-azext-utils": "^3.5.0",
@@ -1490,7 +1513,7 @@
         "open": "^8.0.4",
         "p-retry": "^4.6.2",
         "ps-tree": "^1.1.1",
-        "semver": "^7.5.2",
+        "semver": "^7.7.3",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
         "xml2js": "^0.5.0",

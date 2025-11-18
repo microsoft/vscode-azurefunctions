@@ -6,7 +6,12 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from "../../../constants";
+import { ext } from "../../../extensionVariables";
+import { type IHostJsonV2 } from "../../../funcConfig/host";
+import { confirmEditJsonFile } from "../../../utils/fs";
 import { isDocumentOpened } from "../../../utils/textUtils";
+import { getWorkspaceSetting, updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
@@ -25,6 +30,42 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         const source = context[sourceKey] as string;
 
         await AzExtFsExtra.writeFile(filePath, source);
+        if (context.functionTemplate?.isMcpTrigger) {
+            // indicate that this is a MCP Extension Server project
+            context.mcpProjectType = McpProjectType.McpExtensionServer;
+            if (context.workspaceFolder) {
+                // can only update workspace setting if a workspaceFolder is opened
+                const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, context.workspaceFolder);
+                if (mcpProjectType !== McpProjectType.McpExtensionServer) {
+                    await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+                }
+            } else {
+                // otherwise write to settings.json in .vscode
+                await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
+            }
+
+
+            const hostFilePath: string = path.join(context.projectPath, hostFileName);
+            if (await AzExtFsExtra.pathExists(hostFilePath)) {
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.extensions = hostJson.extensions ?? {};
+                if (!hostJson.extensions.mcp) {
+                    hostJson.extensions.mcp = {
+                        instructions: "Some test instructions on how to use the server",
+                        serverName: "TestServer",
+                        serverVersion: "2.0.0",
+                        encryptClientState: true,
+                        messageOptions: {
+                            useAbsoluteUriForEndpoint: false
+                        },
+                        system: {
+                            webhookAuthorizationLevel: "System"
+                        }
+                    }
+                }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+            }
+        }
     }
 
     protected async getFilePath(context: T): Promise<string> {
@@ -42,5 +83,21 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         }
 
         return fullFilePath;
+    }
+
+    private async writeToSettingsJson(context: T, vscodePath: string): Promise<void> {
+        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
+        const settings = [{ key: mcpProjectTypeSetting, value: context.mcpProjectType }];
+        await confirmEditJsonFile(
+            context,
+            settingsJsonPath,
+            (data: {}): {} => {
+                for (const setting of settings) {
+                    const key: string = `${ext.prefix}.${setting.key}`;
+                    data[key] = setting.value;
+                }
+                return data;
+            }
+        );
     }
 }
