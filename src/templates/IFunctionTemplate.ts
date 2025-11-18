@@ -46,4 +46,5 @@ export interface FunctionTemplateBase {
     isTimerTrigger: boolean;
     isMcpTrigger: boolean;
     templateSchemaVersion: TemplateSchemaVersion
+    templateFilter?: TemplateFilter; // defaults to All
 }
