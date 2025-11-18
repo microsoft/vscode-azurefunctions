@@ -6,12 +6,10 @@
 import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
-import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from "../../../constants";
-import { ext } from "../../../extensionVariables";
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from "../../../constants";
 import { type IHostJsonV2 } from "../../../funcConfig/host";
-import { confirmEditJsonFile } from "../../../utils/fs";
 import { isDocumentOpened } from "../../../utils/textUtils";
-import { getWorkspaceSetting, updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
+import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from "../../../vsCodeConfig/settings";
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
@@ -41,7 +39,7 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
                 }
             } else {
                 // otherwise write to settings.json in .vscode
-                await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
+                await writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName), mcpProjectTypeSetting, context.mcpProjectType);
             }
 
 
@@ -83,21 +81,5 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         }
 
         return fullFilePath;
-    }
-
-    private async writeToSettingsJson(context: T, vscodePath: string): Promise<void> {
-        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
-        const settings = [{ key: mcpProjectTypeSetting, value: context.mcpProjectType }];
-        await confirmEditJsonFile(
-            context,
-            settingsJsonPath,
-            (data: {}): {} => {
-                for (const setting of settings) {
-                    const key: string = `${ext.prefix}.${setting.key}`;
-                    data[key] = setting.value;
-                }
-                return data;
-            }
-        );
     }
 }
