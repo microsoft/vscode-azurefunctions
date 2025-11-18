@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting, type IActionContext } from '../extension.bundle';
+import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateSource, updateGlobalSetting, updateWorkspaceSetting, type IActionContext } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -106,7 +106,7 @@ async function preLoadTemplates(): Promise<void> {
                 }
 
                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, TemplateFilter.Verified, undefined));
+                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, undefined));
                 }
             }
         });
@@ -147,7 +147,6 @@ export async function cleanTestWorkspace(): Promise<void> {
         const settings: string[] = [
             projectLanguageSetting,
             funcVersionSetting,
-            templateFilterSetting,
             deploySubpathSetting,
             preDeployTaskSetting,
             pythonVenvSetting
