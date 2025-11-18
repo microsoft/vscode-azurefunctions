@@ -6,7 +6,7 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
-import { type GitHubFileMetadata } from '../../../constants';
+import { hostFileName, ProjectLanguage, type GitHubFileMetadata } from '../../../constants';
 import { localize } from "../../../localize";
 import { feedUtils } from '../../../utils/feedUtils';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -41,12 +41,7 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
     private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
         for (const item of items) {
             if (item.type === 'file') {
-                // Download file content
-                // not a JSON so this is throwing errors:
-                const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: item.download_url });
-                const fileContent = response.bodyAsText;
-                const filePath: string = path.join(basePath, item.name);
-                await AzExtFsExtra.writeFile(filePath, fileContent ?? '');
+                await MCPDownloadSnippetsExecuteStep.downloadSingleFile(context, item, basePath);
             } else if (item.type === 'dir') {
                 // Create directory
                 const dirPath: string = path.join(basePath, item.name);
@@ -64,5 +59,25 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
 
     public shouldExecute(context: MCPProjectWizardContext): boolean {
         return context.includeSnippets === true;
+    }
+
+    public static async downloadSingleFile(context: MCPProjectWizardContext, item: GitHubFileMetadata, dirPath: string): Promise<void> {
+        const fileUrl: string = item.download_url;
+        let destinationPath: string = path.join(dirPath, item.name);
+        const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: fileUrl });
+        let fileContent = response.bodyAsText;
+        if (context.serverLanguage === ProjectLanguage.CSharp) {
+            if (item.name === hostFileName) {
+                // for C#, we need to replace the host.json
+                // "arguments": ["<path to the compiled DLL, e.g. HelloWorld.dll>"] with the name of the actual DLL
+                const dllName: string = `${path.basename(context.projectPath)}.dll`;
+                fileContent = fileContent?.replace('<path to the compiled DLL, e.g. HelloWorld.dll>', dllName);
+            } else if (item.name === 'dotnet.csproj') {
+                // for C#, the project file needs to be named after the project folder
+                const csprojFileName: string = `${path.basename(context.projectPath)}.csproj`;
+                destinationPath = path.join(dirPath, csprojFileName);
+            }
+        }
+        await AzExtFsExtra.writeFile(destinationPath, fileContent ?? '');
     }
 }
