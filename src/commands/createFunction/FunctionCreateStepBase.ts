@@ -3,31 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
-<<<<<<< HEAD
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from '../../constants';
-=======
-import { hostFileName, McpProjectType, mcpProjectTypeSetting } from '../../constants';
->>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
-<<<<<<< HEAD
 import { confirmEditJsonFile } from '../../utils/fs';
-=======
->>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
-<<<<<<< HEAD
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-=======
-import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
->>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 interface ICachedFunction {
