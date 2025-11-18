@@ -117,8 +117,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else {
                 context.functionTemplate = result;
             }
+
+            context.telemetry.properties.templateFilter = templateFilter;
         }
-        context.telemetry.properties.templateFilter = templateFilter;
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {

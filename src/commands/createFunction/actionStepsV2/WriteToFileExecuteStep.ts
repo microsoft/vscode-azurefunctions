@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { Uri, window, workspace } from "vscode";
-import { hostFileName, McpProjectType, mcpProjectTypeSetting } from "../../../constants";
+import { hostFileName, McpProjectType, mcpProjectTypeSetting, settingsFileName, vscodeFolderName } from "../../../constants";
+import { ext } from "../../../extensionVariables";
 import { type IHostJsonV2 } from "../../../funcConfig/host";
-import { type FunctionTemplateBase } from "../../../templates/IFunctionTemplate";
+import { confirmEditJsonFile } from "../../../utils/fs";
 import { isDocumentOpened } from "../../../utils/textUtils";
-import { verifyExtensionBundle } from "../../../utils/verifyExtensionBundle";
-import { updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
+import { getWorkspaceSetting, updateWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 import { getFileExtensionFromLanguage } from "../scriptSteps/ScriptFunctionCreateStep";
 import { ActionSchemaStepBase } from "./ActionSchemaStepBase";
@@ -32,9 +32,18 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         await AzExtFsExtra.writeFile(filePath, source);
         if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
-            await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
-            const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
-            await verifyExtensionBundle(context, template);
+            context.mcpProjectType = McpProjectType.McpExtensionServer;
+            if (context.workspaceFolder) {
+                // can only update workspace setting if a workspaceFolder is opened
+                const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, context.workspaceFolder);
+                if (mcpProjectType !== McpProjectType.McpExtensionServer) {
+                    await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, context.workspacePath);
+                }
+            } else {
+                // otherwise write to settings.json in .vscode
+                await this.writeToSettingsJson(context, path.join(context.projectPath, vscodeFolderName));
+            }
+
 
             const hostFilePath: string = path.join(context.projectPath, hostFileName);
             if (await AzExtFsExtra.pathExists(hostFilePath)) {
@@ -74,5 +83,21 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
         }
 
         return fullFilePath;
+    }
+
+    private async writeToSettingsJson(context: T, vscodePath: string): Promise<void> {
+        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
+        const settings = [{ key: mcpProjectTypeSetting, value: context.mcpProjectType }];
+        await confirmEditJsonFile(
+            context,
+            settingsJsonPath,
+            (data: {}): {} => {
+                for (const setting of settings) {
+                    const key: string = `${ext.prefix}.${setting.key}`;
+                    data[key] = setting.value;
+                }
+                return data;
+            }
+        );
     }
 }
