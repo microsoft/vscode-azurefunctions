@@ -1083,7 +1083,6 @@
                 "title": "Azure Functions",
                 "properties": {
                     "azureFunctions.templateFilter": {
-                        "deprecationMessage": "This setting is no longer used to filter templates, but is being left to explain what the filter enumerations mean.",
                         "scope": "resource",
                         "type": "string",
                         "default": "Verified",
