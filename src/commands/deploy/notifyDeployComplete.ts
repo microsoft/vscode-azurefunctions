@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IDeployContext } from '@microsoft/vscode-azext-azureappservice';
 import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as retry from 'p-retry';
 import * as path from 'path';
@@ -14,111 +13,90 @@ import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
-import { addRemoteMcpServer, checkIfMcpServerExists, getOrCreateMcpJson, getRemoteServerName, isMcpProject, saveMcpJson } from '../../utils/mcpUtils';
 import { nonNullValue } from '../../utils/nonNull';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
+import { type IFuncDeployContext } from './deploy';
 import { hasRemoteEventGridBlobTrigger, promptForEventGrid } from './promptForEventGrid';
 
-export async function notifyDeployComplete(context: IDeployContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean, deployedWithFuncCli?: boolean): Promise<void> {
+export async function notifyDeployComplete(context: IFuncDeployContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder, isFlexConsumption?: boolean, deployedWithFuncCli?: boolean): Promise<void> {
     await node.initSite(context);
-    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
-    if (await isMcpProject(workspaceFolder)) {
+    let deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
+    try {
+        const shouldCheckEventSystemTopics = isFlexConsumption && await hasRemoteEventGridBlobTrigger(context, node);
+        if (shouldCheckEventSystemTopics) {
+            await promptForEventGrid(context, workspaceFolder);
+        }
+    } catch (err) {
+        // ignore this error, don't block deploy for this check
+    }
+    const messageItems: MessageItem[] = [];
+    const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
+    const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
+    const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
+    const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect to MCP Server') };
+    if (context.isMcpProject) {
+        messageItems.push(connectMcpServer);
         const mcpRecommendedActions: string = `Recommended actions: Learn more about [built-in server authorization](https://aka.ms/mcp-easy-auth) and authentication and Azure Functions [MCP server integration](https://aka.ms/mcp-integration).`;
+        deployComplete = `${deployComplete} ${mcpRecommendedActions}`;
+    } else {
+        messageItems.push(streamLogs, uploadSettings, viewOutput);
+    }
 
-        const connectMcpServer: MessageItem = { title: localize('connectMcpServer', 'Connect MCP Server') };
-        void window.showInformationMessage(`${deployComplete} ${mcpRecommendedActions}`, connectMcpServer).then(async result => {
-            await callWithTelemetryAndErrorHandling('postMcpDeploy', async (postDeployContext: IActionContext) => {
-                postDeployContext.valuesToMask.push(...context.valuesToMask);
-                context.telemetry.eventVersion = 2;
-                await node.initSite(context);
+    // Don't wait
+    void window.showInformationMessage(deployComplete, ...messageItems).then(async result => {
+        await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
+            postDeployContext.telemetry.properties.dialogResult = result && result.title;
+            postDeployContext.valuesToMask.push(...context.valuesToMask);
+            context.telemetry.eventVersion = 2;
+            await node.initSite(context);
+
+            if (result === viewOutput) {
+                ext.outputChannel.show();
+            } else if (result === streamLogs) {
+                await startStreamingLogs(postDeployContext, node);
+            } else if (result === uploadSettings) {
+                const subContext = {
+                    ...postDeployContext,
+                    ...node.site.subscription
+                }
+                await uploadAppSettings(subContext, node.appSettingsTreeItem, undefined, workspaceFolder);
+            } else if (result === connectMcpServer) {
                 const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
                 if (mcpProjectType === McpProjectType.McpExtensionServer) {
                     postDeployContext.telemetry.properties.projectType = 'McpExtensionServer';
                 } else if (mcpProjectType === McpProjectType.SelfHostedMcpServer) {
                     postDeployContext.telemetry.properties.projectType = 'SelfHostedMcpServer';
-                } else {
-                    // not sure how we got here so just return;
-                    return;
                 }
-
-                const workspace = context.workspaceFolder;
-                const mcpJson = await getOrCreateMcpJson(workspace);
-                const serverName = getRemoteServerName(node);
-                // only add if it doesn't already exist
-                if (!checkIfMcpServerExists(mcpJson, serverName)) {
-                    const newMcpJson = await addRemoteMcpServer(mcpJson, node, mcpProjectType);
-                    await saveMcpJson(workspace, newMcpJson);
-                }
-
-                if (result === connectMcpServer) {
-                    const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
-                    await window.showTextDocument(Uri.file(mcpJsonFilePath));
-                }
-            });
-        });
-
-    } else {
-
-        const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
-        const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
-        const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
-
-        try {
-            const shouldCheckEventSystemTopics = isFlexConsumption && await hasRemoteEventGridBlobTrigger(context, node);
-            if (shouldCheckEventSystemTopics) {
-                await promptForEventGrid(context, workspaceFolder);
+                const mcpJsonFilePath: string = path.join(context.workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
+                await window.showTextDocument(Uri.file(mcpJsonFilePath));
             }
-        } catch (err) {
-            // ignore this error, don't block deploy for this check
-        }
-
-        // Don't wait
-        void window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
-            await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
-                postDeployContext.telemetry.properties.dialogResult = result && result.title;
-                postDeployContext.valuesToMask.push(...context.valuesToMask);
-                context.telemetry.eventVersion = 2;
-                await node.initSite(context);
-
-                if (result === viewOutput) {
-                    ext.outputChannel.show();
-                } else if (result === streamLogs) {
-                    await startStreamingLogs(postDeployContext, node);
-                } else if (result === uploadSettings) {
-                    const subContext = {
-                        ...postDeployContext,
-                        ...node.site.subscription
-                    }
-                    await uploadAppSettings(subContext, node.appSettingsTreeItem, undefined, workspaceFolder);
-                }
-            });
         });
+    });
 
-        try {
-            if (deployedWithFuncCli) {
-                // don't query triggers if we used the func cli to deploy
-                return;
-            }
-            const retries: number = 4;
-            await retry(
-                async (currentAttempt: number) => {
-                    context.telemetry.properties.queryTriggersAttempt = currentAttempt.toString();
-                    const message: string = currentAttempt === 1 ?
-                        localize('queryingTriggers', 'Querying triggers...') :
-                        localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
-                    ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
-                    await listHttpTriggerUrls(context, node);
-                },
-                { retries, minTimeout: 2 * 1000 }
-            );
-        } catch (error) {
-            // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
-            context.errorHandling.suppressDisplay = true;
-            ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
-            throw error;
+    try {
+        if (deployedWithFuncCli || context.isMcpProject) {
+            // don't query triggers if we used the func cli to deploy or if it's a self-hosted MCP project
+            return;
         }
+        const retries: number = 4;
+        await retry(
+            async (currentAttempt: number) => {
+                context.telemetry.properties.queryTriggersAttempt = currentAttempt.toString();
+                const message: string = currentAttempt === 1 ?
+                    localize('queryingTriggers', 'Querying triggers...') :
+                    localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
+                ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
+                await listHttpTriggerUrls(context, node);
+            },
+            { retries, minTimeout: 2 * 1000 }
+        );
+    } catch (error) {
+        // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
+        context.errorHandling.suppressDisplay = true;
+        ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
+        throw error;
     }
 }
 

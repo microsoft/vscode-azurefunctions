@@ -15,6 +15,7 @@ export class MCPServerInitVSCodeStep extends InitVSCodeStepBase {
         super();
     }
 
+    // TODO: Need to verify what we want the debugging experience to be
     public getTasks(_language: ProjectLanguage): TaskDefinition[] {
         return [{
             "type": "func",
