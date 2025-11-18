@@ -40,15 +40,14 @@ export class ParsedFunctionJson {
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
     public constructor(data: any) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
-            // this is to preserve the old template structure where function.json was nested under 'functions'
+        if (typeof data === 'object' && data !== null && (data.triggerType !== undefined)) {
+            this.template = <IFunctionTemplate>data;
+            this.data = {};
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        else if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
+            this.data = <IFunctionJson>data;
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            this.data = <IFunctionJson>data.functions;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        } else if (typeof data === 'object' && data !== null && (data.metadata) !== undefined) {
-            // for Node.js programming model v4, there is no function.json so use the template metadata
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            this.template = <IFunctionTemplate>data.metadata;
         } else {
             this.data = {};
         }

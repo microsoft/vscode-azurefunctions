@@ -197,7 +197,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         return undefined;
     }
 
-    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate);
+    // V4 triggers use metadata rather than the function object
+    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function ?? rawTemplate.metadata);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
     // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
