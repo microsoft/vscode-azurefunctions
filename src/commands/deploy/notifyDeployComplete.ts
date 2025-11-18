@@ -13,6 +13,7 @@ import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
+import { addRemoteMcpServer, checkIfMcpServerExists, getOrCreateMcpJson, getRemoteServerName, isMcpProject, saveMcpJson } from '../../utils/mcpUtils';
 import { nonNullValue } from '../../utils/nonNull';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
@@ -80,23 +81,6 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
             // don't query triggers if we used the func cli to deploy or if it's a self-hosted MCP project
             return;
         }
-        const retries: number = 4;
-        await retry(
-            async (currentAttempt: number) => {
-                context.telemetry.properties.queryTriggersAttempt = currentAttempt.toString();
-                const message: string = currentAttempt === 1 ?
-                    localize('queryingTriggers', 'Querying triggers...') :
-                    localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
-                ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
-                await listHttpTriggerUrls(context, node);
-            },
-            { retries, minTimeout: 2 * 1000 }
-        );
-    } catch (error) {
-        // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
-        context.errorHandling.suppressDisplay = true;
-        ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
-        throw error;
     }
 }
 

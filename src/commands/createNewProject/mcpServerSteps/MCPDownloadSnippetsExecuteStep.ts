@@ -6,7 +6,11 @@
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
+<<<<<<< HEAD
 import { hostFileName, ProjectLanguage, type GitHubFileMetadata } from '../../../constants';
+=======
+import { type GitHubFileMetadata } from '../../../constants';
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 import { localize } from "../../../localize";
 import { feedUtils } from '../../../utils/feedUtils';
 import { nonNullProp } from '../../../utils/nonNull';

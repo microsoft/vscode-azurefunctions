@@ -7,6 +7,10 @@ import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import * as vscode from 'vscode';
+<<<<<<< HEAD
+=======
+import { type WorkspaceFolder } from "vscode";
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, mcpSelfHostedConfigurationProfile } from "../constants";
 import { type IHostJsonV2 } from "../funcConfig/host";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
@@ -34,33 +38,55 @@ type McpServerDefinition = {
     };
 }
 
+<<<<<<< HEAD
 export async function isMcpProject(projectPath: string): Promise<boolean> {
     const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, projectPath);
+=======
+export async function isMcpProject(workspaceFolder: WorkspaceFolder): Promise<boolean> {
+    const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
     if (mcpProjectType === McpProjectType.SelfHostedMcpServer || mcpProjectType === McpProjectType.McpExtensionServer) {
         return true;
     }
 
+<<<<<<< HEAD
     const hostFilePath: string = path.join(projectPath, hostFileName);
+=======
+    const hostFilePath: string = path.join(workspaceFolder.uri.fsPath, hostFileName);
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
     if (!(await AzExtFsExtra.pathExists(hostFilePath))) {
         return false;
     }
 
     const hostJson = await AzExtFsExtra.readJSON(hostFilePath) as IHostJsonV2;
     if (hostJson.configurationProfile === mcpSelfHostedConfigurationProfile) {
+<<<<<<< HEAD
         await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, projectPath);
+=======
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.SelfHostedMcpServer, workspaceFolder.uri.fsPath);
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
         return true;
     }
 
     if (hostJson.extensions?.mcp) {
+<<<<<<< HEAD
         await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, projectPath);
+=======
+        await updateWorkspaceSetting(mcpProjectTypeSetting, McpProjectType.McpExtensionServer, workspaceFolder.uri.fsPath);
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
         return true;
     }
 
     return false;
 }
 
+<<<<<<< HEAD
 export async function getOrCreateMcpJson(projectPath: string): Promise<McpJson> {
     const mcpJsonFilePath: string = path.join(projectPath, '.vscode', 'mcp.json');
+=======
+export async function getOrCreateMcpJson(workspaceFolder: WorkspaceFolder): Promise<McpJson> {
+    const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
     if (await AzExtFsExtra.pathExists(mcpJsonFilePath)) {
         const mcpJsonContent: string = await AzExtFsExtra.readFile(mcpJsonFilePath);
         const errors: jsonc.ParseError[] = [];
@@ -81,8 +107,13 @@ export async function getOrCreateMcpJson(projectPath: string): Promise<McpJson> 
     }
 }
 
+<<<<<<< HEAD
 export async function saveMcpJson(projectPath: string, mcpJson: McpJson): Promise<void> {
     const mcpJsonFilePath: string = path.join(projectPath, '.vscode', 'mcp.json');
+=======
+export async function saveMcpJson(workspaceFolder: WorkspaceFolder, mcpJson: McpJson): Promise<void> {
+    const mcpJsonFilePath: string = path.join(workspaceFolder.uri.fsPath, '.vscode', 'mcp.json');
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
     const mcpJsonContent: string = JSON.stringify(mcpJson, undefined, 4);
     await AzExtFsExtra.writeFile(mcpJsonFilePath, mcpJsonContent);
 }
@@ -100,8 +131,13 @@ export function checkIfMcpServerExists(mcpJson: McpJson, serverName: string): bo
     return false;
 }
 
+<<<<<<< HEAD
 export function getLocalServerName(projectPath: string): string {
     return `${path.basename(projectPath)}-local-server`;
+=======
+export function getLocalServerName(workspace: WorkspaceFolder): string {
+    return `${workspace.name}-local-server`;
+>>>>>>> 77c94a450de5ca91e2457f8514e75d77ce7c358a
 }
 
 export function getRemoteServerName(ti: SlotTreeItem): string {
