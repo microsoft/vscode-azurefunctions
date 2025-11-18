@@ -8,7 +8,19 @@ import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
-    customHandler?: {};
+    configurationProfile?: string;
+    // Custom handler settings for MCP servers
+    customHandler?: {
+        enableProxyingHttpRequest?: boolean;
+        http?: {
+            routes?: { route: string }[];
+        };
+        description: {
+            defaultExecutablePath: string;
+            workingDirectory: string;
+            arguments: string[];
+        }
+    };
     // https://github.com/Azure/azure-functions-templates/issues/906
     logging?: {
         applicationInsights?: {
@@ -27,7 +39,19 @@ export interface IHostJsonV2 {
         http?: {
             routePrefix?: string;
         };
-    };
+        mcp?: {
+            instructions: string,
+            serverName: string,
+            serverVersion: string,
+            encryptClientState: boolean,
+            messageOptions: {
+                useAbsoluteUriForEndpoint: boolean
+            },
+            system: {
+                webhookAuthorizationLevel: string
+            }
+        };
+    }
     concurrency?: {
         dynamicConcurrencyEnabled: boolean;
         snapshotPersistenceEnabled: boolean;

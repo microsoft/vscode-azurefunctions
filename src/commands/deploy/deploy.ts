@@ -62,7 +62,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
-
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
     if (projectPath === undefined) {
         const message: string = localize('functionProjectRootNotFound', 'No azure function project root could be found. This can be caused by a missing {0} file.', hostFileName);
@@ -234,8 +233,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
         }
 
-        // app settings shouldn't be checked with flex consumption plans
-        if (isZipDeploy && !isFlexConsumption) {
+        if (isZipDeploy) {
             await verifyAppSettings({
                 context,
                 node,
@@ -243,7 +241,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 version,
                 language,
                 languageModel,
-                bools: { doRemoteBuild, isConsumption },
+                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
                 durableStorageType,
                 appSettings
             });
