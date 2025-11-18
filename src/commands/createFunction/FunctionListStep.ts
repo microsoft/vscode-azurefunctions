@@ -109,8 +109,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else {
                 context.functionTemplate = result;
             }
-
-            context.telemetry.properties.templateFilter = templateFilter;
         }
     }
 
