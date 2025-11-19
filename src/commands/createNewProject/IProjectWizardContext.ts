@@ -6,7 +6,7 @@
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type Uri, type WorkspaceFolder } from "vscode";
 import { type FuncVersion } from "../../FuncVersion";
-import { type ProjectLanguage } from "../../constants";
+import { type McpProjectType, type ProjectLanguage } from "../../constants";
 import { type TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
 import { type cliFeedUtils } from "../../utils/cliFeedUtils";
 
@@ -31,6 +31,14 @@ export interface IProjectWizardContext extends IActionContext {
     targetFramework?: string | string[];
 
     containerizedProject?: boolean;
+    // Didn't want `mcpProjectType` on `IProjectWizardContext` but all projects can have mcp extension triggers
+    mcpProjectType?: McpProjectType;
+}
+
+export interface MCPProjectWizardContext extends IProjectWizardContext {
+    serverLanguage?: ProjectLanguage;
+    includeSnippets?: boolean;
+    sampleMcpRepoUrl?: string;
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';

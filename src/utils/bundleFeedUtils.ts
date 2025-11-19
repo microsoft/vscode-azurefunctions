@@ -14,7 +14,7 @@ import { nugetUtils } from './nugetUtils';
 
 export namespace bundleFeedUtils {
     export const defaultBundleId: string = 'Microsoft.Azure.Functions.ExtensionBundle';
-    export const defaultVersionRange: string = '[1.*, 2.0.0)';
+    export const defaultVersionRange: string = '[4.*, 5.0.0)';
 
     interface IBundleFeed {
         defaultVersionRange: string;

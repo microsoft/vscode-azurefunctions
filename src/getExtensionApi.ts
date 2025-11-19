@@ -27,7 +27,7 @@ export async function getAzureContainerAppsApi(context: IActionContext, installM
     const acaExtension: apiUtils.AzureExtensionApiProvider | undefined = await apiUtils.getExtensionExports(acaExtensionId);
 
     if (acaExtension) {
-        return acaExtension.getApi<acaApi.AzureContainerAppsExtensionApi>('^0.0.1');
+        return acaExtension.getApi<acaApi.AzureContainerAppsExtensionApi>('^1.0.0');
     }
 
     await context.ui.showWarningMessage(installMessage ??

@@ -85,7 +85,7 @@ const defaultFuncPort: string = '7071';
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
-    return /func (host )?start/i.test(commandLine || '');
+    return /(?:^|[\\/])(func(?:\.exe)?)\s+host\s+start$/i.test(commandLine || '');
 }
 
 let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
