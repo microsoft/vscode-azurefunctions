@@ -92,7 +92,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         }
 
         devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
-        devDeps['typescript'] = '^4.0.0';
+        devDeps['typescript'] = '^5.0.0';
         devDeps['rimraf'] = '^5.0.0';
         return devDeps;
     }
