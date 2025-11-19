@@ -28,7 +28,8 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                     outDir: tsDefaultOutDir,
                     rootDir: '.',
                     sourceMap: true,
-                    strict: false
+                    strict: false,
+                    esModuleInterop: true
                 }
             });
         }
