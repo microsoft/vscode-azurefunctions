@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzureWizardExecuteStep, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { type AzureExtensionApi } from "@microsoft/vscode-azureresources-api";
 import type * as vscode from 'vscode';
 
 export interface ILocalFunction {
@@ -55,7 +56,7 @@ interface ListLocalProjectsResult {
     invalidProjects: InvalidLocalProject[];
 }
 
-export interface AzureFunctionsExtensionApi {
+export interface AzureFunctionsExtensionApi extends AzureExtensionApi {
     apiVersion: string;
 
     revealTreeItem(resourceId: string): Promise<void>;
