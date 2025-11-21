@@ -134,6 +134,7 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            runngFuncTask.map.get
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
             const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
             const wizard = new AzureWizard(wizardContext, {
