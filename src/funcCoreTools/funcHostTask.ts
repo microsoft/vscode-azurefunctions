@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
+import { PostFuncDebugExecuteStep } from '../commands/debug/PostFuncDebugExecuteStep';
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
+import { createActivityContext } from '../utils/activityUtils';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -83,10 +85,17 @@ export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
+const funcCommandRegex: RegExp = /(?:^|[\\/])(func(?:\.exe)?)\s+host\s+start$/i
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
-    return /(?:^|[\\/])(func(?:\.exe)?)\s+host\s+start$/i.test(commandLine || '');
+    return funcCommandRegex.test(commandLine || '');
 }
+
+export function isFuncShellEvent(event: vscode.TerminalShellExecutionStartEvent): boolean {
+    const commandLine = event.execution && event.execution.commandLine;
+    return funcCommandRegex.test(commandLine.value || '');
+}
+
 
 let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
 export let terminalEventReader: vscode.Disposable;
@@ -94,15 +103,13 @@ export function registerFuncHostTaskEvents(): void {
     // we need to register this listener before the func host task starts, so we can capture the terminal output stream
     terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
         /**
-         * NOTE: there is no reliable way to link a terminal to a task due to the name and PID not updating in real time,
-         * so just keep updating to the latest event since the func task and its dependencies run in the same
-         * terminal (the terminal that we want to output)
-         * New tasks will create new `terminalShellExecutionEvents`, so we don't need to worry about picking up output from other terminals
-         * BUG: There's a current issue where if there is _only_ a func task in the tasks.json (as in it doesn't dependOn any other tasks),
-         * the onDidStartTerminalShellExecution does not fire at all. This should not impact most runtimes as they all have some sort of
-         * build task as a dependency. This is a bug on VS Code that I am working with Daniel to fix.
+         * This will pick up any terminal that starts a `func host start` command, including those started outside of tasks (e.g. via the command palette).
+         * But we don't actually access the terminal stream until the `func host start` task starts, at which time this will be pointing to the correct terminal
          * */
-        latestTerminalShellExecutionEvent = terminalShellExecEvent;
+        if (isFuncShellEvent(terminalShellExecEvent)) {
+            latestTerminalShellExecutionEvent = terminalShellExecEvent;
+        }
+
     });
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
@@ -111,7 +118,7 @@ export function registerFuncHostTaskEvents(): void {
 
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const runningFuncTask = {
+            const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
@@ -123,11 +130,18 @@ export function registerFuncHostTaskEvents(): void {
         }
     });
 
-    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
+    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
+            const wizard = new AzureWizard(wizardContext, {
+                title: localize('funcTaskEnded', 'Function host task ended.'),
+                promptSteps: [],
+                executeSteps: [new PostFuncDebugExecuteStep()]
+            });
+            await wizard.execute();
         }
     });
 
