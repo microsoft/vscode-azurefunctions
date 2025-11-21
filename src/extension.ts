@@ -28,7 +28,7 @@ import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
-import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
+import { registerFuncHostTaskEvents, terminalEventReader } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
@@ -154,4 +154,5 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
 export async function deactivateInternal(): Promise<void> {
     await emulatorClient.disposeAsync();
+    terminalEventReader?.dispose();
 }
