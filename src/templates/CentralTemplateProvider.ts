@@ -83,18 +83,20 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     /* Ignored by the v2 schema */
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<FunctionTemplateBase[]> {
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<FunctionTemplateBase[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
-        switch (templateFilter) {
-            case TemplateFilter.All:
-                return templates.functionTemplates;
-            case TemplateFilter.Core:
-                return templates.functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
-            case TemplateFilter.Verified:
-            default:
-                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
-                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
+        for (const template of templates.functionTemplates) {
+            // by default, all templates will be categorized as 'All'
+            template.templateFilter = TemplateFilter.All;
+            const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
+            if (verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === template.id : vt.test(template.id))) {
+                template.templateFilter = TemplateFilter.Verified;
+            } else if ((template as IFunctionTemplate).categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined) {
+                template.templateFilter = TemplateFilter.Core;
+            }
         }
+
+        return templates.functionTemplates;
     }
 
     public async clearTemplateCache(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): Promise<void> {
@@ -117,7 +119,7 @@ export class CentralTemplateProvider implements Disposable {
 
     public async tryGetSampleData(context: IActionContext, version: FuncVersion, triggerBindingType: string): Promise<string | undefined> {
         try {
-            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
+            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, undefined, version, undefined);
             const template: IScriptFunctionTemplate | undefined = templates.find(t => t.functionJson.triggerBinding?.type?.toLowerCase() === triggerBindingType.toLowerCase());
             return template?.templateFiles['sample.dat'];
         } catch {
