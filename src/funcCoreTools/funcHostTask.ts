@@ -6,6 +6,7 @@
 import { AzureWizard, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { CommandAttributes } from '../commands/CommandAttributes';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { PostFuncDebugExecuteStep } from '../commands/debug/PostFuncDebugExecuteStep';
 import { localSettingsFileName } from '../constants';
@@ -136,6 +137,7 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const task = runningFuncTaskMap.get(e.execution.task.scope!, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
             const wizardContext = Object.assign(context, await createActivityContext());
+            wizardContext.activityAttributes = CommandAttributes.Debug;
             wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
 
             const wizard = new AzureWizard(wizardContext, {

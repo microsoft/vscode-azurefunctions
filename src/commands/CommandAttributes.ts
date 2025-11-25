@@ -31,4 +31,12 @@ export class CommandAttributes {
         ],
     };
 
+    static readonly Debug: ActivityAttributes = {
+        description: "Starts the Azure Functions host in debug mode, allowing you to set breakpoints and step through your function code locally using a debugger.",
+        troubleshooting: [
+            "Function host fails to start — check the output logs for errors related to your function code or configuration.",
+            "Breakpoints are not being hit — ensure that the debugger is properly attached and that you're running the function host in debug mode.",
+            "Port conflicts — verify that the ports required for debugging (e.g., 9229 for Node.js) are not being used by other applications.",
+        ],
+    };
 }
