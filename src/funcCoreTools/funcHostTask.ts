@@ -21,6 +21,7 @@ export interface IRunningFuncTask {
     portNumber: string;
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
+    logs: string[];
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -79,7 +80,7 @@ class RunningFunctionTaskMap {
 
 export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
 
-const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope>();
+const funcTaskStartedEmitter = new vscode.EventEmitter<{ scope: vscode.WorkspaceFolder | vscode.TaskScope, execution?: vscode.ShellExecution }>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
@@ -115,15 +116,17 @@ export function registerFuncHostTaskEvents(): void {
 
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
+            const logs: string[] = [];
             const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
-                stream: latestTerminalShellExecutionEvent?.execution.read()
+                stream: latestTerminalShellExecutionEvent?.execution.read(),
+                logs
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
-            funcTaskStartedEmitter.fire(e.execution.task.scope);
+            funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
         }
     });
 
@@ -131,20 +134,29 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const task = runningFuncTaskMap.get(e.execution.task.scope);
-            if (task && task.stream) {
-                for await (const streamLine of task.stream || []) {
-                    console.log(streamLine);
-                }
-            }
-            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
+            const task = runningFuncTaskMap.get(e.execution.task.scope!, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const wizardContext = Object.assign(context, await createActivityContext());
+            wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
+
             const wizard = new AzureWizard(wizardContext, {
                 title: localize('funcTaskEnded', 'Function host task ended.'),
+
                 promptSteps: [],
-                executeSteps: [new PostFuncDebugExecuteStep()]
+                executeSteps: [new PostFuncDebugExecuteStep(task?.logs ?? [])]
             });
             await wizard.execute();
+            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+        }
+    });
+
+    onFuncTaskStarted(async ({ scope, execution }) => {
+        const task = runningFuncTaskMap.get(scope, execution?.options?.cwd);
+        if (!task) {
+            return;
+        }
+
+        for await (const chunk of task.stream ?? []) {
+            task.logs.push(chunk);
         }
     });
 
