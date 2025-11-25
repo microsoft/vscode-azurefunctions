@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.20.2 - 2025-11-25
+
+### Fixed
+* [[4837]](https://github.com/microsoft/vscode-azurefunctions/issues/4837) Fix not being able to create Premium SKU plans in `Create Function App in Azure (Advanced)`
+
 ## 1.20.1 - 2025-11-19
 
 ### Fixed
