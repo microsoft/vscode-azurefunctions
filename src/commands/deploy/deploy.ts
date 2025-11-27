@@ -162,7 +162,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
-    if (durableStorageType && !isFlexConsumption) {
+    if (durableStorageType) {
         switch (durableStorageType) {
             case DurableBackend.DTS:
                 Object.assign(context, await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
