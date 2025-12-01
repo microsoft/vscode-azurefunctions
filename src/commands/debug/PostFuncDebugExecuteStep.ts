@@ -3,12 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItem, ActivityChildType, activityInfoContext, AzureWizardExecuteStep, createContextValue, randomUtils, type ExecuteActivityContext, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activityInfoContext, AzureWizardExecuteStep, createContextValue, randomUtils, type ExecuteActivityContext, type ExecuteActivityOutput, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { stripVTControlCharacters } from "node:util";
+import { ThemeIcon } from "vscode";
 
-export class PostFuncDebugExecuteStep<T extends ExecuteActivityContext> extends AzureWizardExecuteStep<T> {
+export class PostFuncDebugExecuteStep<T extends IActionContext & ExecuteActivityContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 999;
     public stepName: string = 'PostFuncDebugExecuteStep';
+    // public options: AzureWizardExecuteStepOptions = {
+    //     continueOnFail: true
+    // }
 
     public constructor(readonly logs: string[]) {
         super();
@@ -32,10 +36,10 @@ export class PostFuncDebugExecuteStep<T extends ExecuteActivityContext> extends 
         }
 
         if (errorLogs.length > 0) {
-            this._logs = stripVTControlCharacters(errorLogs.join('\n'));
             context.activityAttributes = context.activityAttributes || {};
             context.activityAttributes.logs = errorLogs.map(log => { return { content: stripVTControlCharacters(log) }; });
-            throw new Error('Function host encountered errors during startup. See logs for details.');
+            context.activityChildren = [];
+            throw new Error('This is from the error in execute');
         }
 
         return;
@@ -48,12 +52,17 @@ export class PostFuncDebugExecuteStep<T extends ExecuteActivityContext> extends 
     public createFailOutput(_context: T): ExecuteActivityOutput {
         return {
             item: new ActivityChildItem({
-                label: 'Function host encountered errors during debugging. Click to have Copilot help diagnose the issue.',
+                label: 'Click to have Copilot help diagnose the issue.',
                 id: `${randomUtils.getRandomHexString(8)}-terminateDebugSession-fail`,
-                activityType: ActivityChildType.Error,
+                activityType: ActivityChildType.Fail,
                 contextValue: createContextValue([activityInfoContext, 'terminateDebugSessionFail']),
+                iconPath: new ThemeIcon('sparkle'),
                 // a little trick to remove the description timer on activity children
-                description: ' '
+                description: ' ',
+                command: {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "title": "Ask Copilot",
+                }
             })
         };
     }

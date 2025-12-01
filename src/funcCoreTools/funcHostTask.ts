@@ -136,7 +136,7 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const task = runningFuncTaskMap.get(e.execution.task.scope!, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            const wizardContext = Object.assign(context, await createActivityContext());
+            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
             wizardContext.activityAttributes = CommandAttributes.Debug;
             wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
 
@@ -146,7 +146,12 @@ export function registerFuncHostTaskEvents(): void {
                 promptSteps: [],
                 executeSteps: [new PostFuncDebugExecuteStep(task?.logs ?? [])]
             });
-            await wizard.execute();
+            try {
+                await wizard.execute();
+            } catch (error) {
+                // swallow errors
+                console.log(error);
+            }
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
         }
     });
