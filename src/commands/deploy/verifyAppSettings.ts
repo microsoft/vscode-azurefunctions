@@ -42,28 +42,28 @@ export async function verifyAppSettings(options: {
     const appSettings: StringDictionary = options.appSettings;
     let updateAppSettings: boolean = false;
     // these were checks for consumption and app service hosted plans
-    if (appSettings.properties && !bools.isFlexConsumption) {
-        const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
-        await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
+    if (appSettings.properties) {
+        if (!bools.isFlexConsumption) {
+            const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
+            await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
-        // update the settings if the remote runtime was changed
-        updateAppSettings = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
-        if (node.site.isLinux) {
-            const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
-            updateAppSettings ||= remoteBuildSettingsChanged;
+            // update the settings if the remote runtime was changed
+            updateAppSettings = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
+            if (node.site.isLinux) {
+                const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
+                updateAppSettings ||= remoteBuildSettingsChanged;
+            } else {
+                updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+            }
         } else {
-            updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+            const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(context.originalDeployFsPath));
+            const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, workspace);
+            const localSettings = localSettingsPath ? await getLocalSettingsJson(context, localSettingsPath, false) : {};
+            updateAppSettings = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
-
-
-    } else if (appSettings.properties && bools.isFlexConsumption) {
-        const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(context.originalDeployFsPath));
-        const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, workspace);
-        const localSettings = localSettingsPath ? await getLocalSettingsJson(context, localSettingsPath, false) : {};
-        updateAppSettings = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
     }
 
     if (updateAppSettings) {
