@@ -177,12 +177,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     }
 
-    if (durableStorageType === DurableBackend.DTS && isFlexConsumption) {
-        const warning: string = localize('durableStorageTypeWarning', 'The Durable Task Scheduler (DTS) storage provider is not yet supported for apps on a flex consumption plan.');
-        ext.outputChannel.appendLog(warning);
-        await context.ui.showWarningMessage(warning, { modal: true }, { title: localize('continue', 'Continue') });
-    }
-
     Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
