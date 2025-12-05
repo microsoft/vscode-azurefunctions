@@ -1502,7 +1502,7 @@
         "@microsoft/vscode-azext-azureutils": "^3.5.2",
         "@microsoft/vscode-azext-utils": "^3.5.0",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
-        "@microsoft/vscode-container-client": "^0.4.3",
+        "@microsoft/vscode-container-client": "^0.3.0",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",
