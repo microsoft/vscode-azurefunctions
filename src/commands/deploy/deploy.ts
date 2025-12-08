@@ -144,6 +144,16 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const isFlexConsumption: boolean = await client.getIsConsumptionV2(actionContext);
     actionContext.telemetry.properties.isFlexConsumption = String(isFlexConsumption);
+
+    if (language === ProjectLanguage.Python && isFlexConsumption) {
+        const runtimeVersion = site.rawSite.functionAppConfig?.runtime?.version;
+        if (runtimeVersion === '3.14') {
+            const errorMessage = localize('python314FlexError', 'Remote build for Python 3.14 is not supported for flex. Please refer to https://aka.ms/py314-remote-build-flex.');
+            ext.outputChannel.appendLog(errorMessage);
+            throw new Error(errorMessage);
+        }
+    }
+
     // don't use remote build setting for consumption v2
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
