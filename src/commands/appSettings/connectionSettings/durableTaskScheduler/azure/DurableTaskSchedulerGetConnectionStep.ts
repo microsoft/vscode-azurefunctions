@@ -11,7 +11,7 @@ export class DurableTaskSchedulerGetConnectionStep<T extends IDTSAzureConnection
     public priority: number = 200;
 
     public async execute(context: T): Promise<void> {
-        context.newDTSConnectionSettingValue = getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
+        context.newDTSConnectionSettingValue ??= getSchedulerConnectionString(context.dts?.properties.endpoint ?? '', SchedulerAuthenticationType.UserAssignedIdentity);
 
         if (context.managedIdentity) {
             context.newDTSConnectionSettingValue = context.newDTSConnectionSettingValue.replace(clientIdKey, context.managedIdentity?.clientId ?? clientIdKey);
@@ -20,7 +20,7 @@ export class DurableTaskSchedulerGetConnectionStep<T extends IDTSAzureConnection
         context.valuesToMask.push(context.newDTSConnectionSettingValue);
     }
 
-    public shouldExecute(context: T): boolean {
-        return !context.newDTSConnectionSettingValue;
+    public shouldExecute(): boolean {
+        return true;
     }
 }
