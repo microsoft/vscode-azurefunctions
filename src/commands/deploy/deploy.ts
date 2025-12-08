@@ -162,6 +162,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
+    if (durableStorageType === DurableBackend.SQL && isFlexConsumption) {
+        const warning: string = localize('durableStorageTypeWarning', 'SQL storage provider support has not yet been verified for apps on a flex consumption plan.');
+        ext.outputChannel.appendLog(warning);
+        await context.ui.showWarningMessage(warning, { modal: true }, { title: localize('continue', 'Continue') });
+    }
+
     if (durableStorageType) {
         switch (durableStorageType) {
             case DurableBackend.DTS:
