@@ -7,7 +7,7 @@ import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCrea
 import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
-import { funcVersionSetting } from "../../constants";
+import { DurableBackend, funcVersionSetting } from "../../constants";
 import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersion";
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -15,7 +15,7 @@ import { durableUtils } from "../../utils/durableUtils";
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from "../../vsCodeConfig/settings";
 import { AuthenticationPromptStep } from "./AuthenticationPromptStep";
 import { FunctionAppCreateStep } from "./FunctionAppCreateStep";
-import { FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
+import { allAvailableFunctionAppHostingPlans, FunctionAppHostingPlans, FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
 import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
@@ -150,7 +150,9 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
     const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
 
-    promptSteps.push(new FunctionAppHostingPlanStep());
+    promptSteps.push(new FunctionAppHostingPlanStep(
+        getAvailableFunctionAppHostingPlans(wizardContext) /** availablePlans */,
+    ));
     CustomLocationListStep.addStep(wizardContext, promptSteps);
 
     promptSteps.push(new FunctionAppStackStep());
@@ -176,4 +178,26 @@ async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: Az
     executeSteps.push(new ContainerizedFunctionAppCreateStep());
 
     return { promptSteps, executeSteps };
+}
+
+function getAvailableFunctionAppHostingPlans(context: IFunctionAppWizardContext): Set<FunctionAppHostingPlans> {
+    const availablePlans: Set<FunctionAppHostingPlans> = new Set();
+
+    switch (true) {
+        case context.useFlexConsumptionPlan:
+            availablePlans.add(FunctionAppHostingPlans.Flex);
+            break;
+
+        case context.durableStorageType === DurableBackend.DTS:
+            if (context.advancedCreation) {
+                availablePlans.add(FunctionAppHostingPlans.Premium);
+            }
+            availablePlans.add(FunctionAppHostingPlans.Flex);
+            break;
+
+        default:
+            return allAvailableFunctionAppHostingPlans;
+    }
+
+    return availablePlans;
 }
