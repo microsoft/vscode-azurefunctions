@@ -183,14 +183,21 @@ async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: Az
 function getAvailableFunctionAppHostingPlans(context: IFunctionAppWizardContext): Set<FunctionAppHostingPlans> {
     const availablePlans: Set<FunctionAppHostingPlans> = new Set();
 
-    if (context.useFlexConsumptionPlan) {
-        availablePlans.add(FunctionAppHostingPlans.Flex);
-    } else if (context.durableStorageType === DurableBackend.DTS) {
-        if (context.advancedCreation) {
-            availablePlans.add(FunctionAppHostingPlans.Premium);
-        }
-        availablePlans.add(FunctionAppHostingPlans.Flex);
+    switch (true) {
+        case context.useFlexConsumptionPlan:
+            availablePlans.add(FunctionAppHostingPlans.Flex);
+            break;
+
+        case context.durableStorageType === DurableBackend.DTS:
+            if (context.advancedCreation) {
+                availablePlans.add(FunctionAppHostingPlans.Premium);
+            }
+            availablePlans.add(FunctionAppHostingPlans.Flex);
+            break;
+
+        default:
+            return allAvailableFunctionAppHostingPlans;
     }
 
-    return availablePlans.size ? availablePlans : allAvailableFunctionAppHostingPlans;
+    return availablePlans;
 }
