@@ -13,16 +13,36 @@ import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
-export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
-    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
-        const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
-        const picks: IAzureQuickPickItem<[boolean, boolean, RegExp | undefined]>[] = [
-            { label: localize('flexConsumption', 'Flex Consumption'), data: [false, true, undefined] },
-            { label: localize('consumption', 'Consumption'), description: localize('legacy', 'Legacy'), data: [true, false, undefined] },
-            { label: localize('premium', 'Premium'), data: [false, false, /^EP$/i] },
-            { label: localize('dedicated', 'App Service Plan'), data: [false, false, /^((?!EP|Y|FC).)*$/i] }
-        ];
+export enum FunctionAppHostingPlans {
+    Flex,
+    Consumption,
+    Premium,
+    AppService,
+}
 
+export const allAvailableFunctionAppHostingPlans = new Set([FunctionAppHostingPlans.Flex, FunctionAppHostingPlans.Consumption, FunctionAppHostingPlans.Premium, FunctionAppHostingPlans.AppService]);
+
+export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
+    constructor(private readonly availablePlans: Set<FunctionAppHostingPlans>) {
+        super();
+    }
+
+    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
+        const picks: IAzureQuickPickItem<[boolean, boolean, RegExp | undefined]>[] = [];
+        if (this.availablePlans.has(FunctionAppHostingPlans.Flex)) {
+            picks.push({ label: localize('flexConsumption', 'Flex Consumption'), data: [false, true, undefined] });
+        }
+        if (this.availablePlans.has(FunctionAppHostingPlans.Consumption)) {
+            picks.push({ label: localize('consumption', 'Consumption'), description: localize('legacy', 'Legacy'), data: [true, false, undefined] });
+        }
+        if (this.availablePlans.has(FunctionAppHostingPlans.Premium)) {
+            picks.push({ label: localize('premium', 'Premium'), data: [false, false, /^EP$/i] });
+        }
+        if (this.availablePlans.has(FunctionAppHostingPlans.AppService)) {
+            picks.push({ label: localize('dedicated', 'App Service Plan'), data: [false, false, /^((?!EP|Y|FC).)*$/i] });
+        }
+
+        const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         [context.useConsumptionPlan, context.useFlexConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder, learnMoreLink: 'aka.ms/flexconsumption' })).data;
         await setLocationsTask(context);
         if (context.useConsumptionPlan) {
@@ -33,7 +53,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return (context.useFlexConsumptionPlan === undefined && context.dockerfilePath === undefined);
+        return (context.useFlexConsumptionPlan === undefined && context.dockerfilePath === undefined) && !context.planSkuFamilyFilter;
     }
 
     public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
