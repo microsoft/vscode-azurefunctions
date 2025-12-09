@@ -8,20 +8,18 @@ import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipel
 import { setLocationsTask, WebsiteOS, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { createGenericClient, LocationListStep, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { DurableBackend } from '../../constants';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
-const premiumSkuFilter = /^EP$/i;
 export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectHostingPlan', 'Select a hosting plan.');
         const picks: IAzureQuickPickItem<[boolean, boolean, RegExp | undefined]>[] = [
             { label: localize('flexConsumption', 'Flex Consumption'), data: [false, true, undefined] },
             { label: localize('consumption', 'Consumption'), description: localize('legacy', 'Legacy'), data: [true, false, undefined] },
-            { label: localize('premium', 'Premium'), data: [false, false, premiumSkuFilter] },
+            { label: localize('premium', 'Premium'), data: [false, false, /^EP$/i] },
             { label: localize('dedicated', 'App Service Plan'), data: [false, false, /^((?!EP|Y|FC).)*$/i] }
         ];
 
@@ -35,19 +33,11 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IFunctionA
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        return (context.useFlexConsumptionPlan === undefined && context.dockerfilePath === undefined) && !context.planSkuFamilyFilter;
+        return (context.useFlexConsumptionPlan === undefined && context.dockerfilePath === undefined);
     }
 
     public configureBeforePrompt(context: IFunctionAppWizardContext): void | Promise<void> {
-        if (context.durableStorageType === DurableBackend.DTS) {
-            // premium is required for DTS
-            if (context.advancedCreation) {
-                // allows users to select/create a Elastic Premium plan
-                context.planSkuFamilyFilter = premiumSkuFilter;
-            } else {
-                setPremiumPlanProperties(context);
-            }
-        } else if (context.useFlexConsumptionPlan) {
+        if (context.useFlexConsumptionPlan) {
             setFlexConsumptionPlanProperties(context);
         }
     }
@@ -64,16 +54,6 @@ function setFlexConsumptionPlanProperties(context: IAppServiceWizardContext): vo
     // flex consumption only supports linux
     context.newSiteOS = WebsiteOS.linux;
     LocationListStep.setLocationSubset(context, getFlexLocations(context), 'Microsoft.WebFlex');
-}
-
-function setPremiumPlanProperties(context: IAppServiceWizardContext): void {
-    context.newPlanName = `PREMIUM-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
-    context.newPlanSku = {
-        name: 'P1v2',
-        tier: 'Premium V2',
-        size: 'P1v2',
-        family: 'Pv2'
-    };
 }
 
 async function getFlexLocations(context: IAppServiceWizardContext): Promise<string[]> {
