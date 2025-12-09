@@ -185,7 +185,7 @@ function getAvailableFunctionAppHostingPlans(context: IFunctionAppWizardContext)
 
     if (context.useFlexConsumptionPlan) {
         availablePlans.add(FunctionAppHostingPlans.Flex);
-    } if (context.durableStorageType === DurableBackend.DTS) {
+    } else if (context.durableStorageType === DurableBackend.DTS) {
         if (context.advancedCreation) {
             availablePlans.add(FunctionAppHostingPlans.Premium);
         }
