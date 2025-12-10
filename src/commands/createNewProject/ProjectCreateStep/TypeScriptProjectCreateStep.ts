@@ -28,7 +28,8 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                     outDir: tsDefaultOutDir,
                     rootDir: '.',
                     sourceMap: true,
-                    strict: false
+                    strict: false,
+                    esModuleInterop: true
                 }
             });
         }
@@ -92,7 +93,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         }
 
         devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
-        devDeps['typescript'] = '^4.0.0';
+        devDeps['typescript'] = '^5.0.0';
         devDeps['rimraf'] = '^5.0.0';
         return devDeps;
     }
