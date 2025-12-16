@@ -7,6 +7,7 @@
 * [[4847](https://github.com/microsoft/vscode-azurefunctions/pull/4847)] Add .NET 10 and Java 25
 
 ### Changed
+* [[4827](https://github.com/microsoft/vscode-azurefunctions/pull/4827)] Update `typescript` version and TS compile options in template files
 * [[4862](https://github.com/microsoft/vscode-azurefunctions/pull/4862)] [[4863](https://github.com/microsoft/vscode-azurefunctions/pull/4863)] Allow flex consumption deployments for DTS
 
 ### Fixed
