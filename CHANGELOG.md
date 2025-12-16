@@ -1,5 +1,19 @@
 # Change Log
 
+## 1.20.3 - 2025-12-16
+
+### Added
+* [[4861](https://github.com/microsoft/vscode-azurefunctions/pull/4861)] Add error message when deploying to flex apps with python 3.14
+* [[4847](https://github.com/microsoft/vscode-azurefunctions/pull/4847)] Add .NET 10 and Java 25
+
+### Changed
+* [[4862](https://github.com/microsoft/vscode-azurefunctions/pull/4862)] [[4863](https://github.com/microsoft/vscode-azurefunctions/pull/4863)] Allow flex consumption deployments for DTS
+
+### Fixed
+* [[4858](https://github.com/microsoft/vscode-azurefunctions/pull/4858)] Fix an issue where DTS emulator was failing to start on some Windows machines
+* [[4855](https://github.com/microsoft/vscode-azurefunctions/pull/4855)] Fix a `Netherite` connection setting boolean
+* [[4853](https://github.com/microsoft/vscode-azurefunctions/pull/4853)] Always verify and update app connection strings
+
 ## 1.20.2 - 2025-11-25
 
 ### Fixed
