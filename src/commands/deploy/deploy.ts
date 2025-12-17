@@ -298,7 +298,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 }
                 const deployContext = Object.assign(context, await createActivityContext());
                 deployContext.activityChildren = [];
-                await innerDeploy(site, deployFsPath, deployContext, [new CreateRemoteMcpServerExecuteStep()]);
+                // Only add CreateRemoteMcpServerExecuteStep for MCP projects to avoid any potential interference with non-MCP deployments
+                const optionalSteps = context.isMcpProject ? [new CreateRemoteMcpServerExecuteStep()] : [];
+                await innerDeploy(site, deployFsPath, deployContext, optionalSteps);
             }
         }
     );
