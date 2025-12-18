@@ -5,7 +5,6 @@
 
 import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -170,8 +169,8 @@ async function initTestWorkspaceFolders(): Promise<string[]> {
         const folders: string[] = [];
         for (let i = 0; i < workspaceFolders.length; i++) {
             const workspacePath: string = workspaceFolders[i].uri.fsPath;
-            const folderName = path.basename(workspacePath);
-            assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
+            // const folderName = path.basename(workspacePath);
+            // assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
             await AzExtFsExtra.ensureDir(workspacePath);
             await AzExtFsExtra.emptyDir(workspacePath);
             folders.push(workspacePath);

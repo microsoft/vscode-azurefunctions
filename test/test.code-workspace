@@ -29,6 +29,10 @@
         },
         {
             "path": "../testWorkspace/9"
+        },
+        {
+            "name": "scenario-durable-dts",
+            "path": "../testWorkspace/scenarios/durable-dts"
         }
     ],
     "settings": {

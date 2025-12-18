@@ -72,11 +72,11 @@
             "env": {
                 "MOCHA_grep": "", // RegExp of tests to run (empty for all)
                 "MOCHA_timeout": "0", // Disable time-outs
-                "DEBUGTELEMETRY": "v",
+                "DEBUGTELEMETRY": "",
                 "NODE_DEBUG": "",
                 "FUNC_PATH": "func",
                 "AZFUNC_UPDATE_BACKUP_TEMPLATES": "",
-                "AzCode_EnableLongRunningTestsLocal": "",
+                "AzCode_EnableLongRunningTestsLocal": "true",
             }
         },
         {
