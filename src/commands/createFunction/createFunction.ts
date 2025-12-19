@@ -90,4 +90,6 @@ export async function createFunctionInternal(context: IActionContext, options: a
     });
     await wizard.prompt();
     await wizard.execute();
+
+    console.log("test")
 }

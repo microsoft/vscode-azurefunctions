@@ -31,8 +31,20 @@
             "path": "../testWorkspace/9"
         },
         {
-            "name": "scenario-durable-dts",
-            "path": "../testWorkspace/scenarios/durable-dts"
+            "name": "scenarios-dts-tsnode",
+            "path": "../testWorkspace/scenarios/durable-dts/tsnode"
+        },
+        {
+            "name": "scenarios-dts-python",
+            "path": "../testWorkspace/scenarios/durable-dts/python"
+        },
+        {
+            "name": "scenarios-dts-dotnet-isolated",
+            "path": "../testWorkspace/scenarios/durable-dts/dotnet-isolated"
+        },
+        {
+            "name": "scenarios-dts-dotnet-inproc",
+            "path": "../testWorkspace/scenarios/durable-dts/dotnet-inproc"
         }
     ],
     "settings": {
