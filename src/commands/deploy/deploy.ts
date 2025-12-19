@@ -52,8 +52,8 @@ export async function deployProductionSlot(context: IActionContext, target?: vsc
     await deploy(context, target, undefined);
 }
 
-export async function deployProductionSlotByFunctionAppId(context: IActionContext, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, undefined, functionAppId);
+export async function deployProductionSlotByFunctionAppId(context: IActionContext, functionAppId?: string | {}, target?: vscode.Uri | string | SlotTreeItem): Promise<void> {
+    await deploy(context, target, functionAppId);
 }
 
 export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {

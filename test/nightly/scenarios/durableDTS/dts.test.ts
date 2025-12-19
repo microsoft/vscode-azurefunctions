@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { workspace, type Uri, type WorkspaceFolder } from 'vscode';
-import { createNewProjectInternal, updateGlobalSetting } from '../../../../extension.bundle';
+import { createFunctionApp, createNewProjectInternal, deployProductionSlotByFunctionAppId, getRandomAlphanumericString, updateGlobalSetting } from '../../../../extension.bundle';
 import { longRunningTestsEnabled } from '../../../global.test';
 
 let rootFolder: WorkspaceFolder | undefined;
@@ -27,12 +27,13 @@ suite.only('Durable Task Scheduler (DTS) Scenarios', function (this: Mocha.Suite
     });
 
     test('Create function should bring down template files and make the necessary workspace changes', async () => {
+        const appName: string = getRandomAlphanumericString();
         const createNewProjectInputs = [
-            'TypeScript',
+            /TypeScript/i,
             /v4/i,
-            /durable functions orchestrator/i,
-            'Durable Task Scheduler',
-            'dtsFunctionName',
+            /Durable Functions Orchestrator/i,
+            /Durable Task Scheduler/i,
+            'durableHello1',
         ];
 
         await runWithTestActionContext('scenarios.createNewProject', async context => {
@@ -43,9 +44,44 @@ suite.only('Durable Task Scheduler (DTS) Scenarios', function (this: Mocha.Suite
 
         // Verify that the right project settings were set
 
-        // Create Function App
+        // For Loop - Tests for this project:
 
-        // Deploy
+        // For flex test basic, else test adv?
+        const createFunctionAppBasicInputs = [
+            nonNullValue(rootFolder?.name),
+            appName,
+            /West US 2/i,
+            /Node\.js 22/i,
+            /Managed Identity/i,
+        ];
+
+        let functionAppId: string | undefined;
+        await runWithTestActionContext('scenarios.createFunctionApp', async context => {
+            await context.ui.runWithInputs(createFunctionAppBasicInputs, async () => {
+                functionAppId = await createFunctionApp(context);
+            });
+        });
+        assert.ok(functionAppId, 'Failed to create function app.');
+
+        const deployFunctionAppInputs = [
+            // Todo: Expand regexp capability for context.ui.showWarningMessage
+            'Connect Durable Task Scheduler',
+            /Create New Durable Task Scheduler/i,
+            appName,
+            /Create New Durable Task Hub/i,
+            appName,
+            /Assign New User[- ]Assigned Identity/i,
+            /Create New User[- ]Assigned Identity/i,
+            // Todo: Here too
+            'Deploy',
+        ];
+        await runWithTestActionContext('scenarios.deploy', async context => {
+            await context.ui.runWithInputs(deployFunctionAppInputs, async () => {
+                await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
+            });
+        });
+
+        // Post deploy check
     });
 });
 

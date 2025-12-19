@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type AzExtParentTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { nonNullValueAndProp, type AzExtParentTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -38,12 +38,13 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     context.newResourceGroupName = newResourceGroupName;
     if (!isMultiRootWorkspace()) {
         // only set the workspace if we're not doing in a multiroot project
-        context.workspaceFolder = await getRootWorkspaceFolder();
+        context.workspaceFolder = await getRootWorkspaceFolder(context);
     }
 
     const funcAppNode: SlotTreeItem | ContainerTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
 
-    return funcAppNode.fullId;
+    // Full id has it as "undefined/subscriptions/...."
+    return nonNullValueAndProp(funcAppNode.site, 'id');
 }
 
 export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzExtParentTreeItem | string, nodesOrNewResourceGroupName?: string | (string | AzExtParentTreeItem)[]): Promise<string | undefined> {

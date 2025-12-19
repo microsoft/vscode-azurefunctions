@@ -15,7 +15,7 @@ import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProjec
  * Otherwise, prompt
  */
 export async function getLocalSettingsFile(context: IActionContext, message: string, workspaceFolder?: vscode.WorkspaceFolder): Promise<string> {
-    workspaceFolder ||= await getRootWorkspaceFolder();
+    workspaceFolder ||= await getRootWorkspaceFolder(context);
     if (workspaceFolder) {
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder);
         if (projectPath) {
