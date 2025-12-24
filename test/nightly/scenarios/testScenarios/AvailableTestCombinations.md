@@ -24,6 +24,7 @@ TBD
 |-----|-------------------|-------------------|------------------|------------------------|---------|
 | 1   | I                 | Managed Identity  | Linux            | Flex Consumption       | Skip    |
 | 2   | I                 | Managed Identity  | Windows          | Flex Consumption       | Skip    |
+| 3   | I                 | Managed Identity  | Linux            | Premium                | Skip    |
 | 4   | I                 | Managed Identity  | Windows          | Premium                | Skip    |
 | 5   | I                 | Managed Identity  | Linux            | Consumption (Legacy)   | Skip    |
 | 6   | I                 | Managed Identity  | Windows          | Consumption (Legacy)   | Skip    |
@@ -38,7 +39,7 @@ TBD
 | 15  | I                 | Secrets           | Linux            | App Service            | Skip    |
 | 16  | I                 | Secrets           | Windows          | App Service            | Skip    |
 | 17  | II                | Managed Identity  | Linux            | Flex Consumption       |         |
-| 18  | II                | Managed Identity  | Windows          | Flex Consumption       |         |
+| 18  | II                | Managed Identity  | Windows          | Flex Consumption       | Not Offered |
 | 19  | II                | Managed Identity  | Linux            | Premium                |         |
 | 20  | II                | Managed Identity  | Windows          | Premium                |         |
 | 21  | II                | Managed Identity  | Linux            | Consumption (Legacy)   |         |
@@ -46,7 +47,7 @@ TBD
 | 23  | II                | Managed Identity  | Linux            | App Service            |         |
 | 24  | II                | Managed Identity  | Windows          | App Service            |         |
 | 25  | II                | Secrets           | Linux            | Flex Consumption       |         |
-| 26  | II                | Secrets           | Windows          | Flex Consumption       |         |
+| 26  | II                | Secrets           | Windows          | Flex Consumption       | Not Offered |
 | 27  | II                | Secrets           | Linux            | Premium                |         |
 | 28  | II                | Secrets           | Windows          | Premium                |         |
 | 29  | II                | Secrets           | Linux            | Consumption (Legacy)   |         |
@@ -70,7 +71,7 @@ TBD
 | 47  | III               | Secrets           | Linux            | App Service            | Skip    |
 | 48  | III               | Secrets           | Windows          | App Service            | Skip    |
 | 49  | IV                | Managed Identity  | Linux            | Flex Consumption       |         |
-| 50  | IV                | Managed Identity  | Windows          | Flex Consumption       |         |
+| 50  | IV                | Managed Identity  | Windows          | Flex Consumption       | Not Offered |
 | 51  | IV                | Managed Identity  | Linux            | Premium                |         |
 | 52  | IV                | Managed Identity  | Windows          | Premium                |         |
 | 53  | IV                | Managed Identity  | Linux            | Consumption (Legacy)   |         |
@@ -78,7 +79,7 @@ TBD
 | 55  | IV                | Managed Identity  | Linux            | App Service            |         |
 | 56  | IV                | Managed Identity  | Windows          | App Service            |         |
 | 57  | IV                | Secrets           | Linux            | Flex Consumption       |         |
-| 58  | IV                | Secrets           | Windows          | Flex Consumption       |         |
+| 58  | IV                | Secrets           | Windows          | Flex Consumption       | Not Offered |
 | 59  | IV                | Secrets           | Linux            | Premium                |         |
 | 60  | IV                | Secrets           | Windows          | Premium                |         |
 | 61  | IV                | Secrets           | Linux            | Consumption (Legacy)   |         |
@@ -86,7 +87,7 @@ TBD
 | 63  | IV                | Secrets           | Linux            | App Service            |         |
 | 64  | IV                | Secrets           | Windows          | App Service            |         |
 | 65  | V                 | Managed Identity  | Linux            | Flex Consumption       |         |
-| 66  | V                 | Managed Identity  | Windows          | Flex Consumption       |         |
+| 66  | V                 | Managed Identity  | Windows          | Flex Consumption       | Not Offered |
 | 67  | V                 | Managed Identity  | Linux            | Premium                |         |
 | 68  | V                 | Managed Identity  | Windows          | Premium                |         |
 | 69  | V                 | Managed Identity  | Linux            | Consumption (Legacy)   |         |
@@ -94,7 +95,7 @@ TBD
 | 71  | V                 | Managed Identity  | Linux            | App Service            |         |
 | 72  | V                 | Managed Identity  | Windows          | App Service            |         |
 | 73  | V                 | Secrets           | Linux            | Flex Consumption       |         |
-| 74  | V                 | Secrets           | Windows          | Flex Consumption       |         |
+| 74  | V                 | Secrets           | Windows          | Flex Consumption       | Not Offered |
 | 75  | V                 | Secrets           | Linux            | Premium                |         |
 | 76  | V                 | Secrets           | Windows          | Premium                |         |
 | 77  | V                 | Secrets           | Linux            | Consumption (Legacy)   |         |
@@ -102,7 +103,7 @@ TBD
 | 79  | V                 | Secrets           | Linux            | App Service            |         |
 | 80  | V                 | Secrets           | Windows          | App Service            |         |
 | 81  | VI                | Managed Identity  | Linux            | Flex Consumption       |         |
-| 82  | VI                | Managed Identity  | Windows          | Flex Consumption       |         |
+| 82  | VI                | Managed Identity  | Windows          | Flex Consumption       | Not Offered |
 | 83  | VI                | Managed Identity  | Linux            | Premium                |         |
 | 84  | VI                | Managed Identity  | Windows          | Premium                |         |
 | 85  | VI                | Managed Identity  | Linux            | Consumption (Legacy)   |         |
@@ -110,7 +111,7 @@ TBD
 | 87  | VI                | Managed Identity  | Linux            | App Service            |         |
 | 88  | VI                | Managed Identity  | Windows          | App Service            |         |
 | 89  | VI                | Secrets           | Linux            | Flex Consumption       |         |
-| 90  | VI                | Secrets           | Windows          | Flex Consumption       |         |
+| 90  | VI                | Secrets           | Windows          | Flex Consumption       | Not Offered |
 | 91  | VI                | Secrets           | Linux            | Premium                |         |
 | 92  | VI                | Secrets           | Windows          | Premium                |         |
 | 93  | VI                | Secrets           | Linux            | Consumption (Legacy)   |         |
