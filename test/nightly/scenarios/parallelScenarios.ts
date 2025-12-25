@@ -7,7 +7,8 @@ import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { workspace, type Uri, type WorkspaceFolder } from 'vscode';
-import { createFunctionApp, createNewProjectInternal, deployProductionSlotByFunctionAppId, ext } from '../../../extension.bundle';
+import { createFunctionApp, createFunctionAppAdvanced, createNewProjectInternal, deployProductionSlotByFunctionAppId, ext } from '../../../extension.bundle';
+import { CreateMode } from '../../utils/createFunctionAppUtils';
 import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from './testScenarios/AzExtFunctionsTestScenario';
 import { generateTestScenarios } from './testScenarios/testScenarios';
 
@@ -40,13 +41,18 @@ function runTestScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsPa
         await runWithTestActionContext('scenario.createNewProject', async context => {
             await context.ui.runWithInputs(scenario.createNewProjectTest.inputs, async () => {
                 await createNewProjectInternal(context, { folderPath: rootFolder.uri.fsPath });
-                await scenario.createNewProjectTest.postTestAssertion?.(context, rootFolder.uri.fsPath, '');
+                await scenario.createNewProjectTest.postTest?.(context, rootFolder.uri.fsPath, '');
             });
         });
 
         // 2. Immediately spin off all the create and deploy tests
-        const createAndDeployTests: Promise<void>[] = scenario.createAndDeployTests.map(test => startCreateAndDeployTest(scenario.label, rootFolder, test));
-        await Promise.allSettled(createAndDeployTests);
+        const onlyTestCase: CreateAndDeployTestCase | undefined = scenario.createAndDeployTests.find(test => test.only);
+        if (onlyTestCase) {
+            await startCreateAndDeployTest(scenario.label, rootFolder, onlyTestCase);
+        } else {
+            const createAndDeployTests: Promise<void>[] = scenario.createAndDeployTests.map(test => startCreateAndDeployTest(scenario.label, rootFolder, test));
+            await Promise.allSettled(createAndDeployTests);
+        }
 
         await cleanTestFolder(rootFolder);
     }
@@ -59,7 +65,12 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
     let functionAppId: string;
     await runWithTestActionContext('scenario.createFunctionApp', async context => {
         await context.ui.runWithInputs(test.createFunctionApp.inputs, async () => {
-            functionAppId = await createFunctionApp(context);
+            if (test.createFunctionApp.mode === CreateMode.Basic) {
+                functionAppId = await createFunctionApp(context);
+            } else {
+                functionAppId = await createFunctionAppAdvanced(context);
+            }
+
             assert.ok(functionAppId, 'Failed to create function app.');
             test.createFunctionApp.postTest?.(context, functionAppId, '');
         });

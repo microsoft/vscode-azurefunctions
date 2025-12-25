@@ -21,11 +21,9 @@ TBD
 | Workspace Project | Connection Type   | Operating System | Plan Type         | Comment |
 |-------------------|-------------------|------------------|-------------------|---------|
 | I                 | Managed Identity  | Linux            | Flex Consumption  |         |
-| I                 | Managed Identity  | Windows          | Flex Consumption  |         |
 | I                 | Managed Identity  | Linux            | Premium           |         |
 | I                 | Managed Identity  | Windows          | Premium           |         |
 | I                 | Secrets           | Linux            | Flex Consumption  |         |
-| I                 | Secrets           | Windows          | Flex Consumption  |         |
 | I                 | Secrets           | Linux            | Premium           |         |
 | I                 | Secrets           | Windows          | Premium           |         |
 | II                | Managed Identity  | Linux            | Flex Consumption  |         |

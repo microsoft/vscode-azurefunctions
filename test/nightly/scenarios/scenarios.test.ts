@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { nonNullProp, updateGlobalSetting } from '../../../extension.bundle';
+import { updateGlobalSetting } from '../../../extension.bundle';
 import { longRunningTestsEnabled } from '../../global.test';
 import { generateParallelScenarios, type AzExtFunctionsParallelTestScenario } from './parallelScenarios';
 
 const testScenarios: AzExtFunctionsParallelTestScenario[] = generateParallelScenarios();
 
 suite.only('Scenarios', async function (this: Mocha.Suite) {
-    this.timeout(15 * 60 * 1000);
+    // Unfortunately, durable task schedulers sometimes take ~30m to provision
+    this.timeout(60 * 60 * 1000);
 
     suiteSetup(async function (this: Mocha.Context) {
         if (!longRunningTestsEnabled) {
@@ -25,8 +26,11 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
     });
 
     for (const s of testScenarios) {
-        test(s.title, async function () {
-            await nonNullProp(s, 'scenario');
+        test(s.title, async function (this: Mocha.Context) {
+            if (!s.scenario) {
+                this.skip();
+            }
+            await s.scenario;
         });
     }
 });

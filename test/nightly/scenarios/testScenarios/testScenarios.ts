@@ -12,4 +12,3 @@ export function generateTestScenarios(): AzExtFunctionsTestScenario[] {
     ];
     return testScenarios;
 }
-

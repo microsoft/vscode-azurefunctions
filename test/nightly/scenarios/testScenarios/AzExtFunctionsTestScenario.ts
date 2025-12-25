@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "../../../../extension.bundle";
+import { type CreateMode } from "../../../utils/createFunctionAppUtils";
 
 export interface AzExtFunctionsTestScenario {
     label: string;
@@ -20,8 +21,7 @@ export interface AzExtFunctionsTestScenario {
 export interface CreateNewProjectTestCase {
     label: string;
     inputs: (string | RegExp)[];
-    postTestAssertion?: (context: IActionContext, workspaceFolderPath: string, errMsg?: string) => void | Promise<void>;
-    resourceGroupToDelete?: string;
+    postTest?: (context: IActionContext, workspaceFolderPath: string, errMsg?: string) => void | Promise<void>;
 
     /**
      * Indicates this test case should be executed exclusively. This should only be used during local development.
@@ -32,6 +32,7 @@ export interface CreateNewProjectTestCase {
 export interface CreateAndDeployTestCase {
     createFunctionApp: {
         label: string;
+        mode: CreateMode;
         inputs: (string | RegExp)[];
         postTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
     };
