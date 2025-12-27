@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DurableBackend, getRandomAlphanumericString } from "../../../../../extension.bundle";
-import { ConnectionType, createFunctionAppUtils, CreateMode, OperatingSystem, PlanType } from "../../../../utils/createFunctionAppUtils";
-import { deployFunctionAppUtils } from "../../../../utils/deployFunctionAppUtils";
-import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from "../AzExtFunctionsTestScenario";
+import { DurableBackend, getRandomAlphanumericString } from "../../../../../../extension.bundle";
+import { ConnectionType, createFunctionAppUtils, CreateMode, OperatingSystem, PlanType } from "../../../../../utils/createFunctionAppUtils";
+import { deployFunctionAppUtils } from "../../../../../utils/deployFunctionAppUtils";
+import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from "../../AzExtFunctionsTestScenario";
 
 export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
     const folderName: string = 'scenarios-dts-tsnode';
@@ -37,17 +37,18 @@ export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
 
 function generateCreateAndDeployTest(folderName: string, createMode: CreateMode, connection: ConnectionType, os: OperatingSystem, plan: PlanType): CreateAndDeployTestCase {
     const appName: string = getRandomAlphanumericString();
+    const description: string = `${createMode}-${connection}-${os}-${plan}`;
 
     return {
         createFunctionApp: {
-            label: 'create-function-app',
+            label: `create-function-app-${description}`,
             mode: createMode,
             inputs: createMode === CreateMode.Basic ?
                 createFunctionAppUtils.generateBasicCreateInputs(appName, folderName, connection) :
                 createFunctionAppUtils.generateAdvancedCreateInputs(appName, folderName, connection, os, plan),
         },
         deployFunctionApp: {
-            label: 'deploy-function-app',
+            label: `deploy-function-app-${description}`,
             inputs: deployFunctionAppUtils.generateDurableDeployInputs(appName, DurableBackend.DTS),
         },
         resourceGroupToDelete: appName,

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzExtFunctionsTestScenario } from "./AzExtFunctionsTestScenario";
-import { generateDTSScenarios } from "./dtsScenarios/dtsScenarios";
+import { generateDTSScenarios } from "./durable/dts/dtsScenarios";
 
 export function generateTestScenarios(): AzExtFunctionsTestScenario[] {
     const testScenarios: AzExtFunctionsTestScenario[] = [
