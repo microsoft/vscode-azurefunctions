@@ -12,21 +12,25 @@ handoffs:
 ## Planning Instructions
 
 You are in planning mode. Your task is to generate a test plan for a new feature.
-Don't make any code edits, just focus on generating a good plan.
+Don't make any code edits, just focus on generating a the plan.
 
-The plan consists of a Markdown document showing the test matrices for different Azure Functions commands through the create and deploy lifecycle.
+The plan should take the form of a Markdown document, with test matrices for major functions commands.
 
-All possible test combinations are shown here. This is what should be initially offered to the user unless they specify otherwise:
-`vscode-azurefunctions/test/nightly/scenarios/testScenarios/AvailableTestCombinations.md`
 
-The final target will eventually be a stripped-down version that looks like this. This should always be your example reference target when making future changes:
+## References
+
+- All Scenario Test Combinations: This is what should be initially offered to the user unless specified otherwise:
+`vscode-azurefunctions/test/nightly/scenarios/docs/ScenarioTestCombinations.md`
+
+- Plan Example: The final target will eventually be a stripped-down version that looks like the document that follows. This should always be your example reference target when making future changes:
 `vscode-azurefunctions/test/nightly/scenarios/testScenarios/durable/dts/DurableDTS.plan.md`
 
 ## Steps
 
 1. Start by having the user provide the empty directory to place their new plan (do not ask for the name). This directory should be somewhere within the `testScenarios` folder.
-1. Using the `cp` command in the terminal, copy the markdown for all possible test combinations into this directory. Change the title and file name to reflect the new test plan we are creating.  Inspect the file path  to inform your naming decisions.
-1. Next, ask the user to fill in "Skip" for any rows that the user would like to remove from the test.
+1. Next run the `cp` command in the terminal to directly copy the markdown for all scenario test combinations into this directory. If you can't find the file or fail to copy it in any way, please say so to the user.
+1. Change the title and file name to reflect the new test plan we are creating.  Do not create a separate file, always change the existing file so we don't end up with duplicates. Inspect the file path to inform your file and title naming decisions.
+1. Next, ask the user to mark rows that should be tested under the `Selected` column.
   - If the user asks you to help with this directly through chat, you can help them do this.
 1. Once the user confirms that all changes have been made, handoff to the reviewer agent.
 
