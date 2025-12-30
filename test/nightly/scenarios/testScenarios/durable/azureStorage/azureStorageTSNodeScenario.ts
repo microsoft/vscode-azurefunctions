@@ -18,7 +18,7 @@ export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
         createNewProjectTest: {
             label: 'create-new-project',
             inputs: [
-                /TypeScript/i,
+                /JavaScript/i,
                 /v4/i,
                 /Durable Functions Orchestrator/i,
                 /Azure Storage/i,
@@ -50,16 +50,16 @@ function generateCreateAndDeployTest(folderName: string, createMode: CreateMode,
 
     return {
         createFunctionApp: {
-            label: `create-function-app-${description}`,
+            label: `create-function-app | ${description}`,
             mode: createMode,
             inputs: createMode === CreateMode.Basic ?
                 createFunctionAppUtils.generateBasicCreateInputs(appName, folderName, connection) :
                 createFunctionAppUtils.generateAdvancedCreateInputs(appName, folderName, connection, os, plan),
         },
         deployFunctionApp: {
-            label: `deploy-function-app-${description}`,
-            inputs: deployFunctionAppUtils.generateDurableDeployInputs(appName, DurableBackend.DTS),
+            label: `deploy-function-app | ${description}`,
+            inputs: deployFunctionAppUtils.generateDurableDeployInputs(appName, DurableBackend.Storage),
         },
-        resourceGroupToDelete: appName,
+        resourceGroupsToDelete: [appName],
     };
 }

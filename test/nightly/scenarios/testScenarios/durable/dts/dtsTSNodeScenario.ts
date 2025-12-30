@@ -51,6 +51,6 @@ function generateCreateAndDeployTest(folderName: string, createMode: CreateMode,
             label: `deploy-function-app-${description}`,
             inputs: deployFunctionAppUtils.generateDurableDeployInputs(appName, DurableBackend.DTS),
         },
-        resourceGroupToDelete: appName,
+        resourceGroupsToDelete: [appName],
     };
 }

@@ -21,6 +21,7 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
         await updateGlobalSetting('groupBy', 'resourceType', 'azureResourceGroups');
 
         const onlyTestScenario = testScenarios.find(s => s.only);
+
         if (onlyTestScenario) {
             onlyTestScenario.scenario = onlyTestScenario.runScenario();
         } else {

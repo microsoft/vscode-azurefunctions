@@ -43,7 +43,7 @@ export interface CreateAndDeployTestCase {
         postTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
         asyncWaitTask?: (context: IActionContext) => Promise<unknown>;
     };
-    resourceGroupToDelete?: string;
+    resourceGroupsToDelete?: string[];
 
     /**
      * Indicates this test case should be executed exclusively. This should only be used to aid with local development.

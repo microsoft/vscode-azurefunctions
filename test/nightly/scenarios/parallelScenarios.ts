@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, parseError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { workspace, type Uri, type WorkspaceFolder } from 'vscode';
-import { createFunctionApp, createFunctionAppAdvanced, createNewProjectInternal, deployProductionSlotByFunctionAppId, ext } from '../../../extension.bundle';
+import { createFunctionApp, createFunctionAppAdvanced, createNewProjectInternal, deployProductionSlotByFunctionAppId } from '../../../extension.bundle';
 import { CreateMode } from '../../utils/createFunctionAppUtils';
+import { resourceGroupsToDelete, scenariosTracker } from '../global.nightly.test';
 import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from './testScenarios/AzExtFunctionsTestScenario';
 import { generateTestScenarios } from './testScenarios/testScenarios';
 
@@ -38,12 +39,19 @@ function runTestScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsPa
         await cleanTestFolder(rootFolder);
 
         // 1. Create shared workspace project
-        ext.outputChannel.appendLog(`[[[ *** ${scenario.label} - ${scenario.createNewProjectTest.label} *** ]]]`);
+        scenariosTracker.initScenario(scenario.label);
+        scenariosTracker.startCreateNewProject(scenario.label, scenario.createNewProjectTest.label);
 
         await runWithTestActionContext('scenario.createNewProject', async context => {
             await context.ui.runWithInputs(scenario.createNewProjectTest.inputs, async () => {
-                await createNewProjectInternal(context, { folderPath: rootFolder.uri.fsPath });
-                await scenario.createNewProjectTest.postTest?.(context, rootFolder.uri.fsPath, '');
+                try {
+                    await createNewProjectInternal(context, { folderPath: rootFolder.uri.fsPath });
+                    await scenario.createNewProjectTest.postTest?.(context, rootFolder.uri.fsPath, '');
+                    scenariosTracker.passCreateNewProject(scenario.label);
+                } catch (err) {
+                    scenariosTracker.failCreateNewProject(scenario.label, (err as Error).message ?? parseError(err).message);
+                    throw err;
+                }
             });
         });
 
@@ -61,30 +69,48 @@ function runTestScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsPa
 }
 
 async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: WorkspaceFolder, test: CreateAndDeployTestCase): Promise<void> {
+    const scenarioTestTrackerId: number = scenariosTracker.initCreateAndDeployTest(scenarioLabel);
+
+    for (const rg of test.resourceGroupsToDelete ?? []) {
+        resourceGroupsToDelete.add(rg);
+    }
+
     // 3. Create function app
-    ext.outputChannel.appendLog(`[[[ *** ${scenarioLabel} - ${test.createFunctionApp.label} *** ]]]`);
+    scenariosTracker.startCreateFunctionApp(scenarioLabel, scenarioTestTrackerId, test.createFunctionApp.label);
 
     let functionAppId: string;
     await runWithTestActionContext('scenario.createFunctionApp', async context => {
         await context.ui.runWithInputs(test.createFunctionApp.inputs, async () => {
-            if (test.createFunctionApp.mode === CreateMode.Basic) {
-                functionAppId = await createFunctionApp(context);
-            } else {
-                functionAppId = await createFunctionAppAdvanced(context);
-            }
+            try {
+                if (test.createFunctionApp.mode === CreateMode.Basic) {
+                    functionAppId = await createFunctionApp(context);
+                } else {
+                    functionAppId = await createFunctionAppAdvanced(context);
+                }
 
-            assert.ok(functionAppId, 'Failed to create function app.');
-            test.createFunctionApp.postTest?.(context, functionAppId, '');
+                assert.ok(functionAppId, 'Failed to create function app.');
+                await test.createFunctionApp.postTest?.(context, functionAppId, '');
+                scenariosTracker.passCreateFunctionApp(scenarioLabel, scenarioTestTrackerId);
+            } catch (err) {
+                scenariosTracker.failCreateFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);
+                throw err;
+            }
         });
     });
 
     // 4. Deploy function app
-    ext.outputChannel.appendLog(`[[[ *** ${scenarioLabel} - ${test.deployFunctionApp.label} *** ]]]`);
+    scenariosTracker.startDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, test.deployFunctionApp.label);
 
     await runWithTestActionContext('scenario.deploy', async context => {
         await context.ui.runWithInputs(test.deployFunctionApp.inputs, async () => {
-            await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
-            await test.deployFunctionApp.postTest?.(context, functionAppId, '');
+            try {
+                await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
+                await test.deployFunctionApp.postTest?.(context, functionAppId, '');
+                scenariosTracker.passDeployFunctionApp(scenarioLabel, scenarioTestTrackerId);
+            } catch (err) {
+                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);
+                throw err;
+            }
         });
     });
 }

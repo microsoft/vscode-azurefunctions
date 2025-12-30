@@ -33,7 +33,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         appName = getRandomHexString();
         app2Name = getRandomHexString();
         rgName = getRandomHexString();
-        resourceGroupsToDelete.push(rgName);
+        resourceGroupsToDelete.add(rgName);
         saName = getRandomHexString().toLowerCase(); // storage account must have lower case name
         aiName = getRandomHexString();
         location = getRotatingLocation();
