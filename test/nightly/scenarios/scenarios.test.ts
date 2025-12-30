@@ -20,8 +20,13 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
         // Todo: This should probably happen elsewhere?
         await updateGlobalSetting('groupBy', 'resourceType', 'azureResourceGroups');
 
-        for (const s of testScenarios) {
-            s.scenario = s.runScenario();
+        const onlyTestScenario = testScenarios.find(s => s.only);
+        if (onlyTestScenario) {
+            onlyTestScenario.scenario = onlyTestScenario.runScenario();
+        } else {
+            for (const s of testScenarios) {
+                s.scenario = s.runScenario();
+            }
         }
     });
 

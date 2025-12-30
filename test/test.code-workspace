@@ -31,19 +31,23 @@
             "path": "../testWorkspace/9"
         },
         {
-            "name": "scenarios-dts-tsnode",
+            "name": "scenarios-durable-azurestorage-tsnode",
+            "path": "../testWorkspace/scenarios/durable-azureStorage/tsnode"
+        },
+        {
+            "name": "scenarios-durable-dts-tsnode",
             "path": "../testWorkspace/scenarios/durable-dts/tsnode"
         },
         {
-            "name": "scenarios-dts-python",
+            "name": "scenarios-durable-dts-python",
             "path": "../testWorkspace/scenarios/durable-dts/python"
         },
         {
-            "name": "scenarios-dts-dotnet-isolated",
+            "name": "scenarios-durable-dts-dotnet-isolated",
             "path": "../testWorkspace/scenarios/durable-dts/dotnet-isolated"
         },
         {
-            "name": "scenarios-dts-dotnet-inproc",
+            "name": "scenarios-durable-dts-dotnet-inproc",
             "path": "../testWorkspace/scenarios/durable-dts/dotnet-inproc"
         }
     ],

@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
+import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -54,6 +56,10 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await funcExtension.activate(); // activate the extension before tests begin
 
     ext.outputChannel = new TestOutputChannel();
+
+    registerAppServiceExtensionVariables(ext);
+    registerAzureUtilsExtensionVariables(ext);
+    registerUIExtensionVariables(ext);
 
     registerOnActionStartHandler(context => {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out

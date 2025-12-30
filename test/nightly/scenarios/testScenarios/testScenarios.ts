@@ -4,11 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzExtFunctionsTestScenario } from "./AzExtFunctionsTestScenario";
-import { generateDTSScenarios } from "./durable/dts/dtsScenarios";
+import { generateDurableAzureStorageScenarios } from "./durable/azureStorage/azureStorageScenarios";
+import { generateDurableDTSScenarios } from "./durable/dts/dtsScenarios";
 
 export function generateTestScenarios(): AzExtFunctionsTestScenario[] {
     const testScenarios: AzExtFunctionsTestScenario[] = [
-        ...generateDTSScenarios(),
+        ...generateDurableAzureStorageScenarios(),
+        ...generateDurableDTSScenarios(),
     ];
     return testScenarios;
 }

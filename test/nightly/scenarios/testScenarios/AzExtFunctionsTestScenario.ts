@@ -13,7 +13,7 @@ export interface AzExtFunctionsTestScenario {
     createAndDeployTests: CreateAndDeployTestCase[];
 
     /**
-     * Indicates this scenario should be executed exclusively. This should only be used during local development.
+     * Indicates this scenario should be executed exclusively. This should only be used to aid with local development.
      */
     only?: boolean;
 }
@@ -24,7 +24,7 @@ export interface CreateNewProjectTestCase {
     postTest?: (context: IActionContext, workspaceFolderPath: string, errMsg?: string) => void | Promise<void>;
 
     /**
-     * Indicates this test case should be executed exclusively. This should only be used during local development.
+     * Indicates this test case should be executed exclusively. This should only be used to aid with local development.
      */
     only?: boolean;
 }
@@ -41,11 +41,12 @@ export interface CreateAndDeployTestCase {
         inputs: (string | RegExp)[];
         preTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
         postTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
+        asyncWaitTask?: (context: IActionContext) => Promise<unknown>;
     };
     resourceGroupToDelete?: string;
 
     /**
-     * Indicates this test case should be executed exclusively. This should only be used during local development.
+     * Indicates this test case should be executed exclusively. This should only be used to aid with local development.
      */
     only?: boolean;
 }

@@ -9,6 +9,7 @@ handoffs:
     prompt: Review and clean up the test plan.
     send: true
 ---
+
 ## Planning Instructions
 
 You are in planning mode. Your task is to generate a test plan for a new feature.

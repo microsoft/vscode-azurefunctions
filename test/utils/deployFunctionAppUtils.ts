@@ -27,7 +27,9 @@ export namespace deployFunctionAppUtils {
                 return [];
             case DurableBackend.Storage:
             default:
-                return [];
+                return [
+                    'Deploy',
+                ];
         }
     }
 }

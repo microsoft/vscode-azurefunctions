@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzExtFunctionsTestScenario } from '../../AzExtFunctionsTestScenario';
-import { generateTSNodeScenario } from './dtsTSNodeScenario';
+import { generateTSNodeScenario } from './azureStorageTSNodeScenario';
 
-export function generateDurableDTSScenarios(): AzExtFunctionsTestScenario[] {
+export function generateDurableAzureStorageScenarios(): AzExtFunctionsTestScenario[] {
     return [
         generateTSNodeScenario(),
     ];

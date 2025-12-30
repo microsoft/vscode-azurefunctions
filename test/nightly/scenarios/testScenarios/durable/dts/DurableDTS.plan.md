@@ -1,4 +1,4 @@
-# Durable Task Scheduler - Test Plan
+# Durable Task Scheduler (DTS) Test Plan
 
 ## I. Create New Project / Create Function
 

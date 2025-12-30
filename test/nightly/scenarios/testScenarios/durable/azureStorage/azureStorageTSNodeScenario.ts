@@ -9,10 +9,11 @@ import { deployFunctionAppUtils } from "../../../../../utils/deployFunctionAppUt
 import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from "../../AzExtFunctionsTestScenario";
 
 export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
-    const folderName: string = 'scenarios-durable-dts-tsnode';
+    const folderName: string = 'scenarios-durable-azurestorage-tsnode';
 
     return {
-        label: 'durable-dts-tsnode',
+        only: true,
+        label: 'durable-azurestorage-tsnode',
         folderName,
         createNewProjectTest: {
             label: 'create-new-project',
@@ -20,7 +21,7 @@ export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
                 /TypeScript/i,
                 /v4/i,
                 /Durable Functions Orchestrator/i,
-                /Durable Task Scheduler/i,
+                /Azure Storage/i,
                 'durableHello1',
             ],
         },
@@ -28,9 +29,17 @@ export function generateTSNodeScenario(): AzExtFunctionsTestScenario {
             generateCreateAndDeployTest(folderName, CreateMode.Basic, ConnectionType.ManagedIdentity, OperatingSystem.Linux, PlanType.FlexConsumption),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Linux, PlanType.Premium),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Windows, PlanType.Premium),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Linux, PlanType.LegacyConsumption),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Windows, PlanType.LegacyConsumption),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Linux, PlanType.AppService),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.ManagedIdentity, OperatingSystem.Windows, PlanType.AppService),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Linux, PlanType.FlexConsumption),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Linux, PlanType.Premium),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Windows, PlanType.Premium),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Linux, PlanType.LegacyConsumption),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Windows, PlanType.LegacyConsumption),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Linux, PlanType.AppService),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, ConnectionType.Secrets, OperatingSystem.Windows, PlanType.AppService),
         ],
     };
 }

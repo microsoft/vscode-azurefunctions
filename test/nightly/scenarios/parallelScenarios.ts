@@ -16,6 +16,7 @@ export interface AzExtFunctionsParallelTestScenario {
     title: string;
     scenario?: Promise<void>;
     runScenario(): Promise<void>;
+    only?: boolean;
 }
 
 export function generateParallelScenarios(): AzExtFunctionsParallelTestScenario[] {
@@ -23,6 +24,7 @@ export function generateParallelScenarios(): AzExtFunctionsParallelTestScenario[
         return {
             title: scenario.label,
             runScenario: runTestScenario(scenario),
+            only: scenario.only,
         };
     });
 }
