@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzExtFunctionsTestScenario } from '../../AzExtFunctionsTestScenario';
-import { generateTSNodeScenario } from './dtsTSNodeScenario';
+import { generateJSNodeScenario } from './dtsJSNodeScenario';
 
 export function generateDurableDTSScenarios(): AzExtFunctionsTestScenario[] {
     return [
-        generateTSNodeScenario(),
+        generateJSNodeScenario(),
     ];
 }

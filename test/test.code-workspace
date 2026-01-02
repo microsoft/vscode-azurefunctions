@@ -31,12 +31,16 @@
             "path": "../testWorkspace/9"
         },
         {
-            "name": "scenarios-durable-azurestorage-tsnode",
-            "path": "../testWorkspace/scenarios/durable-azureStorage/tsnode"
+            "name": "scenarios-durable-azurestorage-jsnode",
+            "path": "../testWorkspace/scenarios/durable-azurestorage/jsnode"
         },
         {
-            "name": "scenarios-durable-dts-tsnode",
-            "path": "../testWorkspace/scenarios/durable-dts/tsnode"
+            "name": "scenarios-durable-azurestorage-python",
+            "path": "../testWorkspace/scenarios/durable-azurestorage/python"
+        },
+        {
+            "name": "scenarios-durable-dts-jsnode",
+            "path": "../testWorkspace/scenarios/durable-dts/jsnode"
         },
         {
             "name": "scenarios-durable-dts-python",

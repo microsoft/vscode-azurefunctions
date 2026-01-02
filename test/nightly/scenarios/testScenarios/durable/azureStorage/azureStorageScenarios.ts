@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzExtFunctionsTestScenario } from '../../AzExtFunctionsTestScenario';
-import { generateTSNodeScenario } from './azureStorageTSNodeScenario';
+import { generateJSNodeScenario } from './azureStorageJSNodeScenario';
+import { generatePythonScenario } from './pythonScenario';
 
 export function generateDurableAzureStorageScenarios(): AzExtFunctionsTestScenario[] {
     return [
-        generateTSNodeScenario(),
+        generateJSNodeScenario(),
+        generatePythonScenario(),
     ];
 }

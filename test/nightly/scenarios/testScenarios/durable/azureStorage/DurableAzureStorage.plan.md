@@ -6,7 +6,7 @@
 
 | No. | Language | Runtime | Programming Model | Comment                            |
 |-----|----------|---------|-------------------|------------------------------------|
-| 1   | TS       | Node    | v4                |                                    |
+| 1   | JS       | Node    | v4                |                                    |
 | 2   | Python   | Python  | v2                |                                    |
 | 3   | C#       | .NET    | isolated          |                                    |
 | 4   | C#       | .NET    | in-proc           |                                    |

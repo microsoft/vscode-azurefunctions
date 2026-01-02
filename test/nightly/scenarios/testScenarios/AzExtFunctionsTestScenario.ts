@@ -34,13 +34,13 @@ export interface CreateAndDeployTestCase {
         label: string;
         mode: CreateMode;
         inputs: (string | RegExp)[];
-        postTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
+        postTest?: (context: IActionContext, functionAppId: string) => void | Promise<void>;
     };
     deployFunctionApp: {
         label: string;
         inputs: (string | RegExp)[];
-        preTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
-        postTest?: (context: IActionContext, functionAppId: string, errMsg?: string) => void | Promise<void>;
+        preTest?: (context: IActionContext, functionAppId: string) => void | Promise<void>;
+        postTest?: (context: IActionContext, functionAppId: string) => void | Promise<void>;
         asyncWaitTask?: (context: IActionContext) => Promise<unknown>;
     };
     resourceGroupsToDelete?: string[];

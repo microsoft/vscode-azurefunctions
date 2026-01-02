@@ -6,8 +6,8 @@
 
 | No. | Language | Runtime | Programming Model | Comment                            | Selected    |
 |-----|----------|---------|-------------------|------------------------------------|-------------|
-| 1   | TS       | Node    | v3                |  Skip unless special requirements  |             |
-| 2   | TS       | Node    | v4                |                                    |             |
+| 1   | JS       | Node    | v3                |  Skip unless special requirements  |             |
+| 2   | JS       | Node    | v4                |                                    |             |
 | 3   | Python   | Python  | v1                |  Skip unless special requirements  |             |
 | 4   | Python   | Python  | v2                |                                    |             |
 | 5   | C#       | .NET    | isolated          |                                    |             |

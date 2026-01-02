@@ -89,7 +89,7 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
                 }
 
                 assert.ok(functionAppId, 'Failed to create function app.');
-                await test.createFunctionApp.postTest?.(context, functionAppId, '');
+                await test.createFunctionApp.postTest?.(context, functionAppId);
                 scenariosTracker.passCreateFunctionApp(scenarioLabel, scenarioTestTrackerId);
             } catch (err) {
                 scenariosTracker.failCreateFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);
@@ -105,7 +105,7 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
         await context.ui.runWithInputs(test.deployFunctionApp.inputs, async () => {
             try {
                 await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
-                await test.deployFunctionApp.postTest?.(context, functionAppId, '');
+                await test.deployFunctionApp.postTest?.(context, functionAppId);
                 scenariosTracker.passDeployFunctionApp(scenarioLabel, scenarioTestTrackerId);
             } catch (err) {
                 scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);

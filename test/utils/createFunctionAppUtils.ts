@@ -3,26 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { locationDefaultPick, nodeDefaultPick, pythonDefaultPick } from "../constants";
+
 export namespace createFunctionAppUtils {
-    export function generateBasicCreateInputs(appName: string, folderName: string, connection: ConnectionType): (string | RegExp)[] {
+    export function generateBasicCreateInputs(appName: string, folderName: string, runtime: Runtime, connection: ConnectionType): (string | RegExp)[] {
         return [
             folderName,
             appName,
-            /West US 2/i,
-            /Node\.js 22/i,
+            locationDefaultPick,
+            getRuntimePick(runtime),
             new RegExp(connection, 'i'),
         ];
     }
 
-    export function generateAdvancedCreateInputs(appName: string, folderName: string, connection: ConnectionType, os: OperatingSystem, plan: PlanType): (string | RegExp)[] {
+    export function generateAdvancedCreateInputs(appName: string, folderName: string, runtime: Runtime, connection: ConnectionType, plan: PlanType, os?: OperatingSystem): (string | RegExp)[] {
         switch (plan) {
             case PlanType.FlexConsumption:
                 return [
                     folderName,
                     appName,
                     new RegExp(plan, 'i'),
-                    /West US 2/i,
-                    /Node\.js 22/i,
+                    locationDefaultPick,
+                    getRuntimePick(runtime),
                     '2048',
                     '100',
                     /Create new resource group/i,
@@ -38,9 +40,9 @@ export namespace createFunctionAppUtils {
                     folderName,
                     appName,
                     new RegExp(plan, 'i'),
-                    /West US 2/i,
-                    /Node\.js 22/i,
-                    new RegExp(os, 'i'),
+                    locationDefaultPick,
+                    getRuntimePick(runtime),
+                    ...(os ? [new RegExp(os, 'i')] : []),
                     /Create new app service plan/i,
                     appName,
                     /EP1/i,
@@ -57,9 +59,9 @@ export namespace createFunctionAppUtils {
                     folderName,
                     appName,
                     new RegExp(plan, 'i'),
-                    /West US 2/i,
-                    /Node\.js 22/i,
-                    new RegExp(os, 'i'),
+                    locationDefaultPick,
+                    getRuntimePick(runtime),
+                    ...(os ? [new RegExp(os, 'i')] : []),
                     /Create new resource group/i,
                     appName,
                     ...getConnectionTypeInputs(connection),
@@ -73,9 +75,9 @@ export namespace createFunctionAppUtils {
                     folderName,
                     appName,
                     new RegExp(plan, 'i'),
-                    /West US 2/i,
-                    /Node\.js 22/i,
-                    new RegExp(os, 'i'),
+                    locationDefaultPick,
+                    getRuntimePick(runtime),
+                    ...(os ? [new RegExp(os, 'i')] : []),
                     /Create new app service plan/i,
                     appName,
                     /S1/i,
@@ -87,6 +89,17 @@ export namespace createFunctionAppUtils {
                     /Create new application insights/i,
                     appName,
                 ];
+        }
+    }
+
+    function getRuntimePick(runtime: Runtime): RegExp | string {
+        switch (runtime) {
+            case Runtime.Python:
+                return pythonDefaultPick;
+            case Runtime.Node:
+                return nodeDefaultPick;
+            default:
+                throw new Error(`Runtime "${runtime}" not yet supported in "createFunctionAppUtils.generateBasicCreateInputs".`);
         }
     }
 
@@ -117,4 +130,10 @@ export enum PlanType {
 export enum CreateMode {
     Basic = 'Basic',
     Advanced = 'Advanced',
+}
+
+export enum Runtime {
+    Node = 'Node',
+    Python = 'Python',
+    DotNet = '.NET',
 }
