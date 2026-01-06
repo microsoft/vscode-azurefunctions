@@ -49,10 +49,11 @@ function generateVerifyDeployment(runtime: Runtime) {
             case Runtime.Node:
                 url += `/api/orchestrators/${durableOrchestratorName}Orchestrator`;
                 break;
-            case Runtime.DotNet:
+            case Runtime.DotNetIsolated:
+                url += `/api/${durableOrchestratorName}_HttpStart`;
                 break;
             default:
-                throw new Error('Durable verify deployment not yet supported for this runtime type.');
+                throw new Error('Durable verify deployment not yet implemented for this runtime type.');
         }
 
         const response = await fetch(url);

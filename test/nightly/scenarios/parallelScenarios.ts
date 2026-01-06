@@ -24,14 +24,14 @@ export function generateParallelScenarios(): AzExtFunctionsParallelTestScenario[
     return generateTestScenarios().map(scenario => {
         return {
             title: scenario.label,
-            runScenario: runTestScenario(scenario),
+            runScenario: generateRunScenario(scenario),
             only: scenario.only,
         };
     });
 }
 
-function runTestScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsParallelTestScenario['runScenario'] {
-    return async () => {
+function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsParallelTestScenario['runScenario'] {
+    return async function runScenario() {
         const workspaceFolderUri: Uri = getWorkspaceFolderUri(scenario.folderName);
         const rootFolder = workspace.getWorkspaceFolder(workspaceFolderUri);
         assert.ok(rootFolder, `Failed to retrieve root workspace folder for scenario ${scenario.label}.`);
@@ -103,13 +103,29 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
 
     await runWithTestActionContext('scenario.deploy', async context => {
         await context.ui.runWithInputs(test.deployFunctionApp.inputs, async () => {
+            let error: unknown;
             try {
                 await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
-                await test.deployFunctionApp.postTest?.(context, functionAppId);
+            } catch (deployError) {
+                error = deployError;
+            }
+
+            if (test.deployFunctionApp.postTest) {
+                try {
+                    await test.deployFunctionApp.postTest(context, functionAppId);
+                    if ((error as Error).message) {
+                        (error as Error).message = '**Function app deployment errored but still passed post test deployment verification. ' + (error as Error).message;
+                    }
+                } catch (postTestError) {
+                    error ??= postTestError;
+                }
+            }
+
+            if (!error) {
                 scenariosTracker.passDeployFunctionApp(scenarioLabel, scenarioTestTrackerId);
-            } catch (err) {
-                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);
-                throw err;
+            } else {
+                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, (error as Error).message ?? parseError(error).message);
+                throw error;
             }
         });
     });

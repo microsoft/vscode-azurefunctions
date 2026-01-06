@@ -28,9 +28,11 @@ export function generatePythonScenario(): AzExtFunctionsTestScenario {
         },
         createAndDeployTests: [
             generateCreateAndDeployTest(folderName, CreateMode.Basic, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.FlexConsumption, OperatingSystem.Linux, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.Premium, undefined /** os - automatically defaulted */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.Premium, OperatingSystem.Windows, DurableBackend.Storage),
             generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.FlexConsumption, OperatingSystem.Linux, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.Premium, undefined /** os - automatically defaulted */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.Premium, OperatingSystem.Windows, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.LegacyConsumption, OperatingSystem.Linux, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.AppService, OperatingSystem.Windows, DurableBackend.Storage),
         ],
     };
 }

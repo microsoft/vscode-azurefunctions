@@ -39,9 +39,7 @@ export interface CreateAndDeployTestCase {
     deployFunctionApp: {
         label: string;
         inputs: (string | RegExp)[];
-        preTest?: (context: IActionContext, functionAppId: string) => void | Promise<void>;
         postTest?: (context: IActionContext, functionAppId: string) => void | Promise<void>;
-        asyncWaitTask?: (context: IActionContext) => Promise<unknown>;
     };
     resourceGroupsToDelete?: string[];
 
