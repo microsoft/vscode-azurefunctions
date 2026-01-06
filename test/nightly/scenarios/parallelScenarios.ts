@@ -103,30 +103,40 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
 
     await runWithTestActionContext('scenario.deploy', async context => {
         await context.ui.runWithInputs(test.deployFunctionApp.inputs, async () => {
-            let error: unknown;
+            let deployError: unknown;
             try {
-                await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder?.uri);
-            } catch (deployError) {
-                error = deployError;
+                await deployProductionSlotByFunctionAppId(context, functionAppId, rootFolder.uri);
+            } catch (err) {
+                deployError = err;
             }
 
+            let postTestError: unknown;
             if (test.deployFunctionApp.postTest) {
                 try {
                     await test.deployFunctionApp.postTest(context, functionAppId);
-                    if ((error as Error).message) {
-                        (error as Error).message = '**Function app deployment errored but still passed post test deployment verification. ' + (error as Error).message;
-                    }
-                } catch (postTestError) {
-                    error ??= postTestError;
+                } catch (err) {
+                    postTestError = err;
                 }
             }
 
+            const error = deployError ?? postTestError;
             if (!error) {
                 scenariosTracker.passDeployFunctionApp(scenarioLabel, scenarioTestTrackerId);
-            } else {
-                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, (error as Error).message ?? parseError(error).message);
-                throw error;
+                return;
             }
+
+            let errorMessage: string = (error as Error).message ?? parseError(error).message;
+
+            // Deploy failed but verification still passed - warn instead of showing an outright fail
+            // This is a known issue, TODO: Add issue link
+            if (deployError && !postTestError) {
+                errorMessage = '** Deploy-Fail; Verify-Pass ** ' + errorMessage;
+                scenariosTracker.warnDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);
+            } else {
+                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);
+            }
+
+            throw error;
         });
     });
 }

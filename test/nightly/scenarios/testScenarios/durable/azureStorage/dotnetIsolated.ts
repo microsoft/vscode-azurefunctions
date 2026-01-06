@@ -13,7 +13,6 @@ export function generateDotnetIsolatedScenario(): AzExtFunctionsTestScenario {
     const folderName: string = 'scenarios-durable-azurestorage-dotnetisolated';
 
     return {
-        only: true,
         label: 'durable-azurestorage-dotnetisolated',
         folderName,
         createNewProjectTest: {

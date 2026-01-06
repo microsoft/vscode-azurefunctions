@@ -18,24 +18,21 @@ export class ScenariosTracker {
 
     startCreateNewProject(scenarioLabel: string, createNewProjectLabel: string): void {
         const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createNewProject = {
-            label: createNewProjectLabel,
-            passed: false,
-        };
+        scenarioStatus.createNewProject = { label: createNewProjectLabel };
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
     passCreateNewProject(scenarioLabel: string): void {
         const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
         const createNewProjectStatus = nonNullProp(scenarioStatus, 'createNewProject');
-        createNewProjectStatus.passed = true;
+        createNewProjectStatus.status = 'pass';
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
     failCreateNewProject(scenarioLabel: string, error: string): void {
         const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
         const createNewProjectStatus = nonNullProp(scenarioStatus, 'createNewProject');
-        createNewProjectStatus.passed = false;
+        createNewProjectStatus.status = 'fail';
         createNewProjectStatus.error = error;
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
@@ -54,10 +51,7 @@ export class ScenariosTracker {
         scenarioStatus.createAndDeployTests ??= [];
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
-        createAndDeployTest.createFunctionApp = {
-            label: createLabel,
-            passed: false,
-        };
+        createAndDeployTest.createFunctionApp = { label: createLabel };
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
@@ -68,7 +62,7 @@ export class ScenariosTracker {
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
         const createFunctionAppTest = nonNullValue(createAndDeployTest.createFunctionApp);
-        createFunctionAppTest.passed = true;
+        createFunctionAppTest.status = 'pass';
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
@@ -79,7 +73,7 @@ export class ScenariosTracker {
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
         const createFunctionAppTest = nonNullValue(createAndDeployTest.createFunctionApp);
-        createFunctionAppTest.passed = false;
+        createFunctionAppTest.status = 'fail';
         createFunctionAppTest.error = error;
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
@@ -90,10 +84,7 @@ export class ScenariosTracker {
         scenarioStatus.createAndDeployTests ??= [];
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
-        createAndDeployTest.deployFunctionApp = {
-            label: deployLabel,
-            passed: false,
-        };
+        createAndDeployTest.deployFunctionApp = { label: deployLabel };
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
@@ -104,7 +95,19 @@ export class ScenariosTracker {
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
         const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
-        deployFunctionAppTest.passed = true;
+        deployFunctionAppTest.status = 'pass';
+
+        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+    }
+
+    warnDeployFunctionApp(scenarioLabel: string, createAndDeployTestId: number, error?: string): void {
+        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+        scenarioStatus.createAndDeployTests ??= [];
+
+        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
+        deployFunctionAppTest.status = 'warn';
+        deployFunctionAppTest.error = error;
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
@@ -115,7 +118,7 @@ export class ScenariosTracker {
 
         const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
         const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
-        deployFunctionAppTest.passed = false;
+        deployFunctionAppTest.status = 'fail';
         deployFunctionAppTest.error = error;
 
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
@@ -127,16 +130,16 @@ export class ScenariosTracker {
         }
 
         const lines: string[] = [];
-        const passIcon = '✅';
-        const failIcon = '❌';
-        const dashIcon = '-';
+        const icons: Record<TestStatus | 'undefined', string> = {
+            pass: '✅',
+            warn: '⚠️',
+            fail: '❌',
+            undefined: '-',
+        };
         const maxErrorLength = 200;
 
-        const getStatusIcon = (passed: boolean | undefined): string => {
-            if (passed === undefined) {
-                return dashIcon;
-            }
-            return passed ? passIcon : failIcon;
+        const getStatusIcon = (status: TestStatus | undefined): string => {
+            return icons[status ?? 'undefined'];
         };
 
         const truncateError = (error: string | undefined): string => {
@@ -158,26 +161,26 @@ export class ScenariosTracker {
 
             // Report createNewProject test
             if (scenario.createNewProject) {
-                const status = getStatusIcon(scenario.createNewProject.passed);
+                const statusIcon = getStatusIcon(scenario.createNewProject.status);
                 const error = truncateError(scenario.createNewProject.error);
                 const errorCell = error ? ` | ${error} |` : '';
-                lines.push(`| ${rowNum++} | ${scenarioLabel} | ${scenario.createNewProject.label} | ${status}${errorCell}`);
+                lines.push(`| ${rowNum++} | ${scenarioLabel} | ${scenario.createNewProject.label} | ${statusIcon}${errorCell}`);
             }
 
             // Report createAndDeployTests
             if (scenario.createAndDeployTests) {
                 for (const test of scenario.createAndDeployTests) {
                     if (test.createFunctionApp) {
-                        const status = getStatusIcon(test.createFunctionApp.passed);
+                        const statusIcon = getStatusIcon(test.createFunctionApp.status);
                         const error = truncateError(test.createFunctionApp.error);
                         const errorCell = error ? ` | ${error} |` : '';
-                        lines.push(`| ${rowNum++} | ${scenarioLabel} | ${test.createFunctionApp.label} | ${status}${errorCell}`);
+                        lines.push(`| ${rowNum++} | ${scenarioLabel} | ${test.createFunctionApp.label} | ${statusIcon}${errorCell}`);
                     }
                     if (test.deployFunctionApp) {
-                        const status = getStatusIcon(test.deployFunctionApp.passed);
+                        const statusIcon = getStatusIcon(test.deployFunctionApp.status);
                         const error = truncateError(test.deployFunctionApp.error);
                         const errorCell = error ? ` | ${error} |` : '';
-                        lines.push(`| ${rowNum++} | ${scenarioLabel} | ${test.deployFunctionApp.label} | ${status}${errorCell}`);
+                        lines.push(`| ${rowNum++} | ${scenarioLabel} | ${test.deployFunctionApp.label} | ${statusIcon}${errorCell}`);
                     }
                 }
             }
@@ -187,23 +190,19 @@ export class ScenariosTracker {
     }
 }
 
+type TestStatus = 'pass' | 'warn' | 'fail';
+
+type TestResult = {
+    label: string;
+    status?: TestStatus;
+    error?: string;
+};
+
 type ScenarioStatus = {
     label: string;
-    createNewProject?: {
-        label: string;
-        passed?: boolean;
-        error?: string;
-    };
+    createNewProject?: TestResult;
     createAndDeployTests?: {
-        createFunctionApp?: {
-            label: string;
-            passed?: boolean;
-            error?: string;
-        };
-        deployFunctionApp?: {
-            label: string;
-            passed?: boolean;
-            error?: string;
-        };
+        createFunctionApp?: TestResult;
+        deployFunctionApp?: TestResult;
     }[];
-}
+};

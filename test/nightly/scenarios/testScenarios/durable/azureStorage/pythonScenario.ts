@@ -5,7 +5,7 @@
 
 import { DurableBackend } from "../../../../../../extension.bundle";
 import { durableOrchestratorName, durableOrchestratorPick, pythonDefaultPick } from "../../../../../constants";
-import { ConnectionType, CreateMode, OperatingSystem, PlanType, Runtime } from "../../../../../utils/createFunctionAppUtils";
+import { ConnectionType, CreateMode, PlanType, Runtime } from "../../../../../utils/createFunctionAppUtils";
 import { type AzExtFunctionsTestScenario } from "../../AzExtFunctionsTestScenario";
 import { generateCreateAndDeployTest } from "../generateCreateAndDeployTest";
 
@@ -27,12 +27,15 @@ export function generatePythonScenario(): AzExtFunctionsTestScenario {
             ],
         },
         createAndDeployTests: [
-            generateCreateAndDeployTest(folderName, CreateMode.Basic, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.FlexConsumption, OperatingSystem.Linux, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.Premium, OperatingSystem.Windows, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.FlexConsumption, OperatingSystem.Linux, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.Premium, OperatingSystem.Windows, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.LegacyConsumption, OperatingSystem.Linux, DurableBackend.Storage),
-            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.AppService, OperatingSystem.Windows, DurableBackend.Storage),
+            // OS gets automatically defaulted to Linux
+            generateCreateAndDeployTest(folderName, CreateMode.Basic, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.FlexConsumption, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.Premium, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.LegacyConsumption, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.ManagedIdentity, PlanType.AppService, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.FlexConsumption, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.Premium, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.LegacyConsumption, undefined /** os */, DurableBackend.Storage),
+            generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Python, ConnectionType.Secrets, PlanType.AppService, undefined /** os */, DurableBackend.Storage),
         ],
     };
 }
