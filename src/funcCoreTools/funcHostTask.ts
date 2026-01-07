@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandAttributes } from '../commands/CommandAttributes';
@@ -135,7 +135,8 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const task = runningFuncTaskMap.get(e.execution.task.scope!, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const scope = nonNullValue(e.execution.task.scope);
+            const task = runningFuncTaskMap.get(scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
             const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
             wizardContext.activityAttributes = CommandAttributes.Debug;
             wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');

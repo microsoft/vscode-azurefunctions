@@ -20,6 +20,7 @@ export class PostFuncDebugExecuteStep<T extends IActionContext & ExecuteActivity
 
     public async execute(context: T): Promise<void> {
         const errorLogs: string[] = [];
+        // eslint-disable-next-line no-control-regex
         const redAnsiRegex = /\x1b\[(?:[0-9;]*31m|[0-9;]*91m|38;5;(9|1)m)/;
         const functionErrors = [
             /No job functions found/i,
