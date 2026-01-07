@@ -177,6 +177,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         this._cachedIsConsumption = undefined;
 
         // on refresh, we should reinitialize the site to ensure we have the latest data
+        await this.initSite(context);
         const client = await this.site.createClient(context);
         const site = await client.getSite();
         if (site) {
