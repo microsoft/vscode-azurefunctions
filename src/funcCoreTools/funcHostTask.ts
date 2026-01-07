@@ -87,7 +87,7 @@ export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
-const funcCommandRegex: RegExp = /(?:^|[\\/])(func(?:\.exe)?)\s+host\s+start$/i
+const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
     return funcCommandRegex.test(commandLine || '');
