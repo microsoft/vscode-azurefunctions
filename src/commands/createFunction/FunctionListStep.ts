@@ -131,14 +131,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .sort((a, b) => sortTemplates(a, b))
             .map(t => { return { label: t.name, data: t, group: t.templateFilter }; });
 
-        if (this._isProjectWizard) {
-            picks.unshift({
-                label: localize('skipForNow', '$(clock) Skip for now'),
-                data: 'skipForNow',
-                suppressPersistence: true
-            });
-        }
-
         if (templates.length === 0) {
             picks.push({
                 label: localize('noTemplates', '$(warning) No templates found'),
@@ -158,11 +150,21 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             });
         }
 
+        if (this._isProjectWizard) {
+            picks.push({
+                label: localize('skipForNow', '$(clock) Skip for now'),
+                data: 'skipForNow',
+                suppressPersistence: true,
+                group: ' '
+            });
+        }
+
         if (getWorkspaceSetting<boolean>('showReloadTemplates')) {
             picks.push({
                 label: localize('reloadTemplates', '$(sync) Reload templates'),
                 data: 'reloadTemplates',
-                suppressPersistence: true
+                suppressPersistence: true,
+                group: ' '
             });
         }
 

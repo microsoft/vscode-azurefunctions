@@ -17,7 +17,7 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { type IBindingTemplate } from './IBindingTemplate';
 import { TemplateCategory, type FunctionTemplateBase, type IFunctionTemplate } from './IFunctionTemplate';
 import { type ITemplates } from './ITemplates';
-import { type TemplateProviderBase } from './TemplateProviderBase';
+import { TemplateSchemaVersion, type TemplateProviderBase } from './TemplateProviderBase';
 import { BallerinaTemplateProvider } from './ballerina/BallerinaTemplateProvider';
 import { getBallerinaVerifiedTemplateIds } from './ballerina/getBallerinaVerifiedTemplateIds';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -91,7 +91,7 @@ export class CentralTemplateProvider implements Disposable {
             const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
             if (verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === template.id : vt.test(template.id))) {
                 template.templateFilter = TemplateFilter.Verified;
-            } else if ((template as IFunctionTemplate).categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined) {
+            } else if (template.templateSchemaVersion === TemplateSchemaVersion.v1 && (template as IFunctionTemplate).categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined) {
                 template.templateFilter = TemplateFilter.Core;
             }
         }
