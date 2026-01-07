@@ -58,8 +58,9 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
-        this._disposables.push(onFuncTaskStarted(async scope => this.onFuncTaskChanged(scope)));
-        this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged(scope)));
+        this._disposables.push(onFuncTaskStarted(async event => this.onFuncTaskChanged(event)));
+        // this._disposables.push(onFuncTaskStarted(async scope => this.onFuncTaskChanged(scope)));
+        this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged({ scope })));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
         this._localSettingsTreeItem = new AppSettingsTreeItem(this, new LocalSettingsClientProvider(this.workspaceFolder), ext.prefix, {
@@ -123,9 +124,9 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         await this.project.setApplicationSetting(context, key, value);
     }
 
-    private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {
+    private async onFuncTaskChanged(event: { scope: WorkspaceFolder | TaskScope | undefined }): Promise<void> {
         await callWithTelemetryAndErrorHandling('onFuncTaskChanged', async (context: IActionContext) => {
-            if (this.workspaceFolder === scope) {
+            if (this.workspaceFolder === event.scope) {
                 context.errorHandling.suppressDisplay = true;
                 context.telemetry.suppressIfSuccessful = true;
                 await this.refresh(context);
