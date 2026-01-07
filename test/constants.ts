@@ -7,6 +7,14 @@
 export const durableOrchestratorPick: RegExp = /Durable Functions Orch/i;
 export const durableOrchestratorName: string = 'durableHello';
 
+export const httpTriggerName: string = 'httpTrigger';
+
+// Language picks
+export const jsLanguagePick: RegExp = /JavaScript/i;
+
+// Framework picks
+export const jsModelV4Pick: RegExp = /v4/i;
+
 export const locationDefaultPick: RegExp = /West US 2/i;
 export const pythonDefaultPick: RegExp = /Python(\s)?3\.12/i;
 export const nodeDefaultPick: RegExp = /Node\.js(\s)?22/i;

@@ -31,16 +31,16 @@
             "path": "../testWorkspace/9"
         },
         {
+            "name": "scenarios-http-trigger-jsnode",
+            "path": "../testWorkspace/scenarios/http-trigger/jsnode"
+        },
+        {
             "name": "scenarios-durable-azurestorage-jsnode",
             "path": "../testWorkspace/scenarios/durable-azurestorage/jsnode"
         },
         {
             "name": "scenarios-durable-azurestorage-python",
             "path": "../testWorkspace/scenarios/durable-azurestorage/python"
-        },
-        {
-            "name": "scenarios-durable-azurestorage-dotnetinproc",
-            "path": "../testWorkspace/scenarios/durable-azurestorage/dotnetinproc"
         },
         {
             "name": "scenarios-durable-azurestorage-dotnetisolated",
