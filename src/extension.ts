@@ -22,6 +22,7 @@ import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
+import { registerFunctionHostDebugView } from './debug/FunctionHostDebugView';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
@@ -93,6 +94,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         });
 
         registerFuncHostTaskEvents();
+
+        registerFunctionHostDebugView(context);
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
         const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();

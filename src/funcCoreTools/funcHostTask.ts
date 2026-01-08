@@ -3,18 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CommandAttributes } from '../commands/CommandAttributes';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { PostFuncDebugExecuteStep } from '../commands/debug/PostFuncDebugExecuteStep';
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
-import { createActivityContext } from '../utils/activityUtils';
+import { stripAnsiControlCharacters } from '../utils/ansiUtils';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { isFuncHostErrorLog } from './funcHostErrorUtils';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
@@ -23,6 +22,40 @@ export interface IRunningFuncTask {
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
     logs: string[];
+    /**
+     * A small set of recent error lines detected in the host output.
+     * Used by the Function Host Debug view to surface errors under the host node.
+     */
+    errorLogs?: string[];
+    /**
+     * Tracks whether we've already surfaced an activity log item for errors while this task is still running.
+     */
+    hasReportedLiveErrors?: boolean;
+}
+
+function addErrorLog(task: IRunningFuncTask, rawChunk: string): void {
+    const plain = stripAnsiControlCharacters(rawChunk).trim();
+    if (!plain) {
+        return;
+    }
+
+    const arr = task.errorLogs ?? (task.errorLogs = []);
+    if (arr[arr.length - 1] === plain) {
+        return;
+    }
+
+    arr.push(plain);
+
+    // Keep the most recent few to avoid unbounded memory usage.
+    const maxErrors = 10;
+    if (arr.length > maxErrors) {
+        task.errorLogs = arr.slice(arr.length - maxErrors);
+    }
+}
+
+export interface IRunningFuncTaskWithScope {
+    scope: vscode.WorkspaceFolder | vscode.TaskScope;
+    task: IRunningFuncTask;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -84,6 +117,38 @@ export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTas
 const funcTaskStartedEmitter = new vscode.EventEmitter<{ scope: vscode.WorkspaceFolder | vscode.TaskScope, execution?: vscode.ShellExecution }>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
+const runningFuncTasksChangedEmitter = new vscode.EventEmitter<void>();
+export const onRunningFuncTasksChanged = runningFuncTasksChangedEmitter.event;
+
+const funcHostDebugContextKey = 'azureFunctions.funcHostDebugVisible';
+
+function getAllRunningFuncTasks(): IRunningFuncTaskWithScope[] {
+    const tasks: IRunningFuncTaskWithScope[] = [];
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        for (const t of runningFuncTaskMap.getAll(folder)) {
+            if (t) {
+                tasks.push({ scope: folder, task: t });
+            }
+        }
+    }
+
+    // Also include tasks started with global scope
+    for (const t of runningFuncTaskMap.getAll(vscode.TaskScope.Global)) {
+        if (t) {
+            tasks.push({ scope: vscode.TaskScope.Global, task: t });
+        }
+    }
+    return tasks;
+}
+
+async function updateFuncHostDebugContext(): Promise<void> {
+    await vscode.commands.executeCommand('setContext', funcHostDebugContextKey, getAllRunningFuncTasks().length > 0);
+}
+
+export async function refreshFuncHostDebugContext(): Promise<void> {
+    await updateFuncHostDebugContext();
+}
+
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
@@ -123,11 +188,16 @@ export function registerFuncHostTaskEvents(): void {
                 taskExecution: e.execution,
                 portNumber,
                 stream: latestTerminalShellExecutionEvent?.execution.read(),
-                logs
+                logs,
+                errorLogs: [],
+                hasReportedLiveErrors: false
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
+
+            runningFuncTasksChangedEmitter.fire();
+            await updateFuncHostDebugContext();
         }
     });
 
@@ -135,29 +205,22 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const scope = nonNullValue(e.execution.task.scope);
-            const task = runningFuncTaskMap.get(scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
-            wizardContext.activityAttributes = CommandAttributes.Debug;
-            wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
-
-            const wizard = new AzureWizard(wizardContext, {
-                title: localize('funcTaskEnded', 'Function host task ended.'),
-
-                promptSteps: [],
-                executeSteps: [new PostFuncDebugExecuteStep(task?.logs ?? [])]
-            });
-            try {
-                await wizard.execute();
-            } catch (error) {
-                // swallow errors
-                console.log(error);
-            }
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+
+            runningFuncTasksChangedEmitter.fire();
+            await updateFuncHostDebugContext();
         }
     });
 
-    onFuncTaskStarted(async ({ scope, execution }) => {
+    registerEvent('azureFunctions.onFuncTaskStarted', onFuncTaskStarted, async (
+        context: IActionContext,
+        event: { scope: vscode.WorkspaceFolder | vscode.TaskScope; execution?: vscode.ShellExecution }
+    ) => {
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
+
+        const { scope, execution } = event;
+
         const task = runningFuncTaskMap.get(scope, execution?.options?.cwd);
         if (!task) {
             return;
@@ -165,6 +228,16 @@ export function registerFuncHostTaskEvents(): void {
 
         for await (const chunk of task.stream ?? []) {
             task.logs.push(chunk);
+
+            // Keep track of errors for the Debug view.
+            if (isFuncHostErrorLog(chunk)) {
+                const beforeCount = task.errorLogs?.length ?? 0;
+                addErrorLog(task, chunk);
+                const afterCount = task.errorLogs?.length ?? 0;
+                if (afterCount > beforeCount) {
+                    runningFuncTasksChangedEmitter.fire();
+                }
+            }
         }
     });
 
@@ -223,6 +296,9 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
     if (killAll) {
         runningFuncTaskMap.delete(workspaceFolder);
     }
+
+    runningFuncTasksChangedEmitter.fire();
+    await updateFuncHostDebugContext();
 }
 
 /**

@@ -40,6 +40,7 @@ export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/script/getScriptResourcesLanguage';
 export * from './src/templates/TemplateProviderBase';
 export * from './src/tree/AzureAccountTreeItemWithProjects';
+export { stripAnsiControlCharacters } from './src/utils/ansiUtils';
 export * from './src/utils/cpUtils';
 export * from './src/utils/delay';
 export * from './src/utils/envUtils';
