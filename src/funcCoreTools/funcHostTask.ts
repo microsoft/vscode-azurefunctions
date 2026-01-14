@@ -275,7 +275,7 @@ export function registerFuncHostTaskEvents(): void {
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
             // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
             await stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, false);
-
+            terminalEventReader.dispose();
         }
     });
 }

@@ -14,7 +14,7 @@ suite('Function host error context extraction', () => {
         assert.strictEqual(isFuncHostErrorLog('normal log line'), false);
     });
 
-    test('extractFuncHostErrorContext includes surrounding window', () => {
+    test('extractFuncHostErrorContext extracts only red output', () => {
         const logs = [
             'line 0\n',
             'line 1\n',
@@ -25,13 +25,11 @@ suite('Function host error context extraction', () => {
 
         const extracted = extractFuncHostErrorContext(logs, { before: 1, after: 1, max: 250 });
         assert.deepStrictEqual(extracted, [
-            'line 1\n',
-            '\u001b[31m[Error] Something failed\u001b[39m\n',
-            'line 3\n',
+            '[Error] Something failed\n',
         ]);
     });
 
-    test('extractFuncHostErrorContextForErrorMessage only includes the selected error window', () => {
+    test('extractFuncHostErrorContextForErrorMessage returns only the matching red entry', () => {
         const logs = [
             'line 0\n',
             '\u001b[31m[Error] First\u001b[39m\n',
@@ -42,9 +40,7 @@ suite('Function host error context extraction', () => {
 
         const extracted = extractFuncHostErrorContextForErrorMessage(logs, '[Error] Second', { before: 1, after: 1, max: 250 });
         assert.deepStrictEqual(extracted, [
-            'line 2\n',
-            '\u001b[31m[Error] Second\u001b[39m\n',
-            'line 4\n',
+            '[Error] Second\n',
         ]);
     });
 });

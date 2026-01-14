@@ -3,13 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { extractFuncHostErrorContextForErrorMessage } from '../funcCoreTools/funcHostErrorUtils';
-import { onRunningFuncTasksChanged, refreshFuncHostDebugContext, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
-import { stripAnsiControlCharacters } from '../utils/ansiUtils';
-import { openCopilotChat } from '../utils/copilotChat';
 
 enum FuncHostDebugContextValue {
     HostTask = 'azFunc.funcHostDebug.hostTask',
@@ -22,19 +18,62 @@ interface INoHostNode {
     kind: 'noHost';
 }
 
-interface IHostTaskNode {
+export interface IHostTaskNode {
     kind: 'hostTask';
     workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
     cwd?: string;
     portNumber: string;
 }
 
-interface IHostErrorNode {
+export interface IHostErrorNode {
     kind: 'hostError';
     workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
     cwd?: string;
     portNumber: string;
     message: string;
+}
+
+function getNoHostTreeItem(): vscode.TreeItem {
+    const item = new vscode.TreeItem(localize('funcHostDebug.noneRunning', 'No Function Host task is currently running.'), vscode.TreeItemCollapsibleState.None);
+    item.description = localize('funcHostDebug.startDebuggingHint', 'Start debugging (F5) to launch the host.');
+    item.iconPath = new vscode.ThemeIcon('debug');
+    return item;
+}
+
+function getHostErrorTreeItem(element: IHostErrorNode): vscode.TreeItem {
+    const firstLine = element.message.split(/\r?\n/)[0].trim();
+    const label = firstLine || localize('funcHostDebug.errorDetected', 'Error detected');
+
+    const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+    item.iconPath = new vscode.ThemeIcon('error');
+    item.tooltip = element.message;
+    item.contextValue = FuncHostDebugContextValue.HostError;
+    return item;
+}
+
+function getHostTaskTreeItem(element: IHostTaskNode): vscode.TreeItem {
+    const task = runningFuncTaskMap.get(element.workspaceFolder, element.cwd);
+    const scopeLabel = typeof element.workspaceFolder === 'object'
+        ? element.workspaceFolder.name
+        : localize('funcHostDebug.globalScope', 'Global');
+
+    const label = localize('funcHostDebug.hostLabel', 'Function Host ({0})', element.portNumber);
+
+    const tooltip = new vscode.MarkdownString(undefined, true);
+    tooltip.appendMarkdown(`**${label}**\n\n`);
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.workspace', 'Workspace')}: ${scopeLabel}\n`);
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.pid', 'PID')}: ${task?.processId ?? localize('funcHostDebug.unknown', 'Unknown')}\n`);
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.port', 'Port')}: ${element.portNumber}\n`);
+    if (element.cwd) {
+        tooltip.appendMarkdown(`- ${localize('funcHostDebug.cwd', 'CWD')}: ${element.cwd}\n`);
+    }
+
+    const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
+    item.description = scopeLabel;
+    item.tooltip = tooltip;
+    item.contextValue = FuncHostDebugContextValue.HostTask;
+    item.iconPath = new vscode.ThemeIcon('server-process');
+    return item;
 }
 
 export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHostDebugNode> {
@@ -46,46 +85,17 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
     }
 
     public getTreeItem(element: FuncHostDebugNode): vscode.TreeItem {
-        if (element.kind === 'noHost') {
-            const item = new vscode.TreeItem(localize('funcHostDebug.noneRunning', 'No Function Host task is currently running.'), vscode.TreeItemCollapsibleState.None);
-            item.description = localize('funcHostDebug.startDebuggingHint', 'Start debugging (F5) to launch the host.');
-            item.iconPath = new vscode.ThemeIcon('debug');
-            return item;
+        switch (element.kind) {
+            case 'noHost':
+                return getNoHostTreeItem();
+            case 'hostError':
+                return getHostErrorTreeItem(element);
+            case 'hostTask':
+                return getHostTaskTreeItem(element);
+            default:
+                // Exhaustive check
+                return getNoHostTreeItem();
         }
-
-        if (element.kind === 'hostError') {
-            const firstLine = element.message.split(/\r?\n/)[0].trim();
-            const label = firstLine || localize('funcHostDebug.errorDetected', 'Error detected');
-
-            const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
-            item.iconPath = new vscode.ThemeIcon('error');
-            item.tooltip = element.message;
-            item.contextValue = FuncHostDebugContextValue.HostError;
-            return item;
-        }
-
-        const task = runningFuncTaskMap.get(element.workspaceFolder, element.cwd);
-        const scopeLabel = typeof element.workspaceFolder === 'object'
-            ? element.workspaceFolder.name
-            : localize('funcHostDebug.globalScope', 'Global');
-
-        const label = localize('funcHostDebug.hostLabel', 'Function Host ({0})', element.portNumber);
-
-        const tooltip = new vscode.MarkdownString(undefined, true);
-        tooltip.appendMarkdown(`**${label}**\n\n`);
-        tooltip.appendMarkdown(`- ${localize('funcHostDebug.workspace', 'Workspace')}: ${scopeLabel}\n`);
-        tooltip.appendMarkdown(`- ${localize('funcHostDebug.pid', 'PID')}: ${task?.processId ?? localize('funcHostDebug.unknown', 'Unknown')}\n`);
-        tooltip.appendMarkdown(`- ${localize('funcHostDebug.port', 'Port')}: ${element.portNumber}\n`);
-        if (element.cwd) {
-            tooltip.appendMarkdown(`- ${localize('funcHostDebug.cwd', 'CWD')}: ${element.cwd}\n`);
-        }
-
-        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
-        item.description = scopeLabel;
-        item.tooltip = tooltip;
-        item.contextValue = FuncHostDebugContextValue.HostTask;
-        item.iconPath = new vscode.ThemeIcon('server-process');
-        return item;
     }
 
     public async getChildren(element?: FuncHostDebugNode): Promise<FuncHostDebugNode[]> {
@@ -133,138 +143,4 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
 
         return hostTasks;
     }
-}
-
-async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
-    const newlyErroredTasks: IRunningFuncTask[] = [];
-
-    for (const folder of vscode.workspace.workspaceFolders ?? []) {
-        for (const t of runningFuncTaskMap.getAll(folder)) {
-            if (!t) {
-                continue;
-            }
-
-            if ((t.errorLogs?.length ?? 0) > 0 && !t.hasReportedLiveErrors) {
-                newlyErroredTasks.push(t);
-            }
-        }
-    }
-
-    for (const t of runningFuncTaskMap.getAll(vscode.TaskScope.Global)) {
-        if (!t) {
-            continue;
-        }
-
-        if ((t.errorLogs?.length ?? 0) > 0 && !t.hasReportedLiveErrors) {
-            newlyErroredTasks.push(t);
-        }
-    }
-
-    if (newlyErroredTasks.length === 0) {
-        return;
-    }
-
-    // Show Run & Debug view (Debug container) so the view (contributed under it) is visible.
-    try {
-        await vscode.commands.executeCommand('workbench.view.debug');
-        // Mark as revealed only after the view open attempt, to avoid repeated calls.
-        for (const t of newlyErroredTasks) {
-            t.hasReportedLiveErrors = true;
-        }
-    } catch {
-        // If this fails, leave flags untouched so we can try again later.
-    }
-}
-
-function getRecentLogs(task: IRunningFuncTask | undefined, limit: number = 250): string {
-    const logs = task?.logs ?? [];
-    const recent = logs.slice(Math.max(0, logs.length - limit));
-    return recent.join('');
-}
-
-function getRecentLogsPlainText(task: IRunningFuncTask | undefined, limit: number = 250): string {
-    return stripAnsiControlCharacters(getRecentLogs(task, limit));
-}
-
-function getErrorContextForCopilot(task: IRunningFuncTask | undefined, errorMessage: string): string {
-    const logs = task?.logs ?? [];
-    const extracted = extractFuncHostErrorContextForErrorMessage(logs, errorMessage, { before: 5, after: 25, max: 250 });
-    const plainLines = extracted.map((l) => stripAnsiControlCharacters(l));
-    return plainLines.join('').trim();
-}
-
-export function registerFunctionHostDebugView(context: vscode.ExtensionContext): void {
-    const provider = new FuncHostDebugViewProvider();
-
-    context.subscriptions.push(
-        vscode.window.registerTreeDataProvider('azureFunctions.funcHostDebugView', provider),
-        onRunningFuncTasksChanged(() => {
-            provider.refresh();
-            void tryOpenDebugViewOnFirstFuncHostError();
-        }),
-    );
-
-    // Ensure the context key is correct on activation.
-    void refreshFuncHostDebugContext();
-
-    registerCommand('azureFunctions.funcHostDebug.stop', async (actionContext: IActionContext, args: IHostTaskNode) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        await stopFuncTaskIfRunning(args.workspaceFolder, args.cwd, false, false);
-    });
-
-    registerCommand('azureFunctions.funcHostDebug.terminate', async (actionContext: IActionContext, args: IHostTaskNode) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        await stopFuncTaskIfRunning(args.workspaceFolder, args.cwd, false, true);
-    });
-
-    registerCommand('azureFunctions.funcHostDebug.copyRecentLogs', async (actionContext: IActionContext, args: IHostTaskNode) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-        const text = getRecentLogsPlainText(task);
-        await vscode.env.clipboard.writeText(text);
-        vscode.window.setStatusBarMessage(localize('funcHostDebug.copiedLogs', 'Copied recent Function Host logs to clipboard.'), 3000);
-    });
-
-    registerCommand('azureFunctions.funcHostDebug.showRecentLogs', async (actionContext: IActionContext, args: IHostTaskNode) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-        const text = getRecentLogsPlainText(task);
-
-        const doc = await vscode.workspace.openTextDocument({
-            content: text || localize('funcHostDebug.noLogs', 'No logs captured yet.'),
-            language: 'log',
-        });
-        await vscode.window.showTextDocument(doc, { preview: true });
-    });
-
-    registerCommand('azureFunctions.funcHostDebug.askCopilot', async (actionContext: IActionContext, args: IHostErrorNode) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-
-        const errorContext = getErrorContextForCopilot(task, args.message) || args.message;
-
-        const scopeLabel = typeof args.workspaceFolder === 'object'
-            ? args.workspaceFolder.name
-            : localize('funcHostDebug.globalScope', 'Global');
-
-        const prompt = [
-            'I am debugging an Azure Functions project locally in VS Code.',
-            `Function Host Port: ${args.portNumber}`,
-            `Workspace: ${scopeLabel}`,
-            args.cwd ? `CWD: ${args.cwd}` : undefined,
-            '',
-            'The Functions host produced an error. Diagnose the likely cause and suggest concrete next steps to fix it.',
-            '',
-            'Error output (with surrounding context):',
-            errorContext,
-        ].filter((l): l is string => Boolean(l)).join('\n');
-
-        await openCopilotChat(prompt);
-    });
-
-    registerCommand('azureFunctions.funcHostDebug.refresh', async (actionContext: IActionContext) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        provider.refresh();
-        await refreshFuncHostDebugContext();
-    });
 }

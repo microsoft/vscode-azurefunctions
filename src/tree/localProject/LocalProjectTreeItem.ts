@@ -59,7 +59,6 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
         this._disposables.push(onFuncTaskStarted(async event => this.onFuncTaskChanged(event)));
-        // this._disposables.push(onFuncTaskStarted(async scope => this.onFuncTaskChanged(scope)));
         this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged({ scope })));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
