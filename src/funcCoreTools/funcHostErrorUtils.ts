@@ -28,42 +28,6 @@ export function isFuncHostErrorLog(log: string): boolean {
 }
 
 /**
- * Extracts likely error output from the function host log stream, including a small window
- * of surrounding context to help diagnose issues (e.g., stack traces that may not be red).
- */
-export function extractFuncHostErrorContext(logs: readonly string[], options?: FuncHostErrorContextOptions): string[] {
-    const before = options?.before ?? 5;
-    const after = options?.after ?? 15;
-    const max = options?.max ?? 250;
-
-    const includeIndices = new Set<number>();
-    for (let i = 0; i < logs.length; i++) {
-        if (isFuncHostErrorLog(logs[i])) {
-            const start = Math.max(0, i - before);
-            const end = Math.min(logs.length - 1, i + after);
-            for (let j = start; j <= end; j++) {
-                includeIndices.add(j);
-            }
-        }
-    }
-
-    // Preserve order
-    const result: string[] = [];
-    for (let i = 0; i < logs.length; i++) {
-        if (includeIndices.has(i)) {
-            result.push(logs[i]);
-        }
-    }
-
-    // Keep most recent `max` lines
-    if (result.length > max) {
-        return result.slice(result.length - max);
-    }
-
-    return result;
-}
-
-/**
  * Extracts context for only a single relevant error line (as selected in the UI).
  *
  * @param errorMessage A plain-text error line (ANSI/control chars already removed).

@@ -129,14 +129,6 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
             }
         }
 
-        for (const t of runningFuncTaskMap.getAll(vscode.TaskScope.Global)) {
-            if (!t) {
-                continue;
-            }
-            const cwd = (t.taskExecution.task.execution as vscode.ShellExecution | undefined)?.options?.cwd;
-            hostTasks.push({ kind: 'hostTask', workspaceFolder: vscode.TaskScope.Global, cwd, portNumber: t.portNumber });
-        }
-
         if (hostTasks.length === 0) {
             return [{ kind: 'noHost' }];
         }

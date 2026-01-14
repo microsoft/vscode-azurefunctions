@@ -124,7 +124,6 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
         const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
         const text = getRecentLogsPlainText(task);
         await vscode.env.clipboard.writeText(text);
-        vscode.window.setStatusBarMessage(localize('funcHostDebug.copiedLogs', 'Copied recent Function Host logs to clipboard.'), 3000);
     });
 
     registerCommand('azureFunctions.funcHostDebug.showRecentLogs', async (actionContext: IActionContext, args: unknown) => {

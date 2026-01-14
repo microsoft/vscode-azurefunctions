@@ -33,6 +33,7 @@ export * from './src/utils/durableUtils';
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
 export * from './src/funcConfig/function';
+export { extractFuncHostErrorContextForErrorMessage, isFuncHostErrorLog } from './src/funcCoreTools/funcHostErrorUtils';
 export * from './src/funcCoreTools/hasMinFuncCliVersion';
 export * from './src/FuncVersion';
 export * from './src/templates/CentralTemplateProvider';

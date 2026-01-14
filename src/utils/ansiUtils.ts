@@ -5,7 +5,6 @@
 
 /**
  * Removes ANSI escape sequences and other terminal control characters from a string.
- *
  * This is intended for presenting Function Host output in a plain text editor / clipboard.
  */
 export function stripAnsiControlCharacters(text: string): string {

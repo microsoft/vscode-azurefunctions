@@ -6,27 +6,12 @@
 import * as assert from 'assert';
 
 // eslint-disable-next-line no-restricted-imports
-import { extractFuncHostErrorContext, extractFuncHostErrorContextForErrorMessage, isFuncHostErrorLog } from '../src/funcCoreTools/funcHostErrorUtils';
+import { extractFuncHostErrorContextForErrorMessage, isFuncHostErrorLog } from '../extension.bundle';
 
 suite('Function host error context extraction', () => {
     test('detects red ANSI as error', () => {
         assert.strictEqual(isFuncHostErrorLog('\u001b[31m[Error] Boom\u001b[39m'), true);
         assert.strictEqual(isFuncHostErrorLog('normal log line'), false);
-    });
-
-    test('extractFuncHostErrorContext extracts only red output', () => {
-        const logs = [
-            'line 0\n',
-            'line 1\n',
-            '\u001b[31m[Error] Something failed\u001b[39m\n',
-            'line 3\n',
-            'line 4\n',
-        ];
-
-        const extracted = extractFuncHostErrorContext(logs, { before: 1, after: 1, max: 250 });
-        assert.deepStrictEqual(extracted, [
-            '[Error] Something failed\n',
-        ]);
     });
 
     test('extractFuncHostErrorContextForErrorMessage returns only the matching red entry', () => {

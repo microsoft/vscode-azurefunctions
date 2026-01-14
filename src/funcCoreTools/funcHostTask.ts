@@ -81,28 +81,11 @@ class RunningFunctionTaskMap {
     public get(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): IRunningFuncTask | undefined {
         const values = this._map.get(key) || [];
         return values.find(t => {
-            const taskExecution = t.taskExecution.task.execution;
-            if (!(taskExecution instanceof vscode.ShellExecution)) {
-                return false;
-            }
-
-            const scope = t.taskExecution.task?.scope;
-            const workspaceFolderPath = typeof scope === 'object' ? scope.uri?.path : undefined;
-            if (!workspaceFolderPath) {
-                return false;
-            }
-
-            // The cwd/buildPath will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-            const cwd = taskExecution.options?.cwd;
-            const taskDirectory = typeof cwd === 'string'
-                ? cwd.replace('${workspaceFolder}', workspaceFolderPath)
-                : undefined;
-
-            const resolvedBuildPath = typeof buildPath === 'string'
-                ? buildPath.replace('${workspaceFolder}', workspaceFolderPath)
-                : undefined;
-
-            return taskDirectory && resolvedBuildPath && normalizePath(taskDirectory) === normalizePath(resolvedBuildPath);
+            const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
+            // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
+            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
         });
     }
 
@@ -151,12 +134,6 @@ function getAllRunningFuncTasks(): IRunningFuncTaskWithScope[] {
         }
     }
 
-    // Also include tasks started with global scope
-    for (const t of runningFuncTaskMap.getAll(vscode.TaskScope.Global)) {
-        if (t) {
-            tasks.push({ scope: vscode.TaskScope.Global, task: t });
-        }
-    }
     return tasks;
 }
 

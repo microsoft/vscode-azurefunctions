@@ -9,7 +9,6 @@ import { localize } from '../localize';
 
 /**
  * Best-effort helper to open GitHub Copilot Chat with a pre-filled prompt.
- *
  * VS Code command IDs and argument shapes have evolved over time, so we try a few.
  */
 export async function openCopilotChat(prompt: string): Promise<void> {
