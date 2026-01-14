@@ -28,7 +28,8 @@ export interface IRunningFuncTask {
      */
     errorLogs?: string[];
     /**
-     * Tracks whether we've already surfaced an activity log item for errors while this task is still running.
+     * Tracks whether we've already surfaced the "first error" UX for this host session (e.g. opening the Debug view).
+     * This avoids repeatedly stealing focus / opening the view for every subsequent error.
      */
     hasReportedLiveErrors?: boolean;
 }
@@ -121,6 +122,7 @@ const runningFuncTasksChangedEmitter = new vscode.EventEmitter<void>();
 export const onRunningFuncTasksChanged = runningFuncTasksChangedEmitter.event;
 
 const funcHostDebugContextKey = 'azureFunctions.funcHostDebugVisible';
+const alwaysShowFuncHostDebugViewSetting = 'alwaysShowFuncHostDebugView';
 
 function getAllRunningFuncTasks(): IRunningFuncTaskWithScope[] {
     const tasks: IRunningFuncTaskWithScope[] = [];
@@ -142,7 +144,8 @@ function getAllRunningFuncTasks(): IRunningFuncTaskWithScope[] {
 }
 
 async function updateFuncHostDebugContext(): Promise<void> {
-    await vscode.commands.executeCommand('setContext', funcHostDebugContextKey, getAllRunningFuncTasks().length > 0);
+    const alwaysShow = !!getWorkspaceSetting<boolean>(alwaysShowFuncHostDebugViewSetting);
+    await vscode.commands.executeCommand('setContext', funcHostDebugContextKey, alwaysShow || getAllRunningFuncTasks().length > 0);
 }
 
 export async function refreshFuncHostDebugContext(): Promise<void> {
@@ -190,13 +193,22 @@ export function registerFuncHostTaskEvents(): void {
                 stream: latestTerminalShellExecutionEvent?.execution.read(),
                 logs,
                 errorLogs: [],
-                hasReportedLiveErrors: false
+                hasReportedLiveErrors: false,
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
 
             runningFuncTasksChangedEmitter.fire();
+            await updateFuncHostDebugContext();
+        }
+    });
+
+    registerEvent('azureFunctions.onDidChangeConfiguration', vscode.workspace.onDidChangeConfiguration, async (context: IActionContext, e: vscode.ConfigurationChangeEvent) => {
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
+
+        if (e.affectsConfiguration(`azureFunctions.${alwaysShowFuncHostDebugViewSetting}`)) {
             await updateFuncHostDebugContext();
         }
     });

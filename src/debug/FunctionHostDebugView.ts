@@ -11,8 +11,6 @@ import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
 import { openCopilotChat } from '../utils/copilotChat';
 
-const viewId = 'azureFunctions.funcHostDebugView';
-
 enum FuncHostDebugContextValue {
     HostTask = 'azFunc.funcHostDebug.hostTask',
     HostError = 'azFunc.funcHostDebug.hostError',
@@ -82,8 +80,7 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
             tooltip.appendMarkdown(`- ${localize('funcHostDebug.cwd', 'CWD')}: ${element.cwd}\n`);
         }
 
-        const hasErrors = (task?.errorLogs?.length ?? 0) > 0;
-        const item = new vscode.TreeItem(label, hasErrors ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
         item.description = scopeLabel;
         item.tooltip = tooltip;
         item.contextValue = FuncHostDebugContextValue.HostTask;
@@ -138,6 +135,47 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
     }
 }
 
+async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
+    const newlyErroredTasks: IRunningFuncTask[] = [];
+
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        for (const t of runningFuncTaskMap.getAll(folder)) {
+            if (!t) {
+                continue;
+            }
+
+            if ((t.errorLogs?.length ?? 0) > 0 && !t.hasReportedLiveErrors) {
+                newlyErroredTasks.push(t);
+            }
+        }
+    }
+
+    for (const t of runningFuncTaskMap.getAll(vscode.TaskScope.Global)) {
+        if (!t) {
+            continue;
+        }
+
+        if ((t.errorLogs?.length ?? 0) > 0 && !t.hasReportedLiveErrors) {
+            newlyErroredTasks.push(t);
+        }
+    }
+
+    if (newlyErroredTasks.length === 0) {
+        return;
+    }
+
+    // Show Run & Debug view (Debug container) so the view (contributed under it) is visible.
+    try {
+        await vscode.commands.executeCommand('workbench.view.debug');
+        // Mark as revealed only after the view open attempt, to avoid repeated calls.
+        for (const t of newlyErroredTasks) {
+            t.hasReportedLiveErrors = true;
+        }
+    } catch {
+        // If this fails, leave flags untouched so we can try again later.
+    }
+}
+
 function getRecentLogs(task: IRunningFuncTask | undefined, limit: number = 250): string {
     const logs = task?.logs ?? [];
     const recent = logs.slice(Math.max(0, logs.length - limit));
@@ -159,8 +197,11 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
     const provider = new FuncHostDebugViewProvider();
 
     context.subscriptions.push(
-        vscode.window.registerTreeDataProvider(viewId, provider),
-        onRunningFuncTasksChanged(() => provider.refresh()),
+        vscode.window.registerTreeDataProvider('azureFunctions.funcHostDebugView', provider),
+        onRunningFuncTasksChanged(() => {
+            provider.refresh();
+            void tryOpenDebugViewOnFirstFuncHostError();
+        }),
     );
 
     // Ensure the context key is correct on activation.

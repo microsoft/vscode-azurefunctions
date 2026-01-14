@@ -78,6 +78,8 @@ export function extractFuncHostErrorContextForErrorMessage(
         return [];
     }
 
+    const before = options?.before ?? 5;
+    const after = options?.after ?? 15;
     const max = options?.max ?? 250;
 
     let bestIndex = -1;
@@ -111,7 +113,14 @@ export function extractFuncHostErrorContextForErrorMessage(
         return [];
     }
 
-    // Only include the relevant error line (no extra surrounding context).
-    const result = [logs[bestIndex]];
-    return result.length > max ? result.slice(result.length - max) : result;
+    const start = Math.max(0, bestIndex - before);
+    const end = Math.min(logs.length - 1, bestIndex + after);
+
+    const result = logs.slice(start, end + 1);
+
+    if (result.length > max) {
+        return result.slice(result.length - max);
+    }
+
+    return result;
 }

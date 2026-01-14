@@ -485,6 +485,12 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureFunctions.funcHostDebug.clearErrors",
+                "title": "%azureFunctions.funcHostDebug.clearErrors%",
+                "category": "Azure Functions",
+                "icon": "$(clear-all)"
+            },
+            {
                 "command": "azureFunctions.funcHostDebug.showRecentLogs",
                 "title": "%azureFunctions.funcHostDebug.showRecentLogs%",
                 "category": "Azure Functions",
@@ -546,6 +552,11 @@
                 },
                 {
                     "command": "azureFunctions.funcHostDebug.refresh",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.clearErrors",
                     "when": "view == azureFunctions.funcHostDebugView",
                     "group": "navigation@1"
                 }
@@ -1275,6 +1286,11 @@
                     "azureFunctions.enableJavaRemoteDebugging": {
                         "type": "boolean",
                         "description": "%azureFunctions.enableJavaRemoteDebugging%",
+                        "default": false
+                    },
+                    "azureFunctions.alwaysShowFuncHostDebugView": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.alwaysShowFuncHostDebugView%",
                         "default": false
                     },
                     "azureFunctions.showProjectWarning": {
