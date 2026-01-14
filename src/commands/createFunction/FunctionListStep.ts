@@ -198,8 +198,8 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
 }
 
 /**
- * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
- * Otherwise sort alphabetically
+ * Sorts templates by priority, placing HttpTrigger and TimerTrigger templates first since they're the most popular,
+ * and using the template name to help determine the relative order of the remaining templates.
  */
 function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number {
     function getPriority(id: string): number {
