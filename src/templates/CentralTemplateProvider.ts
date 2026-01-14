@@ -85,10 +85,12 @@ export class CentralTemplateProvider implements Disposable {
     /* Ignored by the v2 schema */
     public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<FunctionTemplateBase[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
+        const verifiedTemplateIds = getScriptVerifiedTemplateIds(version)
+            .concat(getDotnetVerifiedTemplateIds(version))
+            .concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
         for (const template of templates.functionTemplates) {
             // by default, all templates will be categorized as 'All'
             template.templateFilter = TemplateFilter.All;
-            const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds().concat(getBallerinaVerifiedTemplateIds()));
             if (verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === template.id : vt.test(template.id))) {
                 template.templateFilter = TemplateFilter.Verified;
             } else if (template.templateSchemaVersion === TemplateSchemaVersion.v1 && (template as IFunctionTemplate).categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined) {
