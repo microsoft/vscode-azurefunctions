@@ -146,7 +146,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
                 data: 'openAPI',
-                suppressPersistence: true
+                suppressPersistence: true,
+                group: 'All'
             });
         }
 
