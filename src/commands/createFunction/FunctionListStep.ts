@@ -205,7 +205,7 @@ function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number
     function getPriority(id: string): number {
         if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger
             return 1;
-        } else if (/\bhttptrigger/i.test(id)) { // Http trigger with any extra pizazz
+        } else if (/httptrigger/i.test(id)) { // Http trigger with any extra pizazz
             return 2;
         } else if (/\btimertrigger\b/i.test(id)) {
             return 3;
