@@ -5,8 +5,7 @@
 
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { extractFuncHostErrorContextForErrorMessage } from '../funcCoreTools/funcHostErrorUtils';
-import { onRunningFuncTasksChanged, refreshFuncHostDebugContext, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { onRunningFuncTasksChanged, refreshFuncHostDebugContext, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
 import { openCopilotChat } from '../utils/copilotChat';
@@ -85,13 +84,6 @@ function getRecentLogsPlainText(task: IRunningFuncTask | undefined, limit: numbe
     return stripAnsiControlCharacters(getRecentLogs(task, limit));
 }
 
-function getErrorContextForCopilot(task: IRunningFuncTask | undefined, errorMessage: string): string {
-    const logs = task?.logs ?? [];
-    const extracted = extractFuncHostErrorContextForErrorMessage(logs, errorMessage, { before: 5, after: 25, max: 250 });
-    const plainLines = extracted.map((l) => stripAnsiControlCharacters(l));
-    return plainLines.join('').trim();
-}
-
 export function registerFunctionHostDebugView(context: vscode.ExtensionContext): void {
     const provider = new FuncHostDebugViewProvider();
 
@@ -106,13 +98,21 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
     // Ensure the context key is correct on activation.
     void refreshFuncHostDebugContext();
 
-    registerCommand('azureFunctions.funcHostDebug.stop', async (actionContext: IActionContext, args: unknown) => {
+    registerCommand('azureFunctions.funcHostDebug.clearErrors', async (actionContext: IActionContext) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
-        if (!isHostTaskNode(args)) {
-            return;
+        for (const folder of vscode.workspace.workspaceFolders ?? []) {
+            for (const t of runningFuncTaskMap.getAll(folder)) {
+                if (!t) {
+                    continue;
+                }
+
+                if ((t.errorLogs?.length ?? 0) > 0) {
+                    t.errorLogs = [];
+                }
+            }
         }
 
-        await stopFuncTaskIfRunning(args.workspaceFolder, args.cwd, false, false);
+        provider.refresh();
     });
 
     registerCommand('azureFunctions.funcHostDebug.copyRecentLogs', async (actionContext: IActionContext, args: unknown) => {
@@ -149,9 +149,8 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
             return;
         }
 
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-
-        const errorContext = getErrorContextForCopilot(task, args.message) || args.message;
+        // Use the exact message shown in the error node tooltip.
+        const errorContext = stripAnsiControlCharacters(args.message).trim() || args.message;
 
         const scopeLabel = typeof args.workspaceFolder === 'object'
             ? args.workspaceFolder.name
@@ -165,7 +164,7 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
             '',
             'The Functions host produced an error. Diagnose the likely cause and suggest concrete next steps to fix it.',
             '',
-            'Error output (with surrounding context):',
+            'Error output:',
             errorContext,
         ].filter((l): l is string => Boolean(l)).join('\n');
 

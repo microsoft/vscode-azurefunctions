@@ -151,6 +151,5 @@
     "azureFunctions.funcHostDebug.clearErrors": "Clear Function Host Errors",
     "azureFunctions.funcHostDebug.showRecentLogs": "Show Recent Host Logs",
     "azureFunctions.funcHostDebug.copyRecentLogs": "Copy Recent Host Logs",
-    "azureFunctions.funcHostDebug.stop": "Stop Function Host",
     "azureFunctions.funcHostDebug.askCopilot": "Ask Copilot"
 }

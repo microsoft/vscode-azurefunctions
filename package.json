@@ -503,12 +503,6 @@
                 "icon": "$(copy)"
             },
             {
-                "command": "azureFunctions.funcHostDebug.stop",
-                "title": "%azureFunctions.funcHostDebug.stop%",
-                "category": "Azure Functions",
-                "icon": "$(debug-stop)"
-            },
-            {
                 "command": "azureFunctions.funcHostDebug.askCopilot",
                 "title": "%azureFunctions.funcHostDebug.askCopilot%",
                 "category": "Azure Functions",
@@ -569,11 +563,6 @@
                 },
                 {
                     "command": "azureFunctions.funcHostDebug.copyRecentLogs",
-                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
-                    "group": "inline"
-                },
-                {
-                    "command": "azureFunctions.funcHostDebug.stop",
                     "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
                     "group": "inline"
                 },
@@ -1034,10 +1023,6 @@
                 },
                 {
                     "command": "azureFunctions.funcHostDebug.copyRecentLogs",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.funcHostDebug.stop",
                     "when": "never"
                 },
                 {
