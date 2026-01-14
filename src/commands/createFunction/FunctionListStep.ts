@@ -129,7 +129,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const picks: IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[] = templates
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b))
-            .map(t => { return { label: t.name, data: t, group: t.templateFilter }; });
+            .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
 
         if (templates.length === 0) {
             picks.push({
