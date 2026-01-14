@@ -210,8 +210,15 @@ function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number
         } else if (/\btimertrigger\b/i.test(id)) {
             return 3;
         } else {
-            return a.name.localeCompare(b.name) === -1 ? 4 : 5;
+            return 4;
         }
     }
-    return getPriority(a.id) - getPriority(b.id);
+    
+    const priorityDiff = getPriority(a.id) - getPriority(b.id);
+    if (priorityDiff !== 0) {
+        return priorityDiff;
+    }
+    
+    // If priorities are the same, sort alphabetically by name
+    return a.name.localeCompare(b.name);
 }
