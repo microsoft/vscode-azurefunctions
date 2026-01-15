@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode } from '../extension.bundle';
+import { FuncHostDebugViewProvider, isHostErrorNode, isHostTaskNode, type IHostErrorNode, type IHostTaskNode } from '../extension.bundle';
 
 suite('FuncHostDebugViewProvider', () => {
     let provider: FuncHostDebugViewProvider;
@@ -194,6 +194,253 @@ suite('FuncHostDebugViewProvider', () => {
             });
 
             provider.refresh();
+        });
+    });
+});
+
+suite('Type Guards', () => {
+    suite('isHostTaskNode', () => {
+        test('returns true for valid host task node', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node: IHostTaskNode = {
+                kind: 'hostTask',
+                workspaceFolder: mockFolder,
+                portNumber: '7071'
+            };
+
+            assert.strictEqual(isHostTaskNode(node), true);
+        });
+
+        test('returns true for host task node with cwd', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node: IHostTaskNode = {
+                kind: 'hostTask',
+                workspaceFolder: mockFolder,
+                portNumber: '7071',
+                cwd: '/test/workspace/subfolder'
+            };
+
+            assert.strictEqual(isHostTaskNode(node), true);
+        });
+
+        test('returns true for host task node with global scope', () => {
+            const node: IHostTaskNode = {
+                kind: 'hostTask',
+                workspaceFolder: vscode.TaskScope.Global,
+                portNumber: '7071'
+            };
+
+            assert.strictEqual(isHostTaskNode(node), true);
+        });
+
+        test('returns false for null', () => {
+            assert.strictEqual(isHostTaskNode(null), false);
+        });
+
+        test('returns false for undefined', () => {
+            assert.strictEqual(isHostTaskNode(undefined), false);
+        });
+
+        test('returns false for non-object', () => {
+            assert.strictEqual(isHostTaskNode('string'), false);
+            assert.strictEqual(isHostTaskNode(123), false);
+            assert.strictEqual(isHostTaskNode(true), false);
+        });
+
+        test('returns false for object with wrong kind', () => {
+            const node = {
+                kind: 'wrongKind',
+                workspaceFolder: vscode.TaskScope.Global,
+                portNumber: '7071'
+            };
+
+            assert.strictEqual(isHostTaskNode(node), false);
+        });
+
+        test('returns false for object missing portNumber', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node = {
+                kind: 'hostTask',
+                workspaceFolder: mockFolder
+            };
+
+            assert.strictEqual(isHostTaskNode(node), false);
+        });
+
+        test('returns false for object with invalid workspaceFolder', () => {
+            const node = {
+                kind: 'hostTask',
+                workspaceFolder: 'invalid',
+                portNumber: '7071'
+            };
+
+            assert.strictEqual(isHostTaskNode(node), false);
+        });
+
+        test('returns false for object with invalid cwd type', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node = {
+                kind: 'hostTask',
+                workspaceFolder: mockFolder,
+                portNumber: '7071',
+                cwd: 123 // Invalid: should be string or undefined
+            };
+
+            assert.strictEqual(isHostTaskNode(node), false);
+        });
+    });
+
+    suite('isHostErrorNode', () => {
+        test('returns true for valid host error node', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node: IHostErrorNode = {
+                kind: 'hostError',
+                workspaceFolder: mockFolder,
+                portNumber: '7071',
+                message: 'Error message'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), true);
+        });
+
+        test('returns true for host error node with cwd', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node: IHostErrorNode = {
+                kind: 'hostError',
+                workspaceFolder: mockFolder,
+                portNumber: '7071',
+                message: 'Error message',
+                cwd: '/test/workspace/subfolder'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), true);
+        });
+
+        test('returns true for host error node with global scope', () => {
+            const node: IHostErrorNode = {
+                kind: 'hostError',
+                workspaceFolder: vscode.TaskScope.Global,
+                portNumber: '7071',
+                message: 'Error message'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), true);
+        });
+
+        test('returns false for null', () => {
+            assert.strictEqual(isHostErrorNode(null), false);
+        });
+
+        test('returns false for undefined', () => {
+            assert.strictEqual(isHostErrorNode(undefined), false);
+        });
+
+        test('returns false for non-object', () => {
+            assert.strictEqual(isHostErrorNode('string'), false);
+            assert.strictEqual(isHostErrorNode(123), false);
+            assert.strictEqual(isHostErrorNode(true), false);
+        });
+
+        test('returns false for object with wrong kind', () => {
+            const node = {
+                kind: 'wrongKind',
+                workspaceFolder: vscode.TaskScope.Global,
+                portNumber: '7071',
+                message: 'Error message'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), false);
+        });
+
+        test('returns false for object missing message', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node = {
+                kind: 'hostError',
+                workspaceFolder: mockFolder,
+                portNumber: '7071'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), false);
+        });
+
+        test('returns false for object missing portNumber', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node = {
+                kind: 'hostError',
+                workspaceFolder: mockFolder,
+                message: 'Error message'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), false);
+        });
+
+        test('returns false for object with invalid workspaceFolder', () => {
+            const node = {
+                kind: 'hostError',
+                workspaceFolder: 'invalid',
+                portNumber: '7071',
+                message: 'Error message'
+            };
+
+            assert.strictEqual(isHostErrorNode(node), false);
+        });
+
+        test('returns false for object with invalid cwd type', () => {
+            const mockFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/test/workspace'),
+                name: 'TestWorkspace',
+                index: 0
+            };
+
+            const node = {
+                kind: 'hostError',
+                workspaceFolder: mockFolder,
+                portNumber: '7071',
+                message: 'Error message',
+                cwd: 123 // Invalid: should be string or undefined
+            };
+
+            assert.strictEqual(isHostErrorNode(node), false);
         });
     });
 });

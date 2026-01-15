@@ -13,7 +13,7 @@ import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode } fr
 
 const viewId = 'azureFunctions.funcHostDebugView';
 
-function isHostTaskNode(node: unknown): node is IHostTaskNode {
+export function isHostTaskNode(node: unknown): node is IHostTaskNode {
     if (!node || typeof node !== 'object') {
         return false;
     }
@@ -28,7 +28,7 @@ function isHostTaskNode(node: unknown): node is IHostTaskNode {
         && (n.cwd === undefined || typeof n.cwd === 'string');
 }
 
-function isHostErrorNode(node: unknown): node is IHostErrorNode {
+export function isHostErrorNode(node: unknown): node is IHostErrorNode {
     if (!node || typeof node !== 'object') {
         return false;
     }
