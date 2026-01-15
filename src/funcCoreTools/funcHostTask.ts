@@ -232,8 +232,13 @@ export function registerFuncHostTaskEvents(): void {
             return;
         }
 
+        const maxLogEntries = 1000;
+
         for await (const chunk of task.stream ?? []) {
             task.logs.push(chunk);
+            if (task.logs.length > maxLogEntries) {
+                task.logs.splice(0, task.logs.length - maxLogEntries);
+            }
 
             // Keep track of errors for the Debug view.
             if (isFuncHostErrorLog(chunk)) {
