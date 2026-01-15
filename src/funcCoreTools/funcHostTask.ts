@@ -172,10 +172,12 @@ export function registerFuncHostTaskEvents(): void {
     // we need to register this listener before the func host task starts, so we can capture the terminal output stream
     terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
         /**
-         * This will pick up any terminal that, including those started outside of tasks (e.g. via the command palette).
-         * But we don't actually access the terminal stream until the `func host start` task starts, at which time this will be pointing to the correct terminal
+         * Only store terminal events for func host start commands to avoid race conditions
+         * where a non-func terminal opened just before the func task starts could be incorrectly captured.
          * */
-        latestTerminalShellExecutionEvent = terminalShellExecEvent;
+        if (isFuncShellEvent(terminalShellExecEvent)) {
+            latestTerminalShellExecutionEvent = terminalShellExecEvent;
+        }
     });
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
