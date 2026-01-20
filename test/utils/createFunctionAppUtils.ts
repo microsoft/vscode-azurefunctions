@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { dotnetIsolatedDefaultPick, locationDefaultPick, nodeDefaultPick, pythonDefaultPick } from "../constants";
+import { dotnetIsolatedRuntimePick, locationDefaultPick, nodeRuntimePick, pythonRuntimePick } from "../constants";
 
 export namespace createFunctionAppUtils {
     export function generateBasicCreateInputs(appName: string, folderName: string, runtime: Runtime, connection: ConnectionType): (string | RegExp)[] {
@@ -95,11 +95,11 @@ export namespace createFunctionAppUtils {
     function getRuntimePick(runtime: Runtime): RegExp | string {
         switch (runtime) {
             case Runtime.Python:
-                return pythonDefaultPick;
+                return pythonRuntimePick;
             case Runtime.Node:
-                return nodeDefaultPick;
+                return nodeRuntimePick;
             case Runtime.DotNetIsolated:
-                return dotnetIsolatedDefaultPick;
+                return dotnetIsolatedRuntimePick;
             default:
                 throw new Error(`Runtime "${runtime}" not yet supported in "createFunctionAppUtils.generateBasicCreateInputs".`);
         }

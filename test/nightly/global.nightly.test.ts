@@ -6,7 +6,7 @@
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
+import { AzureAccountTreeItemWithProjects, createAzureClient, ext, updateGlobalSetting } from '../../extension.bundle';
 import { longRunningTestsEnabled } from '../global.test';
 
 import { createSubscriptionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
@@ -25,6 +25,8 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         this.timeout(2 * 60 * 1000);
 
         await vscode.commands.executeCommand('azureResourceGroups.logIn');
+        await updateGlobalSetting('groupBy', 'resourceType', 'azureResourceGroups');
+
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         const testContext = await createTestActionContext();
         const subscription: AzureSubscription = await subscriptionExperience(testContext, ext.rgApi.appResourceTree);

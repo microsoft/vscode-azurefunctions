@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DurableBackend } from "../../../../../../extension.bundle";
-import { durableOrchestratorName, durableOrchestratorPick } from "../../../../../constants";
+import { cSharpLanguagePick, dotnetIsolatedPick, dotnetNamespaceName, durableAzureStoragePick, durableOrchestratorName, durableOrchestratorPick } from "../../../../../constants";
 import { ConnectionType, CreateMode, OperatingSystem, PlanType, Runtime } from "../../../../../utils/createFunctionAppUtils";
 import { type AzExtFunctionsTestScenario } from "../../AzExtFunctionsTestScenario";
 import { generateCreateAndDeployTest } from "../generateCreateAndDeployTest";
 
 export function generateDotnetIsolatedScenario(): AzExtFunctionsTestScenario {
-    const folderName: string = 'scenarios-durable-azurestorage-dotnetisolated';
+    const folderName: string = 'scenario-durable-azurestorage-dotnetisolated';
 
     return {
         label: 'durable-azurestorage-dotnetisolated',
@@ -18,13 +18,13 @@ export function generateDotnetIsolatedScenario(): AzExtFunctionsTestScenario {
         createNewProjectTest: {
             label: 'create-new-project',
             inputs: [
-                /C#/i,
+                cSharpLanguagePick,
                 // Todo: This needs to also run a match on the description because isolated vs. inproc differentiates there
-                /\.NET 10/i,
+                dotnetIsolatedPick,
                 durableOrchestratorPick,
-                /Azure Storage/i,
+                durableAzureStoragePick,
                 durableOrchestratorName,
-                'Company.Function',
+                dotnetNamespaceName,
             ],
         },
         createAndDeployTests: [

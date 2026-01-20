@@ -10,7 +10,7 @@ import { type AzExtFunctionsTestScenario } from "../../AzExtFunctionsTestScenari
 import { generateCreateAndDeployTest } from "../generateCreateAndDeployTest";
 
 export function generateJSNodeScenario(): AzExtFunctionsTestScenario {
-    const folderName: string = 'scenarios-durable-dts-jsnode';
+    const folderName: string = 'scenario-durable-dts-jsnode';
 
     return {
         label: 'durable-dts-jsnode',

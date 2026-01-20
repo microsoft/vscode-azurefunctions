@@ -10,7 +10,8 @@ export interface AzExtFunctionsTestScenario {
     label: string;
     folderName: string;
     createNewProjectTest: CreateNewProjectTestCase;
-    createAndDeployTests: CreateAndDeployTestCase[];
+    createAndDeployTestsCore: CreateAndDeployTestCase[];
+    createAndDeployTestsExtended?: CreateAndDeployTestCase[];
 
     /**
      * Indicates this scenario should be executed exclusively. This should only be used to aid with local development.

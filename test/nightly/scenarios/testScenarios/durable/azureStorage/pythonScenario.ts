@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DurableBackend } from "../../../../../../extension.bundle";
-import { durableOrchestratorName, durableOrchestratorPick, pythonDefaultPick } from "../../../../../constants";
+import { durableAzureStoragePick, durableOrchestratorName, durableOrchestratorPick, pythonLanguagePick, pythonModelV2Pick, pythonRuntimePick } from "../../../../../constants";
 import { ConnectionType, CreateMode, PlanType, Runtime } from "../../../../../utils/createFunctionAppUtils";
 import { type AzExtFunctionsTestScenario } from "../../AzExtFunctionsTestScenario";
 import { generateCreateAndDeployTest } from "../generateCreateAndDeployTest";
 
 export function generatePythonScenario(): AzExtFunctionsTestScenario {
-    const folderName: string = 'scenarios-durable-azurestorage-python';
+    const folderName: string = 'scenario-durable-azurestorage-python';
 
     return {
         label: 'durable-azurestorage-python',
@@ -18,11 +18,11 @@ export function generatePythonScenario(): AzExtFunctionsTestScenario {
         createNewProjectTest: {
             label: 'create-new-project',
             inputs: [
-                /Python/i,
-                /v2/i,
-                pythonDefaultPick,
+                pythonLanguagePick,
+                pythonModelV2Pick,
+                pythonRuntimePick,
                 durableOrchestratorPick,
-                /Azure Storage/i,
+                durableAzureStoragePick,
                 durableOrchestratorName,
             ],
         },

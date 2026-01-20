@@ -5,7 +5,6 @@
 
 import { nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
 
-
 export class ScenariosTracker {
     private scenarioStatuses: Map<string, ScenarioStatus> = new Map();
 

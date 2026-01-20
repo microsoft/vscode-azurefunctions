@@ -16,7 +16,7 @@ import { generateTestScenarios } from './testScenarios/testScenarios';
 export interface AzExtFunctionsParallelTestScenario {
     title: string;
     scenario?: Promise<void>;
-    runScenario(): Promise<void>;
+    runScenario(testPlan: TestPlan): Promise<void>;
     only?: boolean;
 }
 
@@ -31,7 +31,7 @@ export function generateParallelScenarios(): AzExtFunctionsParallelTestScenario[
 }
 
 function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctionsParallelTestScenario['runScenario'] {
-    return async function runScenario() {
+    return async function runScenario(testPlan: TestPlan) {
         const workspaceFolderUri: Uri = getWorkspaceFolderUri(scenario.folderName);
         const rootFolder = workspace.getWorkspaceFolder(workspaceFolderUri);
         assert.ok(rootFolder, `Failed to retrieve root workspace folder for scenario ${scenario.label}.`);
@@ -55,13 +55,15 @@ function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctio
             });
         });
 
-        // 2. Immediately spin off all the create and deploy tests
-        const onlyTestCase: CreateAndDeployTestCase | undefined = scenario.createAndDeployTests.find(test => test.only);
+        // 2. Start all create and deploy tests for the scenario
+        const createAndDeployTests: CreateAndDeployTestCase[] | undefined = testPlan === 'core' ? scenario.createAndDeployTestsCore : scenario.createAndDeployTestsExtended ?? [];
+
+        const onlyTestCase: CreateAndDeployTestCase | undefined = createAndDeployTests.find(test => test.only);
         if (onlyTestCase) {
             await startCreateAndDeployTest(scenario.label, rootFolder, onlyTestCase);
         } else {
-            const createAndDeployTests: Promise<void>[] = scenario.createAndDeployTests.map(test => startCreateAndDeployTest(scenario.label, rootFolder, test));
-            await Promise.allSettled(createAndDeployTests);
+            const createAndDeployTasks: Promise<void>[] = createAndDeployTests.map(test => startCreateAndDeployTest(scenario.label, rootFolder, test));
+            await Promise.allSettled(createAndDeployTasks);
         }
 
         await cleanTestFolder(rootFolder);
@@ -158,4 +160,9 @@ export function getWorkspaceFolderUri(folderName: string): Uri {
     }
 
     throw new Error(`Unable to find workspace folder "${folderName}"`);
+}
+
+export enum TestPlan {
+    Core = 'core',
+    Extended = 'extended',
 }
