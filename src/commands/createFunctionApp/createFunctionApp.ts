@@ -42,8 +42,6 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     }
 
     const funcAppNode: SlotTreeItem | ContainerTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
-
-    // Full id has it as "undefined/subscriptions/...."
     return nonNullValueAndProp(funcAppNode.site, 'id');
 }
 
