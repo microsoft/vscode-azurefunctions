@@ -55,22 +55,23 @@ export interface AzExtFunctionsTestScenario {
     createNewProjectTest: CreateNewProjectTestCase;
 
     /**
-     * Core test cases for creating and deploying function apps.
+     * Test cases for creating and deploying function apps.
      * These tests execute after project creation completes successfully.
-     *
-     * Core tests represent high-value smoke/regression tests that run as part of the
-     * nightly test suite. Keep this set small and focused on critical paths that we expect to pass.
      */
-    createAndDeployTestsCore: CreateAndDeployTestCase[];
+    createAndDeployTests: {
+        /**
+         * Core test cases representing high-value smoke/regression tests that run as part of the
+         * nightly test suite. Keep this set small and focused on critical paths that we expect to pass.
+         */
+        core: CreateAndDeployTestCase[];
 
-    /**
-     * Extended test cases for creating and deploying function apps.
-     * These tests execute after project creation completes successfully.
-     *
-     * Extended tests provide broader, more exploratory coverage and are intended to be
-     * triggered manually for on-demand, deep-dive inspection rather than nightly runs due to their more comprehensive nature.
-     */
-    createAndDeployTestsExtended?: CreateAndDeployTestCase[];
+        /**
+         * Expanded test cases providing broader, more exploratory coverage. Intended to be
+         * triggered manually for on-demand, deep-dive inspection rather than nightly runs
+         * due to their more comprehensive nature.
+         */
+        expanded?: CreateAndDeployTestCase[];
+    };
 
     /**
      * Indicates this scenario should be executed exclusively. This should only be used to aid with local development.

@@ -9,7 +9,6 @@ import { generateParallelScenarios, TestLevel, type AzExtFunctionsParallelTestSc
 const testScenarios: AzExtFunctionsParallelTestScenario[] = generateParallelScenarios();
 
 suite.only('Scenarios', async function (this: Mocha.Suite) {
-    // Leave ample time since some tasks are known to take a while (e.g. durable task schedulers sometimes take ~30m to provision)
     this.timeout(45 * 60 * 1000);
 
     suiteSetup(async function (this: Mocha.Context) {
@@ -18,12 +17,12 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
         }
 
         const onlyTestScenario = testScenarios.find(s => {
-            if (process.env.AzCode_OnlyLongRunningTestScenario) {
-                return s.title === process.env.AzCode_OnlyLongRunningTestScenario;
+            if (process.env.AzCode_ScenarioToIsolateAndExpand) {
+                return s.title === process.env.AzCode_ScenarioToIsolateAndExpand;
             }
             return s.only;
         });
-        const testLevel: TestLevel = process.env.AzCode_OnlyLongRunningTestScenario ? TestLevel.Extended : TestLevel.Core;
+        const testLevel: TestLevel = process.env.AzCode_ScenarioToIsolateAndExpand ? TestLevel.Expanded : TestLevel.Core;
 
         if (onlyTestScenario) {
             onlyTestScenario.scenario = onlyTestScenario.runScenario(testLevel);

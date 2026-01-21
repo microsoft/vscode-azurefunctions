@@ -39,6 +39,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
+        scenariosTracker.report();
 
         await deleteResourceGroups();
         ext.azureAccountTreeItem.dispose();
@@ -46,11 +47,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 });
 
 async function deleteResourceGroups(): Promise<void> {
-    const report = scenariosTracker.report();
-    console.log(report);
-
     const rgClient: ResourceManagementClient = createAzureClient([await createTestActionContext(), subscriptionContext], ResourceManagementClient);
-
     await Promise.allSettled(Array.from(resourceGroupsToDelete).map(async resourceGroup => {
         if ((await rgClient.resourceGroups.checkExistence(resourceGroup)).body) {
             console.log(`Started delete of resource group "${resourceGroup}"...`);

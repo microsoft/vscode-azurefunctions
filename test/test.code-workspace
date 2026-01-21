@@ -31,37 +31,9 @@
             "path": "../testWorkspace/9"
         },
         {
-            "name": "scenario-http-trigger-jsnode",
-            "path": "../testWorkspace/scenarios/http-trigger/jsnode"
-        },
-        {
             "name": "scenario-durable-azurestorage-jsnode",
             "path": "../testWorkspace/scenarios/durable-azurestorage/jsnode"
         },
-        {
-            "name": "scenario-durable-azurestorage-python",
-            "path": "../testWorkspace/scenarios/durable-azurestorage/python"
-        },
-        {
-            "name": "scenario-durable-azurestorage-dotnetisolated",
-            "path": "../testWorkspace/scenarios/durable-azurestorage/dotnetisolated"
-        },
-        {
-            "name": "scenario-durable-dts-jsnode",
-            "path": "../testWorkspace/scenarios/durable-dts/jsnode"
-        },
-        {
-            "name": "scenario-durable-dts-python",
-            "path": "../testWorkspace/scenarios/durable-dts/python"
-        },
-        {
-            "name": "scenario-durable-dts-dotnet-isolated",
-            "path": "../testWorkspace/scenarios/durable-dts/dotnet-isolated"
-        },
-        {
-            "name": "scenario-durable-dts-dotnet-inproc",
-            "path": "../testWorkspace/scenarios/durable-dts/dotnet-inproc"
-        }
     ],
     "settings": {
         "debug.internalConsoleOptions": "neverOpen",

@@ -77,7 +77,7 @@
                 "FUNC_PATH": "func",
                 "AZFUNC_UPDATE_BACKUP_TEMPLATES": "",
                 "AzCode_EnableLongRunningTestsLocal": "true",
-                "AzCode_OnlyLongRunningTestScenario": "",
+                "AzCode_ScenarioToIsolateAndExpand": ""
             }
         },
         {
