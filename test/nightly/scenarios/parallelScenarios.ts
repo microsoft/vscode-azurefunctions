@@ -144,12 +144,11 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
                 return;
             }
 
-            let errorMessage: string = (error as Error).message ?? parseError(error).message;
+            const errorMessage: string = (error as Error).message ?? parseError(error).message;
 
-            // Deploy failed but verification still passed - warn instead of showing an outright fail
-            // There is at least one known issue that this checks for - TODO: Add issue link
+            // Warning marker indicates deployment failed but verification still passed.
+            // Example of one known issue that this checks for: https://github.com/microsoft/vscode-azurefunctions/issues/4859
             if (deployError && !postTestError) {
-                errorMessage = '** Deploy-Fail; Verify-Pass ** ' + errorMessage;
                 scenariosTracker.warnDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);
             } else {
                 scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);

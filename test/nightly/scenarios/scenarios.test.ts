@@ -16,6 +16,11 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
             this.skip();
         }
 
+        // For quickly specifying tests to isolate:
+        // - Set `AzCode_ScenarioToIsolateAndExpand` env var to match the scenario title to isolate and run with the expanded test suite. TODO: Enable setting this for manual runs in the remote pipelines.
+        // - Set `only: true` on a scenario definition to more quickly isolate during local development/debugging purposes.  Defaults to a test level of "core".
+        //
+        // When not running isolated tests, test level will always default to "core" to minimize the number of service requests.
         const onlyTestScenario = testScenarios.find(s => {
             if (process.env.AzCode_ScenarioToIsolateAndExpand) {
                 return s.title === process.env.AzCode_ScenarioToIsolateAndExpand;

@@ -9,5 +9,7 @@ import { generateJSNodeScenario } from './azureStorageJSNodeScenario';
 export function generateDurableAzureStorageScenarios(): AzExtFunctionsTestScenario[] {
     return [
         generateJSNodeScenario(),
+        // generatePythonScenario(),
+        // generateDotNetIsolatedScenario(),
     ];
 }

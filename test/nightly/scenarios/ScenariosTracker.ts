@@ -186,7 +186,8 @@ export class ScenariosTracker {
             }
         }
 
-        console.log(lines.join('\n'));
+        const reportCard: string = lines.join('\n');
+        console.log(reportCard);
     }
 }
 
