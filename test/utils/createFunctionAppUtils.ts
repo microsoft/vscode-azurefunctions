@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { dotnetIsolatedRuntimePick, locationDefaultPick, nodeRuntimePick, pythonRuntimePick } from "../constants";
+import { locationDefaultPick, nodeRuntimePick } from "../constants";
 
 export namespace createFunctionAppUtils {
-    export function generateBasicCreateInputs(appName: string, folderName: string, runtime: Runtime, connection: ConnectionType): (string | RegExp)[] {
+    export function generateBasicCreateInputs(appName: string, folderName: string, runtime: Runtime, storageConnection: ConnectionType): (string | RegExp)[] {
         return [
             folderName,
             appName,
             locationDefaultPick,
             getRuntimePick(runtime),
-            new RegExp(connection, 'i'),
+            new RegExp(storageConnection, 'i'),
         ];
     }
 
-    export function generateAdvancedCreateInputs(appName: string, folderName: string, runtime: Runtime, connection: ConnectionType, plan: PlanType, os?: OperatingSystem): (string | RegExp)[] {
+    export function generateAdvancedCreateInputs(appName: string, folderName: string, runtime: Runtime, storageConnection: ConnectionType, plan: PlanType, os?: OperatingSystem): (string | RegExp)[] {
         switch (plan) {
             case PlanType.FlexConsumption:
                 return [
@@ -29,7 +29,7 @@ export namespace createFunctionAppUtils {
                     '100',
                     /Create new resource group/i,
                     appName,
-                    ...getConnectionTypeInputs(connection),
+                    ...getConnectionTypeInputs(storageConnection),
                     /Create new storage account/i,
                     appName,
                     /Create new application insights/i,
@@ -48,7 +48,7 @@ export namespace createFunctionAppUtils {
                     /EP1/i,
                     /Create new resource group/i,
                     appName,
-                    ...getConnectionTypeInputs(connection),
+                    ...getConnectionTypeInputs(storageConnection),
                     /Create new storage account/i,
                     appName,
                     /Create new application insights/i,
@@ -64,7 +64,7 @@ export namespace createFunctionAppUtils {
                     ...(os ? [new RegExp(os, 'i')] : []),
                     /Create new resource group/i,
                     appName,
-                    ...getConnectionTypeInputs(connection),
+                    ...getConnectionTypeInputs(storageConnection),
                     /Create new storage account/i,
                     appName,
                     /Create new application insights/i,
@@ -83,7 +83,7 @@ export namespace createFunctionAppUtils {
                     /S1/i,
                     /Create new resource group/i,
                     appName,
-                    ...getConnectionTypeInputs(connection),
+                    ...getConnectionTypeInputs(storageConnection),
                     /Create new storage account/i,
                     appName,
                     /Create new application insights/i,
@@ -94,12 +94,11 @@ export namespace createFunctionAppUtils {
 
     function getRuntimePick(runtime: Runtime): RegExp | string {
         switch (runtime) {
-            case Runtime.Python:
-                return pythonRuntimePick;
+            // case Runtime.Python:
             case Runtime.Node:
                 return nodeRuntimePick;
-            case Runtime.DotNetIsolated:
-                return dotnetIsolatedRuntimePick;
+            // case Runtime.DotNetIsolated:
+            // case Runtime.DotNetInProc:
             default:
                 throw new Error(`Runtime "${runtime}" not yet supported in "createFunctionAppUtils.generateBasicCreateInputs".`);
         }
@@ -138,4 +137,5 @@ export enum Runtime {
     Node = 'Node',
     Python = 'Python',
     DotNetIsolated = '.NET Isolated',
+    DotNetInProc = '.NET In-Proc'
 }

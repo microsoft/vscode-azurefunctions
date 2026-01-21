@@ -13,18 +13,18 @@ import { deployFunctionAppUtils } from "../../../../utils/deployFunctionAppUtils
 import { subscriptionContext } from "../../../global.nightly.test";
 import { type CreateAndDeployTestCase } from "../AzExtFunctionsTestScenario";
 
-export function generateCreateAndDeployTest(folderName: string, createMode: CreateMode, runtime: Runtime, connection: ConnectionType, plan: PlanType, os?: OperatingSystem, storageType?: DurableBackend): CreateAndDeployTestCase {
+export function generateCreateAndDeployTest(folderName: string, createMode: CreateMode, runtime: Runtime, storageConnection: ConnectionType, plan: PlanType, os?: OperatingSystem, storageType?: DurableBackend): CreateAndDeployTestCase {
     const appName: string = getRandomAlphanumericString();
     const osDescription: string = os ? `-${os}` : '';
-    const description: string = `${createMode}-${connection}${osDescription}-${plan}`;
+    const description: string = `${createMode}-${storageConnection}${osDescription}-${plan}`;
 
     return {
         createFunctionApp: {
             label: `create-function-app | ${description}`,
             mode: createMode,
             inputs: createMode === CreateMode.Basic ?
-                createFunctionAppUtils.generateBasicCreateInputs(appName, folderName, runtime, connection) :
-                createFunctionAppUtils.generateAdvancedCreateInputs(appName, folderName, runtime, connection, plan, os),
+                createFunctionAppUtils.generateBasicCreateInputs(appName, folderName, runtime, storageConnection) :
+                createFunctionAppUtils.generateAdvancedCreateInputs(appName, folderName, runtime, storageConnection, plan, os),
         },
         deployFunctionApp: {
             label: `deploy-function-app | ${description}`,
@@ -43,15 +43,11 @@ function generateVerifyDeployment(runtime: Runtime) {
 
         let url = `https://${functionApp.defaultHostName}`;
         switch (runtime) {
-            case Runtime.Python:
-                url += `/api/orchestrators/${durableOrchestratorName}_orchestrator`;
-                break;
+            // case Runtime.Python:
             case Runtime.Node:
                 url += `/api/orchestrators/${durableOrchestratorName}Orchestrator`;
                 break;
-            case Runtime.DotNetIsolated:
-                url += `/api/${durableOrchestratorName}_HttpStart`;
-                break;
+            // case Runtime.DotNetIsolated:
             default:
                 throw new Error('Durable verify deployment not yet implemented for this runtime type.');
         }

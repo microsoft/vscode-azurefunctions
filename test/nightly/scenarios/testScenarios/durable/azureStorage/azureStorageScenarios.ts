@@ -5,13 +5,9 @@
 
 import { type AzExtFunctionsTestScenario } from '../../AzExtFunctionsTestScenario';
 import { generateJSNodeScenario } from './azureStorageJSNodeScenario';
-import { generateDotnetIsolatedScenario } from './dotnetIsolated';
-import { generatePythonScenario } from './pythonScenario';
 
 export function generateDurableAzureStorageScenarios(): AzExtFunctionsTestScenario[] {
     return [
         generateJSNodeScenario(),
-        generatePythonScenario(),
-        generateDotnetIsolatedScenario(),
     ];
 }

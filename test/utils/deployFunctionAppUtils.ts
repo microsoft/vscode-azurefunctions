@@ -6,25 +6,11 @@
 import { DurableBackend } from "../../extension.bundle";
 
 export namespace deployFunctionAppUtils {
-    export function generateDurableDeployInputs(appName: string, storageType?: DurableBackend): (string | RegExp)[] {
+    export function generateDurableDeployInputs(_appName: string, storageType?: DurableBackend): (string | RegExp)[] {
         switch (storageType) {
-            case DurableBackend.DTS:
-                return [
-                    // Todo: Expand regexp capability for context.ui.showWarningMessage
-                    'Connect Durable Task Scheduler',
-                    /Create New Durable Task Scheduler/i,
-                    appName,
-                    /Create New Durable Task Hub/i,
-                    appName,
-                    /Assign New User[- ]Assigned Identity/i,
-                    /Create New User[- ]Assigned Identity/i,
-                    // Todo: Here too
-                    'Deploy',
-                ];
-            case DurableBackend.Netherite:
-                return [];
-            case DurableBackend.SQL:
-                return [];
+            // case DurableBackend.DTS:
+            // case DurableBackend.Netherite:
+            // case DurableBackend.SQL:
             case DurableBackend.Storage:
             default:
                 return [

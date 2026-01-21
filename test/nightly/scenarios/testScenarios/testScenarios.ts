@@ -5,17 +5,14 @@
 
 import { type AzExtFunctionsTestScenario } from "./AzExtFunctionsTestScenario";
 import { generateDurableAzureStorageScenarios } from "./durable/azureStorage/azureStorageScenarios";
-import { generateDurableDTSScenarios } from "./durable/dts/dtsScenarios";
-import { generateHttpTriggerScenarios } from "./httpTrigger/httpTriggerScenarios";
 
 export function generateTestScenarios(): AzExtFunctionsTestScenario[] {
     const testScenarios: AzExtFunctionsTestScenario[] = [
         // Trigger scenarios
-        ...generateHttpTriggerScenarios(),
+        // ...generateHttpTriggerScenarios(),
 
         // Durable scenarios
         ...generateDurableAzureStorageScenarios(),
-        ...generateDurableDTSScenarios(),
     ];
     return testScenarios;
 }

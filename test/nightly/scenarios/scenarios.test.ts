@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { longRunningTestsEnabled } from '../../global.test';
-import { generateParallelScenarios, TestPlan, type AzExtFunctionsParallelTestScenario } from './parallelScenarios';
+import { generateParallelScenarios, TestLevel, type AzExtFunctionsParallelTestScenario } from './parallelScenarios';
 
 const testScenarios: AzExtFunctionsParallelTestScenario[] = generateParallelScenarios();
 
 suite.only('Scenarios', async function (this: Mocha.Suite) {
-    // Unfortunately, durable task schedulers sometimes take ~30m to provision
+    // Leave ample time since some tasks are known to take a while (e.g. durable task schedulers sometimes take ~30m to provision)
     this.timeout(45 * 60 * 1000);
 
     suiteSetup(async function (this: Mocha.Context) {
@@ -23,13 +23,13 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
             }
             return s.only;
         });
-        const testPlan: TestPlan = process.env.AzCode_OnlyLongRunningTestScenario ? TestPlan.Extended : TestPlan.Core;
+        const testLevel: TestLevel = process.env.AzCode_OnlyLongRunningTestScenario ? TestLevel.Extended : TestLevel.Core;
 
         if (onlyTestScenario) {
-            onlyTestScenario.scenario = onlyTestScenario.runScenario(testPlan);
+            onlyTestScenario.scenario = onlyTestScenario.runScenario(testLevel);
         } else {
             for (const s of testScenarios) {
-                s.scenario = s.runScenario(TestPlan.Core);
+                s.scenario = s.runScenario(TestLevel.Core);
             }
         }
     });

@@ -123,9 +123,10 @@ export class ScenariosTracker {
         this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
-    report(): string {
+    report(): void {
         if (!this.scenarioStatuses.size) {
-            return 'No test scenarios recorded.';
+            console.log('No test scenarios recorded.');
+            return;
         }
 
         const lines: string[] = [];
@@ -138,7 +139,7 @@ export class ScenariosTracker {
         const maxErrorLength = 200;
 
         const getStatusIcon = (status: TestStatus | undefined): string => {
-            return icons[status ?? 'undefined'];
+            return icons[String(status)];
         };
 
         const truncateError = (error: string | undefined): string => {
@@ -185,7 +186,7 @@ export class ScenariosTracker {
             }
         }
 
-        return lines.join('\n');
+        console.log(lines.join('\n'));
     }
 }
 
