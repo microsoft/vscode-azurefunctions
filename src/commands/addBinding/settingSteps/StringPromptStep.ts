@@ -11,7 +11,7 @@ import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class StringPromptStep extends BindingSettingStepBase {
     // not used by v2 schema so enforce  IBindingSetting
-    protected readonly _setting: IBindingSetting;
+    declare protected readonly _setting: IBindingSetting;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         return await context.ui.showInputBox({
             placeHolder: this._setting.label,

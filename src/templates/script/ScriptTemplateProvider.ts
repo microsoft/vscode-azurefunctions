@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as extract from 'extract-zip';
+import extract from 'extract-zip';
 import * as path from 'path';
 import { FuncVersion } from '../../FuncVersion';
 import { ext } from '../../extensionVariables';

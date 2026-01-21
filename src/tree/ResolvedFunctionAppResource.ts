@@ -31,7 +31,7 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
 
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     protected _site: ParsedSite | undefined = undefined;
-    public data: Site;
+    declare public data: Site;
     public dataModel: FunctionAppModel;
 
     private _subscription: ISubscriptionContext;

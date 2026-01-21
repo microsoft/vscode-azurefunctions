@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as globby from 'globby';
-import * as Mocha from 'mocha';
-import * as path from 'path';
+import globby from 'globby';
+import Mocha from 'mocha';
+import path from 'path';
 import { envUtils } from '../extension.bundle';
 
 export async function run(): Promise<void> {

@@ -9,7 +9,7 @@ import { type DurableTaskSchedulerResource, type DurableTaskSchedulerClient } fr
 import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { localize } from '../../localize';
-import * as retry from 'p-retry';
+const pRetryPromise = import('p-retry');
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModel, AzureResourceModel {
     public constructor(
@@ -27,7 +27,8 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
         // NOTE: The DTS RP may return a 500 when getting task hubs for a just-deleted scheduler.
         //       In the case of such a failure, just wait a moment and try again.
 
-        const taskHubs = await retry(
+        const pRetryModule = await pRetryPromise;
+        const taskHubs = await pRetryModule.default(
             () => this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup as string, this.resource.name),
             {
                 retries: 3,

@@ -21,7 +21,7 @@ export async function createSystemIdentityTreeItem(context: IActionContext, pare
 
 class SystemIdentityTreeItem extends AzExtParentTreeItem {
     public readonly identity: Identity;
-    public readonly parent: ManagedIdentityTreeItem;
+    declare public readonly parent: ManagedIdentityTreeItem;
     public static contextValue: string = 'systemIdentity';
     public state: string;
 

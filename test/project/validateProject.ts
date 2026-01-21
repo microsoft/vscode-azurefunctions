@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import * as globby from 'globby';
+import globby from 'globby';
 import * as path from 'path';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContainingWorkspace, type IExtensionsJson, type ILaunchJson, type ITasksJson } from '../../extension.bundle';
 

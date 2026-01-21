@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
+import retry from 'p-retry';
 import * as path from 'path';
 import { Uri, window, type MessageItem, type WorkspaceFolder } from 'vscode';
 import { McpProjectType, mcpProjectTypeSetting } from '../../constants';

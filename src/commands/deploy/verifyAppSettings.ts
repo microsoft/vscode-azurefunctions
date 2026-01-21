@@ -6,7 +6,7 @@
 import { type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
+import { default as retry } from 'p-retry';
 import * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { azureWebJobsFeatureFlags, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';

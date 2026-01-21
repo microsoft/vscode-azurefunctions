@@ -27,8 +27,8 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     }
 
     protected _resources: { en: { [key: string]: string } };
-    protected _rawTemplates: RawTemplateV2[];
-    protected _rawBindings: object[];
+    declare protected _rawTemplates: RawTemplateV2[];
+    declare protected _rawBindings: object[];
     protected _language: string;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {

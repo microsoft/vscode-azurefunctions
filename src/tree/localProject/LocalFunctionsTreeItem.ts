@@ -19,7 +19,7 @@ export class ProjectNotRunningError extends Error {
 }
 
 export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
-    public readonly parent: LocalProjectTreeItem;
+    declare public readonly parent: LocalProjectTreeItem;
     public isReadOnly: boolean;
 
     public constructor(parent: LocalProjectTreeItem) {

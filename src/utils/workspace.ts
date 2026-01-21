@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import * as globby from 'globby';
+import globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { browseItem } from '../constants';

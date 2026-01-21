@@ -5,17 +5,18 @@
 
 import { type AzExtTreeItem, type TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import { IconPath, Uri } from 'vscode';
 import { ext } from '../extensionVariables';
 
 export namespace treeUtils {
-    export function getIconPath(iconName: string): string {
-        return path.join(getResourcesPath(), `${iconName}.svg`);
+    export function getIconPath(iconName: string): IconPath {
+        return Uri.file(path.join(getResourcesPath(), `${iconName}.svg`));
     }
 
     export function getThemedIconPath(iconName: string): TreeItemIconPath {
         return {
-            light: path.join(getResourcesPath(), 'light', `${iconName}.svg`),
-            dark: path.join(getResourcesPath(), 'dark', `${iconName}.svg`)
+            light: Uri.file(path.join(getResourcesPath(), 'light', `${iconName}.svg`)),
+            dark: Uri.file(path.join(getResourcesPath(), 'dark', `${iconName}.svg`))
         };
     }
 

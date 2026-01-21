@@ -7,7 +7,7 @@ import { type HostKeys } from '@azure/arm-appservice';
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
 import { parseAzureResourceId, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as extract from 'extract-zip';
+import extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
