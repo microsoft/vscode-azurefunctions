@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { locationDefaultPick, nodeRuntimePick } from "../constants";
+import { createNewAppInsightsPick, createNewAppServicePlanPick, createNewResourceGroupPick, createNewStorageAccountPick, createNewUserAssignedIdentityPick, locationDefaultPick, nodeRuntimePick } from "../constants";
 
 export namespace createFunctionAppUtils {
     export function generateBasicCreateInputs(appName: string, folderName: string, runtime: Runtime, storageConnection: ConnectionType): (string | RegExp)[] {
@@ -27,12 +27,12 @@ export namespace createFunctionAppUtils {
                     getRuntimePick(runtime),
                     '2048',
                     '100',
-                    /Create new resource group/i,
+                    createNewResourceGroupPick,
                     appName,
                     ...getConnectionTypeInputs(storageConnection),
-                    /Create new storage account/i,
+                    createNewStorageAccountPick,
                     appName,
-                    /Create new application insights/i,
+                    createNewAppInsightsPick,
                     appName,
                 ];
             case PlanType.Premium:
@@ -43,15 +43,15 @@ export namespace createFunctionAppUtils {
                     locationDefaultPick,
                     getRuntimePick(runtime),
                     ...(os ? [new RegExp(os, 'i')] : []),
-                    /Create new app service plan/i,
+                    createNewAppServicePlanPick,
                     appName,
                     /EP1/i,
-                    /Create new resource group/i,
+                    createNewResourceGroupPick,
                     appName,
                     ...getConnectionTypeInputs(storageConnection),
-                    /Create new storage account/i,
+                    createNewStorageAccountPick,
                     appName,
-                    /Create new application insights/i,
+                    createNewAppInsightsPick,
                     appName,
                 ];
             case PlanType.LegacyConsumption:
@@ -62,12 +62,12 @@ export namespace createFunctionAppUtils {
                     locationDefaultPick,
                     getRuntimePick(runtime),
                     ...(os ? [new RegExp(os, 'i')] : []),
-                    /Create new resource group/i,
+                    createNewResourceGroupPick,
                     appName,
                     ...getConnectionTypeInputs(storageConnection),
-                    /Create new storage account/i,
+                    createNewStorageAccountPick,
                     appName,
-                    /Create new application insights/i,
+                    createNewAppInsightsPick,
                     appName,
                 ];
             case PlanType.AppService:
@@ -78,15 +78,15 @@ export namespace createFunctionAppUtils {
                     locationDefaultPick,
                     getRuntimePick(runtime),
                     ...(os ? [new RegExp(os, 'i')] : []),
-                    /Create new app service plan/i,
+                    createNewAppServicePlanPick,
                     appName,
                     /S1/i,
-                    /Create new resource group/i,
+                    createNewResourceGroupPick,
                     appName,
                     ...getConnectionTypeInputs(storageConnection),
-                    /Create new storage account/i,
+                    createNewStorageAccountPick,
                     appName,
-                    /Create new application insights/i,
+                    createNewAppInsightsPick,
                     appName,
                 ];
         }
@@ -112,7 +112,7 @@ export namespace createFunctionAppUtils {
 
     function getConnectionTypeInputs(connection: ConnectionType): (string | RegExp)[] {
         return connection === ConnectionType.ManagedIdentity ?
-            [new RegExp(connection, 'i'), /Create new user[- ]assigned identity/i] :
+            [new RegExp(connection, 'i'), createNewUserAssignedIdentityPick] :
             [new RegExp(connection, 'i')];
     }
 }

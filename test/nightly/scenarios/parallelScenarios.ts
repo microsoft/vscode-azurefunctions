@@ -23,7 +23,7 @@ export interface AzExtFunctionsParallelTestScenario {
     title: string;
 
     /**
-     * A promise representing the running scenario. Holds the scenario execution that gets awaited.
+     * Holds a reference to the promise representing the running scenario. This is used so that all scenarios can be concurrently awaited.
      */
     scenario?: Promise<void>;
 
@@ -89,14 +89,14 @@ function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctio
 }
 
 async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: WorkspaceFolder, test: CreateAndDeployTestCase): Promise<void> {
-    const scenarioTestTrackerId: number = scenariosTracker.initCreateAndDeployTest(scenarioLabel);
+    const testId: number = scenariosTracker.initCreateAndDeployTest(scenarioLabel);
 
     for (const rg of test.resourceGroupsToDelete ?? []) {
         resourceGroupsToDelete.add(rg);
     }
 
     // 3. Create function app
-    scenariosTracker.startCreateFunctionApp(scenarioLabel, scenarioTestTrackerId, test.createFunctionApp.label);
+    scenariosTracker.startCreateFunctionApp(scenarioLabel, testId, test.createFunctionApp.label);
 
     let functionAppId: string;
     await runWithTestActionContext('scenario.createFunctionApp', async context => {
@@ -109,16 +109,16 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
                 }
 
                 assert.ok(functionAppId, 'Failed to create function app.');
-                scenariosTracker.passCreateFunctionApp(scenarioLabel, scenarioTestTrackerId);
+                scenariosTracker.passCreateFunctionApp(scenarioLabel, testId);
             } catch (err) {
-                scenariosTracker.failCreateFunctionApp(scenarioLabel, scenarioTestTrackerId, (err as Error).message ?? parseError(err).message);
+                scenariosTracker.failCreateFunctionApp(scenarioLabel, testId, (err as Error).message ?? parseError(err).message);
                 throw err;
             }
         });
     });
 
     // 4. Deploy function app
-    scenariosTracker.startDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, test.deployFunctionApp.label);
+    scenariosTracker.startDeployFunctionApp(scenarioLabel, testId, test.deployFunctionApp.label);
 
     await runWithTestActionContext('scenario.deploy', async context => {
         await context.ui.runWithInputs(test.deployFunctionApp.inputs, async () => {
@@ -140,18 +140,18 @@ async function startCreateAndDeployTest(scenarioLabel: string, rootFolder: Works
 
             const error = deployError ?? postTestError;
             if (!error) {
-                scenariosTracker.passDeployFunctionApp(scenarioLabel, scenarioTestTrackerId);
+                scenariosTracker.passDeployFunctionApp(scenarioLabel, testId);
                 return;
             }
 
             const errorMessage: string = (error as Error).message ?? parseError(error).message;
 
             // Warning marker indicates deployment failed but verification still passed.
-            // Example of one known issue that this checks for: https://github.com/microsoft/vscode-azurefunctions/issues/4859
+            // Example of a known issue where this happens: https://github.com/microsoft/vscode-azurefunctions/issues/4859
             if (deployError && !postTestError) {
-                scenariosTracker.warnDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);
+                scenariosTracker.warnDeployFunctionApp(scenarioLabel, testId, errorMessage);
             } else {
-                scenariosTracker.failDeployFunctionApp(scenarioLabel, scenarioTestTrackerId, errorMessage);
+                scenariosTracker.failDeployFunctionApp(scenarioLabel, testId, errorMessage);
             }
 
             throw error;

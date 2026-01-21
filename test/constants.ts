@@ -25,6 +25,13 @@ export const jsModelV4Pick: RegExp = /v4/i;
 // Default runtime picks
 export const nodeRuntimePick: RegExp = /Node\.js(\s)?22/i;
 
+// Create resource picks
+export const createNewResourceGroupPick: RegExp = /Create new resource group/i;
+export const createNewStorageAccountPick: RegExp = /Create new storage account/i;
+export const createNewAppInsightsPick: RegExp = /Create new application insights/i;
+export const createNewAppServicePlanPick: RegExp = /Create new app service plan/i;
+export const createNewUserAssignedIdentityPick: RegExp = /Create new user[- ]assigned identity/i;
+
 // Location picks
 export const locationDefaultPick: RegExp = /West US 2/i;
 
