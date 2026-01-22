@@ -1455,8 +1455,8 @@
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
-        "@microsoft/vscode-azext-dev": "^2.0.2",
         "@microsoft/vscode-azext-eng": "^1.0.0-alpha.9",
+        "@microsoft/eslint-config-azuretools": "^0.2.2",
         "@types/fs-extra": "^8.1.0",
         "@types/node": "^22.0.0",
         "@types/ps-tree": "^1.1.0",
