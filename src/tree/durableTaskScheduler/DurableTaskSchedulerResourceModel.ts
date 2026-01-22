@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ViewPropertiesModel, type AzureResource, type AzureResourceModel } from "@microsoft/vscode-azureresources-api";
-import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
-import { type DurableTaskSchedulerResource, type DurableTaskSchedulerClient } from "./DurableTaskSchedulerClient";
-import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
+import { type AzureResource, type AzureResourceModel, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import retry from 'p-retry';
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { localize } from '../../localize';
-const pRetryPromise = import('p-retry');
+import { DurableTaskHubResourceModel } from "./DurableTaskHubResourceModel";
+import { type DurableTaskSchedulerClient, type DurableTaskSchedulerResource } from "./DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerModel } from "./DurableTaskSchedulerModel";
 
 export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerModel, AzureResourceModel {
     public constructor(
@@ -26,9 +26,7 @@ export class DurableTaskSchedulerResourceModel implements DurableTaskSchedulerMo
 
         // NOTE: The DTS RP may return a 500 when getting task hubs for a just-deleted scheduler.
         //       In the case of such a failure, just wait a moment and try again.
-
-        const pRetryModule = await pRetryPromise;
-        const taskHubs = await pRetryModule.default(
+        const taskHubs = await retry(
             () => this.schedulerClient.getSchedulerTaskHubs(this.resource.subscription, this.resource.resourceGroup as string, this.resource.name),
             {
                 retries: 3,
