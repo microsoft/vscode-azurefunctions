@@ -14,7 +14,7 @@ import { type AzExtFunctionsTestScenario, type CreateAndDeployTestCase } from '.
 import { generateTestScenarios } from './testScenarios/testScenarios';
 
 /**
- * A wrapper for {@link AzExtFunctionsTestScenario} which holds a scenario that has been prepared for concurrent test execution.
+ * A wrapper for {@link AzExtFunctionsTestScenario}. Prepares a scenario for concurrent test execution.
  */
 export interface AzExtFunctionsParallelTestScenario {
     /**
