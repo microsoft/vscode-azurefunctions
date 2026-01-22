@@ -60,22 +60,22 @@ export interface AzExtFunctionsTestScenario {
      */
     createAndDeployTests: {
         /**
-         * Core test cases representing high-value smoke/regression tests that run as part of the
+         * Basic test cases representing high-value smoke/regression tests that run as part of the
          * nightly test suite.
          *
          * Note: Keep this set small (~1-2) and focused on representative samples that we expect to pass.
          */
-        core: CreateAndDeployTestCase[];
+        basic: CreateAndDeployTestCase[];
 
         /**
-         * Expanded number of test cases providing much deeper inspection of the scenario deployment health. Intended to be
+         * Extended number of test cases providing much deeper inspection of the scenario deployment health. Intended to be
          * triggered manually for on-demand, deep-dive inspection rather than nightly runs
          * due to their more comprehensive nature.
          *
-         * Note: Initially this may be a more exploratory set of tests whose outcome will eventually need to be confirmed by Function App PMs.
-         * After that determination, we should pare this down to only those tests that we expect to pass.
+         * Note: Initially this may be a more exploratory set of tests whose outcome will eventually need to be more explicitly confirmed by Function App PMs.
+         * Upon final determination, we should pare this down to only those tests that we expect to pass.
          */
-        expanded?: CreateAndDeployTestCase[];
+        extended?: CreateAndDeployTestCase[];
     };
 
     /**

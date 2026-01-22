@@ -8,6 +8,23 @@ import { nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
 export class ScenariosTracker {
     private scenarioStatuses: Map<string, ScenarioStatus> = new Map();
 
+    private getScenarioStatus(scenarioLabel: string): ScenarioStatus {
+        return nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+    }
+
+    private getCreateAndDeployTest(scenarioLabel: string, id: number): CreateAndDeployTest {
+        const scenario = this.getScenarioStatus(scenarioLabel);
+        scenario.createAndDeployTests ??= [];
+        return nonNullValue(scenario.createAndDeployTests[id]);
+    }
+
+    private updateTestStatus(testResult: TestResult, status: TestStatus, error?: string): void {
+        testResult.status = status;
+        if (error) {
+            testResult.error = error;
+        }
+    }
+
     initScenario(scenarioLabel: string): void {
         if (this.scenarioStatuses.has(scenarioLabel)) {
             return;
@@ -16,28 +33,24 @@ export class ScenariosTracker {
     }
 
     startCreateNewProject(scenarioLabel: string, createNewProjectLabel: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+        const scenarioStatus = this.getScenarioStatus(scenarioLabel);
         scenarioStatus.createNewProject = { label: createNewProjectLabel };
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
     passCreateNewProject(scenarioLabel: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+        const scenarioStatus = this.getScenarioStatus(scenarioLabel);
         const createNewProjectStatus = nonNullProp(scenarioStatus, 'createNewProject');
-        createNewProjectStatus.status = 'pass';
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(createNewProjectStatus, 'pass');
     }
 
     failCreateNewProject(scenarioLabel: string, error: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+        const scenarioStatus = this.getScenarioStatus(scenarioLabel);
         const createNewProjectStatus = nonNullProp(scenarioStatus, 'createNewProject');
-        createNewProjectStatus.status = 'fail';
-        createNewProjectStatus.error = error;
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(createNewProjectStatus, 'fail', error);
     }
 
     initCreateAndDeployTest(scenarioLabel: string): number {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
+        const scenarioStatus = this.getScenarioStatus(scenarioLabel);
         scenarioStatus.createAndDeployTests ??= [];
 
         const id: number = scenarioStatus.createAndDeployTests.length;
@@ -46,81 +59,43 @@ export class ScenariosTracker {
     }
 
     startCreateFunctionApp(scenarioLabel: string, createAndDeployTestId: number, createLabel: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         createAndDeployTest.createFunctionApp = { label: createLabel };
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
     passCreateFunctionApp(scenarioLabel: string, createAndDeployTestId: number): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         const createFunctionAppTest = nonNullValue(createAndDeployTest.createFunctionApp);
-        createFunctionAppTest.status = 'pass';
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(createFunctionAppTest, 'pass');
     }
 
     failCreateFunctionApp(scenarioLabel: string, createAndDeployTestId: number, error: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         const createFunctionAppTest = nonNullValue(createAndDeployTest.createFunctionApp);
-        createFunctionAppTest.status = 'fail';
-        createFunctionAppTest.error = error;
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(createFunctionAppTest, 'fail', error);
     }
 
     startDeployFunctionApp(scenarioLabel: string, createAndDeployTestId: number, deployLabel: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         createAndDeployTest.deployFunctionApp = { label: deployLabel };
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
     }
 
     passDeployFunctionApp(scenarioLabel: string, createAndDeployTestId: number): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
-        deployFunctionAppTest.status = 'pass';
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(deployFunctionAppTest, 'pass');
     }
 
     warnDeployFunctionApp(scenarioLabel: string, createAndDeployTestId: number, error?: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
-        deployFunctionAppTest.status = 'warn';
-        deployFunctionAppTest.error = error;
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(deployFunctionAppTest, 'warn', error);
     }
 
     failDeployFunctionApp(scenarioLabel: string, createAndDeployTestId: number, error: string): void {
-        const scenarioStatus = nonNullValue(this.scenarioStatuses.get(scenarioLabel));
-        scenarioStatus.createAndDeployTests ??= [];
-
-        const createAndDeployTest = nonNullValue(scenarioStatus.createAndDeployTests[createAndDeployTestId]);
+        const createAndDeployTest = this.getCreateAndDeployTest(scenarioLabel, createAndDeployTestId);
         const deployFunctionAppTest = nonNullValue(createAndDeployTest.deployFunctionApp);
-        deployFunctionAppTest.status = 'fail';
-        deployFunctionAppTest.error = error;
-
-        this.scenarioStatuses.set(scenarioLabel, scenarioStatus);
+        this.updateTestStatus(deployFunctionAppTest, 'fail', error);
     }
 
     report(): void {
@@ -202,8 +177,10 @@ type TestResult = {
 type ScenarioStatus = {
     label: string;
     createNewProject?: TestResult;
-    createAndDeployTests?: {
-        createFunctionApp?: TestResult;
-        deployFunctionApp?: TestResult;
-    }[];
+    createAndDeployTests?: CreateAndDeployTest[];
+}
+
+type CreateAndDeployTest = {
+    createFunctionApp?: TestResult;
+    deployFunctionApp?: TestResult;
 };

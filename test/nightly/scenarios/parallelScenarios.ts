@@ -29,7 +29,7 @@ export interface AzExtFunctionsParallelTestScenario {
 
     /**
      * Starts the concurrent test scenario based on the specified test level.
-     * @param testLevel - Specifies which level of tests to run: 'core' vs. 'extended'
+     * @param testLevel - Specifies which level of tests to run: 'basic' vs. 'extended'
      */
     runScenario(testLevel: TestLevel): Promise<void>;
 
@@ -74,7 +74,7 @@ function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctio
         });
 
         // 2. Start all create and deploy tests for the scenario
-        const createAndDeployTests: CreateAndDeployTestCase[] = testLevel === TestLevel.Core ? scenario.createAndDeployTests.core : scenario.createAndDeployTests.expanded ?? [];
+        const createAndDeployTests: CreateAndDeployTestCase[] = testLevel === TestLevel.Basic ? scenario.createAndDeployTests.basic : scenario.createAndDeployTests.extended ?? [];
         const onlyTestCase: CreateAndDeployTestCase | undefined = createAndDeployTests.find(test => test.only);
 
         if (onlyTestCase) {
@@ -179,6 +179,6 @@ export function getWorkspaceFolderUri(folderName: string): Uri {
 }
 
 export enum TestLevel {
-    Core = 'core',
-    Expanded = 'expanded',
+    Basic = 'basic',
+    Extended = 'extended',
 }
