@@ -47,7 +47,7 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
