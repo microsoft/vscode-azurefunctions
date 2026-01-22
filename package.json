@@ -1468,12 +1468,9 @@
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
-        "copy-webpack-plugin": "^6.0.3",
         "esbuild": "*",
         "esbuild-plugin-copy": "*",
-        "husky": "^7.0.2",
-        "webpack": "^5.96.1",
-        "webpack-cli": "^4.6.0"
+        "husky": "^7.0.2"
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",

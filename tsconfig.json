@@ -13,7 +13,7 @@
         "noImplicitThis": true,
         "noImplicitReturns": true,
         "strictNullChecks": true,
-        "skipLibCheck": true,
+        "skipLibCheck": true, // needed to ignore vscode-jsonrpc package
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
         "baseUrl": "./",
@@ -27,7 +27,6 @@
     "exclude": [
         "**/node_modules",
         ".vscode-test",
-        "gulpfile.ts",
         "**/dist",
         "**/out"
     ]

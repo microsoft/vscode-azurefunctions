@@ -1,3 +1,7 @@
+﻿/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import { type ResourceGraphClient } from "@azure/arm-resourcegraph";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";

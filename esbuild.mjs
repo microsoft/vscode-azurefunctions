@@ -1,7 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 
-const baseConfig = autoSelectEsbuildConfig();
-
-/** @type {import('esbuild').BuildOptions} */
-
-await autoEsbuildOrWatch(baseConfig);
+await autoEsbuildOrWatch(autoSelectEsbuildConfig());
