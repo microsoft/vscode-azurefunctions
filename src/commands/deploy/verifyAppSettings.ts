@@ -70,7 +70,7 @@ export async function verifyAppSettings(options: {
         await client.updateApplicationSettings(appSettings);
         try {
             await verifyAppSettingsPropagated(context, client, appSettings);
-        } catch (e) {
+        } catch (_e) {
             // don't throw if we can't verify the settings were updated
         }
 

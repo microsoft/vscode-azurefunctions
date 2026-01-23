@@ -15,7 +15,7 @@ export class MaximumInstanceCountPromptStep extends AzureWizardPromptStep<IFlexF
             validateInput: (val: string) => this.validateInput(flexSku, val),
             prompt: localize('maximumInstanceCount', 'Enter the maximum instance count'),
             value: flexSku.maximumInstanceCount.defaultValue.toString()
-        }
+        };
 
         context.newFlexMaximumInstanceCount = Number(await context.ui.showInputBox(options));
     }
@@ -36,7 +36,7 @@ export class MaximumInstanceCountPromptStep extends AzureWizardPromptStep<IFlexF
 
         const { lowestMaximumInstanceCount, highestMaximumInstanceCount } = flexSku.maximumInstanceCount;
         if (isNaN(num)) {
-            return localize('enterNumber', 'Enter a valid maximum instance count')
+            return localize('enterNumber', 'Enter a valid maximum instance count');
         } else if (!Number.isInteger(num)) {
             return localize('integersOnly', 'Enter only whole integer values');
         } else if (num < lowestMaximumInstanceCount || num > highestMaximumInstanceCount) {

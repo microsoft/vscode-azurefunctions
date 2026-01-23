@@ -27,7 +27,7 @@ export class EventHubsNamespaceAuthRuleNameStep<T extends INetheriteAzureConnect
             prompt: localize('authRuleNamePrompt', 'Provide an access policy name for the event hubs namespace.'),
             value: 'RootManageSharedAccessKey',
             validateInput: (name: string) => this.validateInput(name),
-        })).trim()
+        })).trim();
     }
 
     public shouldPrompt(context: T): boolean {

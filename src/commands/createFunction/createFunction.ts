@@ -81,7 +81,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     wizardContext.activityTitle = localize('creatingFunction', 'Create function');
     wizardContext.activityChildren = [];
 
-    const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<IFunctionWizardContext>(wizardContext, {
         promptSteps: [new FunctionListStep({
             templateId: options.templateId,
             functionSettings: options.functionSettings,

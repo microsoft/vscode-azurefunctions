@@ -21,12 +21,12 @@ export class StringPromptStep extends BindingSettingStepBase {
         });
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async getDefaultValue(_wizardContext: IBindingWizardContext): Promise<string | undefined> {
         return this._setting === undefined ? undefined : String(this._setting.defaultValue);
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async validateInput(_wizardContext: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
         return this._setting.validateSetting(val);
     }

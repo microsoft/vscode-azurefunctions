@@ -38,7 +38,7 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
             return {
                 promptSteps,
                 executeSteps
-            }
+            };
         }
 
         return undefined;
@@ -54,6 +54,6 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
                 label: localize('managedIdentity', 'Managed identity'),
                 detail: localize('managedIdentityDetails', 'For best security practice, use managed identity authentication when available.'),
             },
-        ]
+        ];
     }
 }

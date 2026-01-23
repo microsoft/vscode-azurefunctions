@@ -18,6 +18,6 @@ export async function editAppSetting(context: IFunctionAppWizardContext, node?: 
         });
     }
     const parent = node.parent.parent;
-    await showEolWarningIfNecessary(context, nonNullValue(parent))
+    await showEolWarningIfNecessary(context, nonNullValue(parent));
     await node.edit(context);
 }

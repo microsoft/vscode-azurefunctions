@@ -32,7 +32,7 @@ export async function executeEventGridFunction(context: IActionContext, _node: F
         fileOpened: false,
     };
 
-    const wizard: AzureWizard<EventGridExecuteFunctionContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<EventGridExecuteFunctionContext>(wizardContext, {
         title,
         promptSteps,
         executeSteps,

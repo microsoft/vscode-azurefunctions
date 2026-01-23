@@ -44,7 +44,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
                 children.push(new InvalidTreeItem(this, invalidLocalFunction.error, {
                     label: invalidLocalFunction.name,
                     contextValue: 'azFuncInvalidLocalFunction'
-                }))
+                }));
             }
 
             if (this.parent.preCompiledProjectPath) {
@@ -92,6 +92,6 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
 export async function getFunctionFolders(context: IActionContext, projectPath: string): Promise<string[]> {
     return await telemetryUtils.runWithDurationTelemetry(context, 'getFuncs', async () => {
         const funcJsonUris = await findFiles(projectPath, `*/${functionJsonFileName}`);
-        return funcJsonUris.map(uri => path.basename(path.dirname(uri.fsPath)))
+        return funcJsonUris.map(uri => path.basename(path.dirname(uri.fsPath)));
     });
 }

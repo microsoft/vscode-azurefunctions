@@ -94,7 +94,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 localize('selectFuncTemplate', 'Select a template for your function');
 
             if (templateProvider.templateSource) {
-                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource)
+                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource);
             }
 
             const result: FunctionTemplateBase | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
@@ -155,7 +155,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 suppressPersistence: true,
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
-            })
+            });
         } else if (language === ProjectLanguage.CSharp ||
             language === ProjectLanguage.Java ||
             (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||

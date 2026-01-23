@@ -13,7 +13,7 @@ export async function tryGetLocalFuncVersion(context: IActionContext, workspaceP
         if (version) {
             return tryParseFuncVersion(version);
         }
-    } catch (err) {
+    } catch (_err) {
         // swallow errors and return undefined
     }
 

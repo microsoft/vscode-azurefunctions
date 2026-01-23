@@ -38,7 +38,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
             data: this.data,
             label: this.name,
             getData: () => this.getData(),
-        }
+        };
     }
 
     public async getData(): Promise<Site> {
@@ -55,7 +55,7 @@ export abstract class ResolvedFunctionAppBase implements ResolvedAppResourceBase
     public abstract getVersion(context: IActionContext): Promise<FuncVersion>;
 
     public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') }
+        return { url: nonNullValueAndProp(this.site, 'defaultHostUrl') };
     }
 
     public getDefaultHostUrl(): string {
