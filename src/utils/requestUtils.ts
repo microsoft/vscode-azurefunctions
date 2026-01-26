@@ -51,8 +51,8 @@ export namespace requestUtils {
         const client: ServiceClient = await createGenericClient(context, undefined);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
-        await new Promise((resolve, reject): void => {
-            stream.pipe(fse.createWriteStream(filePath).on('finish', () => resolve).on('error', reject));
+        await new Promise<void>((resolve, reject): void => {
+            stream.pipe(fse.createWriteStream(filePath).on('finish', () => resolve()).on('error', reject));
         });
     }
 
