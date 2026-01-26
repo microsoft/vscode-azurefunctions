@@ -33,7 +33,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     });
 
     await vscode.window.withProgress({ location: vscode.ProgressLocation.Window }, async (p: vscode.Progress<{}>) => {
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-async-promise-executor
         return new Promise(async (resolve: (value: unknown) => void, reject: (e: any) => void): Promise<void> => {
             try {
                 const siteConfig: SiteConfigResource = await client.getSiteConfig();

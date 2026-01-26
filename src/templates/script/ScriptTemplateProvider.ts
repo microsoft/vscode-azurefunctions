@@ -81,14 +81,14 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async cacheTemplates(): Promise<void> {
         await this.updateCachedValue(this._templatesKey, this._rawTemplates);
         await this.updateCachedValue(this._bindingsKey, this._rawBindings);
         await this.updateCachedValue(this._resourcesKey, this._rawResources);
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async clearCachedTemplates(): Promise<void> {
         await this.deleteCachedValue(this._templatesKey);
         await this.deleteCachedValue(this._bindingsKey);

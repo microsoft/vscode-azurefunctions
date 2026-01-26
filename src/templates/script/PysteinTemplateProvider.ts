@@ -43,7 +43,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
             functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             // no bindings for V2 schema
             bindingTemplates: []
-        }
+        };
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
@@ -55,7 +55,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         return {
             functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             bindingTemplates: []
-        }
+        };
     }
 
     public includeTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {

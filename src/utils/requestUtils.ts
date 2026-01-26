@@ -76,7 +76,7 @@ export namespace requestUtils {
      * Converts property name like "function_app_id" to "functionAppId"
      */
     function convertPropertyName(name: string): string {
-        // eslint-disable-next-line no-constant-condition
+         
         while (true) {
             const match: RegExpMatchArray | null = /_([a-z])/g.exec(name);
             if (match) {

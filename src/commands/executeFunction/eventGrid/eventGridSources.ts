@@ -59,7 +59,7 @@ export const supportedEventGridSources: EventGridSource[] = [
     'Microsoft.Web',
 ];
 
-export const supportedEventGridSourceLabels: Map<EventGridSource, string> = new Map([
+export const supportedEventGridSourceLabels = new Map<EventGridSource, string>([
     ['Microsoft.Storage', 'Blob Storage'],
     ['Microsoft.EventHub', 'Event Hubs'],
     ['Microsoft.ServiceBus', 'Service Bus'],

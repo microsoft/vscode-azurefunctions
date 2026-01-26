@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
 import { localize } from "./localize";
 
 export const viewOutput: string = localize('viewOutput', 'View Output');
@@ -25,4 +26,4 @@ export const getInvalidLengthMessage = (lowerLimitIncl?: number, upperLimitIncl?
     } else {
         return localize('invalidBetweenInputLength', 'The value must be between {0} and {1} characters long.', lowerLimitIncl, upperLimitIncl);
     }
-}
+};

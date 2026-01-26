@@ -67,7 +67,7 @@ export namespace cliFeedUtils {
             if (cliFeed.tags[newTag]) {
                 tag = newTag;
             } else {
-                ext.outputChannel.appendLog(localize('versionWithoutStaging', 'WARNING: Azure Functions v{0} does not support the staging template source. Using default template source instead.', majorVersion))
+                ext.outputChannel.appendLog(localize('versionWithoutStaging', 'WARNING: Azure Functions v{0} does not support the staging template source. Using default template source instead.', majorVersion));
             }
         }
 

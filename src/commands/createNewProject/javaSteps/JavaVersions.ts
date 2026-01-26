@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../localize';
 import { cpUtils } from "../../../utils/cpUtils";
@@ -35,7 +36,7 @@ async function checkVersionInReleaseFile(javaHome: string): Promise<number | und
         const regexp = /^JAVA_VERSION="(.*)"/gm;
         const match = regexp.exec(content.toString());
         return match ? flattenMajorVersion(match[1]) : undefined;
-    } catch (error) {
+    } catch (_error) {
         // ignore
         return undefined;
     }

@@ -23,7 +23,7 @@ export class LocalProject implements LocalProjectInternal {
 
     public async getHostJson(): Promise<IParsedHostJson> {
         const version: FuncVersion = await this.getVersion();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = await AzExtFsExtra.readJSON<any>(path.join(this.options.effectiveProjectPath, hostFileName));
         return parseHostJson(data, version);
     }

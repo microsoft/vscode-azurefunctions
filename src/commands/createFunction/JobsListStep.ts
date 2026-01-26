@@ -57,7 +57,7 @@ export class JobsListStep extends AzureWizardPromptStep<IFunctionWizardContext> 
 
     private async getPicks(context: FunctionV2WizardContext): Promise<IAzureQuickPickItem<ParsedJob>[]> {
         assertTemplateIsV2(context.functionTemplate);
-        let picks = context.functionTemplate.wizards.map((w) => { return { label: w.name, data: w } });
+        let picks = context.functionTemplate.wizards.map((w) => { return { label: w.name, data: w }; });
         // verify if this is a function project-- if so, remove the createNewApp job
         if (await isFunctionProject(context.projectPath)) {
             picks = picks.filter(p => p.data.type !== JobType.CreateNewApp);

@@ -18,7 +18,7 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
         return {
             name: randomUtils.getRandomHexString(6),
             connectionString: localStorageEmulatorConnectionString
-        }
+        };
     }
 
     const client: StorageManagementClient = await createStorageClient(context);

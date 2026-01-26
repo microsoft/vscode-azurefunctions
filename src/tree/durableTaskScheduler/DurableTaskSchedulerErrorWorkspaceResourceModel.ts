@@ -15,7 +15,7 @@ export class DurableTaskSchedulerErrorWorkspaceResourceModel implements DurableT
         const treeItem = new TreeItem(this.error);
 
         treeItem.contextValue = 'azFunc.dts.emulatorError';
-        treeItem.iconPath = new ThemeIcon('warning')
+        treeItem.iconPath = new ThemeIcon('warning');
 
         return treeItem;
     }

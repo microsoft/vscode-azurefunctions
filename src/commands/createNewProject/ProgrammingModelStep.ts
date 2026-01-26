@@ -17,7 +17,7 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
 
     public constructor(options: ProgrammingModelStepOptions) {
         super();
-        this._options = options
+        this._options = options;
     }
 
     public async prompt(context: IProjectWizardContext): Promise<void> {

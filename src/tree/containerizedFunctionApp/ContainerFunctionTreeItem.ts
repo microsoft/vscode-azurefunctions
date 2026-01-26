@@ -31,7 +31,7 @@ export class ContainerFunctionTreeItem extends FunctionTreeItemBase {
         return {
             data: this.rawConfig,
             label: this.function.name,
-        }
+        };
     }
 
     public get contextValue(): string {

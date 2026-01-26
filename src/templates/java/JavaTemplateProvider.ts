@@ -70,7 +70,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         return true;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     protected async getCacheKeySuffix(): Promise<string> {
         return 'Java';
     }

@@ -44,7 +44,7 @@ export async function listLocalFunctions(project: LocalProjectInternal): Promise
             const result: ListLocalFunctionsResult = {
                 functions: [],
                 invalidFunctions: []
-            }
+            };
 
             const functions: string[] = await getFunctionFolders(context, project.options.effectiveProjectPath);
             for (const func of functions) {

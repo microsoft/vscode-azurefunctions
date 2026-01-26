@@ -158,7 +158,7 @@ async function createFunctionAppWizard(wizardContext: IFunctionAppWizardContext)
     promptSteps.push(new FunctionAppStackStep());
 
     if (wizardContext.advancedCreation) {
-        promptSteps.push(new AppServicePlanListStep())
+        promptSteps.push(new AppServicePlanListStep());
     }
 
     if (wizardContext.version === FuncVersion.v1) { // v1 doesn't support linux
@@ -181,7 +181,7 @@ async function createContainerizedFunctionAppWizard(): Promise<{ promptSteps: Az
 }
 
 function getAvailableFunctionAppHostingPlans(context: IFunctionAppWizardContext): Set<FunctionAppHostingPlans> {
-    const availablePlans: Set<FunctionAppHostingPlans> = new Set();
+    const availablePlans = new Set<FunctionAppHostingPlans>();
 
     switch (true) {
         case context.useFlexConsumptionPlan:

@@ -42,7 +42,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         return {
             data: this.rawConfig,
             label: this.function.name,
-        }
+        };
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {

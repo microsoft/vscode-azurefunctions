@@ -25,7 +25,7 @@ export async function setAzureWebJobsStorage(context: IActionContext): Promise<v
         newStorageConnectionSettingKey: ConnectionKey.Storage,
     };
 
-    const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<IStorageConnectionWizardContext>(wizardContext, {
         title: localize('settingStorageTitle', 'Setting "{0}" in "{1}"', ConnectionKey.Storage, localSettingsFileName),
         promptSteps: [new StorageConnectionListStep(availableStorageConnections)],
     });
