@@ -92,12 +92,6 @@ export namespace createFunctionAppUtils {
         }
     }
 
-    export function getStorageConnectionDescription(storageConnection: ConnectionType): string {
-        return storageConnection === ConnectionType.Secrets ?
-            'storage:secrets' :
-            'storage:mi';
-    }
-
     function getRuntimePick(runtime: Runtime): RegExp | string {
         switch (runtime) {
             // case Runtime.Python:

@@ -16,7 +16,7 @@ import { type CreateAndDeployTestCase } from "../AzExtFunctionsTestScenario";
 export function generateCreateAndDeployTest(folderName: string, createMode: CreateMode, runtime: Runtime, storageConnection: ConnectionType, plan: PlanType, os?: OperatingSystem, storageType?: DurableBackend): CreateAndDeployTestCase {
     const appName: string = getRandomAlphanumericString();
     const osDescription: string = os ? `-${os}` : '';
-    const description: string = `${createMode}-${createFunctionAppUtils.getStorageConnectionDescription(storageConnection)}${osDescription}-${plan}`;
+    const description: string = `${createMode}-${storageConnection}${osDescription}-${plan}`;
 
     return {
         createFunctionApp: {
