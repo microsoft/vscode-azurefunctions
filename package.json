@@ -1449,7 +1449,7 @@
         "lint": "eslint --max-warnings 0",
         "lint-fix": "eslint --max-warnings 0 --fix",
         "pretest": "npm run build && node scripts/pretest.mjs",
-        "test": "node ./out/test/runTest.js",
+        "test": "vscode-test",
         "all": "npm i && npm run lint && npm test"
     },
     "devDependencies": {
