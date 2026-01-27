@@ -96,6 +96,12 @@ export interface CreateNewProjectTestCase {
     inputs: (string | RegExp)[];
 
     /**
+     * An optional callback to run after the deployment test completes.
+     * Great for use as a post test verification step.
+     */
+    postTest?: (context: IActionContext) => void | Promise<void>;
+
+    /**
      * Indicates this test case should be executed exclusively. This should only be used to aid with local development.
      */
     only?: boolean;

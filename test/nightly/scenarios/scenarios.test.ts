@@ -9,7 +9,7 @@ import { generateParallelScenarios, TestLevel, type AzExtFunctionsParallelTestSc
 const testScenarios: AzExtFunctionsParallelTestScenario[] = generateParallelScenarios();
 
 suite.only('Scenarios', async function (this: Mocha.Suite) {
-    this.timeout(45 * 60 * 1000);
+    this.timeout(40 * 60 * 1000);
 
     suiteSetup(async function (this: Mocha.Context) {
         if (!longRunningTestsEnabled) {
@@ -17,10 +17,10 @@ suite.only('Scenarios', async function (this: Mocha.Suite) {
         }
 
         // For quickly specifying tests to isolate:
-        // - Set the `AzCode_RunScenarioExtended` env var to match the scenario label if you want to isolate and run with the extended test suite. TODO: Enable setting this for manual runs in the remote pipelines.
-        // - Set `only: true` on a scenario definition to more quickly isolate during local development.  Note this naturally defaults to a test level of "basic".
+        // - Set the `AzCode_RunScenarioExtended` env var to match the scenario label you want to isolate. This will automatically run with the extended test suite. TODO: Enable setting this for manual runs in the remote pipelines.
+        // - Setting `only: true` on a scenario definition also allows more quickly isolating a run during local development.  Note this naturally defaults to a test level of "basic".
         //
-        // When not running isolated tests, test level will always default to "basic" to minimize the number of service requests.
+        // When not running isolated tests, test level will always default to "basic" to minimize the number of service requests to avoid running into 429 ratelimit errors.
         const onlyTestScenario = testScenarios.find(s => {
             if (process.env.AzCode_RunScenarioExtended) {
                 return s.title === process.env.AzCode_RunScenarioExtended;

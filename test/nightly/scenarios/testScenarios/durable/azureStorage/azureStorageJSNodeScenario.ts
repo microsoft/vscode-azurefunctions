@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DurableBackend } from "../../../../../../extension.bundle";
+import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import * as assert from "assert";
+import * as path from "path";
+import { DurableBackend, DurableProjectConfigureStep, hostFileName, type IActionContext, type IHostJsonV2 } from "../../../../../../extension.bundle";
 import { durableAzureStoragePick, durableOrchestratorName, durableOrchestratorPick, jsLanguagePick, jsModelV4Pick } from "../../../../../constants";
 import { ConnectionType, CreateMode, OperatingSystem, PlanType, Runtime } from "../../../../../utils/createFunctionAppUtils";
 import { type AzExtFunctionsTestScenario } from "../../AzExtFunctionsTestScenario";
@@ -24,6 +27,7 @@ export function generateJSNodeScenario(): AzExtFunctionsTestScenario {
                 durableAzureStoragePick,
                 durableOrchestratorName,
             ],
+            postTest: verifyCreateNewProject,
         },
         createAndDeployTests: {
             basic: [
@@ -32,7 +36,8 @@ export function generateJSNodeScenario(): AzExtFunctionsTestScenario {
                 generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Node, ConnectionType.Secrets, PlanType.Premium, OperatingSystem.Linux),
             ],
             extended: [
-                // Todo: Needs discussion & final approval
+                // Placeholder...
+                // Todo: Will need future discussion & final approval
                 generateCreateAndDeployTest(folderName, CreateMode.Basic, Runtime.Node, ConnectionType.ManagedIdentity, PlanType.FlexConsumption, OperatingSystem.Linux, DurableBackend.Storage),
                 generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Node, ConnectionType.ManagedIdentity, PlanType.Premium, OperatingSystem.Linux, DurableBackend.Storage),
                 generateCreateAndDeployTest(folderName, CreateMode.Advanced, Runtime.Node, ConnectionType.ManagedIdentity, PlanType.Premium, OperatingSystem.Windows, DurableBackend.Storage),
@@ -50,4 +55,16 @@ export function generateJSNodeScenario(): AzExtFunctionsTestScenario {
             ],
         }
     };
+}
+
+async function verifyCreateNewProject(context: IActionContext & { projectPath?: string }): Promise<void> {
+    if (!context.projectPath) {
+        throw new Error('Internal Error: Test context is missing the requisite project path.');
+    }
+
+    const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+    const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+    hostJson.extensions ??= {};
+
+    assert.deepStrictEqual(hostJson.extensions.durableTask, DurableProjectConfigureStep.getDefaultStorageTaskConfig(), '');
 }

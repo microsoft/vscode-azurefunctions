@@ -65,6 +65,7 @@ function generateRunScenario(scenario: AzExtFunctionsTestScenario): AzExtFunctio
             await context.ui.runWithInputs(scenario.createNewProjectTest.inputs, async () => {
                 try {
                     await createNewProjectInternal(context, { folderPath: rootFolder.uri.fsPath });
+                    await scenario.createNewProjectTest.postTest?.(context);
                     scenariosTracker.passCreateNewProject(scenario.label);
                 } catch (err) {
                     scenariosTracker.failCreateNewProject(scenario.label, (err as Error).message ?? parseError(err).message);
