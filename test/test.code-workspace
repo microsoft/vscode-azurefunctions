@@ -29,7 +29,11 @@
         },
         {
             "path": "../testWorkspace/9"
-        }
+        },
+        {
+            "name": "scenario-durable-azurestorage-jsnode",
+            "path": "../testWorkspace/scenarios/durable-azurestorage/jsnode"
+        },
     ],
     "settings": {
         "debug.internalConsoleOptions": "neverOpen",

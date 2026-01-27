@@ -20,14 +20,14 @@ export function isMultiRootWorkspace(): boolean {
  * Use sparingly. Prefer storing and passing 'projectPaths' instead.
  * Over-reliance on this function may result in excessive prompting when a user employs a multi-root workspace.
  */
-export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+export async function getRootWorkspaceFolder(context: IActionContext): Promise<vscode.WorkspaceFolder | undefined> {
     if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
         return undefined;
     } else if (vscode.workspace.workspaceFolders.length === 1) {
         return vscode.workspace.workspaceFolders[0];
     } else {
         const placeHolder: string = localize('selectRootWorkspace', 'Select the folder containing your function project');
-        const folder = await vscode.window.showWorkspaceFolderPick({ placeHolder });
+        const folder = await context.ui.showWorkspaceFolderPick({ placeHolder });
         if (!folder) {
             throw new UserCancelledError('selectRootWorkspace');
         }

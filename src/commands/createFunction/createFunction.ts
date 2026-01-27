@@ -54,7 +54,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     let workspacePath: string | undefined = options.folderPath;
 
     if (workspacePath === undefined) {
-        workspaceFolder = await getRootWorkspaceFolder();
+        workspaceFolder = await getRootWorkspaceFolder(context);
         workspacePath = workspaceFolder?.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);

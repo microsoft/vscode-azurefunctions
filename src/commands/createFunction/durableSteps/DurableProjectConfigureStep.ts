@@ -69,7 +69,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Storage:
-                hostJson.extensions.durableTask = this.getDefaultStorageTaskConfig();
+                hostJson.extensions.durableTask = DurableProjectConfigureStep.getDefaultStorageTaskConfig();
                 // Omit setting azureWebJobsStorage since it should already be initialized during 'createNewProject'
                 break;
             case DurableBackend.Netherite:
@@ -100,7 +100,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }
 
-    private getDefaultStorageTaskConfig(): IStorageTaskJson {
+    static getDefaultStorageTaskConfig(): IStorageTaskJson {
         return {
             storageProvider: {
                 type: DurableBackend.Storage,

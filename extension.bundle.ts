@@ -30,9 +30,11 @@ export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
 export * from './src/constants';
 export * from './src/utils/durableUtils';
 // Export activate/deactivate for main.js
+export * from './src/commands/createFunction/durableSteps/DurableProjectConfigureStep';
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
 export * from './src/funcConfig/function';
+export * from './src/funcConfig/host';
 export * from './src/funcCoreTools/hasMinFuncCliVersion';
 export * from './src/FuncVersion';
 export * from './src/templates/CentralTemplateProvider';

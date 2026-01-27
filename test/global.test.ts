@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
+import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import * as assert from 'assert';
+import { AzExtFsExtra, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -55,6 +56,10 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await funcExtension.activate(); // activate the extension before tests begin
 
     ext.outputChannel = new TestOutputChannel();
+
+    registerAppServiceExtensionVariables(ext);
+    registerAzureUtilsExtensionVariables(ext);
+    registerUIExtensionVariables(ext);
 
     registerOnActionStartHandler(context => {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
@@ -170,8 +175,8 @@ async function initTestWorkspaceFolders(): Promise<string[]> {
         const folders: string[] = [];
         for (let i = 0; i < workspaceFolders.length; i++) {
             const workspacePath: string = workspaceFolders[i].uri.fsPath;
-            const folderName = path.basename(workspacePath);
-            assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
+            // const folderName = path.basename(workspacePath);
+            // assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
             await AzExtFsExtra.ensureDir(workspacePath);
             await AzExtFsExtra.emptyDir(workspacePath);
             folders.push(workspacePath);
