@@ -14,7 +14,7 @@ import { SubscriptionListStep } from './SubscriptionListStep';
 export async function getMcpHostKey(context: IActionContext & { subscription?: AzureSubscription },
     args: { resourceId: string, projectType: McpProjectType }): Promise<string> {
     const parsedId: ParsedAzureResourceId = parseAzureResourceId(args.resourceId);
-    const wizard = new AzureWizard<IAppServiceWizardContext>(context, {
+    const wizard = new AzureWizard<IActionContext & Partial<IAppServiceWizardContext>>(context, {
         promptSteps: [new SubscriptionListStep(parsedId.subscriptionId)],
         // this should never happen, but just in case
         title: l10n.t('Select the subscription that contains the function app {0}.', parsedId.resourceName)

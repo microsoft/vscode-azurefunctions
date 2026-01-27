@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizard, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ProgressLocation, l10n, window } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -18,7 +17,7 @@ import { type IFuncDeployContext } from "./deploy";
 
 export async function getOrCreateFunctionApp(context: IFuncDeployContext & Partial<IFunctionAppWizardContext>): Promise<SlotTreeItem> {
     let node: SlotTreeItem | undefined;
-    const wizard = new AzureWizard<IAppServiceWizardContext>(context, {
+    const wizard = new AzureWizard<IFuncDeployContext & Partial<IFunctionAppWizardContext>>(context, {
         promptSteps: [new SubscriptionListStep(), new FunctionAppListStep()],
         title: l10n.t('Select Function App')
     });

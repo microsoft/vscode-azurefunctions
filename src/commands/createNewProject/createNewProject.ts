@@ -87,7 +87,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
         context.telemetry.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
     }
 
-    const wizard = new AzureWizard<IFunctionWizardContext>(wizardContext, {
+    const wizard = new AzureWizard<IActionContext & Partial<IFunctionWizardContext>>(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
         promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
         executeSteps: optionalExecuteStep ? [optionalExecuteStep, new OpenFolderStep()] : [new OpenFolderStep()]

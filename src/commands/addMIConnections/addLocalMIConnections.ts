@@ -40,7 +40,7 @@ export async function addLocalMIConnectionsInternal(context: IActionContext, con
     const promptSteps: AzureWizardPromptStep<AddMIConnectionsContext>[] = [new ConnectionsListStep()];
     const executeSteps: AzureWizardExecuteStep<AddMIConnectionsContext>[] = [new SettingsAddBaseStep(), new LocalSettingsAddStep()];
 
-    const wizard = new AzureWizard<AddMIConnectionsContext>(wizardContext, {
+    const wizard = new AzureWizard<IActionContext & Partial<AddMIConnectionsContext>>(wizardContext, {
         title,
         promptSteps,
         executeSteps

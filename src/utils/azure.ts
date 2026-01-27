@@ -7,7 +7,6 @@ import { AppKind, type IAppServiceWizardContext } from '@microsoft/vscode-azext-
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, type AzureWizardExecuteStep, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { type IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { localize } from '../localize';
 import { type ICreateFunctionAppContext, type SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
@@ -45,7 +44,7 @@ export async function registerProviders(context: ICreateFunctionAppContext, subs
     const storageProvider = 'Microsoft.Storage';
     const providerExecuteSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] =
         [new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights', 'Microsoft.OperationalInsights'])];
-    const providerWizard = new AzureWizard<IFunctionAppWizardContext>(providerContext, { executeSteps: providerExecuteSteps });
+    const providerWizard = new AzureWizard<IAppServiceWizardContext>(providerContext, { executeSteps: providerExecuteSteps });
 
     await providerWizard.execute();
 }
