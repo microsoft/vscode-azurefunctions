@@ -5,8 +5,10 @@
 
 import { type TestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
-import { ProjectLanguage, createNewProjectInternal, getRandomHexString, hiddenStacksSetting } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
+import { createNewProjectInternal } from '../../src/commands/createNewProject/createNewProject';
+import { hiddenStacksSetting, ProjectLanguage } from '../../src/constants';
+import { getRandomHexString } from '../../src/utils/fs';
 import type * as api from '../../src/vscode-azurefunctions.api';
 import { testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';

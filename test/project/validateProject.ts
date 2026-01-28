@@ -8,7 +8,12 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import globby from 'globby';
 import * as path from 'path';
-import { FuncVersion, JavaBuildTool, ProjectLanguage, extensionId, getContainingWorkspace, type IExtensionsJson, type ILaunchJson, type ITasksJson } from '../../extension.bundle';
+import { JavaBuildTool, ProjectLanguage, extensionId } from '../../src/constants';
+import { FuncVersion } from '../../src/FuncVersion';
+import { getContainingWorkspace } from '../../src/utils/workspace';
+import { IExtensionsJson } from '../../src/vsCodeConfig/extensions';
+import { ILaunchJson } from '../../src/vsCodeConfig/launch';
+import { ITasksJson } from '../../src/vsCodeConfig/tasks';
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 

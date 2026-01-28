@@ -6,7 +6,10 @@
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { FuncVersion, getRandomHexString, ProjectLanguage, verifyVersionAndLanguage } from '../extension.bundle';
+import { verifyVersionAndLanguage } from '../src/commands/deploy/verifyAppSettings';
+import { ProjectLanguage } from '../src/constants';
+import { FuncVersion } from '../src/FuncVersion';
+import { getRandomHexString } from '../src/utils/fs';
 import { assertThrowsAsync } from './assertThrowsAsync';
 import { testFolderPath } from './global.test';
 

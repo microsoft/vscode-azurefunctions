@@ -6,12 +6,14 @@
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
 import { longRunningTestsEnabled } from '../global.test';
 
+import { createAzureClient } from '@microsoft/vscode-azext-azureutils';
 import { createSubscriptionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
+import { ext } from '../../src/extensionVariables';
+import { AzureAccountTreeItemWithProjects } from '../../src/tree/AzureAccountTreeItemWithProjects';
 
 export let testClient: WebSiteManagementClient;
 export let subscriptionContext: ISubscriptionContext;

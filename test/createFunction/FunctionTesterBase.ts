@@ -8,7 +8,12 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { type Disposable } from 'vscode';
-import { createFunctionInternal, getRandomHexString, TemplateFilter, type FunctionTemplateBase, type FuncVersion, type ProjectLanguage, type TemplateSource } from '../../extension.bundle';
+import { createFunctionInternal } from '../../src/commands/createFunction/createFunction';
+import { ProjectLanguage, TemplateFilter } from '../../src/constants';
+import { TemplateSource } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
+import { FunctionTemplateBase } from '../../src/templates/IFunctionTemplate';
+import { getRandomHexString } from '../../src/utils/fs';
 import { addParallelSuite, type ParallelSuiteOptions, type ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
 

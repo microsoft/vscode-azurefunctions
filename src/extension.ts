@@ -48,6 +48,8 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
+    console.log('**********************************************');
+    console.log('Activating Azure Functions extension...');
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
@@ -74,6 +76,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const templateProvider = new CentralTemplateProvider();
         ext.templateProvider.registerExtensionVariable(templateProvider);
+        console.log('Registered CentralTemplateProvider in extension variables.');
         context.subscriptions.push(templateProvider);
 
         // Suppress "Report an Issue" button for all errors in favor of the command
@@ -133,6 +136,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             'DurableTaskSchedulerEmulator',
             new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
+
+    console.log('Activated Azure Functions extension...');
+    console.log('**********************************************');
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
         revealTreeItem,
