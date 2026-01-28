@@ -27,7 +27,7 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
     if (isJavaRemoteDebuggingEnabled) {
         const appSettings: StringDictionary = await siteClient.listApplicationSettings();
         const workerRuntime: string | undefined = appSettings.properties?.[workerRuntimeKey];
-        
+
         // If this is a Java app, delegate to Java remote debugging
         if (workerRuntime?.toLowerCase() === 'java') {
             return await remoteDebugJavaFunctionApp(context, node);
