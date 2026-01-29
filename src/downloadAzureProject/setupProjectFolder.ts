@@ -7,7 +7,7 @@ import { type HostKeys } from '@azure/arm-appservice';
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
 import { parseAzureResourceId, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as extract from 'extract-zip';
+import extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
@@ -57,7 +57,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+             
             await extract(downloadFilePath, { dir: projectFilePath });
             await requestUtils.downloadFile(
                 context,

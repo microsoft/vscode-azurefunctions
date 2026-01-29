@@ -68,7 +68,7 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
                 executeSteps.push(
                     new VerifyProvidersStep<ISqlDatabaseAzureConnectionWizardContext>([SqlProvider]),
                     new SqlDatabaseGetConnectionStep(),
-                )
+                );
                 break;
             case ConnectionType.Custom:
                 promptSteps.push(new SqlDbConnectionCustomPromptStep());

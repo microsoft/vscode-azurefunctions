@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { delay, nonNullProp } from '../extension.bundle';
+import { delay } from '../src/utils/delay';
+import { nonNullProp } from '../src/utils/nonNull';
 import { cleanTestWorkspace, longRunningTestsEnabled } from './global.test';
 
 export interface ParallelTest {

@@ -89,7 +89,7 @@ export class EventGridFileOpenStep extends AzureWizardExecuteStep<EventGridExecu
     }
 
     public shouldExecute(context: EventGridExecuteFunctionContext): boolean {
-        return !context.fileOpened
+        return !context.fileOpened;
     }
 
 }

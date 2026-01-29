@@ -20,6 +20,6 @@ export async function renameAppSetting(context: IFunctionAppWizardContext, node?
 
     const parent = node.parent.parent;
 
-    await showEolWarningIfNecessary(context, nonNullValue(parent))
+    await showEolWarningIfNecessary(context, nonNullValue(parent));
     await node.rename(context);
 }

@@ -89,7 +89,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public async isReadOnly(): Promise<boolean> {
-        return true
+        return true;
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
@@ -119,7 +119,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             result = version || latestGAVersion;
             this._cachedVersion = result;
         }
-        return result
+        return result;
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
@@ -149,7 +149,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             contextValuesToAdd: ['azFunc', 'container'],
         });
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._imageTreeItem,]
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._imageTreeItem,];
 
         return children;
     }
@@ -190,7 +190,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             }
         }
 
-        return undefined
+        return undefined;
     }
 
     public compareChildrenImpl(): number {

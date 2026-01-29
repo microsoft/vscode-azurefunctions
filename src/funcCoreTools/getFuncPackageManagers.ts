@@ -17,11 +17,13 @@ export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<
 
     // Always check for npm (mac, windows, linux)
     try {
-        isFuncInstalled ?
-            await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', '-g', funcPackageName) :
+        if (isFuncInstalled) {
+            await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', '-g', funcPackageName);
+        } else {
             await cpUtils.executeCommand(undefined, undefined, 'npm', '--version');
+        }
         result.push(PackageManager.npm);
-    } catch (error) {
+    } catch (_error) {
         // an error indicates no npm
     }
 
@@ -40,7 +42,7 @@ async function hasBrew(isFuncInstalled: boolean): Promise<boolean> {
                 try {
                     await cpUtils.executeCommand(undefined, undefined, 'brew', '--version');
                     return true;
-                } catch (error) {
+                } catch (_error) {
                     // an error indicates no brew
                 }
             }

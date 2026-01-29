@@ -17,7 +17,5 @@
         "**/node_modules": true,
         ".vscode-test": true,
         "resources/backup*Templates": true
-    },
-    "typescript.preferences.importModuleSpecifier": "relative",
-    "typescript.tsdk": "node_modules/typescript/lib"
+    }
 }

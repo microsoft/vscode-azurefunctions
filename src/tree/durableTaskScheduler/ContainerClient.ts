@@ -96,7 +96,7 @@ export class ShellContainerClient implements ContainerClient {
         try {
             return await command();
         }
-        catch (error) {
+        catch (_error) {
             throw new Error(localize('containerRuntimeError', 'Unable to perform container command. Is a container runtime installed and running?'));
         }
     }

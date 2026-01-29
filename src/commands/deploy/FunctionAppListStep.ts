@@ -32,7 +32,7 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
                 label: nonNullProp(fa, 'name'),
                 description: parseAzureResourceGroupId(nonNullProp(fa, 'id')).resourceGroup,
                 data: fa
-            }
+            };
         });
 
         qp.unshift({ label: '$(plus) Create new function app...', data: undefined });

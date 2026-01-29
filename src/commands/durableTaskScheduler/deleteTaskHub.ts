@@ -53,5 +53,5 @@ export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         finally {
             taskHub.scheduler.refresh();
         }
-    }
+    };
 }

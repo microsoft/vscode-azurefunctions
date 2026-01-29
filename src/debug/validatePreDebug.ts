@@ -170,7 +170,7 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
-        } catch (error) {
+        } catch (_error) {
             // azurite.azurite Check to see if azurite extension is installed
             const azuriteExtension = vscode.extensions.getExtension('azurite.azurite');
             const installOrRun: vscode.MessageItem = azuriteExtension ? { title: localize('runAzurite', 'Run Emulator') } : { title: localize('installAzurite', 'Install Azurite') };

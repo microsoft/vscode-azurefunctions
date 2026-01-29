@@ -6,7 +6,13 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
-import { cpUtils, delay, ext, getGlobalSetting, getRandomHexString, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
+import { pythonVenvSetting } from '../src/constants';
+import { ext } from '../src/extensionVariables';
+import { cpUtils } from '../src/utils/cpUtils';
+import { delay } from '../src/utils/delay';
+import { getRandomHexString } from '../src/utils/fs';
+import { venvUtils } from '../src/utils/venvUtils';
+import { getGlobalSetting, updateGlobalSetting } from '../src/vsCodeConfig/settings';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 

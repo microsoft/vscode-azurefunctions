@@ -25,7 +25,7 @@ export namespace ballerinaUtils {
             unlinkSync(mainBalPath);
             const devContainerPath: string = `${context.projectPath}/.devcontainer.json`;
             unlinkSync(devContainerPath);
-        } catch (error) {
+        } catch (_error) {
             handleBallerinaNotFoundErr(context);
         }
     }

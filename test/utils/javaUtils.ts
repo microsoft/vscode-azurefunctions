@@ -6,7 +6,8 @@
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { createNewProjectInternal, ProjectLanguage } from '../../extension.bundle';
+import { createNewProjectInternal } from '../../src/commands/createNewProject/createNewProject';
+import { ProjectLanguage } from '../../src/constants';
 import { cleanTestWorkspace } from '../global.test';
 
 export namespace javaUtils {

@@ -69,7 +69,7 @@ export class CentralTemplateProvider implements Disposable {
                 if (isPythonV2Plus(language, languageModel)) {
                     providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
                 } else if (isNodeV4Plus({ language, languageModel })) {
-                    providers.push(new NodeV4Provider(version, projectPath, language, projectTemplateKey))
+                    providers.push(new NodeV4Provider(version, projectPath, language, projectTemplateKey));
                 } else {
                     providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
                     if (version !== FuncVersion.v1) {

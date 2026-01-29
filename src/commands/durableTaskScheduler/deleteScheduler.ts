@@ -56,5 +56,5 @@ export function deleteSchedulerCommandFactory(
         finally {
             dataBranchProvider.refresh();
         }
-    }
+    };
 }

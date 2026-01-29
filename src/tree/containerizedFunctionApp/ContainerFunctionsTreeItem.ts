@@ -7,7 +7,7 @@ import { type FunctionEnvelope, type Site } from "@azure/arm-appservice";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { nonNullProp, nonNullValueAndProp, type AzExtTreeItem, type IActionContext } from "@microsoft/vscode-azext-utils";
-import * as retry from 'p-retry';
+import retry from 'p-retry';
 import { ParsedFunctionJson } from "../../funcConfig/function";
 import { localize } from "../../localize";
 import { FunctionsTreeItemBase } from "../FunctionsTreeItemBase";

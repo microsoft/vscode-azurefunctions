@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
+import retry from 'p-retry';
 import * as path from 'path';
 import { Uri, window, type MessageItem, type WorkspaceFolder } from 'vscode';
 import { McpProjectType, mcpProjectTypeSetting } from '../../constants';
@@ -28,7 +28,7 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
         if (shouldCheckEventSystemTopics) {
             await promptForEventGrid(context, workspaceFolder);
         }
-    } catch (err) {
+    } catch (_err) {
         // ignore this error, don't block deploy for this check
     }
     const messageItems: MessageItem[] = [];
@@ -60,7 +60,7 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
                 const subContext = {
                     ...postDeployContext,
                     ...node.site.subscription
-                }
+                };
                 await uploadAppSettings(subContext, node.appSettingsTreeItem, undefined, workspaceFolder);
             } else if (result === connectMcpServer) {
                 const mcpProjectType = getWorkspaceSetting(mcpProjectTypeSetting, workspaceFolder.uri.fsPath);
@@ -113,7 +113,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItem):
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
         for (const func of anonFunctions) {
-            const triggerRequest = nonNullValue(await func.getTriggerRequest(context), 'triggerRequest')
+            const triggerRequest = nonNullValue(await func.getTriggerRequest(context), 'triggerRequest');
             ext.outputChannel.appendLine(`  ${func.label}: ${triggerRequest.url}`);
         }
     }

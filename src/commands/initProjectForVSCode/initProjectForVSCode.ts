@@ -48,7 +48,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
     const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey });
-    const wizard: AzureWizard<IProjectWizardContext> = new AzureWizard(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
+    const wizard = new AzureWizard<IProjectWizardContext>(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();
     await wizard.execute();
 

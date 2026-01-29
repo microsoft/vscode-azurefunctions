@@ -6,7 +6,7 @@
 import { type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
+import { default as retry } from 'p-retry';
 import * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { azureWebJobsFeatureFlags, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
@@ -70,7 +70,7 @@ export async function verifyAppSettings(options: {
         await client.updateApplicationSettings(appSettings);
         try {
             await verifyAppSettingsPropagated(context, client, appSettings);
-        } catch (e) {
+        } catch (_e) {
             // don't throw if we can't verify the settings were updated
         }
 

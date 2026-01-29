@@ -67,7 +67,7 @@ export class WriteToFileExecuteStep<T extends FunctionV2WizardContext> extends A
                         system: {
                             webhookAuthorizationLevel: "System"
                         }
-                    }
+                    };
                 }
                 await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }
