@@ -5,7 +5,8 @@
 
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { FuncVersion, hasMinFuncCliVersion } from '../extension.bundle';
+import { hasMinFuncCliVersion } from '../src/funcCoreTools/hasMinFuncCliVersion';
+import { FuncVersion } from '../src/FuncVersion';
 
 suite('hasMinFuncCliVersion', () => {
     test('Smaller major version', async () => {

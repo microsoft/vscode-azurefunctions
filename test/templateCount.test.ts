@@ -5,7 +5,11 @@
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import { FuncVersion, ProjectLanguage, TemplateFilter, TemplateSource, type CentralTemplateProvider, type FunctionTemplateBase } from '../extension.bundle';
+import { ProjectLanguage, TemplateFilter } from '../src/constants';
+import { TemplateSource } from '../src/extensionVariables';
+import { FuncVersion } from '../src/FuncVersion';
+import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
+import { FunctionTemplateBase } from '../src/templates/IFunctionTemplate';
 import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 

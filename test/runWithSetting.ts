@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ext, getGlobalSetting, updateGlobalSetting } from "../extension.bundle";
-
+import { getGlobalSetting, updateGlobalSetting } from '../src/vsCodeConfig/settings';
+import { ext } from './global.test';
 type SettingValue = {} | string | boolean | undefined;
 
 export async function runWithFuncSetting(key: string, value: SettingValue, callback: () => Promise<void>): Promise<void> {
-    await runWithSettingInternal(key, value, ext.prefix, callback);
+    await runWithSettingInternal(key, value, ext!.prefix, callback);
 }
 
 export async function runWithSetting(key: string, value: SettingValue, callback: () => Promise<void>): Promise<void> {

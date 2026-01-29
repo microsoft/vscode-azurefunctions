@@ -147,7 +147,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             });
         },
         startFuncProcess: startFuncProcessFromApi,
-        apiVersion: '1.10.0'
+        apiVersion: '1.10.0',
+        extensionVariables: ext
     }]);
 }
 

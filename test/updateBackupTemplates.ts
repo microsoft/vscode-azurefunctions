@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import { CentralTemplateProvider, FuncVersion, ProjectLanguage, supportedLanguages as resourceLanguages, type TemplateProviderBase } from '../extension.bundle';
+import { ProjectLanguage } from '../src/constants';
+import { FuncVersion } from '../src/FuncVersion';
+import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
+import { supportedLanguages as resourceLanguages } from '../src/templates/script/getScriptResourcesLanguage';
+import { TemplateProviderBase } from '../src/templates/TemplateProviderBase';
 import { getTestWorkspaceFolder, updateBackupTemplates } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 

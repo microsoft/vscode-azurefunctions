@@ -1488,7 +1488,7 @@
         "@microsoft/vscode-azext-azureappservice": "^4.0.1",
         "@microsoft/vscode-azext-azureappsettings": "^1.0.0",
         "@microsoft/vscode-azext-azureutils": "^4.0.1",
-        "@microsoft/vscode-azext-utils": "^4.0.3",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-4.0.4.tgz",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
         "@microsoft/vscode-container-client": "^0.3.0",
         "cross-fetch": "^4.0.0",
@@ -1509,6 +1509,9 @@
     },
     "extensionDependencies": [
         "ms-azuretools.vscode-azureresourcegroups"
+    ],
+    "enabledApiProposals": [
+        "extensionRuntime"
     ],
     "agentMetadata": {
         "version": "1.0",

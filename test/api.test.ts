@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithInputs } from '@microsoft/vscode-azext-dev';
-import { type apiUtils } from "@microsoft/vscode-azext-utils";
+import { nonNullValue, registerOnActionStartHandler, type apiUtils } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { extensions, type Extension } from "vscode";
-import { extensionId, FuncVersion, nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
+import { extensionId, ProjectLanguage } from '../src/constants';
+import { FuncVersion } from '../src/FuncVersion';
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { convertToValidPackageName } from '../extension.bundle';
+import { convertToValidPackageName } from '../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
 
 suite('convertToValidPackageName', () => {
     const testCases: [string, string, string][] = [

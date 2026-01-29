@@ -66,6 +66,7 @@ export interface AzureFunctionsExtensionApi {
 
     listLocalProjects(): Promise<ListLocalProjectsResult>;
     listLocalFunctions(localProject: WorkspaceProject): Promise<ListLocalFunctionsResult>;
+    extensionVariables?: typeof import('./extensionVariables').ext;
 
     /**
      *
@@ -88,6 +89,9 @@ export interface AzureFunctionsExtensionApi {
      * - `error` {string}: Error message in case the process fails to start, otherwise an empty string.
     */
     startFuncProcess(buildPath: string, args: string[], env: { [key: string]: string }): Promise<{ processId: string; success: boolean; error: string }>;
+
+    // Optional extension variables for test purposes
+    extensionVariables?: typeof import('./extensionVariables').ext;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';

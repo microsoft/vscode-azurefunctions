@@ -236,6 +236,7 @@ export class CentralTemplateProvider implements Disposable {
             const errorMessage: string = parseError(error).message;
             // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
             latestErrorMessage = localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage);
+            console.log('****THE KEY IS HERE', ext, latestErrorMessage);
             ext.outputChannel.appendLog(latestErrorMessage);
             context.telemetry.properties.latestTemplatesError = maskUserInfo(errorMessage, []);
         }

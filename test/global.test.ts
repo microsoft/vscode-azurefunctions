@@ -3,13 +3,20 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { apiUtils, AzExtFsExtra, createTestActionContext, IActionContext, parseError, registerOnActionStartHandler, runWithTestActionContext, testGlobalSetup, TestOutputChannel, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting, type IActionContext } from '../extension.bundle';
+import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, TemplateFilter, templateFilterSetting } from '../src/constants';
+import { TemplateSource } from '../src/extensionVariables';
+import { FuncVersion } from '../src/FuncVersion';
+import { localize } from '../src/localize';
+import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
+import { envUtils } from '../src/utils/envUtils';
+import { getRandomHexString } from '../src/utils/fs';
+import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
+import { getGlobalSetting, updateGlobalSetting, updateWorkspaceSetting } from '../src/vsCodeConfig/settings';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -30,6 +37,8 @@ let oldRequestTimeout: number | undefined;
 
 let testWorkspaceFolders: string[];
 let workspaceFolderIndex = 0;
+
+export let ext: typeof import('../src/extensionVariables').ext | undefined;
 export function getTestWorkspaceFolder(): string {
     if (workspaceFolderIndex >= testWorkspaceFolders.length) {
         throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".')
@@ -44,7 +53,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
-
+    testGlobalSetup();
     await AzExtFsExtra.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
 
@@ -52,7 +61,12 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (!funcExtension) {
         throw new Error('Could not find the Azure Functions extension.');
     }
-    await funcExtension.activate(); // activate the extension before tests begin
+    await funcExtension.activate();
+    const functionsApi = await getFunctionsApi(await createTestActionContext());
+    ext = functionsApi.extensionVariables;
+    if (!ext) {
+        throw new Error('Extension variables not found on Azure Functions extension API.');
+    }
 
     ext.outputChannel = new TestOutputChannel();
 
@@ -63,7 +77,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
-
     if (!updateBackupTemplates) {
         await preLoadTemplates();
     }
@@ -88,7 +101,11 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
  * Pre-load templates so that the first related unit test doesn't time out
  */
 async function preLoadTemplates(): Promise<void> {
+    if (!ext) {
+        throw new Error('Extension variables not found on Azure Functions extension API.');
+    }
     const providers = [ext.templateProvider.get(await createTestActionContext())];
+    console.log(backupLatestTemplateSources, '****PRELOAD TEMPLATES FROM SOURCES');
     for (const source of backupLatestTemplateSources) {
         const provider = new CentralTemplateProvider(source);
         templateProviderMap.set(source, provider);
@@ -98,6 +115,9 @@ async function preLoadTemplates(): Promise<void> {
     const tasks: Promise<unknown>[] = [];
     for (const provider of providers) {
         await runWithTestActionContext('preLoadTemplates', async context => {
+            if (!ext) {
+                throw new Error('Extension variables not found on Azure Functions extension API.');
+            }
             ext.templateProvider.registerActionVariable(provider, context);
             for (const version of Object.values(FuncVersion)) {
                 if (version === FuncVersion.v4) {
@@ -128,6 +148,10 @@ export function shouldSkipVersion(version: FuncVersion): boolean {
 export const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
 export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
     let templateProvider: CentralTemplateProvider | undefined;
+    if (!ext) {
+        throw new Error('Extension variables not found on Azure Functions extension API.');
+
+    }
     if (source === undefined) {
         templateProvider = ext.templateProvider.get(context);
     } else {
@@ -178,4 +202,20 @@ async function initTestWorkspaceFolders(): Promise<string[]> {
         }
         return folders;
     }
+}
+
+export async function getFunctionsApi(context: IActionContext, installMessage?: string): Promise<AzureFunctionsExtensionApi> {
+    const funcExtensionId: string = 'ms-azuretools.vscode-azurefunctions';
+    const funcExtension: apiUtils.AzureExtensionApiProvider | undefined = await apiUtils.getExtensionExports(funcExtensionId);
+
+    if (funcExtension) {
+        return funcExtension.getApi<AzureFunctionsExtensionApi>('^1.7.0');
+    }
+
+    await context.ui.showWarningMessage(installMessage ?? localize('funcInstall', 'You must have the "Azure Functions" extension installed to perform this operation.'), { title: 'Install', stepName: 'installFunctions' });
+    const commandToRun: string = 'extension.open';
+    void vscode.commands.executeCommand(commandToRun, funcExtensionId);
+
+    // we still need to throw an error even if the user installs
+    throw new UserCancelledError('postInstallFunctions');
 }

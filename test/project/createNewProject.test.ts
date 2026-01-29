@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
+import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
+import { TemplateSource } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
