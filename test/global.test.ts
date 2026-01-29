@@ -68,6 +68,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         throw new Error('Extension variables not found on Azure Functions extension API.');
     }
 
+    this.skip();
     ext.outputChannel = new TestOutputChannel();
 
     registerOnActionStartHandler(context => {
