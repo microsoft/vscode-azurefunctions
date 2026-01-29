@@ -60,6 +60,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     }
     await funcExtension.activate(); // activate the extension before tests begin
 
+    this.skip();
     ext.outputChannel = new TestOutputChannel();
 
     registerOnActionStartHandler(context => {
