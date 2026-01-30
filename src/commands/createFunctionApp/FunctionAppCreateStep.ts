@@ -168,7 +168,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                     name: extensionVersionKey,
                     value: '~' + getMajorVersion(context.version)
                 }],
-                 
+
                 ...Object.entries(stackSettings.appSettingsDictionary).map(([name, value]) => { return { name, value }; }));
         }
 
