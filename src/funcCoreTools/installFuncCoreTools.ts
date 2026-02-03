@@ -24,14 +24,14 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
         case PackageManager.npm:
             const distTag: INpmDistTag = await getNpmDistTag(context, version);
             lastCoreToolsInstallCommand = ['npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`];
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', composeArgs(withArg('install', '-g', `${funcPackageName}@${distTag.tag}`))());
+            await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
             lastCoreToolsInstallCommand = ['brew', 'tap', 'azure/functions'];
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', composeArgs(withArg('tap', 'azure/functions'))());
+            await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             lastCoreToolsInstallCommand = ['brew', 'install', brewPackageName];
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', composeArgs(withArg('install', brewPackageName))());
+            await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManagers[0]));

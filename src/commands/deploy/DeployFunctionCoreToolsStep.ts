@@ -5,6 +5,7 @@
 
 import { type InnerDeployContext } from "@microsoft/vscode-azext-azureappservice";
 import { ActivityChildItem, ActivityChildType, activityFailContext, activityFailIcon, activityProgressContext, activityProgressIcon, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, randomUtils, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg, withNamedArg } from "@microsoft/vscode-processutils";
 import { l10n, ThemeIcon, TreeItemCollapsibleState, type Progress } from "vscode";
 import { ext } from "../../extensionVariables";
 import { cpUtils } from "../../utils/cpUtils";
@@ -89,12 +90,12 @@ export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDep
         const message = l10n.t('Publishing "{0}" to "{1}" with Function Core Tools...', context.originalDeployFsPath, context.site.fullName);
         progress.report({ message });
         context.activityAttributes = context.activityAttributes ?? { logs: [] };
-        const args = ['func', 'azure', 'functionapp', 'publish', context.site.siteName];
+        const argBuilders = [withArg('azure', 'functionapp', 'publish', context.site.siteName)];
         if (context.site.isSlot) {
-            // if there's no slotName, then just assume production
-            args.push('--slot', context.site.slotName ?? 'production');
+            argBuilders.push(withNamedArg('--slot', context.site.slotName ?? 'production'));
         }
-        const cmdOutput = await cpUtils.tryExecuteCommandLine(ext.outputChannel, context.originalDeployFsPath, args.join(' '));
+        const args = composeArgs(...argBuilders)();
+        const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, 'func', args);
         context.activityAttributes.logs = [{ content: cmdOutput.cmdOutputIncludingStderr }];
     }
     public shouldExecute(_context: InnerDeployContext): boolean {
