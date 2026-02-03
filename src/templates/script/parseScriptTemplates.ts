@@ -197,7 +197,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         return undefined;
     }
 
-    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function);
+    // V4 triggers use metadata rather than the function object
+    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function ?? rawTemplate.metadata);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
     // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
@@ -251,6 +252,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         functionJson,
         isHttpTrigger: functionJson.isHttpTrigger,
         isTimerTrigger: functionJson.isTimerTrigger,
+        isMcpTrigger: functionJson.isMcpTrigger,
         isSqlBindingTemplate: sqlBindingTemplateRegex.test(rawTemplate.id),
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),

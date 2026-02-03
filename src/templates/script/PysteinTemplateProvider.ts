@@ -27,12 +27,12 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     }
 
     protected _resources: { en: { [key: string]: string } };
-    protected _rawTemplates: RawTemplateV2[];
-    protected _rawBindings: object[];
+    declare protected _rawTemplates: RawTemplateV2[];
+    declare protected _rawBindings: object[];
     protected _language: string;
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const release: bundleFeedUtils.ITemplatesReleaseV2 = await bundleFeedUtils.getReleaseV2(latestTemplateVersion);
+        const release = await bundleFeedUtils.getRelease(latestTemplateVersion, 'v2') as bundleFeedUtils.ITemplatesReleaseV2;
         const language = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const urls: string[] = [release.userPrompts ?? release.bindings, resourcesUrl, release.functions];
@@ -43,7 +43,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
             functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             // no bindings for V2 schema
             bindingTemplates: []
-        }
+        };
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
@@ -55,7 +55,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         return {
             functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),
             bindingTemplates: []
-        }
+        };
     }
 
     public includeTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {

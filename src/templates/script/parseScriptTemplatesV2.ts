@@ -112,7 +112,7 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
 
             const parsedActions: ParsedAction[] = [];
             for (const action of job.actions) {
-                const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase())
+                const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase());
                 if (parsedAction) {
                     parsedActions.push(parsedAction);
                 }
@@ -121,12 +121,16 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
         }
         const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
         const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
+        // python and node.js use 2 different IDs for Mcp Triggers... because of course they do
+        const isMcpTrigger = !!templateV2.id?.toLowerCase().includes('mcptooltrigger') ||
+            templateV2.id?.toLowerCase().includes('mcptrigger');
 
         templates.push(Object.assign(templateV2, {
             wizards: parsedJobs,
             id: nonNullValue(templateV2.id),
             isHttpTrigger,
             isTimerTrigger,
+            isMcpTrigger,
             templateSchemaVersion: TemplateSchemaVersion.v2
         }));
     }

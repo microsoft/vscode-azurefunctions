@@ -59,7 +59,7 @@ export class NodeV4Provider extends TemplateProviderBase {
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return this.isFunctionTemplate(template)
             && template.language === this.language
-            && !!template.triggerType
+            && !!template.triggerType;
     }
 
     protected async parseTemplates(rootPath: string): Promise<ITemplates> {

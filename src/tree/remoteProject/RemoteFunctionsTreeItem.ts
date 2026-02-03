@@ -5,7 +5,7 @@
 
 import { type FunctionEnvelope } from '@azure/arm-appservice';
 import { nonNullProp, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
+import retry from 'p-retry';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
@@ -14,7 +14,7 @@ import { RemoteFunction } from './RemoteFunction';
 import { RemoteFunctionTreeItem, getFunctionNameFromId } from './RemoteFunctionTreeItem';
 
 export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
-    public readonly parent: SlotTreeItem;
+    declare public readonly parent: SlotTreeItem;
     public isReadOnly: boolean;
 
     private _nextLink: string | undefined;

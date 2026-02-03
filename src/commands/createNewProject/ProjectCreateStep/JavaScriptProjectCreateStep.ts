@@ -81,7 +81,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         return {
             start: 'func start',
             test: 'echo \"No tests yet...\"'
-        }
+        };
     }
 
     protected getPackageJsonDeps(context: IProjectWizardContext): { [key: string]: string } {

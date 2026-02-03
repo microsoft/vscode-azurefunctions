@@ -6,8 +6,11 @@
 import { type Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { DialogResponses } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import { DialogResponses, createFunctionAppAdvanced, deleteFunctionApp, getRandomHexString } from '../../extension.bundle';
+import { createFunctionAppAdvanced } from '../../src/commands/createFunctionApp/createFunctionApp';
+import { deleteFunctionApp } from '../../src/commands/deleteFunctionApp';
+import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';

@@ -15,7 +15,7 @@ export namespace gradleUtils {
     export async function validateGradleInstalled(context: IActionContext): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, undefined, gradleCommand, composeArgs(withArg('--version'))());
-        } catch (error) {
+        } catch (_error) {
             const message: string = localize('gradleNotFound', 'Failed to find "gradle", please ensure that the gradle bin directory is in your system path.');
 
             if (!context.errorHandling.suppressDisplay) {

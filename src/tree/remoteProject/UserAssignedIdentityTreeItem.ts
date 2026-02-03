@@ -30,12 +30,12 @@ export class UserAssignedIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, this.identity);
+        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, this.identity, this.parent.parent.site.id);
         return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return false
+        return false;
     }
 
     public get id(): string {

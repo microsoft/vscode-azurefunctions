@@ -31,7 +31,7 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
                 context.telemetry.properties.verifyConfigResult = 'update';
 
                 const wizardContext: IPythonVenvWizardContext = { ...context, version, venvName, projectPath, suppressSkipVenv: true };
-                const wizard: AzureWizard<IPythonVenvWizardContext> = new AzureWizard(wizardContext, {
+                const wizard = new AzureWizard<IPythonVenvWizardContext>(wizardContext, {
                     promptSteps: [new PythonAliasListStep()],
                     executeSteps: [new PythonVenvCreateStep()],
                     title: localize('createVenv', 'Create virtual environment')

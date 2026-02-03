@@ -4,27 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzExtFsExtra, maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
-import * as path from 'path';
+import { maskUserInfo, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
-import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
-import { validateEventHubsConnection } from '../commands/appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { validateSqlDbConnection } from '../commands/appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { CodeAction, ConnectionKey, DurableBackend, ProjectLanguage, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
-import { ParsedFunctionJson } from "../funcConfig/function";
+import { CodeAction, ConnectionKey, DurableBackend, localSettingsFileName, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { MismatchBehavior, getLocalSettingsConnectionString, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
-import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { durableUtils } from '../utils/durableUtils';
-import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
+import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
-import { validateDTSConnectionPreDebug } from './durable/validateDTSConnectionPreDebug';
+import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
+import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
+import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
+import { validateStorageConnectionPreDebug } from './storageProviders/validateStorageConnectionPreDebug';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -71,19 +68,19 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                         await validateDTSConnectionPreDebug(context, context.projectPath);
                         break;
                     case DurableBackend.Netherite:
-                        context.telemetry.properties.lastValidateStep = 'eventHubsConnection';
-                        await validateEventHubsConnection(context, context.projectPath);
+                        context.telemetry.properties.lastValidateStep = 'netheriteConnection';
+                        await validateNetheriteConnectionPreDebug(context, context.projectPath);
                         break;
                     case DurableBackend.SQL:
                         context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSqlDbConnection(context, context.projectPath);
+                        await validateSQLConnectionPreDebug(context, context.projectPath);
                         break;
                     case DurableBackend.Storage:
                     default:
                 }
 
                 context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, projectLanguage, projectLanguageModel, context.projectPath, !!durableStorageType);
+                await validateAzureWebJobsStorage(context, context.projectPath);
 
                 context.telemetry.properties.lastValidateStep = 'emulatorRunning';
                 shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
@@ -103,18 +100,6 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     context.telemetry.properties.shouldContinue = String(shouldContinue);
 
     return { workspace, shouldContinue };
-}
-
-export function canValidateAzureWebJobStorageOnDebug(projectLanguage: string | undefined): boolean {
-    switch (projectLanguage) {
-        case ProjectLanguage.CSharp:
-        case ProjectLanguage.FSharp:
-        case ProjectLanguage.Java:
-            // We know if we need `AzureWebJobStorage` based on the function.json files, but those files don't exist until after a build for languages that need to be compiled
-            return false;
-        default:
-            return true;
-    }
 }
 
 function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {
@@ -171,37 +156,21 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
     }
 }
 
-async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
-    if (!canValidateAzureWebJobStorageOnDebug(projectLanguage) && !requiresDurableStorage) {
-        return;
-    }
-
-    const functionFolders: string[] = await getFunctionFolders(context, projectPath);
-    const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
-        const functionJsonPath: string = path.join(projectPath, ff, functionJsonFileName);
-        return new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
-    }));
-
-    // NOTE: Currently, Python V2+ and Node.js V4 requires storage to be configured, even for HTTP triggers.
-    if (functions.some(f => !f.isHttpTrigger) ||
-        isPythonV2Plus(projectLanguage, projectLanguageModel) ||
-        isNodeV4Plus({ language: projectLanguage, languageModel: projectLanguageModel }) ||
-        requiresDurableStorage) {
-
-        await validateStorageConnection(context, projectPath);
-    }
+async function validateAzureWebJobsStorage(context: IPreDebugContext, projectPath: string): Promise<void> {
+    // most programming models require the `AzureWebJobsStorage` connection now so we should just validate it for every runtime/trigger
+    await validateStorageConnectionPreDebug(context, projectPath);
 }
 
 /**
  * If AzureWebJobsStorage is set, pings the emulator to make sure it's actually running
  */
 async function validateEmulatorIsRunning(context: IActionContext, projectPath: string): Promise<boolean> {
-    const azureWebJobsStorage: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
-    if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localStorageEmulatorConnectionString.toLowerCase()) {
+    const [azureWebJobsStorage, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
+    if (azureWebJobsStorage && isEmulator) {
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
-        } catch (error) {
+        } catch (_error) {
             // azurite.azurite Check to see if azurite extension is installed
             const azuriteExtension = vscode.extensions.getExtension('azurite.azurite');
             const installOrRun: vscode.MessageItem = azuriteExtension ? { title: localize('runAzurite', 'Run Emulator') } : { title: localize('installAzurite', 'Install Azurite') };
@@ -212,6 +181,8 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
             if (result === installOrRun) {
                 if (azuriteExtension) {
                     await vscode.commands.executeCommand('azurite.start_blob');
+                    await vscode.commands.executeCommand('azurite.start_table');
+                    await vscode.commands.executeCommand('azurite.start_queue');
                 }
                 else {
                     await vscode.commands.executeCommand('workbench.extensions.installExtension', 'azurite.azurite');

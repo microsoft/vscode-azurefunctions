@@ -12,7 +12,7 @@ import { UserAssignedIdentityTreeItem } from './UserAssignedIdentityTreeItem';
 
 export class UserAssignedIdentitiesTreeItem extends AzExtParentTreeItem {
     public readonly label: string = localize('userAssignedIdentities', 'User Assigned');
-    public readonly parent: SlotTreeItem;
+    declare public readonly parent: SlotTreeItem;
     public isReadOnly: boolean;
     public readonly contextValue: string = 'userAssignedIdentities';
     public get id(): string {

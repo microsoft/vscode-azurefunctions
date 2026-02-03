@@ -12,7 +12,12 @@ import { localize } from "../../localize";
 import { type ManagedIdentityAssignContext } from "./ManagedIdentityAssignContext";
 
 export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIdentityAssignContext> {
-    public priority: number = 500;
+    public priority: number;
+
+    constructor(options?: { priority?: number }) {
+        super();
+        this.priority = options?.priority ?? 500;
+    }
 
     public async execute(context: ManagedIdentityAssignContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const site: ParsedSite = nonNullProp(context, 'site');
@@ -52,7 +57,7 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
 const addUserAssignedType = (type: ManagedServiceIdentityType | undefined): ManagedServiceIdentityType => {
     if (type?.includes('UserAssigned')) {
-        return type
+        return type;
     }
     if (type === 'SystemAssigned') {
         return 'SystemAssigned, UserAssigned';

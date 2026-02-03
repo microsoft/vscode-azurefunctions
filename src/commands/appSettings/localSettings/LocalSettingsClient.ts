@@ -24,7 +24,7 @@ export class LocalSettingsClientProvider implements AppSettingsClientProvider {
 export class LocalSettingsClient implements IAppSettingsClient {
     public fullName: string;
     public isLinux: boolean;
-    private _workspaceFolder: vscode.WorkspaceFolder
+    private _workspaceFolder: vscode.WorkspaceFolder;
 
     constructor(workspaceFolder: vscode.WorkspaceFolder) {
         this.isLinux = false;

@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
-import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
-import { DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
-import { CodeAction, ConnectionKey, ConnectionType, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
+import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -20,26 +21,31 @@ import { createActivityContext } from '../../utils/activityUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
+import { isMcpProject } from '../../utils/mcpUtils';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { CommandAttributes } from '../CommandAttributes';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { getStorageConnectionIfNeeded } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnection';
 import { getDTSConnectionIfNeeded } from '../appSettings/connectionSettings/durableTaskScheduler/getDTSConnection';
-import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
-import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
+import { getNetheriteConnectionIfNeeded } from '../appSettings/connectionSettings/netherite/getNetheriteConnection';
+import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlDatabase/getSQLConnection';
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
+import { CreateRemoteMcpServerExecuteStep } from './CreateRemoteMcpServerExecuteStep';
+import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
+import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
-import { shouldValidateConnections } from './shouldValidateConnection';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
 // context that is used for deployment but since creation is an option in the deployment command, include ICreateFunctionAppContext
-export type IFuncDeployContext = { site?: Site, subscription?: AzureSubscription } &
+export type IFuncDeployContext = { site?: Site, subscription?: AzureSubscription, isMcpProject?: boolean, deployedNode?: SlotTreeItem } &
     Partial<ICreateFunctionAppContext> & IDeployContext & ISetConnectionSettingContext & ExecuteActivityContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem): Promise<void> {
@@ -58,7 +64,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
-
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(actionContext, deployPaths.workspaceFolder);
     if (projectPath === undefined) {
         const message: string = localize('functionProjectRootNotFound', 'No azure function project root could be found. This can be caused by a missing {0} file.', hostFileName);
@@ -66,25 +71,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     const context: IFuncDeployContext = Object.assign(actionContext, deployPaths, {
+        ...await createActivityContext(),
+        activityAttributes: CommandAttributes.Deploy,
         action: CodeAction.Deploy,
         defaultAppSetting: 'defaultFunctionAppToDeploy',
         projectPath,
-        activityAttributes: {
-            "description": "Deploys application code to an Azure Functions app using deployment methods such as zip deployment, Azure CLI, or GitHub Actions. This action publishes the app to the specified Function App resource, making it live in the target environment.",
-            "troubleshooting": [
-                "Deployment succeeds but the app fails to start — check Application Insights or log stream for runtime errors.",
-                "Deployment fails due to '403 Forbidden' or '401 Unauthorized' — verify the publishing profile, service principal, or deployment credentials have appropriate permissions.",
-                "Code changes are not reflected — ensure you're not deploying to a staging slot or that deployment caching isn't interfering.",
-                "Missing or invalid host.json or function.json — validate your app's structure and configuration files.",
-                "Dependencies not installed — make sure your build step restores packages before deployment (e.g., npm install, pip install).",
-                "Cold start latency after deployment — this is normal for Consumption Plan apps and usually resolves after the first few executions.",
-                "Function runtime version mismatch — verify the target runtime version in Azure matches your local dev/runtime settings.",
-                "Zip deployment fails with 'conflicting changes' — ensure no simultaneous deployments or file locks are interfering.",
-                "Continuous deployment stuck or outdated — check your deployment center logs for GitHub/DevOps pipeline issues.",
-                "App Service Plan quota exceeded — check if the Function App’s resource usage has hit limits for memory, CPU, or file system."
-            ]
-        },
-        ...(await createActivityContext())
     });
 
     if (treeUtils.isAzExtTreeItem(arg1)) {
@@ -97,11 +88,16 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
-        return await getOrCreateFunctionApp(context)
+        return await getOrCreateFunctionApp(context);
     });
 
     await node.initSite(context);
     const site = node.site;
+
+    // Check if the function app is stopped and block deployment with a clear error message if it is not a containerized function app
+    if (!node.contextValue.includes('container') && (site.rawSite.state?.toLowerCase() === 'stopped')) {
+        throw new Error(localize('functionAppStoppedError', 'Cannot deploy to function app "{0}" because it is currently stopped. Please start the function app before deploying.', site.fullName));
+    }
 
     const subscriptionContext: ISubscriptionContext & { subscription: AzureSubscription } = {
         ...node.subscription,
@@ -115,7 +111,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     });
 
     if (node.contextValue.includes('container')) {
-        const learnMoreLink: string = 'https://aka.ms/deployContainerApps'
+        const learnMoreLink: string = 'https://aka.ms/deployContainerApps';
         await context.ui.showWarningMessage(localize('containerFunctionAppError', 'Deploy is not currently supported for containerized function apps within the Azure Functions extension. Please read here to learn how to deploy your project.'), { learnMoreLink });
         //suppress display of error message
         context.errorHandling.suppressDisplay = true;
@@ -148,6 +144,16 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const isFlexConsumption: boolean = await client.getIsConsumptionV2(actionContext);
     actionContext.telemetry.properties.isFlexConsumption = String(isFlexConsumption);
+
+    if (language === ProjectLanguage.Python && isFlexConsumption) {
+        const runtimeVersion = site.rawSite.functionAppConfig?.runtime?.version;
+        if (runtimeVersion === '3.14') {
+            const errorMessage = localize('python314FlexError', 'Remote build for Python 3.14 is not supported for flex. Please refer to https://aka.ms/py314-remote-build-flex.');
+            ext.outputChannel.appendLog(errorMessage);
+            throw new Error(errorMessage);
+        }
+    }
+
     // don't use remote build setting for consumption v2
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
@@ -161,25 +167,33 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'flexconsumption';
     }
 
+    const appSettings: StringDictionary = await client.listApplicationSettings();
+
     const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
-    const { shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(durableStorageType, client, context.projectPath);
-
-    // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
-    if (durableStorageType === DurableBackend.DTS) {
-        const dtsConnections = await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), client, site, context.projectPath);
-        context[ConnectionKey.DTS] = dtsConnections?.[ConnectionKey.DTS];
-        context[ConnectionKey.DTSHub] = dtsConnections?.[ConnectionKey.DTSHub];
-    }
-    if (shouldValidateEventHubs) {
-        await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
-    }
-    if (shouldValidateSqlDb) {
-        await validateSqlDbConnection(context, context.projectPath);
+    if (durableStorageType === DurableBackend.SQL && isFlexConsumption) {
+        const warning: string = localize('durableStorageTypeWarning', 'SQL storage provider support has not yet been verified for apps on a flex consumption plan.');
+        ext.outputChannel.appendLog(warning);
+        await context.ui.showWarningMessage(warning, { modal: true }, { title: localize('continue', 'Continue') });
     }
 
-    const appSettings: StringDictionary = await client.listApplicationSettings();
+    if (durableStorageType) {
+        switch (durableStorageType) {
+            case DurableBackend.DTS:
+                Object.assign(context, await getDTSConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            case DurableBackend.Netherite:
+                Object.assign(context, await getNetheriteConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            case DurableBackend.SQL:
+                Object.assign(context, await getSQLConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
+                break;
+            default:
+        }
+    }
+
+    Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
     const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
@@ -203,6 +217,12 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         deploymentWarningMessages.push(eolWarningMessage);
     }
 
+    const extensionBundleWarningMessage: string | undefined = await getWarningForExtensionBundle(context);
+
+    if (extensionBundleWarningMessage) {
+        deploymentWarningMessages.push(extensionBundleWarningMessage);
+    }
+
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
         deploymentWarningMessages.length > 0) {
         // if there is a warning message, we want to show the deploy confirmation regardless of the setting
@@ -211,54 +231,78 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             eolWarningMessage ? stackUpgradeLearnMoreLink : undefined);
     }
 
-    await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
+    if (language === ProjectLanguage.Custom && isFlexConsumption) {
+        // don't run predeploy tasks and verify settings for a deployment with the CLI
+        await validateFuncCoreToolsInstalled(context, localize('validateFuncCoreToolsCustom', 'The Functions Core Tools are required to deploy to a custom runtime function app.'));
+    } else {
+        await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 
-    if (isZipDeploy) {
-        void validateGlobSettings(context, context.effectiveDeployFsPath);
+        if (isZipDeploy) {
+            void validateGlobSettings(context, context.effectiveDeployFsPath);
+        }
+
+        if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
+            await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
+        }
+
+        if (isZipDeploy) {
+            await verifyAppSettings({
+                context,
+                node,
+                projectPath: context.projectPath,
+                version,
+                language,
+                languageModel,
+                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
+                durableStorageType,
+                appSettings
+            });
+        }
     }
 
-    if (language === ProjectLanguage.CSharp && !site.isLinux || durableStorageType) {
-        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
-    }
-
-    // app settings shouldn't be checked with flex consumption plans
-    if (isZipDeploy && !isFlexConsumption) {
-        await verifyAppSettings({
-            context,
-            node,
-            projectPath: context.projectPath,
-            version,
-            language,
-            languageModel,
-            bools: { doRemoteBuild, isConsumption },
-            durableStorageType,
-            appSettings
-        });
-    }
-
+    let deployedWithFuncCli = false;
+    context.isMcpProject = await isMcpProject(context.effectiveDeployFsPath);
+    context.deployedNode = node;
     await node.runWithTemporaryDescription(
         context,
         localize('deploying', 'Deploying...'),
         async () => {
-            // Stop function app here to avoid *.jar file in use on server side.
-            // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-            context.stopAppBeforeDeploy = language === ProjectLanguage.Java;
+            // deploy with func cli for custom runtimes on flex consumption due to additional requirements
+            if (language === ProjectLanguage.Custom && isFlexConsumption) {
+                context.telemetry.properties.funcCoreToolsInstalled = 'true';
+                context.telemetry.properties.deployMethod = 'funccli';
+                const deployContext = Object.assign(context, await createActivityContext(), { site }) as unknown as InnerDeployContext;
+                deployContext.activityChildren = [];
+                const wizard = new AzureWizard(deployContext, {
+                    executeSteps: [new DeployFunctionCoreToolsStep()],
+                });
 
-            // preDeploy tasks are only required for zipdeploy so subpath may not exist
-            let deployFsPath: string = context.effectiveDeployFsPath;
+                deployContext.activityTitle = site.isSlot
+                    ? localize('deploySlot', 'Deploy to slot "{0}"', site.fullName)
+                    : localize('deployApp', 'Deploy to app "{0}"', site.fullName);
+                await wizard.execute();
+                deployedWithFuncCli = true;
+                return;
+            } else {
+                // Stop function app here to avoid *.jar file in use on server side.
+                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                context.stopAppBeforeDeploy = language === ProjectLanguage.Java;
 
-            if (!isZipDeploy && !isPathEqual(context.effectiveDeployFsPath, context.originalDeployFsPath)) {
-                deployFsPath = context.originalDeployFsPath;
-                const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
-                ext.outputChannel.appendLog(noSubpathWarning);
+                // preDeploy tasks are only required for zipdeploy so subpath may not exist
+                let deployFsPath: string = context.effectiveDeployFsPath;
+
+                if (!isZipDeploy && !isPathEqual(context.effectiveDeployFsPath, context.originalDeployFsPath)) {
+                    deployFsPath = context.originalDeployFsPath;
+                    const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
+                    ext.outputChannel.appendLog(noSubpathWarning);
+                }
+                const deployContext = Object.assign(context, await createActivityContext());
+                deployContext.activityChildren = [];
+                await innerDeploy(site, deployFsPath, deployContext, [new CreateRemoteMcpServerExecuteStep()]);
             }
-            const deployContext = Object.assign(context, await createActivityContext());
-            deployContext.activityChildren = [];
-            await innerDeploy(site, deployFsPath, deployContext);
         }
     );
-
-    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption);
+    await notifyDeployComplete(context, node, context.workspaceFolder, isFlexConsumption, deployedWithFuncCli);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, site: ParsedSite, language: ProjectLanguage, durableStorageType: DurableBackend | undefined): Promise<void> {
@@ -303,3 +347,4 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
 }
+

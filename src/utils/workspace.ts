@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import * as globby from 'globby';
+import globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { browseItem } from '../constants';
 import { localize } from '../localize';
 import * as fsUtils from './fs';
 
@@ -40,13 +41,13 @@ export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder |
 export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: string): Promise<vscode.Uri[]> {
     // Per globby docs: "Note that glob patterns can only contain forward-slashes, not backward-slashes, so if you want to construct a glob pattern from path components, you need to use path.posix.join() instead of path.join()"
     const posixBase = path.posix.normalize(typeof base === 'string' ? base : base.uri.fsPath).replace(/\\/g, '/');
-    const escapedBase = escapeCharacters(posixBase)
+    const escapedBase = escapeCharacters(posixBase);
     const fullPattern = path.posix.join(escapedBase, pattern);
     return (await globby(fullPattern, { ignore: ['**/node_modules/**'] })).map(s => vscode.Uri.file(s));
 }
 
 function escapeCharacters(nonPattern: string): string {
-    return nonPattern.replace(/[$^*+?()\[\]\\]/g, '\\$&')
+    return nonPattern.replace(/[$^*+?()\[\]\\]/g, '\\$&');
 }
 
 export async function selectWorkspaceFolder(context: IActionContext, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
@@ -101,7 +102,7 @@ export async function selectWorkspaceItem(context: IActionContext, placeHolder: 
                 folderPicks.push({ label: path.basename(fsPath), description: fsPath, data: fsPath });
             }
         }
-        folderPicks.push({ label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined });
+        folderPicks.push(browseItem);
         folder = await context.ui.showQuickPick(folderPicks, { placeHolder });
     }
     return folder && folder.data ? folder.data : (await context.ui.showOpenDialog(options))[0].fsPath;

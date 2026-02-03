@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type IActionContext, type IAzureQuickPickItem, type IAzureQuickPickOptions, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import * as escape from 'escape-string-regexp';
+import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -18,7 +18,7 @@ import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
-import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
+import { DurableStorageTypeListStep } from './durableSteps/DurableStorageTypePromptStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -66,17 +66,20 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        if (context.functionTemplate?.templateSchemaVersion === TemplateSchemaVersion.v2) {
-            return { promptSteps: [new JobsListStep(this._isProjectWizard)] };
-        }
-
         const requiresDurableStorageSetup: boolean = durableUtils.requiresDurableStorageSetup(context);
-        if (requiresDurableStorageSetup) {
-            return { promptSteps: [new DurableStorageTypePromptStep()] };
-        } else {
-            return await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard);
+
+        if (context.functionTemplate?.templateSchemaVersion === TemplateSchemaVersion.v2) {
+            return requiresDurableStorageSetup ?
+                { promptSteps: [new DurableStorageTypeListStep(), new JobsListStep(this._isProjectWizard)] } :
+                { promptSteps: [new JobsListStep(this._isProjectWizard)] };
         }
 
+        const { promptSteps = [], executeSteps = [] } = await FunctionSubWizard.createSubWizard(context, this._functionSettings, this._isProjectWizard) ?? { promptSteps: [], executeSteps: [] };
+        if (requiresDurableStorageSetup) {
+            promptSteps.unshift(new DurableStorageTypeListStep());
+        }
+
+        return { promptSteps, executeSteps };
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {
@@ -91,7 +94,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 localize('selectFuncTemplate', 'Select a template for your function');
 
             if (templateProvider.templateSource) {
-                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource)
+                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource);
             }
 
             const result: FunctionTemplateBase | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
@@ -114,13 +117,15 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else {
                 context.functionTemplate = result;
             }
-        }
 
-        context.telemetry.properties.templateFilter = templateFilter;
+            context.telemetry.properties.templateFilter = templateFilter;
+        }
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        return !context.functionTemplate && context['buildTool'] !== JavaBuildTool.maven;
+        return !context.functionTemplate &&
+            context['buildTool'] !== JavaBuildTool.maven &&
+            context.language !== ProjectLanguage.SelfHostedMCPServer;
     }
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[]> {
@@ -150,7 +155,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 suppressPersistence: true,
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
-            })
+            });
         } else if (language === ProjectLanguage.CSharp ||
             language === ProjectLanguage.Java ||
             (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||

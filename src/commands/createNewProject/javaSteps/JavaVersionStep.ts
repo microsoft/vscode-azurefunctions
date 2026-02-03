@@ -13,6 +13,7 @@ export const java8: string = '8';
 export const java11: string = '11';
 export const java17: string = '17';
 export const java21: string = '21';
+export const java25: string = '25';
 
 type javaVersionInfo = {
     label: string,
@@ -25,7 +26,8 @@ const versionInfo: javaVersionInfo[] = [
     { label: 'Java 8', data: java8, miniFunc: '1.0.0' },
     { label: 'Java 11', data: java11, miniFunc: '3.0.2630' },
     { label: 'Java 17', data: java17, miniFunc: '4.0.0' },
-    { label: 'Java 21', data: java21, miniFunc: '4.0.0' }
+    { label: 'Java 21', data: java21, miniFunc: '4.0.0' },
+    { label: 'Java 25', data: java25, miniFunc: '4.0.0' }
 ];
 
 export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {

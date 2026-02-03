@@ -22,6 +22,10 @@ export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
+export const showBallerinaProjectCreationSetting: string = 'showBallerinaProjectCreation';
+export const mcpProjectTypeSetting: string = 'mcpProjectType';
+
+export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -34,7 +38,8 @@ export enum ProjectLanguage {
     Python = 'Python',
     TypeScript = 'TypeScript',
     Ballerina = 'Ballerina',
-    Custom = 'Custom'
+    Custom = 'Custom',
+    SelfHostedMCPServer = 'SelfHostedMCPServer'
 }
 
 /**
@@ -71,7 +76,7 @@ export enum JavaBuildTool {
     gradle = 'gradle'
 }
 
-export const ballerinaTomlFileName: string = "Ballerina.toml"
+export const ballerinaTomlFileName: string = "Ballerina.toml";
 export enum BallerinaBackend {
     jvm = 'jvm',
     native = 'native'
@@ -92,16 +97,19 @@ export enum ScmType {
 
 export enum CodeAction {
     Deploy = 'Deploy',
-    Debug = 'Debug'
+    Debug = 'Debug',
 }
 
+/**
+ * Default host connection keys
+ */
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     StorageIdentity = 'AzureWebJobsStorage__accountName',
     EventHubs = 'EventHubsConnection',
     DTS = 'DURABLE_TASK_SCHEDULER_CONNECTION_STRING',
-    DTSHub = 'TASKHUB_NAME',
-    SQL = 'SQLDB_Connection'
+    DTSHub = '%TASKHUB_NAME%',
+    SQL = 'SQLDB_Connection',
 }
 
 export enum ConnectionType {
@@ -114,7 +122,7 @@ export enum ConnectionType {
      */
     Emulator = 'Emulator',
     /**
-     * Represents the connection to any resource that the user provides through a direct connection string
+     * Represents the connection to any resource that the user provides through a manually entered connection string
      */
     Custom = 'Custom',
 }
@@ -143,6 +151,8 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
+// standard Azurite emulator account key
+export const azuriteAccountKey: string = 'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq';
 export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
 export const localEventHubsEmulatorConnectionString: string = 'SingleHost';
 export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionString}|MemoryF|Memory`);
@@ -153,6 +163,9 @@ export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
 export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
+export const azureWebJobsFeatureFlags: string = 'AzureWebJobsFeatureFlags';
+export const enableMcpCustomHandlerPreview: string = 'EnableMcpCustomHandlerPreview';
+export const mcpSelfHostedConfigurationProfile: string = 'mcp-custom-handler';
 
 /**
  * The "current" Node.js model is 3 (and assumed, if the number is omitted).
@@ -161,14 +174,14 @@ export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
  */
 export const nodeDefaultModelVersion: number = 4;
 const nodeDefaultModel: IAzureQuickPickItem<number | undefined> = { data: nodeDefaultModelVersion, label: localize('modelV4', 'Model V4') };
-const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') }
+const nodeV3Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('modelV3', 'Model V3') };
 
 export const nodeModels = [nodeDefaultModel, nodeV3Model];
 export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
 
 export const pythonDefaultModelVersion: number = 2;
 const pythonV2Model: IAzureQuickPickItem<number | undefined> = { data: pythonDefaultModelVersion, label: localize('pyModelV2', 'Model V2') };
-const pythonV1Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('pyModelV1', 'Model V1') }
+const pythonV1Model: IAzureQuickPickItem<number | undefined> = { data: undefined, label: localize('pyModelV1', 'Model V1') };
 
 export const pythonModels = [pythonV2Model, pythonV1Model];
 export const pythonLearnMoreLink = 'https://aka.ms/AAmlyrc';
@@ -201,5 +214,35 @@ export enum EventGridExecuteFunctionEntryPoint {
 // Originally from the Docker extension: https://github.com/microsoft/vscode-docker/blob/main/src/constants.ts
 export const dockerfileGlobPattern = '{*.[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE],[dD][oO][cC][kK][eE][rR][fF][iI][lL][eE].*}';
 
+export const StorageProvider: string = 'Microsoft.Storage';
+export const StorageAccountsResourceType: string = 'storageAccounts';
+
+export const SqlProvider: string = 'Microsoft.Sql';
+export const SqlServerResourceType: string = 'servers';
+
+export const EventHubsProvider: string = 'Microsoft.EventHub';
+export const EventHubsNamespaceResourceType: string = 'namespaces';
+
 export const DurableTaskProvider: string = 'Microsoft.DurableTask';
 export const DurableTaskSchedulersResourceType: string = 'schedulers';
+export type GitHubFileMetadata = {
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    url: string;
+    html_url: string;
+    git_url: string;
+    download_url: string;
+    type: string;
+    _links: {
+        self: string;
+        git: string;
+        html: string;
+    };
+};
+
+export enum McpProjectType {
+    McpExtensionServer = 'McpExtensionServer',
+    SelfHostedMcpServer = 'SelfHostedMcpServer'
+}

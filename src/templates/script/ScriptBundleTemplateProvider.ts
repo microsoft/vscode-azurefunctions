@@ -31,8 +31,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        const release: bundleFeedUtils.ITemplatesReleaseV1 = await bundleFeedUtils.getRelease(context, bundleMetadata, latestTemplateVersion);
+        const release = await bundleFeedUtils.getRelease(latestTemplateVersion, 'v1') as bundleFeedUtils.ITemplatesReleaseV1;
 
         const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);

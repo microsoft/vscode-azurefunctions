@@ -1,5 +1,98 @@
 # Change Log
 
+## 1.20.3 - 2025-12-16
+
+### Added
+* [[4861](https://github.com/microsoft/vscode-azurefunctions/pull/4861)] Add error message when deploying to flex apps with python 3.14
+* [[4847](https://github.com/microsoft/vscode-azurefunctions/pull/4847)] Add .NET 10 and Java 25
+
+### Changed
+* [[4827](https://github.com/microsoft/vscode-azurefunctions/pull/4827)] Update `typescript` version and TS compile options in template files
+* [[4862](https://github.com/microsoft/vscode-azurefunctions/pull/4862)] [[4863](https://github.com/microsoft/vscode-azurefunctions/pull/4863)] Allow flex consumption deployments for DTS
+
+### Fixed
+* [[4858](https://github.com/microsoft/vscode-azurefunctions/pull/4858)] Fix an issue where DTS emulator was failing to start on some Windows machines
+* [[4855](https://github.com/microsoft/vscode-azurefunctions/pull/4855)] Fix a `Netherite` connection setting boolean
+* [[4853](https://github.com/microsoft/vscode-azurefunctions/pull/4853)] Always verify and update app connection strings
+
+## 1.20.2 - 2025-11-25
+
+### Fixed
+* [[4837]](https://github.com/microsoft/vscode-azurefunctions/issues/4837) Fix not being able to create Premium SKU plans in `Create Function App in Azure (Advanced)`
+
+## 1.20.1 - 2025-11-19
+
+### Fixed
+* [[4832]](https://github.com/microsoft/vscode-azurefunctions/pull/4832) Fix `pickFuncProcess` not finding the `func host start` task if there were additional flags on the command
+
+## 1.20.0 - 2025-11-17
+
+### Overview
+This release introduces support for creating and deploying Model Context Protocol (MCP) servers using Azure Functions and brings support for building MCP servers across multiple languages including TypeScript, JavaScript, Python, and .NET.
+
+### Added
+* [[4789](https://github.com/microsoft/vscode-azurefunctions/pull/4789)] Add support for creating **self-hosted MCP servers** with Azure Functions as a new project type
+* [[4790](https://github.com/microsoft/vscode-azurefunctions/pull/4790)] Add **MCP Tool Trigger** templates for extension-based MCP function apps
+* [[4791](https://github.com/microsoft/vscode-azurefunctions/pull/4791)] Add **MCP deployment** support for both extension triggers and self-hosted servers
+
+### Changed
+* [[4772](https://github.com/microsoft/vscode-azurefunctions/pull/4772)] Update minimum **Azure Container Apps API** version to `v1.0.0`
+* [[4773](https://github.com/microsoft/vscode-azurefunctions/pull/4773)] Improve template filtering with **grouping by category** instead of hiding templates
+* [[4783](https://github.com/microsoft/vscode-azurefunctions/pull/4783)] Add support for **Python 3.13 and 3.14** and remove deprecated Python versions (3.7, 3.8, 3.9)
+
+### Fixed
+* [[4739](https://github.com/microsoft/vscode-azurefunctions/pull/4739)] Fix incorrect error message displayed when deploying to **containerized function apps**
+
+### Engineering
+* [[4731](https://github.com/microsoft/vscode-azurefunctions/pull/4731)] Refactor **Functions Core Tools** installation and pretest logic
+
+## 1.19.2 - 2025-10-08
+
+### Fix
+* [[4734](https://github.com/microsoft/vscode-azurefunctions/pull/4734)] Fix an issue where required debug environment settings were being overwritten
+
+## 1.19.1 - 2025-09-25
+
+### Added
+* [[4688](https://github.com/microsoft/vscode-azurefunctions/pull/4688)] Enable **durable configuration path** for **Python v2** projects.
+* [[4706](https://github.com/microsoft/vscode-azurefunctions/pull/4706)] Show **warning** when running a **deprecated extension bundle version**.
+* [[4703](https://github.com/microsoft/vscode-azurefunctions/pull/4703)] Dynamically add `AzureWebJobsStorage` to tasks when using the **emulator**.
+
+### Changed
+* [[4714](https://github.com/microsoft/vscode-azurefunctions/pull/4714)] Changes were made to support the upcoming multi-factor authentication requirements for Azure
+* [[4718](https://github.com/microsoft/vscode-azurefunctions/pull/4718)] Only provide Durable flex consumption warning for apps using DTS storage provider
+
+### Fixed
+* [[4702](https://github.com/microsoft/vscode-azurefunctions/pull/4702)] Register **debugpy** as a Python debug provider to resolve Python pre-debugging issues.
+* [[4708](https://github.com/microsoft/vscode-azurefunctions/pull/4708)] Fix **containerized functions deployment regression** and apply miscellaneous improvements.
+* [[4712](https://github.com/microsoft/vscode-azurefunctions/pull/4712)] Fix **custom handler runtimes** response due to Stacks API regression.
+* [[4716](https://github.com/microsoft/vscode-azurefunctions/pull/4716)] Ensure storage shared access key is disabled in the deployment entry point when required.
+
+## 1.19.0 - 2025-08-21
+
+### Overview
+This release delivers major improvements to durable functions, including better configuration handling, and enhanced validation for DTS. It also adds improved identity assignment support, and stronger reliability for local development with Azurite.
+
+### Added
+* [[4566](https://github.com/microsoft/vscode-azurefunctions/pull/4566)] Add Azure deployment support for DTS projects
+* [[4625](https://github.com/microsoft/vscode-azurefunctions/pull/4625)] Improve support for assigning a **user-assigned identity and roles** to a Function App.
+* [[4650](https://github.com/microsoft/vscode-azurefunctions/pull/4650)] Deploy with **Functions CLI** for **custom runtimes on Flex Consumption** plans.
+* [[4667](https://github.com/microsoft/vscode-azurefunctions/pull/4667)] Add **dynamic Azurite connection string generation** using workspace settings.
+* [[4660](https://github.com/microsoft/vscode-azurefunctions/pull/4660)] Add **warning popup** when incompatible Function App plans are used for durable projects.
+* [[4618](https://github.com/microsoft/vscode-azurefunctions/pull/4618)] Update **Python requirements.txt**.
+
+### Fixed
+* [[4622](https://github.com/microsoft/vscode-azurefunctions/pull/4622)] Fix `host.json` version not showing for **AzureExtensionsBundle**.
+* [[4632](https://github.com/microsoft/vscode-azurefunctions/pull/4632)] Fix **Azurite Table/Queue services** not starting during durable function debugging.
+* [[4652](https://github.com/microsoft/vscode-azurefunctions/pull/4652)] Use the v1 **index.json** for retrieving all templates
+* [[4661](https://github.com/microsoft/vscode-azurefunctions/pull/4661)] Update templates with **userPrompt tokens** so tokens are replaced.
+* [[4682](https://github.com/microsoft/vscode-azurefunctions/pull/4682)] Use **port number** to find the func PID.
+
+## 1.18.1 - 2025-07-24
+
+### Fixed
+* [[4609]](https://github.com/microsoft/vscode-azurefunctions/pull/4609) Fix bug with function app resolving that assumed access to certain properties
+
 ## 1.18.0 - 2025-07-14
 
 ### Overview

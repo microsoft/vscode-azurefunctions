@@ -100,7 +100,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
 async function validateAutorestInstalled(context: IActionContext): Promise<void> {
     try {
         await cpUtils.executeCommand(undefined, undefined, 'autorest', composeArgs(withArg('--version'))());
-    } catch (error) {
+    } catch (_error) {
         const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
         if (!context.errorHandling.suppressDisplay) {
             void window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {

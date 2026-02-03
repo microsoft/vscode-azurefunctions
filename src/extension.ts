@@ -47,9 +47,10 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
+    console.log('**********************************************');
+    console.log('Activating Azure Functions extension...');
     ext.context = context;
-    ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
 
@@ -75,6 +76,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const templateProvider = new CentralTemplateProvider();
         ext.templateProvider.registerExtensionVariable(templateProvider);
+        console.log('Registered CentralTemplateProvider in extension variables.');
         context.subscriptions.push(templateProvider);
 
         // Suppress "Report an Issue" button for all errors in favor of the command
@@ -103,6 +105,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         // These don't actually overwrite "node", "python", etc. - they just add to it
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', nodeDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('python', pythonDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('debugpy', pythonDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('ballerina', ballerinaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
@@ -133,6 +136,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             'DurableTaskSchedulerEmulator',
             new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
+
+    console.log('Activated Azure Functions extension...');
+    console.log('**********************************************');
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
         revealTreeItem,

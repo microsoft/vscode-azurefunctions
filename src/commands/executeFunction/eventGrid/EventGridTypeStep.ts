@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, nonNullProp, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { type GitHubFileMetadata } from "../../../constants";
 import { localize } from "../../../localize";
 import { feedUtils } from "../../../utils/feedUtils";
 import { type EventGridExecuteFunctionContext } from "./EventGridExecuteFunctionContext";
@@ -13,23 +14,6 @@ const sampleFilesUrl =
     '{eventSource}' +
     '/stable/2018-01-01/examples/cloud-events-schema/';
 
-type FileMetadata = {
-    name: string;
-    path: string;
-    sha: string;
-    size: number;
-    url: string;
-    html_url: string;
-    git_url: string;
-    download_url: string;
-    type: string;
-    _links: {
-        self: string;
-        git: string;
-        html: string;
-    };
-};
-
 export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFunctionContext> {
     public hideStepCount: boolean = false;
 
@@ -38,7 +22,7 @@ export class EventGridTypeStep extends AzureWizardPromptStep<EventGridExecuteFun
 
         // Get sample files for event source
         const samplesUrl = sampleFilesUrl.replace('{eventSource}', eventSource);
-        const sampleFiles: FileMetadata[] = await feedUtils.getJsonFeed(context, samplesUrl);
+        const sampleFiles: GitHubFileMetadata[] = await feedUtils.getJsonFeed(context, samplesUrl);
         const fileNames: string[] = sampleFiles.map((fileMetadata) => fileMetadata.name);
 
         // Prompt for event type

@@ -5,7 +5,7 @@
 
 import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as unixPsTree from 'ps-tree';
+import psTree, { type PS } from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
@@ -46,7 +46,7 @@ export async function startFuncProcessFromApi(
                     uri: vscode.Uri.parse(buildPath),
                     name: buildPath,
                     index: -1
-                }
+                };
             }
 
             await waitForPrevFuncTaskToStop(workspaceFolder);
@@ -72,7 +72,7 @@ export async function startFuncProcessFromApi(
         }
     });
 
-    return result
+    return result;
 }
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
@@ -81,7 +81,6 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new UserCancelledError('preDebugValidate');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
     const funcTask: vscode.Task | undefined = tasks.find(t => {
@@ -99,7 +98,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder, buildPath?: string): Promise<void> {
-    stopFuncTaskIfRunning(workspaceFolder, buildPath);
+    await stopFuncTaskIfRunning(workspaceFolder, buildPath);
 
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
@@ -156,7 +155,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                     try {
                         // wait for status url to indicate functions host is running
                         const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                         if (response.parsedBody.state.toLowerCase() === 'running') {
                             funcTaskReadyEmitter.fire(workspaceFolder);
                             return taskInfo;
@@ -194,7 +192,7 @@ type OSAgnosticProcess = { command: string | undefined; pid: number | string };
 async function pickChildProcess(taskInfo: IRunningFuncTask): Promise<string> {
     // Workaround for https://github.com/microsoft/vscode-azurefunctions/issues/2656
     if (!isRunning(taskInfo.processId) && vscode.window.activeTerminal) {
-        const terminalPid = await vscode.window.activeTerminal.processId
+        const terminalPid = await vscode.window.activeTerminal.processId;
         if (terminalPid) {
             // NOTE: Intentionally updating the object so that `runningFuncTaskMap` is affected, too
             taskInfo.processId = terminalPid;
@@ -207,11 +205,11 @@ async function pickChildProcess(taskInfo: IRunningFuncTask): Promise<string> {
 
 // Looks like this bug was fixed, but never merged:
 // https://github.com/indexzero/ps-tree/issues/18
-type ActualUnixPS = unixPsTree.PS & { COMM?: string };
+type ActualUnixPS = PS & { COMM?: string };
 
 async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
     const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
-        unixPsTree(pid, (error: Error | null, result: unixPsTree.PS[]) => {
+        psTree(pid, (error: Error | null, result: PS[]) => {
             if (error) {
                 reject(error);
             } else {

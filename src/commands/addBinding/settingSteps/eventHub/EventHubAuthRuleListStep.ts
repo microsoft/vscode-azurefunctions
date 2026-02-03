@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { promptForResource, type IBaseResourceWithName } from '../../../../utils/azure';
@@ -15,7 +15,7 @@ import { type IEventHubWizardContext } from './IEventHubWizardContext';
 export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
     public async prompt(context: IEventHubWizardContext): Promise<void> {
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
+        const resourceGroupName: string = getResourceGroupFromId(nonNullValueAndProp(context.eventHubsNamespace, 'id'));
         const eventHubName: string = nonNullProp(context, 'eventhubname');
 
         const client: EventHubManagementClient = await createEventHubClient(context);

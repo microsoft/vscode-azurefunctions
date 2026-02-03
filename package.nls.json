@@ -138,5 +138,11 @@
     "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features",
     "azureFunctions.durableTaskScheduler.emulatorRegistry": "The registry of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorImage": "The name of the Durable Task Scheduler emulator image.",
-    "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image."
+    "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image.",
+    "azureFunctions.showBallerinaProjectCreation": "Show the option to create a Ballerina Function projects when creating a new Function project.",
+    "azureFunctions.getMcpHostKey": "Retrieve the MCP host key for the Function App specified by the resource ID.",
+    "azureFunctions.mcpProjectType": "The type of MCP integration the project uses.",
+    "azureFunctions.mcpProjectType.NoMcpServer": "Runs the standard Azure Functions runtime with no MCP integration.",
+    "azureFunctions.mcpProjectType.McpExtensionServer": "Runs the Functions host with an embedded MCP server provided by the Azure Functions MCP extension.",
+    "azureFunctions.mcpProjectType.SelfHostedMcpServer": "Runs the Functions host in custom-handler mode, forwarding requests to a self-hosted MCP server process."
 }

@@ -44,5 +44,6 @@ export interface FunctionTemplateBase {
     language: ProjectLanguage;
     isHttpTrigger: boolean;
     isTimerTrigger: boolean;
+    isMcpTrigger: boolean;
     templateSchemaVersion: TemplateSchemaVersion
 }

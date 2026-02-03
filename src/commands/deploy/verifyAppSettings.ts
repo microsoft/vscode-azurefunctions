@@ -6,23 +6,26 @@
 import { type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite, type SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as retry from 'p-retry';
-import type * as vscode from 'vscode';
+import { default as retry } from 'p-retry';
+import * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { ConnectionKey, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
+import { azureWebJobsFeatureFlags, DurableBackend, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { type ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { tryGetLocalSettingsFileNoPrompt } from '../appSettings/localSettings/getLocalSettingsFile';
+import { type IFuncDeployContext } from './deploy';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
-type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
+type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean, isFlexConsumption: boolean };
 
 export async function verifyAppSettings(options: {
-    context: IActionContext,
+    context: IFuncDeployContext,
     node: SlotTreeItem,
     projectPath: string | undefined,
     version: FuncVersion,
@@ -37,33 +40,42 @@ export async function verifyAppSettings(options: {
     await node.initSite(context);
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = options.appSettings;
+    let updateAppSettings: boolean = false;
+    // these were checks for consumption and app service hosted plans
     if (appSettings.properties) {
-        const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
-        await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
+        if (!bools.isFlexConsumption) {
+            const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
+            await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
-        // update the settings if the remote runtime was changed
-        let updateAppSettings: boolean = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
-        if (node.site.isLinux) {
-            const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
-            updateAppSettings ||= remoteBuildSettingsChanged;
+            // update the settings if the remote runtime was changed
+            updateAppSettings = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
+            if (node.site.isLinux) {
+                const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
+                updateAppSettings ||= remoteBuildSettingsChanged;
+            } else {
+                updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+            }
         } else {
-            updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
+            const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(context.originalDeployFsPath));
+            const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, workspace);
+            const localSettings = localSettingsPath ? await getLocalSettingsJson(context, localSettingsPath, false) : {};
+            updateAppSettings = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
+    }
 
-        if (updateAppSettings) {
-            await client.updateApplicationSettings(appSettings);
-            try {
-                await verifyAppSettingsPropagated(context, client, appSettings);
-            } catch (e) {
-                // don't throw if we can't verify the settings were updated
-            }
-
-            // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
-            await node.appSettingsTreeItem?.refresh(context);
+    if (updateAppSettings) {
+        await client.updateApplicationSettings(appSettings);
+        try {
+            await verifyAppSettingsPropagated(context, client, appSettings);
+        } catch (_e) {
+            // don't throw if we can't verify the settings were updated
         }
+
+        // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
+        await node.appSettingsTreeItem?.refresh(context);
     }
 }
 
@@ -71,29 +83,44 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
     let didUpdate: boolean = false;
     switch (durableStorageType) {
         case DurableBackend.Netherite:
-            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs]);
-            didUpdate ||= updatedNetheriteConnection;
+            if (context.newEventHubsNamespaceConnectionSettingKey && context.newEventHubsNamespaceConnectionSettingValue) {
+                const updatedNamespaceConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubsNamespaceConnectionSettingKey, context.newEventHubsNamespaceConnectionSettingValue);
+                didUpdate ||= updatedNamespaceConnection;
+            }
+            if (context.newEventHubConnectionSettingKey && context.newEventHubConnectionSettingValue) {
+                const updatedEventHubConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubConnectionSettingKey, context.newEventHubConnectionSettingValue);
+                didUpdate ||= updatedEventHubConnection;
+            }
             break;
         case DurableBackend.DTS:
-            const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTS, context[ConnectionKey.DTS]);
-            const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.DTSHub, context[ConnectionKey.DTSHub]);
-            didUpdate ||= updatedDTSConnection || updatedDTSHub;
+            if (context.newDTSConnectionSettingKey && context.newDTSConnectionSettingValue) {
+                const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSConnectionSettingKey, context.newDTSConnectionSettingValue);
+                didUpdate ||= updatedDTSConnection;
+            }
+            if (context.newDTSHubConnectionSettingKey && context.newDTSHubConnectionSettingValue) {
+                const updatedDTSHub: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue);
+                didUpdate ||= updatedDTSHub;
+            }
             break;
         case DurableBackend.SQL:
-            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL]);
-            didUpdate ||= updatedSqlDbConnection;
+            if (context.newSQLStorageConnectionSettingKey && context.newSQLStorageConnectionSettingValue) {
+                const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newSQLStorageConnectionSettingKey, context.newSQLStorageConnectionSettingValue);
+                didUpdate ||= updatedSqlDbConnection;
+            }
             break;
         case DurableBackend.Storage:
         default:
     }
 
-    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context[ConnectionKey.Storage]);
-    didUpdate ||= updatedStorageConnection;
+    if (context.newStorageConnectionSettingKey && context.newStorageConnectionSettingValue) {
+        const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, context.newStorageConnectionSettingKey, context.newStorageConnectionSettingValue);
+        didUpdate ||= updatedStorageConnection;
+    }
 
     return didUpdate;
 }
 
-export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKey, newValue: string | undefined): boolean {
+export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: string, newValue: string | undefined): boolean {
     if (newValue && newValue !== remoteProperties[propertyName]) {
         remoteProperties[propertyName] = newValue;
         context.telemetry.properties[`update${propertyName}`] = 'true';
@@ -150,6 +177,34 @@ function verifyRunFromPackage(context: IActionContext, site: ParsedSite, remoteP
 
     context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
     return shouldAddSetting;
+}
+
+async function verifyFeatureFlagSetting(context: IActionContext, remoteProperties: { [propertyName: string]: string }, localSettings: ILocalSettingsJson): Promise<boolean> {
+    const remoteFeatureFlagString = remoteProperties[azureWebJobsFeatureFlags] || '';
+    const localFeatureFlagString = localSettings.Values?.[azureWebJobsFeatureFlags] || '';
+
+    // Feature flags are comma-delimited lists of beta features
+    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#azurewebjobsfeatureflags
+    // Split on commas, trim whitespace, and filter out empties
+    const remoteFlags = remoteFeatureFlagString
+        .split(',')
+        .map(f => f.trim())
+        .filter(Boolean);
+    const localFlags = localFeatureFlagString
+        .split(',')
+        .map(f => f.trim())
+        .filter(Boolean);
+
+    if (remoteFlags.length === 0 && localFlags.length === 0) {
+        // No flags to verify
+        return false;
+    }
+
+    // merge flags, but remove any duplicates
+    const mergedFlags = Array.from(new Set([...remoteFlags, ...localFlags]));
+    remoteProperties[azureWebJobsFeatureFlags] = mergedFlags.join(',');
+    context.telemetry.properties.addedFeatureFlagSetting = String(true);
+    return true;
 }
 
 function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {

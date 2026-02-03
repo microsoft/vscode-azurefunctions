@@ -13,7 +13,7 @@ import { type Progress } from "vscode";
 import { webProvider } from "../../../constants";
 import { localize } from "../../../localize";
 import { createWebSiteClient } from "../../../utils/azureClients";
-import { getStorageConnectionString } from "../../appSettings/connectionSettings/getLocalConnectionSetting";
+import { getStorageConnectionString } from "../../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 
 export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOutput<IFunctionAppWizardContext> {
@@ -54,7 +54,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
-        return !!context.dockerfilePath
+        return !!context.dockerfilePath;
     }
 
     private async getNewSite(context: IFunctionAppWizardContext): Promise<Site> {
@@ -93,7 +93,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
                     }
                 ]
             }
-        }
+        };
     }
 }
 

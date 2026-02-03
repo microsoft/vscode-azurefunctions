@@ -5,12 +5,17 @@
 
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
+import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { TestInput, createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomAlphanumericString, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { copyFunctionUrl } from '../../src/commands/copyFunctionUrl';
+import { createNewProjectInternal } from '../../src/commands/createNewProject/createNewProject';
+import { deployProductionSlot } from '../../src/commands/deploy/deploy';
+import { ProjectLanguage } from '../../src/constants';
+import { getRandomAlphanumericString, getRandomHexString } from '../../src/utils/fs';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
 import { NodeModelVersion, PythonModelVersion, defaultTestFuncVersion, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';

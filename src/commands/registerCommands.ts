@@ -26,10 +26,10 @@ import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
-import { setAzureWebJobsStorage } from './appSettings/connectionSettings/azureWebJobsStorage/setAzureWebJobsStorage';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { decryptLocalSettings } from './appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSettings';
+import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';
@@ -65,6 +65,7 @@ import { editAppSetting } from './editAppSetting';
 import { EventGridCodeLensProvider } from './executeFunction/eventGrid/EventGridCodeLensProvider';
 import { sendEventGridRequest } from './executeFunction/eventGrid/sendEventGridRequest';
 import { executeFunction } from './executeFunction/executeFunction';
+import { getMcpHostKey } from './getMcpHostKey';
 import { assignManagedIdentity } from './identity/assignManagedIdentity';
 import { enableSystemIdentity } from './identity/enableSystemIdentity';
 import { unassignManagedIdentity } from './identity/unassignManagedIdentity';
@@ -102,18 +103,18 @@ export function registerCommands(
         'azureFunctions.appSettings.add',
         async (context: ISubscriptionActionContext, node?: AzExtParentTreeItem) => {
             if (node?.parent) {
-                await showEolWarningIfNecessary(context, node?.parent)
+                await showEolWarningIfNecessary(context, node?.parent);
             }
-            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node)
+            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node);
         });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.delete',
         async (context: ISubscriptionActionContext, node?: AzExtTreeItem) => {
             if (node?.parent?.parent) {
-                await showEolWarningIfNecessary(context, node?.parent?.parent)
+                await showEolWarningIfNecessary(context, node?.parent?.parent);
             }
-            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node)
+            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node);
         });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.edit', editAppSetting);
@@ -193,6 +194,7 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.assignManagedIdentity', assignManagedIdentity);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.unassignManagedIdentity', unassignManagedIdentity);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableSystemIdentity', enableSystemIdentity);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.getMcpHostKey', getMcpHostKey);
 
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copyEmulatorConnectionString', copyEmulatorConnectionStringCommandFactory());
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.copySchedulerConnectionString', copySchedulerConnectionStringCommandFactory(services.dts.schedulerClient));

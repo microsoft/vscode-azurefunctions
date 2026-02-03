@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { FuncVersion, ProjectLanguage, type TemplateSource } from '../../extension.bundle';
+import { ProjectLanguage } from '../../src/constants';
+import { TemplateSource } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
 import { backupLatestTemplateSources, shouldSkipVersion } from '../global.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 

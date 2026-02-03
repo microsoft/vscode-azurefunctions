@@ -5,7 +5,6 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { ext, TemplateSource } from '../extensionVariables';
 import { type IBundleMetadata, type IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { type IBindingTemplate } from '../templates/IBindingTemplate';
@@ -15,7 +14,7 @@ import { nugetUtils } from './nugetUtils';
 
 export namespace bundleFeedUtils {
     export const defaultBundleId: string = 'Microsoft.Azure.Functions.ExtensionBundle';
-    export const defaultVersionRange: string = '[1.*, 2.0.0)';
+    export const defaultVersionRange: string = '[4.*, 5.0.0)';
 
     interface IBundleFeed {
         defaultVersionRange: string;
@@ -61,20 +60,23 @@ export namespace bundleFeedUtils {
         }
     }
 
-    export async function getRelease(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesReleaseV1> {
-        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
-        return feed.templates.v1[templateVersion];
-    }
-
-    export async function getReleaseV2(templateVersion: string): Promise<ITemplatesReleaseV2> {
-        // build the url ourselves because the index-v2.json file is no longer publishing version updates for v2 templates
+    export async function getRelease(templateVersion: string, version: 'v1' | 'v2'): Promise<ITemplatesReleaseV1 | ITemplatesReleaseV2> {
+        // build the url ourselves because the index-v2.json file is no longer publishing version updates
         const functionsCdn: string = 'https://cdn.functions.azure.com/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/';
+        if (version === 'v1') {
+            return {
+                functions: `${functionsCdn}${templateVersion}/StaticContent/v1/templates/templates.json`,
+                bindings: `${functionsCdn}${templateVersion}/StaticContent/v1/bindings/bindings.json`,
+                resources: `${functionsCdn}${templateVersion}/StaticContent/v1/resources/Resources.{locale}.json`,
+            };
+        }
+
         return {
             functions: `${functionsCdn}${templateVersion}/StaticContent/v2/templates/templates.json`,
             bindings: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
             userPrompts: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
             resources: `${functionsCdn}${templateVersion}/StaticContent/v2/resources/Resources.{locale}.json`,
-        }
+        };
     }
 
     export function isBundleTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {
@@ -83,14 +85,14 @@ export namespace bundleFeedUtils {
     }
 
     export async function getLatestVersionRange(context: IActionContext): Promise<string> {
-        const feed: IBundleFeed = await getBundleFeed(context, undefined);
+        const feed: IBundleFeed = await getBundleFeed(context);
         return feed.defaultVersionRange;
     }
 
     export async function addDefaultBundle(context: IActionContext, hostJson: IHostJsonV2): Promise<void> {
         let versionRange: string;
         try {
-            versionRange = await getLatestVersionRange(context);
+            versionRange = (await getLatestVersionRange(context)) ?? defaultVersionRange;
         } catch {
             versionRange = defaultVersionRange;
         }
@@ -105,21 +107,8 @@ export namespace bundleFeedUtils {
         return !!template.id?.toLowerCase().includes(templateType.toLowerCase());
     }
 
-    async function getBundleFeed(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
-        const bundleId: string = bundleMetadata && bundleMetadata.id || defaultBundleId;
-
-        const envVarUri: string | undefined = process.env.FUNCTIONS_EXTENSIONBUNDLE_SOURCE_URI;
-        // Only use an aka.ms link for the most common case, otherwise we will dynamically construct the url
-        let url: string;
-        const templateProvider = ext.templateProvider.get(context);
-        if (!envVarUri && bundleId === defaultBundleId && templateProvider.templateSource !== TemplateSource.Staging) {
-            url = 'https://aka.ms/bundleFeedUtilsV2';
-        } else {
-            const suffix: string = templateProvider.templateSource === TemplateSource.Staging ? '-staging' : '';
-            const baseUrl: string = envVarUri || `https://cdn${suffix}.functions.azure.com/public`;
-            url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
-        }
-
+    async function getBundleFeed(context: IActionContext): Promise<IBundleFeed> {
+        const url: string = 'https://aka.ms/funcStaticProperties';
         return feedUtils.getJsonFeed(context, url);
     }
 

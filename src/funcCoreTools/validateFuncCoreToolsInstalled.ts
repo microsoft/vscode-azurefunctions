@@ -101,7 +101,7 @@ export async function funcToolsInstalled(context: IActionContext, workspacePath:
         const funcCliPath = await getFuncCliPath(context, workspacePath);
         await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, composeArgs(withArg('--version'))());
         return true;
-    } catch (error) {
+    } catch (_error) {
         return false;
     }
 }

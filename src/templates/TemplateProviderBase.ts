@@ -11,6 +11,7 @@ import { type IProjectWizardContext } from '../commands/createNewProject/IProjec
 import { type ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { type IBindingTemplate } from './IBindingTemplate';
 import { type FunctionTemplateBase } from './IFunctionTemplate';
 import { type ITemplates } from './ITemplates';
@@ -106,7 +107,11 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
-        return (await AzExtFsExtra.readFile(await this.getBackupVersionPath())).toString().trim();
+        const versionContent = await AzExtFsExtra.readFile(await this.getBackupVersionPath());
+        if (!versionContent) {
+            throw new Error(localize('backupVersionFileEmpty', 'Backup template version file is empty or could not be read'));
+        }
+        return versionContent.toString().trim();
     }
 
     public async updateBackupTemplateVersion(version: string): Promise<void> {
@@ -119,12 +124,12 @@ export abstract class TemplateProviderBase implements Disposable {
         return ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     protected async getCacheKeySuffix(): Promise<string> {
         return '';
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     private async getBackupVersionPath(): Promise<string> {
         return path.join(this.getBackupPath(), 'version.txt');
     }
@@ -174,7 +179,7 @@ export abstract class TemplateProviderBase implements Disposable {
     public async getProjKey(context: IActionContext & Partial<IProjectWizardContext>): Promise<string> {
         // if user has already selected template, rely on project wizard rather than project settings
         if (context.projectTemplateKey) {
-            return context.projectTemplateKey
+            return context.projectTemplateKey;
         }
 
         if (!this.refreshProjKey) {

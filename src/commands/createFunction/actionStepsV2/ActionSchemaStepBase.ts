@@ -8,11 +8,12 @@ import { type ParsedAction } from "../../../templates/script/parseScriptTemplate
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 
 export abstract class ActionSchemaStepBase<T extends FunctionV2WizardContext> extends AzureWizardExecuteStep<T> {
+    public stepName: string;
     public constructor(readonly action: ParsedAction, readonly priority: number) {
         super();
+        this.stepName = `${this.action.name}ActionSchemaStep`;
     }
 
-    public stepName = `${this.action.name}ActionSchemaStep`;
     public async execute(context: T): Promise<void> {
         try {
             await this.executeAction(context);

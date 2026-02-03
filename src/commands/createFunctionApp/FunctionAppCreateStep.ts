@@ -19,7 +19,7 @@ import { localize } from '../../localize';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { createAzureWebJobsStorageManagedIdentitySettings } from '../../utils/managedIdentityUtils';
-import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
+import { getStorageConnectionString } from '../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { type Sku } from './stacks/models/FlexSkuModel';
@@ -105,11 +105,11 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             },
             scaleAndConcurrency: {
                 maximumInstanceCount: context.newFlexMaximumInstanceCount ?? sku.maximumInstanceCount.defaultValue,
-                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? 2048,
+                instanceMemoryMB: context.newFlexInstanceMemoryMB ?? Number.parseInt(sku.instanceMemoryMB.find(im => im.isDefault)?.size ?? '2048'),
                 alwaysReady: [],
                 triggers: undefined
             },
-        }
+        };
 
         return site;
 
@@ -130,7 +130,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             const userAssignedIdentities = {};
             userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
                 { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
-            identity = { type: 'UserAssigned', userAssignedIdentities }
+            identity = { type: 'UserAssigned', userAssignedIdentities };
         }
 
         return {
@@ -168,7 +168,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
                     name: extensionVersionKey,
                     value: '~' + getMajorVersion(context.version)
                 }],
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                 
                 ...Object.entries(stackSettings.appSettingsDictionary).map(([name, value]) => { return { name, value }; }));
         }
 
@@ -200,7 +200,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStepWithActivityOut
             appSettings.push({
                 name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING',
                 value: storageConnectionString
-            })
+            });
         }
 
         // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
@@ -288,11 +288,11 @@ function getSiteKind(context: IAppServiceWizardContext): string {
 async function tryCreateStorageContainer(context: IFlexFunctionAppWizardContext, site: Site, storageAccount: StorageAccount): Promise<void> {
     let client: BlobServiceClient;
     try {
-        const token = await context.createCredentialsForScopes(['https://storage.azure.com/.default'])
+        const token = await context.createCredentialsForScopes(['https://storage.azure.com/.default']);
         const primaryEndpoint = nonNullProp(storageAccount, 'primaryEndpoints');
         client = new BlobServiceClient(nonNullProp(primaryEndpoint, 'blob'), token);
         await client.getProperties(); // Trigger a request to validate the token
-    } catch (error) {
+    } catch (_error) {
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
         client = BlobServiceClient.fromConnectionString(storageConnectionString);
         await client.getProperties(); // Trigger a request to validate the key
@@ -306,16 +306,16 @@ async function tryCreateStorageContainer(context: IFlexFunctionAppWizardContext,
                 const containerClient = client.getContainerClient(containerName);
                 if (!await containerClient.exists()) {
                     await client.createContainer(containerName);
-                    return
+                    return;
                 } else {
                     ext.outputChannel.appendLog(localize('deploymentStorageExists', 'Deployment storage container "{0}" already exists.', containerName));
                     return;
                 }
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // ignore error, we will show a warning in the output channel
-        const parsedError = parseError(error);
+        const parsedError = parseError(_error);
         ext.outputChannel.appendLog(localize('failedToCreateDeploymentStorage', 'Failed to create deployment storage container. {0}', parsedError.message));
     }
 

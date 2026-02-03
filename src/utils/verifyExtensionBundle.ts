@@ -38,7 +38,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
             let hostJson: IHostJsonV2;
             try {
                 hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
-            } catch (error) {
+            } catch (_error) {
                 context.telemetry.properties.bundleResult = 'failedToParseHostJson';
                 // ignore error - no need to block create process just to verify bundle
                 return;

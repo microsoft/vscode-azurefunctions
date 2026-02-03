@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AuthorizationRule, type EventHubManagementClient } from '@azure/arm-eventhub';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { getRandomHexString } from '../../../../utils/fs';
@@ -15,11 +15,11 @@ export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardCo
     public priority: number = 191;
     public async execute(context: IEventHubWizardContext): Promise<void> {
         const namespaceName: string = nonNullValueAndProp(context.eventHubsNamespace, 'name');
-        const resourceGroupName: string = nonNullValueAndProp(context.resourceGroup, 'name');
+        const resourceGroupName: string = getResourceGroupFromId(nonNullValueAndProp(context.eventHubsNamespace, 'id'));
 
         const client: EventHubManagementClient = await createEventHubClient(context);
         // TODO: use randomUtils when the utils package is updated
-        const eventHubName = `${namespaceName}-${getRandomHexString()}`
+        const eventHubName = `${namespaceName}-${getRandomHexString()}`;
         // don't bother prompting the user-- just create one with a default name and properties
         context.eventhubname = (await client.eventHubs.createOrUpdate(resourceGroupName, namespaceName, eventHubName, {})).name;
         // it won't have any auth rules since it was just created so just use root namespace rule

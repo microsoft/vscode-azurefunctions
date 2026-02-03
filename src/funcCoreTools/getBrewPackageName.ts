@@ -36,7 +36,7 @@ async function isBrewPackageInstalled(packageName: string): Promise<boolean> {
     try {
         await cpUtils.executeCommand(undefined, undefined, 'brew', composeArgs(withArg('ls', packageName))());
         return true;
-    } catch (error) {
+    } catch (_error) {
         return false;
     }
 }

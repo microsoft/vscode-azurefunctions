@@ -3,57 +3,62 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItem, ActivityChildType, activityFailIcon, activityProgressContext, activityProgressIcon, activitySuccessContext, activitySuccessIcon, createContextValue, nonNullProp, type ExecuteActivityOutput } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey } from '../../../../constants';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
+import * as path from "path";
+import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
+import { ext } from '../../../../extensionVariables';
+import { type IDTSTaskJson, type IHostJsonV2 } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
-import { SetConnectionSettingStepBase } from '../SetConnectionSettingStepBase';
+import { tryGetVariableSubstitutedKey } from '../getVariableSubstitutedKey';
+import { notifyFailedToConfigureHost } from '../notifyFailedToConfigureHost';
+import { setLocalSetting } from '../setConnectionSetting';
 import { type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
-export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> extends SetConnectionSettingStepBase<T> {
+export class DTSHubNameSetSettingStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 241;
     public stepName: string = 'dtsHubNameSetSettingStep';
-    public debugDeploySetting: ConnectionKey = ConnectionKey.DTSHub;
+
+    protected getOutputLogSuccess = (context: T) => localize('prepareDTSHubNameSuccess', 'Successfully prepared DTS hub connection: "{0}".', context.newDTSHubConnectionSettingValue);
+    protected getOutputLogFail = (context: T) => localize('prepareDTSHubNameFail', 'Failed to prepare DTS hub connection: "{0}".', context.newDTSHubConnectionSettingValue);
+    protected getTreeItemLabel = (context: T) => localize('prepareDTSHubNameLabel', 'Prepare DTS hub connection: "{0}"', context.newDTSHubConnectionSettingValue);
 
     public async execute(context: T): Promise<void> {
-        await this.setConnectionSetting(context, nonNullProp(context, 'newDTSHubNameConnectionSetting'));
+        if (!context.newDTSHubConnectionSettingKey) {
+            try {
+                await this.configureHostJson(context, ConnectionKey.DTSHub);
+            } catch (e) {
+                context.telemetry.properties.dtsHostConfigFailed = 'true';
+                const message: string = localize('dtsHostHubConfigFailed', 'Unable to find and configure "{0}" in your project root. You may want to manually set your DTS hub name to "{1}".', hostFileName, ConnectionKey.DTSHub);
+                notifyFailedToConfigureHost(context, message);
+                ext.outputChannel.appendLog(parseError(e).message);
+            }
+
+            context.newDTSHubConnectionSettingKey = tryGetVariableSubstitutedKey(ConnectionKey.DTSHub);
+        }
+
+        if (context.action === CodeAction.Debug) {
+            await setLocalSetting(
+                context,
+                nonNullProp(context, 'newDTSHubConnectionSettingKey'),
+                nonNullProp(context, 'newDTSHubConnectionSettingValue'),
+            );
+        } else {
+            // No further action required
+        }
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.newDTSHubNameConnectionSetting;
+        return !!context.newDTSHubConnectionSettingValue;
     }
 
-    public createSuccessOutput(context: T): ExecuteActivityOutput {
-        return {
-            item: new ActivityChildItem({
-                label: localize('prepareDTSHubNameLabel', 'Prepare DTS hub connection: "{0}"', context.newDTSHubNameConnectionSetting),
-                contextValue: createContextValue([`${this.stepName}Item`, activitySuccessContext]),
-                activityType: ActivityChildType.Success,
-                iconPath: activitySuccessIcon,
-            }),
-            message: localize('prepareDTSHubNameSuccess', 'Successfully prepared DTS hub connection: "{0}".', context.newDTSConnectionSetting),
-        };
-    }
+    private async configureHostJson(context: T, hubName: string): Promise<void> {
+        const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+        const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
 
-    public createProgressOutput(): ExecuteActivityOutput {
-        return {
-            item: new ActivityChildItem({
-                label: localize('prepareDTSHubNameProgressLabel', 'Prepare DTS hub connection: "..."'),
-                contextValue: createContextValue([`${this.stepName}Item`, activityProgressContext]),
-                activityType: ActivityChildType.Progress,
-                iconPath: activityProgressIcon,
-            }),
-        };
-    }
+        hostJson.extensions ??= {};
+        hostJson.extensions.durableTask ??= {};
+        (hostJson.extensions.durableTask as IDTSTaskJson).hubName = hubName;
 
-    public createFailOutput(context: T): ExecuteActivityOutput {
-        return {
-            item: new ActivityChildItem({
-                label: localize('prepareDTSHubNameLabel', 'Prepare DTS hub connection: "{0}"', context.newDTSHubNameConnectionSetting),
-                contextValue: createContextValue([`${this.stepName}Item`, activitySuccessContext]),
-                activityType: ActivityChildType.Fail,
-                iconPath: activityFailIcon,
-            }),
-            message: localize('prepareDTSHubNameFail', 'Failed to prepare DTS hub connection: "{0}".', context.newDTSConnectionSetting),
-        };
+        await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }
 }

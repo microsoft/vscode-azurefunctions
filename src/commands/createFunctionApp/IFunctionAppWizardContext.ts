@@ -26,12 +26,6 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     durableStorageType?: DurableBackend;
     useFlexConsumptionPlan?: boolean;
     useManagedIdentity?: boolean;
-
-    // Detected local connection string
-    hasAzureStorageConnection?: boolean;
-    hasEventHubsConnection?: boolean;
-    hasSqlDbConnection?: boolean;
-    hasDurableTaskScheduler?: boolean;
 }
 
 export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {

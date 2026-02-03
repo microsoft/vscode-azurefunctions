@@ -6,7 +6,10 @@
 import { runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
+import { initProjectForVSCode } from '../../src/commands/initProjectForVSCode/initProjectForVSCode';
+import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
+import { FuncVersion } from '../../src/FuncVersion';
+import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
 import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from './validateProject';
 

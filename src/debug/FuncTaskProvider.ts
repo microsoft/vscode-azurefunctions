@@ -7,7 +7,8 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microso
 import * as process from 'process';
 import { ShellExecution, Task, TaskScope, workspace, type CancellationToken, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
+import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
+import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -89,7 +90,7 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+             
             const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
@@ -120,6 +121,17 @@ export class FuncTaskProvider implements TaskProvider {
             options.cwd = projectRoot;
         }
 
+        const [azureWebJobsStorage, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, folder.uri.fsPath);
+        if (azureWebJobsStorage && isEmulator) {
+            options.env = {
+                ...options.env,
+                // The purpose of setting this manually is so that we can honor any custom Azurite connection settings that the user may have already set up
+                // See: https://github.com/microsoft/vscode-azurefunctions/pull/4703
+                // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/4735
+                "AzureWebJobsStorage": azureWebJobsStorage
+            };
+        }
+
         definition = definition || { type: func, command };
         return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
     }
@@ -138,7 +150,7 @@ export class FuncTaskProvider implements TaskProvider {
                 debugProvider = this._javaDebugProvider;
                 break;
             case ProjectLanguage.Ballerina:
-                debugProvider = this._ballerinaDebugProvider
+                debugProvider = this._ballerinaDebugProvider;
                 break;
             case ProjectLanguage.PowerShell:
                 debugProvider = this._powershellDebugProvider;

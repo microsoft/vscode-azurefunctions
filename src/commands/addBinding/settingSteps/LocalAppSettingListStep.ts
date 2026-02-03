@@ -11,9 +11,9 @@ import { type BindingSettingValue } from '../../../funcConfig/function';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
-import { type IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { type INetheriteConnectionWizardContext as IEventHubsConnectionWizardContext } from '../../appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext';
+import { EventHubsNamespaceListStep } from '../../appSettings/connectionSettings/netherite/azure/EventHubsNamespaceListStep';
 import { getBindingSetting, type FunctionV2WizardContext, type IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
-import { EventHubsNamespaceListStep } from '../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
@@ -28,8 +28,8 @@ import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectio
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 
 
-const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show hidden values'), data: 'hiddenValues' }
-const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' }
+const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show hidden values'), data: 'hiddenValues' };
+const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' };
 export class LocalAppSettingListStep extends BindingSettingStepBase {
     private _showHiddenValues: boolean = false;
     public async promptCore(context: IFunctionWizardContext): Promise<BindingSettingValue> {
@@ -53,6 +53,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
             } else {
                 return result;
             }
+        // eslint-disable-next-line no-constant-condition
         } while (true);
     }
 

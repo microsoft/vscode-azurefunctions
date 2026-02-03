@@ -15,7 +15,7 @@ import { ProjectResource, getProjectContextValue } from './projectContextValues'
 
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
-    public readonly parent: FunctionsTreeItemBase;
+    declare public readonly parent: FunctionsTreeItemBase;
     public readonly project: IProjectTreeItem;
     public readonly function: FunctionBase;
     private _disabled: boolean;

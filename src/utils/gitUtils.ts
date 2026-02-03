@@ -14,7 +14,7 @@ export namespace gitUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, composeArgs(withArg('--version'))());
             return true;
-        } catch (error) {
+        } catch (_error) {
             return false;
         }
     }
@@ -28,7 +28,7 @@ export namespace gitUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, composeArgs(withArg('rev-parse', '--git-dir'))());
             return true;
-        } catch (error) {
+        } catch (_error) {
             return false;
         }
     }

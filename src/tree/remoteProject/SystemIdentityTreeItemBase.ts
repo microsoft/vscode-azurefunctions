@@ -21,7 +21,7 @@ export async function createSystemIdentityTreeItem(context: IActionContext, pare
 
 class SystemIdentityTreeItem extends AzExtParentTreeItem {
     public readonly identity: Identity;
-    public readonly parent: ManagedIdentityTreeItem;
+    declare public readonly parent: ManagedIdentityTreeItem;
     public static contextValue: string = 'systemIdentity';
     public state: string;
 
@@ -38,7 +38,7 @@ class SystemIdentityTreeItem extends AzExtParentTreeItem {
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const msiClient = await createManagedServiceIdentityClient([context, this.subscription]);
         const systemIdentity = await msiClient.systemAssignedIdentities.getByScope(this.parent.parent.id);
-        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, systemIdentity)
+        const roleDefinitionsItem: RoleDefinitionsItem[] = await createRoleDefinitionsItems(context, this.parent.subscription, systemIdentity, this.parent.parent.site.id);
         return roleDefinitionsItem.map(rd => new RoleDefinitionsTreeItem(this, rd));
     }
 
@@ -47,7 +47,7 @@ class SystemIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public get id(): string {
-        return `${this.parent.id}/${this.state}`
+        return `${this.parent.id}/${this.state}`;
     }
 
     public get label(): string {
@@ -79,7 +79,7 @@ class DisabledIdentityTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return `${this.parent.id}/${this.state}`
+        return `${this.parent.id}/${this.state}`;
     }
 
     public get label(): string {

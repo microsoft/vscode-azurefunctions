@@ -7,7 +7,7 @@ import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, type IActionCon
 import * as path from 'path';
 import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
+import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
@@ -88,14 +88,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
     private async writeTasksJson(context: IProjectWizardContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
         const newTasks: TaskDefinition[] = this.getTasks(language);
         for (const task of newTasks) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+             
             let cwd: string = (task.options && task.options.cwd) || '.';
             cwd = this.addSubDir(context, cwd);
             if (!isPathEqual(cwd, '.')) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                 
                 task.options = task.options || {};
                 // always use posix for debug config
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                 
                 task.options.cwd = path.posix.join('${workspaceFolder}', cwd);
             }
         }
@@ -162,7 +162,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         if (matchingTaskLabels.length > 0) {
             const message = localize('confirmOverwriteTasks', 'This will overwrite the following tasks in your tasks.json: "{0}"', matchingTaskLabels.join('", "'));
             const overwrite: MessageItem = { title: localize('overwrite', 'Overwrite') };
-            await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmOverwriteTasks' }, overwrite)
+            await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmOverwriteTasks' }, overwrite);
         }
 
         return nonMatchingTasks.concat(...newTasks);
@@ -249,6 +249,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
 
         if (this.preDeployTask) {
             settings.push({ key: preDeployTaskSetting, value: this.preDeployTask });
+        }
+
+        if (context.mcpProjectType) {
+            settings.push({ key: mcpProjectTypeSetting, value: context.mcpProjectType });
         }
 
         if (context.workspaceFolder) { // Use VS Code api to update config if folder is open

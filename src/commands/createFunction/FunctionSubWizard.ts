@@ -19,7 +19,6 @@ import { BallerinaFunctionNameStep } from './ballerinaSteps/BallerinaFunctionNam
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
-import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
@@ -50,7 +49,7 @@ export class FunctionSubWizard {
                     break;
                 default:
                     if (isNodeV4Plus(context)) {
-                        promptSteps.push(new NodeV4FunctionNameStep())
+                        promptSteps.push(new NodeV4FunctionNameStep());
                     } else if (context.templateSchemaVersion === TemplateSchemaVersion.v1) {
                         promptSteps.push(new ScriptFunctionNameStep());
                     }
@@ -96,10 +95,6 @@ export class FunctionSubWizard {
                         executeSteps.push(new ScriptFunctionCreateStep());
                         break;
                 }
-            }
-
-            if (context.newDurableStorageType) {
-                executeSteps.push(new DurableProjectConfigureStep());
             }
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);

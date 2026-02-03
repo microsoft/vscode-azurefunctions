@@ -77,6 +77,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     return {
         isHttpTrigger: /^http/i.test(rawTemplate.Name) || /webhook$/i.test(rawTemplate.Name),
         isTimerTrigger: /^timer/i.test(rawTemplate.Name),
+        isMcpTrigger: /^mcptooltrigger/i.test(rawTemplate.Name),
         isSqlBindingTemplate: sqlBindingTemplateRegex.test(rawTemplate.Name),
         id: rawTemplate.Identity,
         name: rawTemplate.Name,
@@ -98,7 +99,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
     for (const rawTemplate of rawTemplates) {
         try {
             functionTemplates.push(parseDotnetTemplate(<IRawTemplate>rawTemplate));
-        } catch (error) {
+        } catch (_error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }

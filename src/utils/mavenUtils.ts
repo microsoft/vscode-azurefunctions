@@ -16,7 +16,7 @@ export namespace mavenUtils {
     export async function validateMavenInstalled(context: IActionContext): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, undefined, mvnCommand, composeArgs(withArg('--version'))());
-        } catch (error) {
+        } catch (_error) {
             const message: string = localize('mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
 
             if (!context.errorHandling.suppressDisplay) {
@@ -39,10 +39,7 @@ export namespace mavenUtils {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
                 if (result && !err) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     if (result['project'] && result['project']['properties']) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         resolve(result['project']['properties']['functionAppName'] as string | undefined);
                         return;
                     }

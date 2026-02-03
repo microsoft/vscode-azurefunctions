@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
-import * as XRegExp from 'xregexp';
+import XRegExp from 'xregexp';
 import { localize } from "../../../localize";
 import { type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
