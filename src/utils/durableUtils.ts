@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, parseError, type IParsedError } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg, withFlagArg } from '@microsoft/vscode-processutils';
 import * as path from "path";
 import { type Uri } from "vscode";
 import * as xml2js from "xml2js";
@@ -187,11 +188,11 @@ export namespace durableUtils {
         const failedPackages: string[] = [];
         for (const p of packages) {
             try {
-                const packageArgs: string[] = [p.name];
-                if (p.prerelease) {
-                    packageArgs.push('--prerelease');
-                }
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', ...packageArgs);
+                const args = composeArgs(
+                    withArg('add', 'package', p.name),
+                    withFlagArg('--prerelease', p.prerelease),
+                )();
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', args);
             } catch {
                 failedPackages.push(p.name);
             }
@@ -205,7 +206,7 @@ export namespace durableUtils {
     async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
             const packageVersion = context.languageModel === 4 ? '3' : '2';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${nodeDfPackage}@${packageVersion}`);
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', composeArgs(withArg('install', `${nodeDfPackage}@${packageVersion}`))());
         } catch (error) {
             const pError: IParsedError = parseError(error);
             const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', nodeDfPackage);

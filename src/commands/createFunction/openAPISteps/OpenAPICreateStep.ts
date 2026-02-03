@@ -18,6 +18,12 @@ import { type IJavaProjectWizardContext } from '../../createNewProject/javaSteps
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 import { type IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';
 
+// Autorest uses --name:value format where the value may need quoting
+const quotationMark: string = process.platform === 'win32' ? '"' : '\'';
+function quoteValue(value: string): string {
+    return quotationMark + value + quotationMark;
+}
+
 export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
     public priority: number = 220;
 
@@ -30,9 +36,8 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
         const uris: Uri[] = nonNullProp(wizardContext, 'openApiSpecificationFile');
         const uri: Uri = uris[0];
 
-        // TODO: Need to work on this...we don't have a good answer for quoting things that are only a substring of a single argument
         const generalArgsCurryFn = composeArgs(
-            withArg(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)}`), // TODO
+            withArg(`--input-file:${quoteValue(uri.fsPath)}`),
             withArg(`--version:3.0.6320`),
         );
 
@@ -71,7 +76,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             generalArgsCurryFn,
             langArgsCurryFn,
             withArg('--generate-metadata:false'),
-            withArg(`--output-folder:${cpUtils.wrapArgInQuotes(wizardContext.projectPath)}`), // TODO
+            withArg(`--output-folder:${quoteValue(wizardContext.projectPath)}`),
         )();
 
         ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.\nIf autorest fails, you can run the script on your command-line, or try resetting autorest (autorest --reset) and try again.'));

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as semver from 'semver';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
@@ -12,7 +13,7 @@ import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 
 export async function getPythonVersion(pyAlias: string): Promise<string> {
-    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
+    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, pyAlias, composeArgs(withArg('--version'))());
     if (result.code !== 0) {
         throw new Error(localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr));
     }

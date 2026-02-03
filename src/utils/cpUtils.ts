@@ -30,7 +30,40 @@ export namespace cpUtils {
         return result.cmdOutput;
     }
 
+    /**
+     * Execute a raw command line string (e.g., compound commands with && or |).
+     * Use this when you need to run shell-specific compound commands.
+     */
+    export async function executeCommandLine(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, commandLine: string): Promise<string> {
+        const result: ICommandResult = await tryExecuteCommandLine(outputChannel, workingDirectory, commandLine);
+        if (result.code !== 0) {
+            if (outputChannel) {
+                outputChannel.show();
+                throw new Error(localize('commandErrorWithOutput', 'Failed to run command. Check output window for more details.'));
+            } else {
+                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{2}":{3}{4}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
+            }
+        } else {
+            if (outputChannel) {
+                outputChannel.appendLog(localize('finishedRunningCommand', 'Finished running command: "{0}".', result.formattedCommandLine));
+            }
+        }
+        return result.cmdOutput;
+    }
+
     export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs): Promise<ICommandResult> {
+        return tryExecuteCommandCore(outputChannel, workingDirectory, command, args, false);
+    }
+
+    /**
+     * Try to execute a raw command line string (e.g., compound commands with && or |).
+     * Use this when you need to run shell-specific compound commands.
+     */
+    export async function tryExecuteCommandLine(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, commandLine: string): Promise<ICommandResult> {
+        return tryExecuteCommandCore(outputChannel, workingDirectory, commandLine, [], true);
+    }
+
+    async function tryExecuteCommandCore(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, allowUnsafeExecutablePath: boolean): Promise<ICommandResult> {
         const stdoutFinal = new AccumulatorStream();
         const stdoutAndErrFinal = new AccumulatorStream();
 
@@ -61,6 +94,7 @@ export namespace cpUtils {
             shellProvider: Shell.getShellOrDefault(),
             stdOutPipe: stdoutIntermediate,
             stdErrPipe: stderrIntermediate,
+            allowUnsafeExecutablePath,
             onCommand: (commandLine: string) => {
                 result.formattedCommandLine = commandLine;
 

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as os from 'os';
 import * as path from 'path';
 import { JavaBuildTool } from '../../../constants';
@@ -30,21 +31,24 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
         try {
             // Use maven command to init Java function project.
             ext.outputChannel.show();
+            const args = composeArgs(
+                withArg('archetype:generate'),
+                withArg(...mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure')),
+                withArg(...mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype')),
+                withArg(...mavenUtils.formatMavenArg('DarchetypeVersion', 'LATEST')),
+                withArg(...mavenUtils.formatMavenArg('DjavaVersion', javaVersion)),
+                withArg(...mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId'))),
+                withArg(...mavenUtils.formatMavenArg('DartifactId', artifactId)),
+                withArg(...mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaProjectVersion'))),
+                withArg(...mavenUtils.formatMavenArg('Dpackage', nonNullProp(context, 'javaPackageName'))),
+                withArg(...mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName'))),
+                withArg('-B'), // in Batch Mode
+            )();
             await mavenUtils.executeMvnCommand(
                 context.telemetry.properties,
                 ext.outputChannel,
                 tempFolder,
-                'archetype:generate',
-                mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure'),
-                mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype'),
-                mavenUtils.formatMavenArg('DarchetypeVersion', 'LATEST'),
-                mavenUtils.formatMavenArg('DjavaVersion', javaVersion),
-                mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId')),
-                mavenUtils.formatMavenArg('DartifactId', artifactId),
-                mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaProjectVersion')),
-                mavenUtils.formatMavenArg('Dpackage', nonNullProp(context, 'javaPackageName')),
-                mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName')),
-                '-B' // in Batch Mode
+                args,
             );
             await fsUtil.copyFolder(context, path.join(tempFolder, artifactId), context.projectPath);
         } finally {

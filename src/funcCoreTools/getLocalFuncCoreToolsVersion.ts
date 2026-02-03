@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as semver from 'semver';
 import { cpUtils } from '../utils/cpUtils';
 import { getFuncCliPath } from './getFuncCliPath';
 
 export async function getLocalFuncCoreToolsVersion(context: IActionContext, workspacePath: string | undefined): Promise<string | null> {
     const funcCliPath = await getFuncCliPath(context, workspacePath);
-    const output: string = await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, '--version');
+    const output: string = await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, composeArgs(withArg('--version'))());
     const version: string | null = semver.clean(output);
     if (version) {
         return version;

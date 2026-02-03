@@ -60,7 +60,7 @@ export namespace venvUtils {
         // child_process uses cmd or bash, not PowerShell
         const terminal: Terminal = process.platform === 'win32' ? Terminal.cmd : Terminal.bash;
         command = joinCommands(terminal, getVenvActivateCommand(venvName, terminal, process.platform), command);
-        await cpUtils.executeCommand(ext.outputChannel, folderPath, command);
+        await cpUtils.executeCommandLine(ext.outputChannel, folderPath, command);
     }
 
     export async function venvExists(venvName: string, rootFolder: string): Promise<boolean> {
