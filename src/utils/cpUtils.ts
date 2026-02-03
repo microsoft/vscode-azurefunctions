@@ -102,7 +102,7 @@ export namespace cpUtils {
                     outputChannel.appendLog(localize('runningCommand', 'Running command: "{0}"...', commandLine));
                 }
             },
-        }
+        };
 
         try {
             await spawnStreamAsync(command, args, options);
