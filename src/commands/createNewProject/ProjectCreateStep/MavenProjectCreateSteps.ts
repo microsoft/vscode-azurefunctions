@@ -33,15 +33,15 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
             ext.outputChannel.show();
             const args = composeArgs(
                 withArg('archetype:generate'),
-                withArg(...mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure')),
-                withArg(...mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype')),
-                withArg(...mavenUtils.formatMavenArg('DarchetypeVersion', 'LATEST')),
-                withArg(...mavenUtils.formatMavenArg('DjavaVersion', javaVersion)),
-                withArg(...mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId'))),
-                withArg(...mavenUtils.formatMavenArg('DartifactId', artifactId)),
-                withArg(...mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaProjectVersion'))),
-                withArg(...mavenUtils.formatMavenArg('Dpackage', nonNullProp(context, 'javaPackageName'))),
-                withArg(...mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName'))),
+                withArg(...mavenUtils.formatMavenArg('archetypeGroupId', 'com.microsoft.azure')),
+                withArg(...mavenUtils.formatMavenArg('archetypeArtifactId', 'azure-functions-archetype')),
+                withArg(...mavenUtils.formatMavenArg('archetypeVersion', 'LATEST')),
+                withArg(...mavenUtils.formatMavenArg('javaVersion', javaVersion)),
+                withArg(...mavenUtils.formatMavenArg('groupId', nonNullProp(context, 'javaGroupId'))),
+                withArg(...mavenUtils.formatMavenArg('artifactId', artifactId)),
+                withArg(...mavenUtils.formatMavenArg('version', nonNullProp(context, 'javaProjectVersion'))),
+                withArg(...mavenUtils.formatMavenArg('package', nonNullProp(context, 'javaPackageName'))),
+                withArg(...mavenUtils.formatMavenArg('appName', nonNullProp(context, 'javaAppName'))),
                 withArg('-B'), // in Batch Mode
             )();
             await mavenUtils.executeMvnCommand(

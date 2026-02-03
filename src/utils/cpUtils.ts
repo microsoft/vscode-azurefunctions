@@ -20,7 +20,7 @@ export namespace cpUtils {
                 outputChannel.show();
                 throw new Error(localize('commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', command));
             } else {
-                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{2}":{3}{4}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
+                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{1}":{2}{3}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
             }
         } else {
             if (outputChannel) {
@@ -41,7 +41,7 @@ export namespace cpUtils {
                 outputChannel.show();
                 throw new Error(localize('commandErrorWithOutput', 'Failed to run command. Check output window for more details.'));
             } else {
-                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{2}":{3}{4}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
+                throw new Error(localize('commandError', 'Command "{0}" failed with exit code "{1}":{2}{3}', result.formattedCommandLine, result.code, os.EOL, result.cmdOutputIncludingStderr));
             }
         } else {
             if (outputChannel) {
@@ -129,8 +129,8 @@ export namespace cpUtils {
     }
 
     function bufferToString(buffer: Buffer): string {
-        // Remove non-printing control characters and trailing newlines
+        // Remove non-printing control characters while preserving newlines
         // eslint-disable-next-line no-control-regex
-        return buffer.toString().replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F]|\r?\n$/g, '');
+        return buffer.toString().replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F]/g, '');
     }
 }
