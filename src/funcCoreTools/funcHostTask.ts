@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -230,7 +231,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
 
         if (process.platform === 'win32') {
             // Windows: Use netstat to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', '-ano');
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', composeArgs(withArg('-ano'))());
             if (result.code === 0) {
                 const lines = result.cmdOutput.split('\n');
                 for (const line of lines) {
@@ -248,8 +249,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
                     undefined,
                     undefined,
                     'powershell',
-                    '-Command',
-                    `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`
+                    composeArgs(withArg('-Command', `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`))()
                 );
                 if (psResult.code === 0 && psResult.cmdOutput.trim()) {
                     const pid = parseInt(psResult.cmdOutput.trim(), 10);
@@ -262,7 +262,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
             }
         } else {
             // Linux/Mac: Use lsof to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', '-ti', `:${portNumber}`);
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', composeArgs(withArg('-ti', `:${portNumber}`))());
             if (result.code === 0 && result.cmdOutput.trim()) {
                 const pid = parseInt(result.cmdOutput.trim(), 10);
                 if (!isNaN(pid)) {

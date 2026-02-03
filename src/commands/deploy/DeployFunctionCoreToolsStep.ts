@@ -94,7 +94,7 @@ export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDep
             // if there's no slotName, then just assume production
             args.push('--slot', context.site.slotName ?? 'production');
         }
-        const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, args.join(' '));
+        const cmdOutput = await cpUtils.tryExecuteCommandLine(ext.outputChannel, context.originalDeployFsPath, args.join(' '));
         context.activityAttributes.logs = [{ content: cmdOutput.cmdOutputIncludingStderr }];
     }
     public shouldExecute(_context: InnerDeployContext): boolean {
