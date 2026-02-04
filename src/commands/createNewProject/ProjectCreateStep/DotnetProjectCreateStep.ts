@@ -42,7 +42,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
             const args = composeArgs(
                 withArg('init'),
                 withNamedArg('--worker-runtime', runtime),
-                withNamedArg('--target-framework', runtime === 'dotnet' ? undefined : nonNullValueAndProp(context.workerRuntime, 'targetFramework')), // targetFramework is only supported for dotnet-isolated projects // TODO: validate this is doing what I think it's doing
+                withNamedArg('--target-framework', runtime === 'dotnet' ? undefined : nonNullValueAndProp(context.workerRuntime, 'targetFramework')), // targetFramework is only supported for dotnet-isolated projects
                 withArg('--docker'),
             )();
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", args);

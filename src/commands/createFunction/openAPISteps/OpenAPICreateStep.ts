@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, type CommandLineCurryFn } from '@microsoft/vscode-processutils';
+import { composeArgs, withArg, withQuotedArg, type CommandLineCurryFn } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { ProgressLocation, window, type Uri } from "vscode";
 import { ProjectLanguage, packageJsonFileName } from "../../../constants";
@@ -17,12 +17,6 @@ import { openUrl } from '../../../utils/openUrl';
 import { type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 import { type IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';
-
-// Autorest uses --name:value format where the value may need quoting
-const quotationMark: string = process.platform === 'win32' ? '"' : '\'';
-function quoteValue(value: string): string {
-    return quotationMark + value + quotationMark;
-}
 
 export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
     public priority: number = 220;
@@ -37,7 +31,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
         const uri: Uri = uris[0];
 
         const generalArgsCurryFn = composeArgs(
-            withArg(`--input-file:${quoteValue(uri.fsPath)}`),
+            withQuotedArg(`--input-file:${uri.fsPath}`),
             withArg(`--version:3.0.6320`),
         );
 
@@ -76,7 +70,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             generalArgsCurryFn,
             langArgsCurryFn,
             withArg('--generate-metadata:false'),
-            withArg(`--output-folder:${quoteValue(wizardContext.projectPath)}`),
+            withQuotedArg(`--output-folder:${wizardContext.projectPath}`),
         )();
 
         ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.\nIf autorest fails, you can run the script on your command-line, or try resetting autorest (autorest --reset) and try again.'));
