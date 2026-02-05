@@ -74,7 +74,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const templateProvider = new CentralTemplateProvider();
         ext.templateProvider.registerExtensionVariable(templateProvider);
-        console.log('Registered CentralTemplateProvider in extension variables.');
         context.subscriptions.push(templateProvider);
 
         // Suppress "Report an Issue" button for all errors in favor of the command
@@ -135,8 +134,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
 
-    console.log('Activated Azure Functions extension...');
-    console.log('**********************************************');
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
         revealTreeItem,

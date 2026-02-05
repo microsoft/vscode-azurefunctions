@@ -5,6 +5,7 @@
 
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
@@ -30,9 +31,9 @@ import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
 export class FunctionSubWizard {
-    public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+    public static async createSubWizard(context: IFunctionWizardContext, functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard?: boolean, overrideExtVariables?: typeof ext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         functionSettings = functionSettings ?? {};
-
+        const _ext = overrideExtVariables ?? ext;
         const template: FunctionTemplateBase | undefined = context.functionTemplate;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
@@ -83,7 +84,7 @@ export class FunctionSubWizard {
                         break;
                     case ProjectLanguage.CSharp:
                     case ProjectLanguage.FSharp:
-                        executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
+                        executeSteps.push(await DotnetFunctionCreateStep.createStep(context, _ext));
                         break;
                     case ProjectLanguage.TypeScript:
                         executeSteps.push(new TypeScriptFunctionCreateStep());

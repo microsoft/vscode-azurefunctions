@@ -49,7 +49,10 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
     }
 
     public configureBeforeExecute(context: IPythonVenvWizardContext): void | Promise<void> {
-        if (!context.venvName) {
+        // Only set a default venv name if this step will actually execute.
+        // Otherwise, we can accidentally set `context.venvName` (and later write `azureFunctions.pythonVenv`)
+        // even when the user chose to skip creating a virtual environment.
+        if (!context.useExistingVenv && context.pythonAlias && !context.venvName) {
             context.venvName = '.venv';
         }
     }

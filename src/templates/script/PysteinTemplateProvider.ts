@@ -5,7 +5,9 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage } from '../../constants';
+import { type FuncVersion } from '../../FuncVersion';
+import { ProjectLanguage, type ProjectLanguage as ProjectLanguageType } from '../../constants';
+import { type IExtensionVariables } from '../../extensionVariables';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { feedUtils } from '../../utils/feedUtils';
 import { verifyTemplateIsV2 } from '../../utils/templateVersionUtils';
@@ -22,6 +24,10 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
     public templateType: TemplateType = TemplateType.Script;
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v2;
 
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguageType, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
+        super(version, projectPath, language, projectTemplateKey, overrideExtVariables);
+    }
+
     protected get backupSubpath(): string {
         return path.join('pystein');
     }
@@ -37,7 +43,7 @@ export class PysteinTemplateProvider extends ScriptBundleTemplateProvider {
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const urls: string[] = [release.userPrompts ?? release.bindings, resourcesUrl, release.functions];
 
-        [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
+        [this._rawBindings, this._resources, this._rawTemplates] = <[object[], { en: { [key: string]: string } }, RawTemplateV2[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url, this._overrideExtVariables)));
 
         return {
             functionTemplates: parseScriptTemplates(this._rawTemplates, this._rawBindings, this._resources),

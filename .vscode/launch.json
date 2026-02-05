@@ -41,6 +41,7 @@
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",
                 "${workspaceFolder}/test/**/*.{ts,mts,cts}", // We are using TSX so out files *are* the source files
+                "${workspaceFolder}/src/**/*.{ts,mts,cts}", // For debugging during tests!
             ],
             "preLaunchTask": "Watch: ESBuild",
             "env": {

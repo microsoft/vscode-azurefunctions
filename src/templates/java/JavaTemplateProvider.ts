@@ -5,7 +5,9 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { JavaBuildTool, javaBuildTool, pomXmlFileName } from '../../constants';
+import { type FuncVersion } from '../../FuncVersion';
+import { JavaBuildTool, javaBuildTool, pomXmlFileName, type ProjectLanguage } from '../../constants';
+import { type IExtensionVariables } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
@@ -29,6 +31,10 @@ interface IRawJavaTemplates {
 export class JavaTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.Java;
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
+        super(version, projectPath, language, projectTemplateKey, overrideExtVariables);
+    }
 
     protected get backupSubpath(): string {
         return path.join('java', this.version);
@@ -70,7 +76,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         return true;
     }
 
-     
+
     protected async getCacheKeySuffix(): Promise<string> {
         return 'Java';
     }

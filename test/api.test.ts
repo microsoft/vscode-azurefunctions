@@ -11,7 +11,7 @@ import { extensions, type Extension } from "vscode";
 import { extensionId, ProjectLanguage } from '../src/constants';
 import { FuncVersion } from '../src/FuncVersion';
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
-import { getTestWorkspaceFolder, testFolderPath } from './global.test';
+import { getTestWorkspaceFolder, mockExt, testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
@@ -36,7 +36,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                targetFramework: ['net6.0', 'net7.0', 'net8.0'] // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
+                targetFramework: ['net6.0', 'net7.0', 'net8.0'],
+                overrideExtensionVariables: mockExt // Will only work on functions api v1.4.0, but won't hurt on v1.3.0
             });
         });
 
@@ -62,7 +63,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 templateId: 'HttpTrigger',
                 languageFilter: /^(Java|Type)Script$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                suppressOpenFolder: true
+                suppressOpenFolder: true,
+                overrideExtensionVariables: mockExt
             });
         });
 
@@ -89,7 +91,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionSettings: {
                     authLevel: 'anonymous'
                 },
-                targetFramework: ['net8.0', 'net7.0', 'net6.0']
+                targetFramework: ['net8.0', 'net7.0', 'net6.0'],
+                overrideExtensionVariables: mockExt
             });
         });
 
@@ -115,7 +118,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 templateId: 'HttpTrigger',
                 languageFilter: /^C\#$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                targetFramework: ['net7.0', 'net6.0']
+                targetFramework: ['net7.0', 'net6.0'],
+                overrideExtensionVariables: mockExt
             })
         });
     });

@@ -10,7 +10,7 @@ import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { URLSearchParams } from "url";
-import { ext } from '../extensionVariables';
+import { ext, type IExtensionVariables } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { nonNullProp, nonNullValue } from "./nonNull";
@@ -26,14 +26,15 @@ export namespace requestUtils {
     /**
      * Send a request using the extension's user-controlled timeout setting
      */
-    export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions): Promise<AzExtPipelineResponse> {
+    export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions, overrideExtVariables?: IExtensionVariables): Promise<AzExtPipelineResponse> {
+        const _ext = overrideExtVariables ?? ext;
         const timeout = getRequestTimeoutMS();
 
         try {
             return await sendRequestWithTimeout(context, options, timeout, undefined);
         } catch (error) {
             if (isTimeoutError(error)) {
-                throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
+                throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', _ext.prefix, timeoutKey));
             } else {
                 throw error;
             }
@@ -51,8 +52,12 @@ export namespace requestUtils {
         const client: ServiceClient = await createGenericClient(context, undefined);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
-        await new Promise((resolve, reject): void => {
-            stream.pipe(fse.createWriteStream(filePath).on('finish', () => resolve).on('error', reject));
+        await new Promise<void>((resolve, reject): void => {
+            stream.pipe(fse.createWriteStream(filePath).on('finish', () => {
+                resolve();
+            }).on('error', (error) => {
+                reject(error);
+            }));
         });
     }
 
@@ -76,7 +81,7 @@ export namespace requestUtils {
      * Converts property name like "function_app_id" to "functionAppId"
      */
     function convertPropertyName(name: string): string {
-         
+
         while (true) {
             const match: RegExpMatchArray | null = /_([a-z])/g.exec(name);
             if (match) {

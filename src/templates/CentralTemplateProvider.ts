@@ -7,7 +7,7 @@ import { maskUserInfo, parseError, type IActionContext } from '@microsoft/vscode
 import { Disposable, workspace, type ConfigurationChangeEvent } from 'vscode';
 import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage, TemplateFilter, projectTemplateKeySetting } from '../constants';
-import { TemplateSource, ext } from '../extensionVariables';
+import { TemplateSource, ext, type IExtensionVariables } from '../extensionVariables';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
@@ -37,8 +37,17 @@ export class CentralTemplateProvider implements Disposable {
     public readonly templateSource: TemplateSource | undefined;
     private readonly _providersMap = new Map<string, CachedProviders>();
     private _disposables: Disposable[] = [];
+    private readonly _overrideExtVariables: IExtensionVariables | undefined;
 
-    public constructor(templateSource?: TemplateSource) {
+    /**
+     * Gets the extension variables, using the override if provided
+     */
+    private get _ext(): IExtensionVariables {
+        return this._overrideExtVariables ?? ext;
+    }
+
+    public constructor(templateSource?: TemplateSource, overrideExtVariables?: IExtensionVariables) {
+        this._overrideExtVariables = overrideExtVariables;
         this.templateSource = templateSource || getWorkspaceSetting('templateSource');
         this._disposables.push(workspace.onDidChangeConfiguration(e => this.onConfigChanged(e)));
     }
@@ -52,28 +61,28 @@ export class CentralTemplateProvider implements Disposable {
         this._providersMap.clear();
     }
 
-    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): TemplateProviderBase[] {
+    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables): TemplateProviderBase[] {
         const providers: TemplateProviderBase[] = [];
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                providers.push(new DotnetTemplateProvider(version, projectPath, language, projectTemplateKey));
+                providers.push(new DotnetTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                 break;
             case ProjectLanguage.Java:
-                providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
+                providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                 break;
             case ProjectLanguage.Ballerina:
-                providers.push(new BallerinaTemplateProvider(version, projectPath, language, projectTemplateKey));
+                providers.push(new BallerinaTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                 break;
             default:
                 if (isPythonV2Plus(language, languageModel)) {
-                    providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
+                    providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                 } else if (isNodeV4Plus({ language, languageModel })) {
-                    providers.push(new NodeV4Provider(version, projectPath, language, projectTemplateKey));
+                    providers.push(new NodeV4Provider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                 } else {
-                    providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
+                    providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                     if (version !== FuncVersion.v1) {
-                        providers.push(new ScriptBundleTemplateProvider(version, projectPath, language, projectTemplateKey));
+                        providers.push(new ScriptBundleTemplateProvider(version, projectPath, language, projectTemplateKey, overrideExtVariables));
                     }
                 }
                 break;
@@ -98,7 +107,7 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     public async clearTemplateCache(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): Promise<void> {
-        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, undefined);
+        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, undefined, this._overrideExtVariables);
         for (const provider of providers) {
             await provider.clearCachedTemplateMetadata();
             await provider.clearCachedTemplates(context);
@@ -160,7 +169,7 @@ export class CentralTemplateProvider implements Disposable {
     private async getCachedProviders(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
         let cachedProviders = this.tryGetCachedProviders(projectPath, language, languageModel, version);
         if (!cachedProviders) {
-            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, projectTemplateKey) };
+            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, projectTemplateKey, this._overrideExtVariables) };
             this.setCachedProviders(projectPath, language, languageModel, version, cachedProviders);
         } else {
             await Promise.all(cachedProviders.providers.map(async p => {
@@ -178,7 +187,6 @@ export class CentralTemplateProvider implements Disposable {
     private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<ITemplates> {
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;
-
         const cachedProviders = await this.getCachedProviders(context, projectPath, language, languageModel, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
@@ -207,6 +215,8 @@ export class CentralTemplateProvider implements Disposable {
         });
     }
 
+
+    // IF I EVER FORGOT, THIS IS PROBABLY WHERE THE PROBLEM IS
     private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
         let result: ITemplates | undefined;
         let latestErrorMessage: string | undefined;
@@ -228,7 +238,7 @@ export class CentralTemplateProvider implements Disposable {
                 result = await Promise.race([
                     this.getLatestTemplates(context, provider, latestTemplateVersion),
                     delay(timeout).then(() => {
-                        throw new Error(localize('templatesTimeout', 'Retrieving templates timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, requestUtils.timeoutKey));
+                        throw new Error(localize('templatesTimeout', 'Retrieving templates timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', this._ext.prefix, requestUtils.timeoutKey));
                     })
                 ]);
             }
@@ -236,8 +246,7 @@ export class CentralTemplateProvider implements Disposable {
             const errorMessage: string = parseError(error).message;
             // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
             latestErrorMessage = localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage);
-            console.log('****THE KEY IS HERE', ext, latestErrorMessage);
-            ext.outputChannel.appendLog(latestErrorMessage);
+            this._ext.outputChannel.appendLog(latestErrorMessage);
             context.telemetry.properties.latestTemplatesError = maskUserInfo(errorMessage, []);
         }
 
@@ -293,7 +302,7 @@ export class CentralTemplateProvider implements Disposable {
                 }
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
-                ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
+                this._ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
                 context.telemetry.properties.cachedTemplatesError = maskUserInfo(errorMessage, []);
             }
         }
@@ -313,7 +322,7 @@ export class CentralTemplateProvider implements Disposable {
                 return result;
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
-                ext.outputChannel.appendLog(localize('backupTemplatesError', 'Failed to get backup templates: {0}', errorMessage));
+                this._ext.outputChannel.appendLog(localize('backupTemplatesError', 'Failed to get backup templates: {0}', errorMessage));
                 context.telemetry.properties.backupTemplatesError = maskUserInfo(errorMessage, []);
             }
         }
@@ -322,7 +331,7 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     private onConfigChanged(e: ConfigurationChangeEvent): void {
-        if (e.affectsConfiguration(`${ext.prefix}.${projectTemplateKeySetting}`)) {
+        if (e.affectsConfiguration(`${this._ext.prefix}.${projectTemplateKeySetting}`)) {
             for (const cached of this._providersMap.values()) {
                 for (const provider of cached.providers) {
                     provider.projKeyMayHaveChanged();

@@ -7,37 +7,48 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { coerce as semVerCoerce, type SemVer } from 'semver';
 import { type FuncVersion } from '../../FuncVersion';
-import { ext } from "../../extensionVariables";
+import { ext, type IExtensionVariables } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
-    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
+export async function executeDotnetTemplateCommand(context: IActionContext,
+    options: {
+        version: FuncVersion,
+        projTemplateKey: string,
+        workingDirectory: string | undefined,
+        operation: 'list' | 'create',
+        overrideExtVariables?: IExtensionVariables
+    },
+    ...args: string[]): Promise<string> {
+
+    const _ext = options.overrideExtVariables ?? ext;
+    const jsonDllPath: string = _ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
-        workingDirectory,
+        options.workingDirectory,
         'dotnet',
         '--roll-forward',
         'Major',
         cpUtils.wrapArgInQuotes(jsonDllPath),
         '--templateDir',
-        cpUtils.wrapArgInQuotes(getDotnetTemplateDir(context, version, projTemplateKey)),
+        cpUtils.wrapArgInQuotes(getDotnetTemplateDir(context, options.version, options.projTemplateKey, options.overrideExtVariables)),
         '--operation',
-        operation,
+        options.operation,
         ...args);
 }
 
-export function getDotnetItemTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {
-    return path.join(getDotnetTemplateDir(context, version, projTemplateKey), 'item.nupkg');
+export function getDotnetItemTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string, overrideExtVariables?: IExtensionVariables): string {
+    return path.join(getDotnetTemplateDir(context, version, projTemplateKey, overrideExtVariables), 'item.nupkg');
 }
 
-export function getDotnetProjectTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {
-    return path.join(getDotnetTemplateDir(context, version, projTemplateKey), 'project.nupkg');
+export function getDotnetProjectTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string, overrideExtVariables?: IExtensionVariables): string {
+    return path.join(getDotnetTemplateDir(context, version, projTemplateKey, overrideExtVariables), 'project.nupkg');
 }
 
-export function getDotnetTemplateDir(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {
-    const templateProvider = ext.templateProvider.get(context);
-    return path.join(ext.context.globalStoragePath, templateProvider.templateSource || '', version, projTemplateKey);
+export function getDotnetTemplateDir(context: IActionContext, version: FuncVersion, projTemplateKey: string, overrideExtVariables?: IExtensionVariables): string {
+    const _ext = overrideExtVariables ?? ext;
+    const templateProvider = _ext.templateProvider.get(context);
+    return path.join(_ext.context.globalStoragePath, templateProvider.templateSource || '', version, projTemplateKey);
 }
 
 export async function validateDotnetInstalled(context: IActionContext): Promise<void> {

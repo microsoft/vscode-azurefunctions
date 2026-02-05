@@ -6,23 +6,33 @@
 import { FuncVersion } from "../../FuncVersion";
 
 export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
+    /**
+     * IMPORTANT: These values must match the .NET template *Identity* segment used by `dotnet new`.
+     * Do NOT use user-facing display names (they often contain spaces/parentheses and won't match Identity).
+     */
     let verifiedTemplateIds: string[] = [
+        // Core triggers
+        'BlobTrigger',
+        'CosmosDBTrigger',
+        'DurableFunctionsOrchestration',
+        'EventGridTrigger',
+        'EventGridCloudEventTrigger',
         'EventHubTrigger',
         'HttpTrigger',
         'HttpTriggerWithOpenAPI',
-        'BlobTrigger',
         'QueueTrigger',
-        'TimerTrigger',
-        'ServiceBusTopicTrigger',
         'ServiceBusQueueTrigger',
-        'CosmosDBTrigger',
-        'EventGridTrigger',
-        'EventGridCloudEventTrigger',
-        //TODO: Add unit test for EventGridBlobTrigger
+        'ServiceBusTopicTrigger',
+        'TimerTrigger',
+
+        // Variants
         'EventGridBlobTrigger',
+
+        // SQL templates vary by worker model
         'SqlInputBinding',
+        'SqlInputBindingIsolated',
         'SqlOutputBinding',
-        'McpToolTrigger'
+        'SqlOutputBindingIsolated'
     ];
 
     if (version === FuncVersion.v1) {
@@ -33,13 +43,17 @@ export function getDotnetVerifiedTemplateIds(version: string): RegExp[] {
         ]);
     } else {
         verifiedTemplateIds = verifiedTemplateIds.concat([
-            'DurableFunctionsOrchestration',
             'IotHubTrigger'
         ]);
     }
 
     return verifiedTemplateIds.map(id => {
-        return new RegExp(`^azure\\.function\\.csharp\\.(?:isolated\\.|)${id}((\\.(?:Net(Core|Fx)\.|)[0-9]+\\.x)|)$`, 'i');
+        // Identity examples:
+        // - Azure.Function.CSharp.HttpTrigger.2.x
+        // - Azure.Function.CSharp.Isolated.HttpTrigger.Net8.0
+        // Keep this intentionally permissive after the template short-name.
+        const escapedId: string = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`^azure\\.function\\.(?:c|f)sharp\\.(?:isolated\\.)?${escapedId}(?:\\..*)?$`, 'i');
     });
 }
 

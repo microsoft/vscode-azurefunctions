@@ -7,7 +7,8 @@ import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils
 import extract from 'extract-zip';
 import * as path from 'path';
 import { FuncVersion } from '../../FuncVersion';
-import { ext } from '../../extensionVariables';
+import { type ProjectLanguage } from '../../constants';
+import { type IExtensionVariables } from '../../extensionVariables';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { getRandomHexString } from '../../utils/fs';
@@ -32,6 +33,10 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     protected _rawBindings: object;
 
     private readonly _templatesKey: string = 'FunctionTemplates';
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
+        super(version, projectPath, language, projectTemplateKey, overrideExtVariables);
+    }
     private readonly _bindingsKey: string = 'FunctionTemplateConfig';
     private readonly _resourcesKey: string = 'FunctionTemplateResources';
 
@@ -47,13 +52,13 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async getLatestTemplateVersion(context: IActionContext): Promise<string> {
-        return await cliFeedUtils.getLatestVersion(context, this.version);
+        return await cliFeedUtils.getLatestVersion(context, this.version, this._overrideExtVariables);
     }
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(context, latestTemplateVersion);
+        const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(context, latestTemplateVersion, this._overrideExtVariables);
 
-        const templatesPath: string = path.join(ext.context.globalStoragePath, 'script', getRandomHexString());
+        const templatesPath: string = path.join(this._ext.context.globalStoragePath, 'script', getRandomHexString());
         try {
             const filePath: string = path.join(templatesPath, 'templates.zip');
             await requestUtils.downloadFile(context, templateRelease.templates, filePath);
@@ -61,7 +66,10 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
             await extract(filePath, { dir: templatesPath });
 
             return await this.parseTemplates(templatesPath);
-        } finally {
+        } catch (error) {
+            throw new Error(`Failed to get latest templates: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        finally {
             if (await AzExtFsExtra.pathExists(templatesPath)) {
                 await AzExtFsExtra.deleteResource(templatesPath, { recursive: true });
             }
@@ -81,14 +89,14 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         }
     }
 
-     
+
     public async cacheTemplates(): Promise<void> {
         await this.updateCachedValue(this._templatesKey, this._rawTemplates);
         await this.updateCachedValue(this._bindingsKey, this._rawBindings);
         await this.updateCachedValue(this._resourcesKey, this._rawResources);
     }
 
-     
+
     public async clearCachedTemplates(): Promise<void> {
         await this.deleteCachedValue(this._templatesKey);
         await this.deleteCachedValue(this._bindingsKey);

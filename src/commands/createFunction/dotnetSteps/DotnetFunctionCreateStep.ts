@@ -6,7 +6,7 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type FuncVersion } from '../../../FuncVersion';
-import { ext } from '../../../extensionVariables';
+import { ext, type IExtensionVariables } from '../../../extensionVariables';
 import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
@@ -17,13 +17,13 @@ import { getBindingSetting } from '../IFunctionWizardContext';
 import { getFileExtension, type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
-    private constructor() {
+    private constructor(readonly overrideExtVariables?: IExtensionVariables) {
         super();
     }
 
-    public static async createStep(context: IActionContext): Promise<DotnetFunctionCreateStep> {
+    public static async createStep(context: IActionContext, overrideExtensionVariables?: IExtensionVariables): Promise<DotnetFunctionCreateStep> {
         await validateDotnetInstalled(context);
-        return new DotnetFunctionCreateStep();
+        return new DotnetFunctionCreateStep(overrideExtensionVariables);
     }
 
     public async executeCore(context: IDotnetFunctionWizardContext): Promise<string> {
@@ -48,12 +48,13 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
 
         const version: FuncVersion = nonNullProp(context, 'version');
+        const _ext: IExtensionVariables = this.overrideExtVariables ?? ext;
         let projectTemplateKey = context.projectTemplateKey;
         if (!projectTemplateKey) {
-            const templateProvider = ext.templateProvider.get(context);
+            const templateProvider = _ext.templateProvider.get(context);
             projectTemplateKey = await templateProvider.getProjectTemplateKey(context, context.projectPath, nonNullProp(context, 'language'), undefined, context.version, undefined);
         }
-        await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
+        await executeDotnetTemplateCommand(context, { version, projTemplateKey: projectTemplateKey, workingDirectory: context.projectPath, operation: 'create', overrideExtVariables: this.overrideExtVariables }, '--identity', template.id, ...args);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

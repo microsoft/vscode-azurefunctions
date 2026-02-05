@@ -10,7 +10,7 @@ import { FuncVersion } from '../FuncVersion';
 import { type IProjectWizardContext } from '../commands/createNewProject/IProjectWizardContext';
 import { type ProjectLanguage } from '../constants';
 import { NotImplementedError } from '../errors';
-import { ext } from '../extensionVariables';
+import { ext, type IExtensionVariables } from '../extensionVariables';
 import { localize } from '../localize';
 import { type IBindingTemplate } from './IBindingTemplate';
 import { type FunctionTemplateBase } from './IFunctionTemplate';
@@ -54,11 +54,21 @@ export abstract class TemplateProviderBase implements Disposable {
     protected abstract backupSubpath: string;
     protected _disposables: Disposable[] = [];
 
-    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
+    protected readonly _overrideExtVariables: IExtensionVariables | undefined;
+
+    /**
+     * Gets the extension variables, using the override if provided
+     */
+    protected get _ext(): IExtensionVariables {
+        return this._overrideExtVariables ?? ext;
+    }
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
         this.version = version;
         this.projectPath = projectPath;
         this.language = language;
         this._sessionProjKey = projectTemplateKey;
+        this._overrideExtVariables = overrideExtVariables;
     }
 
     public dispose(): void {
@@ -66,15 +76,15 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     protected async updateCachedValue(key: string, value: unknown): Promise<void> {
-        await ext.context.globalState.update(await this.getCacheKey(key), value);
+        await this._ext.context.globalState.update(await this.getCacheKey(key), value);
     }
 
     protected async deleteCachedValue(key: string): Promise<void> {
-        await ext.context.globalState.update(await this.getCacheKey(key), undefined);
+        await this._ext.context.globalState.update(await this.getCacheKey(key), undefined);
     }
 
     protected async getCachedValue<T>(key: string): Promise<T | undefined> {
-        return ext.context.globalState.get<T>(await this.getCacheKey(key));
+        return this._ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
 
     public abstract getLatestTemplateVersion(context: IActionContext): Promise<string>;
@@ -121,15 +131,15 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     protected getBackupPath(): string {
-        return ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
+        return this._ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
     }
 
-     
+
     protected async getCacheKeySuffix(): Promise<string> {
         return '';
     }
 
-     
+
     private async getBackupVersionPath(): Promise<string> {
         return path.join(this.getBackupPath(), 'version.txt');
     }

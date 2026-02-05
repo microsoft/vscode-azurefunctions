@@ -19,6 +19,11 @@ import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     private _venvName: string | undefined;
+    private _ext: typeof ext;
+    constructor(readonly overrideExtensionVariables?: typeof ext) {
+        super();
+        this._ext = overrideExtensionVariables || ext;
+    }
 
     protected async executeCore(context: IProjectWizardContext & IPythonVenvWizardContext): Promise<void> {
         await super.executeCore(context);
@@ -66,7 +71,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
                 });
             }
 
-            const venvSettingReference: string = `\${config:${ext.prefix}.${pythonVenvSetting}}`;
+            const venvSettingReference: string = `\${config:${this._ext.prefix}.${pythonVenvSetting}}`;
 
             function getPipInstallCommand(platform: NodeJS.Platform): string {
                 return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);

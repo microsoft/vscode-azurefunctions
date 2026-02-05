@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { ext } from '../../extensionVariables';
 import { type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, previewPythonModel } from '../../constants';
 import { pythonNewModelPreview } from '../../constants-nls';
@@ -61,7 +62,8 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
 export async function addInitVSCodeSteps(
     context: IProjectWizardContext,
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
-    executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
+    executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[],
+    overrideExtensionVariables?: typeof ext): Promise<void> {
 
     switch (context.language) {
         case ProjectLanguage.JavaScript:
@@ -75,7 +77,7 @@ export async function addInitVSCodeSteps(
             executeSteps.push(new DotnetInitVSCodeStep());
             break;
         case ProjectLanguage.Python:
-            await addPythonInitVSCodeSteps(context, promptSteps, executeSteps);
+            await addPythonInitVSCodeSteps(context, promptSteps, executeSteps, overrideExtensionVariables);
             break;
         case ProjectLanguage.PowerShell:
             executeSteps.push(new PowerShellInitVSCodeStep());

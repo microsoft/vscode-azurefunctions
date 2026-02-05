@@ -166,4 +166,6 @@ export interface ICreateFunctionOptions {
      * OpenFolder priority is 250 (https://github.com/microsoft/vscode-azurefunctions/blob/main/src/commands/createNewProject/OpenFolderStep.ts#L11)
      */
     executeStep?: AzureWizardExecuteStep<IActionContext>;
+
+    overrideExtensionVariables?: typeof import('./extensionVariables').ext;
 }

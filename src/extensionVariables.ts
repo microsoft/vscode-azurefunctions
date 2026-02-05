@@ -5,6 +5,7 @@
 
 import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
+import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import { type ExtensionContext } from 'vscode';
 import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
 import { func } from './constants';
@@ -12,7 +13,6 @@ import { type CentralTemplateProvider } from './templates/CentralTemplateProvide
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
 import { type IFunction } from './workspace/LocalFunction';
-import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 
 /**
  * Used for extensionVariables that can also be set per-action
@@ -42,6 +42,26 @@ class ActionVariable<T> {
             throw new Error(`Internal Error: "${this._key}" must be registered before use.`);
         }
     }
+}
+
+/**
+ * Interface for extension variables that can be used for dependency injection/testing
+ */
+export interface IExtensionVariables {
+    context: ExtensionContext;
+    azureAccountTreeItem: AzureAccountTreeItemWithProjects;
+    outputChannel: IAzExtOutputChannel;
+    defaultFuncCliPath: string;
+    ignoreBundle: boolean | undefined;
+    readonly prefix: string;
+    experimentationService: IExperimentationServiceAdapter;
+    templateProvider: ActionVariable<CentralTemplateProvider>;
+    rgApi: AzureHostExtensionApi;
+    rgApiV2: AzureResourcesExtensionApi;
+    eventGridProvider: EventGridCodeLensProvider;
+    currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
+    readonly fileToFunctionNodeMap: Map<string, FunctionTreeItemBase | IFunction>;
+    isExecutingFunction: boolean | undefined;
 }
 
 /**

@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { apiUtils, AzExtFsExtra, createTestActionContext, IActionContext, parseError, registerOnActionStartHandler, runWithTestActionContext, testGlobalSetup, TestOutputChannel, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { apiUtils, AzExtFsExtra, createTestActionContext, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup, TestOutputChannel, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, TemplateFilter, templateFilterSetting } from '../src/constants';
-import { TemplateSource } from '../src/extensionVariables';
+import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, projectLanguageSetting, pythonVenvSetting, templateFilterSetting } from '../src/constants';
+import { type IExtensionVariables, TemplateSource } from '../src/extensionVariables';
 import { FuncVersion } from '../src/FuncVersion';
 import { localize } from '../src/localize';
 import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
@@ -17,6 +17,7 @@ import { envUtils } from '../src/utils/envUtils';
 import { getRandomHexString } from '../src/utils/fs';
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getGlobalSetting, updateGlobalSetting, updateWorkspaceSetting } from '../src/vsCodeConfig/settings';
+import { createMockExtensionVariables } from './mockExtensionVariables';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -29,8 +30,14 @@ const longRunningRemoteTestsEnabled: boolean = envUtils.isEnvironmentVariableSet
 export const longRunningTestsEnabled: boolean = longRunningLocalTestsEnabled || longRunningRemoteTestsEnabled;
 export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
 export const skipStagingTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
+export const skipLatestTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_LATEST_TEMPLATE_SOURCE);
 
 const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
+
+/**
+ * Mock extension variables for template loading - avoids module boundary issues with esbuild
+ */
+export let mockExt: IExtensionVariables;
 
 const requestTimeoutKey: string = 'requestTimeout';
 let oldRequestTimeout: number | undefined;
@@ -57,6 +64,11 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await AzExtFsExtra.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
 
+    // Create mock extension variables for template loading to avoid esbuild module boundary issues
+    mockExt = createMockExtensionVariables(testFolderPath);
+    mockExt.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
+
+
     const funcExtension = vscode.extensions.getExtension('ms-azuretools.vscode-azurefunctions');
     if (!funcExtension) {
         throw new Error('Could not find the Azure Functions extension.');
@@ -68,8 +80,11 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         throw new Error('Extension variables not found on Azure Functions extension API.');
     }
 
-    this.skip();
-    ext.outputChannel = new TestOutputChannel();
+    mockExt.outputChannel = new TestOutputChannel();
+    mockExt.templateProvider = ext.templateProvider;
+    mockExt.rgApi = ext.rgApi;
+    mockExt.rgApiV2 = ext.rgApiV2;
+
 
     registerOnActionStartHandler(context => {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
@@ -79,7 +94,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
     if (!updateBackupTemplates) {
-        await preLoadTemplates();
+        // await preLoadTemplates();
     }
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
@@ -101,39 +116,36 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 /**
  * Pre-load templates so that the first related unit test doesn't time out
  */
-async function preLoadTemplates(): Promise<void> {
-    if (!ext) {
-        throw new Error('Extension variables not found on Azure Functions extension API.');
-    }
-    const providers = [ext.templateProvider.get(await createTestActionContext())];
-    console.log(backupLatestTemplateSources, '****PRELOAD TEMPLATES FROM SOURCES');
-    for (const source of backupLatestTemplateSources) {
-        const provider = new CentralTemplateProvider(source);
-        templateProviderMap.set(source, provider);
-        providers.push(provider);
-    }
+// async function preLoadTemplates(): Promise<void> {
+//     // Use mockExt for template providers to avoid esbuild module boundary issues
+//     // Create all providers with mockExt as override so they use the correct extension variables
+//     const defaultProvider = new CentralTemplateProvider(undefined, mockExt);
+//     templateProviderMap.set(undefined as unknown as TemplateSource, defaultProvider);
+//     const providers = [defaultProvider];
+//     for (const source of backupLatestTemplateSources) {
+//         const provider = new CentralTemplateProvider(source, mockExt);
+//         templateProviderMap.set(source, provider);
+//         providers.push(provider);
+//     }
 
-    const tasks: Promise<unknown>[] = [];
-    for (const provider of providers) {
-        await runWithTestActionContext('preLoadTemplates', async context => {
-            if (!ext) {
-                throw new Error('Extension variables not found on Azure Functions extension API.');
-            }
-            ext.templateProvider.registerActionVariable(provider, context);
-            for (const version of Object.values(FuncVersion)) {
-                if (version === FuncVersion.v4) {
-                    // v4 doesn't have templates yet
-                    continue;
-                }
+//     const tasks: Promise<unknown>[] = [];
+//     for (const provider of providers) {
+//         await runWithTestActionContext('preLoadTemplates', async context => {
+//             mockExt.templateProvider.registerActionVariable(provider, context);
+//             for (const version of Object.values(FuncVersion)) {
+//                 if (version === FuncVersion.v4) {
+//                     // v4 doesn't have templates yet
+//                     continue;
+//                 }
 
-                for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, TemplateFilter.Verified, undefined));
-                }
-            }
-        });
-    }
-    await Promise.all(tasks);
-}
+//                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
+//                     tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, TemplateFilter.Verified, undefined));
+//                 }
+//             }
+//         });
+//     }
+//     await Promise.all(tasks);
+// }
 
 /**
  * Not worth testing older versions for every build
@@ -146,22 +158,16 @@ export function shouldSkipVersion(version: FuncVersion): boolean {
     return isLongRunningVersion(version) && !longRunningTestsEnabled;
 }
 
-export const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
+export const backupLatestTemplateSources: TemplateSource[] = skipLatestTemplateSource ? [TemplateSource.Backup] : [TemplateSource.Backup, TemplateSource.Latest];
 export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
-    let templateProvider: CentralTemplateProvider | undefined;
-    if (!ext) {
-        throw new Error('Extension variables not found on Azure Functions extension API.');
-
+    // Always get providers from the map (they were created with mockExt as override)
+    let templateProvider = templateProviderMap.get(source as unknown as TemplateSource);
+    if (!templateProvider) {
+        // Fallback: create a new provider with mockExt
+        templateProvider = new CentralTemplateProvider(source, mockExt);
+        templateProviderMap.set(source as unknown as TemplateSource, templateProvider);
     }
-    if (source === undefined) {
-        templateProvider = ext.templateProvider.get(context);
-    } else {
-        templateProvider = templateProviderMap.get(source);
-        if (!templateProvider) {
-            throw new Error(`Unrecognized source ${source}`);
-        }
-        ext.templateProvider.registerActionVariable(templateProvider, context);
-    }
+    mockExt.templateProvider.registerActionVariable(templateProvider, context);
 
     await callback(templateProvider);
 }

@@ -6,6 +6,7 @@
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, promptForFuncVersion } from "../../../FuncVersion";
 import { hiddenStacksSetting } from "../../../constants";
+import { ext, IExtensionVariables } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cliFeedUtils } from "../../../utils/cliFeedUtils";
 import { dotnetUtils } from "../../../utils/dotnetUtils";
@@ -13,10 +14,11 @@ import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
-    public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
+    public static async createStep(context: IProjectWizardContext, overrideExtensionVariables?: IExtensionVariables): Promise<DotnetRuntimeStep> {
         if (context.targetFramework) {
+            const _ext = overrideExtensionVariables ?? ext;
             context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;
-            const runtimes = (await getRuntimes(context));
+            const runtimes = (await getRuntimes(context, _ext));
             // if a targetFramework was provided from createNewProject
             const filteredRuntimes = runtimes.filter(runtime => context.targetFramework?.includes(runtime.targetFramework));
             let workerRuntime: cliFeedUtils.IWorkerRuntime | undefined = undefined;
@@ -74,12 +76,13 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     }
 }
 
-async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils.IWorkerRuntime[]> {
-    const funcRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestVersion(context, context.version));
+async function getRuntimes(context: IProjectWizardContext, overrideExtensionVariables?: IExtensionVariables): Promise<cliFeedUtils.IWorkerRuntime[]> {
+    const _ext = overrideExtensionVariables ?? ext;
+    const funcRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestVersion(context, context.version, _ext));
     let runtimes = await getReleaseRuntimes(funcRelease);
     if (context.version === FuncVersion.v4) {
         try {
-            const inProcessRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestReleaseVersionForMajorVersion(context, '0'));
+            const inProcessRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestReleaseVersionForMajorVersion(context, '0', _ext));
             const inProcessRuntimes = await getReleaseRuntimes(inProcessRelease);
             if (inProcessRuntimes.length > 0) {
                 runtimes = runtimes.concat(inProcessRuntimes);

@@ -10,7 +10,7 @@ import { createNewProjectInternal } from '../../src/commands/createNewProject/cr
 import { hiddenStacksSetting, ProjectLanguage } from '../../src/constants';
 import { getRandomHexString } from '../../src/utils/fs';
 import type * as api from '../../src/vscode-azurefunctions.api';
-import { testFolderPath } from '../global.test';
+import { mockExt, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { validateProject, type IValidateProjectOptions } from './validateProject';
 
@@ -45,7 +45,8 @@ export async function createAndValidateProject(context: TestActionContext, optio
             await createNewProjectInternal(context, {
                 language: options.isHiddenLanguage ? <api.ProjectLanguage>language : undefined,
                 version: options.version,
-                suppressOpenFolder: true
+                suppressOpenFolder: true,
+                overrideExtensionVariables: mockExt
             });
         });
     });

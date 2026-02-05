@@ -5,7 +5,7 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { ext, TemplateSource } from '../extensionVariables';
+import { ext, TemplateSource, type IExtensionVariables } from '../extensionVariables';
 import { getMajorVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
@@ -53,21 +53,22 @@ export namespace cliFeedUtils {
         capabilities: string;
     }
 
-    export async function getLatestVersion(context: IActionContext, version: FuncVersion): Promise<string> {
+    export async function getLatestVersion(context: IActionContext, version: FuncVersion, overrideExtVariables?: IExtensionVariables): Promise<string> {
         const majorVersion: string = getMajorVersion(version);
-        return await getLatestReleaseVersionForMajorVersion(context, majorVersion);
+        return await getLatestReleaseVersionForMajorVersion(context, majorVersion, overrideExtVariables);
     }
 
-    export async function getLatestReleaseVersionForMajorVersion(context: IActionContext, majorVersion: string): Promise<string> {
-        const cliFeed: ICliFeed = await getCliFeed(context);
+    export async function getLatestReleaseVersionForMajorVersion(context: IActionContext, majorVersion: string, overrideExtVariables?: IExtensionVariables): Promise<string> {
+        const _ext = overrideExtVariables ?? ext;
+        const cliFeed: ICliFeed = await getCliFeed(context, overrideExtVariables);
         let tag: string = 'v' + majorVersion;
-        const templateProvider = ext.templateProvider.get(context);
+        const templateProvider = _ext.templateProvider.get(context);
         if (templateProvider.templateSource === TemplateSource.Staging) {
             const newTag = tag + '-prerelease';
             if (cliFeed.tags[newTag]) {
                 tag = newTag;
             } else {
-                ext.outputChannel.appendLog(localize('versionWithoutStaging', 'WARNING: Azure Functions v{0} does not support the staging template source. Using default template source instead.', majorVersion));
+                _ext.outputChannel.appendLog(localize('versionWithoutStaging', 'WARNING: Azure Functions v{0} does not support the staging template source. Using default template source instead.', majorVersion));
             }
         }
 
@@ -78,19 +79,19 @@ export namespace cliFeedUtils {
         return releaseData.release;
     }
 
-    export async function getSortedVersions(context: IActionContext, version: FuncVersion): Promise<string[]> {
-        const cliFeed: ICliFeed = await getCliFeed(context);
+    export async function getSortedVersions(context: IActionContext, version: FuncVersion, overrideExtVariables?: IExtensionVariables): Promise<string[]> {
+        const cliFeed: ICliFeed = await getCliFeed(context, overrideExtVariables);
         const majorVersion = parseInt(getMajorVersion(version));
         const versions = Object.keys(cliFeed.releases).filter(v => semver.valid(v) && semver.major(v) === majorVersion);
         return semver.rsort(versions).map(v => typeof v === 'string' ? v : v.version);
     }
 
-    export async function getRelease(context: IActionContext, templateVersion: string): Promise<IRelease> {
-        const cliFeed: ICliFeed = await getCliFeed(context);
+    export async function getRelease(context: IActionContext, templateVersion: string, overrideExtVariables?: IExtensionVariables): Promise<IRelease> {
+        const cliFeed: ICliFeed = await getCliFeed(context, overrideExtVariables);
         return cliFeed.releases[templateVersion];
     }
 
-    async function getCliFeed(context: IActionContext): Promise<ICliFeed> {
-        return feedUtils.getJsonFeed(context, funcCliFeedV4Url);
+    async function getCliFeed(context: IActionContext, overrideExtVariables?: IExtensionVariables): Promise<ICliFeed> {
+        return feedUtils.getJsonFeed(context, funcCliFeedV4Url, overrideExtVariables);
     }
 }

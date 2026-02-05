@@ -49,7 +49,7 @@ export async function createNewProjectFromCommand(
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
     addLocalFuncTelemetry(context, undefined);
-
+    const _ext = options.overrideExtensionVariables || ext;
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, undefined) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
@@ -61,7 +61,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
             version: tryParseFuncVersion(version),
             projectTemplateKey
         },
-        await createActivityContext()
+        await createActivityContext({ overrideExtensionVariables: _ext })
     );
 
     wizardContext.activityChildren = [];
@@ -89,7 +89,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
 
     const wizard = new AzureWizard<IActionContext & Partial<IFunctionWizardContext>>(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
-        promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
+        promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings, _ext), new OpenBehaviorStep()],
         executeSteps: optionalExecuteStep ? [optionalExecuteStep, new OpenFolderStep()] : [new OpenFolderStep()]
     });
 
@@ -97,5 +97,5 @@ export async function createNewProjectInternal(context: IActionContext, options:
     wizardContext.activityTitle = localize('creatingProject', 'Create new {0} project in "{1}"', wizardContext.language, wizardContext.projectPath);
     await wizard.execute();
 
-    await ext.rgApi.workspaceResourceTree.refresh(context);
+    await _ext.rgApi.workspaceResourceTree.refresh(context);
 }

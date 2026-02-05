@@ -1450,7 +1450,8 @@
         "lint-fix": "eslint --max-warnings 0 --fix",
         "pretest": "npm run build && node scripts/pretest.mjs",
         "test": "vscode-test",
-        "all": "npm i && npm run lint && npm test"
+        "all": "npm i && npm run lint && npm test",
+        "install-pwsh": "node scripts/installPwsh.mjs"
     },
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
@@ -1511,7 +1512,16 @@
         "ms-azuretools.vscode-azureresourcegroups"
     ],
     "enabledApiProposals": [
-        "extensionRuntime"
+        "extensionRuntime",
+        "devDeviceId",
+        "telemetry",
+        "resolvers",
+        "extensionsAny",
+        "inlineCompletionsAdditions",
+        "languageModelProxy",
+        "embeddings",
+        "testObserver",
+        "nativeWindowHandle"
     ],
     "agentMetadata": {
         "version": "1.0",

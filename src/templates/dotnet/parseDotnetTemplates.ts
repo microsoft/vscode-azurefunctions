@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage, sqlBindingTemplateRegex, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { type FuncVersion } from '../../FuncVersion';
@@ -94,7 +94,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
  * Parses templates used by the .NET CLI
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
-export async function parseDotnetTemplates(rawTemplates: object[], version: FuncVersion): Promise<ITemplates> {
+export async function parseDotnetTemplates(context: IActionContext, rawTemplates: object[], version: FuncVersion): Promise<ITemplates> {
     const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
@@ -104,7 +104,10 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
         }
     }
 
-    await copyCSharpSettingsFromJS(functionTemplates, version);
+    // Note: Don't create a new context here.
+    // This function is invoked while templates are loading and relies on the current IActionContext
+    // having the central template provider registered.
+    await copyCSharpSettingsFromJS(context, functionTemplates, version);
 
     return {
         functionTemplates,
@@ -116,45 +119,46 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
  * The dotnet templates do not provide the validation, resourceType, and display information that we desire
  * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
  */
-async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], version: FuncVersion): Promise<void> {
-    // Use separate telemetry event since we don't want to overwrite C# telemetry with JS telemetry
-    await callWithTelemetryAndErrorHandling('copyCSharpSettingsFromJS', async (jsContext: IActionContext) => {
-        jsContext.errorHandling.suppressDisplay = true;
-        jsContext.telemetry.properties.isActivationEvent = 'true';
+async function copyCSharpSettingsFromJS(context: IActionContext, csharpTemplates: IFunctionTemplate[], version: FuncVersion): Promise<void> {
+    // Best-effort: If the central template provider isn't registered, just leave names/settings as-is.
+    let jsTemplates: FunctionTemplateBase[];
+    try {
+        const templateProvider = ext.templateProvider.get(context);
+        jsTemplates = await templateProvider.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
+    } catch {
+        return;
+    }
 
-        const templateProvider = ext.templateProvider.get(jsContext);
-        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
-        for (const csharpTemplate of csharpTemplates) {
-            assertTemplateIsV1(csharpTemplate);
-            csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;
+    for (const csharpTemplate of csharpTemplates) {
+        assertTemplateIsV1(csharpTemplate);
+        csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;
 
-            const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
-            const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
+        const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
+        const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
 
-            if (jsTemplate) {
-                assertTemplateIsV1(jsTemplate);
-                csharpTemplate.name = jsTemplate.name;
-                csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;
-                for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
-                    const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
-                    if (jsSetting) {
-                        cSharpSetting.resourceType = jsSetting.resourceType;
-                        cSharpSetting.validateSetting = jsSetting.validateSetting;
-                    }
-                }
-            } else {
-                // Verified templates without a matching JS template
-                switch (normalizedDotnetId) {
-                    case 'httpwithopenapi':
-                        csharpTemplate.name = localize('httpWithOpenApiName', 'HTTP trigger with OpenAPI');
-                        break;
-                    case 'durablefunctionsorchestration':
-                        csharpTemplate.name = localize('durableFunctionsOrchestrationName', 'Durable Functions Orchestration');
-                        break;
+        if (jsTemplate) {
+            assertTemplateIsV1(jsTemplate);
+            csharpTemplate.name = jsTemplate.name;
+            csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;
+            for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
+                const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
+                if (jsSetting) {
+                    cSharpSetting.resourceType = jsSetting.resourceType;
+                    cSharpSetting.validateSetting = jsSetting.validateSetting;
                 }
             }
+        } else {
+            // Verified templates without a matching JS template
+            switch (normalizedDotnetId) {
+                case 'httpwithopenapi':
+                    csharpTemplate.name = localize('httpWithOpenApiName', 'HTTP trigger with OpenAPI');
+                    break;
+                case 'durablefunctionsorchestration':
+                    csharpTemplate.name = localize('durableFunctionsOrchestrationName', 'Durable Functions Orchestration');
+                    break;
+            }
         }
-    });
+    }
 }
 
 /**

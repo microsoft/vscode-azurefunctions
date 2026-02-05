@@ -51,6 +51,7 @@ function addSuite(source: TemplateSource | undefined): void {
                 testName += ` ${projectTemplateKey}`;
             }
             test(testName, async function (this: Mocha.Context): Promise<void> {
+                this.timeout(60 * 1000); // wait for 60 seconds max per test
                 if (shouldSkipVersion(version)) {
                     this.skip();
                 }

@@ -5,7 +5,9 @@
 
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { hostFileName } from '../../constants';
+import { type FuncVersion } from '../../FuncVersion';
+import { hostFileName, type ProjectLanguage } from '../../constants';
+import { type IExtensionVariables } from '../../extensionVariables';
 import { parseHostJson, type IBundleMetadata } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
@@ -20,6 +22,10 @@ import { parseScriptTemplates } from './parseScriptTemplates';
 export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.ScriptBundle;
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
+        super(version, projectPath, language, projectTemplateKey, overrideExtVariables);
+    }
 
     protected get backupSubpath(): string {
         return bundleFeedUtils.defaultBundleId;
@@ -37,7 +43,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const resourcesUrl: string = release.resources.replace('{locale}', language);
 
         const urls: string[] = [release.bindings, resourcesUrl, release.functions];
-        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
+        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url, this._overrideExtVariables)));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }

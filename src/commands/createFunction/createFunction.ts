@@ -86,6 +86,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
             templateId: options.templateId,
             functionSettings: options.functionSettings,
             isProjectWizard: false,
+            overrideExtVariables: options.overrideExtensionVariables,
         })]
     });
     await wizard.prompt();

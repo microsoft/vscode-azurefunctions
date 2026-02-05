@@ -8,6 +8,7 @@ import { window, workspace, type WorkspaceFolder } from 'vscode';
 import { latestGAVersion, type FuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
+import { IExtensionVariables } from '../../extensionVariables';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
@@ -17,7 +18,8 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, _overrideExtensionVariables?: IExtensionVariables): Promise<void> {
+    // const _ext = overrideExtensionVariables || ext;
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
     if (fsPath === undefined) {

@@ -7,7 +7,7 @@ import { AzExtFsExtra, DialogResponses, nonNullValueAndProp, type IActionContext
 import * as path from 'path';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
-import { ext } from '../../../extensionVariables';
+import { ext, type IExtensionVariables } from '../../../extensionVariables';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
@@ -17,13 +17,13 @@ import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class DotnetProjectCreateStep extends ProjectCreateStepBase {
-    private constructor() {
+    private constructor(readonly overrideExtVariables?: IExtensionVariables) {
         super();
     }
 
-    public static async createStep(context: IActionContext): Promise<DotnetProjectCreateStep> {
+    public static async createStep(context: IActionContext, overrideExtVariables?: IExtensionVariables): Promise<DotnetProjectCreateStep> {
         await validateDotnetInstalled(context);
-        return new DotnetProjectCreateStep();
+        return new DotnetProjectCreateStep(overrideExtVariables);
     }
 
     public async executeCore(context: IProjectWizardContext): Promise<void> {
@@ -34,13 +34,14 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
 
         const workerRuntime = nonNullProp(context, 'workerRuntime');
+        const _ext: IExtensionVariables = this.overrideExtVariables ?? ext;
         // For containerized function apps we need to call func init before intialization as we want the .csproj file to be overwritten with the correct version
         // currentely the version created by func init is behind the template version
         if (context.containerizedProject) {
             const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
             // targetFramework is only supported for dotnet-isolated projects
             const targetFramework = runtime === 'dotnet' ? '' : "--target-framework " + nonNullValueAndProp(context.workerRuntime, 'targetFramework');
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, targetFramework, "--docker");
+            await cpUtils.executeCommand(_ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, targetFramework, "--docker");
         } else {
             await this.confirmOverwriteExisting(context, projName);
         }
@@ -56,7 +57,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         // defaults to net6.0 if there is no targetFramework
         args.push('--arg:Framework', cpUtils.wrapArgInQuotes(context.workerRuntime?.targetFramework));
 
-        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
+        await executeDotnetTemplateCommand(context, { version, projTemplateKey, workingDirectory: context.projectPath, operation: 'create', overrideExtVariables: _ext }, ...args);
 
         await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, '', MismatchBehavior.Overwrite);
     }

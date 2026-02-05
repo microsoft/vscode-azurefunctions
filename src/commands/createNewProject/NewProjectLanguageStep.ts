@@ -6,6 +6,7 @@
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
@@ -35,7 +36,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
     private readonly _templateId?: string;
     private readonly _functionSettings?: { [key: string]: string | undefined };
 
-    public constructor(templateId: string | undefined, functionSettings: { [key: string]: string | undefined } | undefined) {
+    public constructor(templateId: string | undefined, functionSettings: { [key: string]: string | undefined } | undefined, readonly overrideExtVariables?: typeof ext) {
         super();
         this._templateId = templateId;
         this._functionSettings = functionSettings;
@@ -78,6 +79,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
     public async getSubWizard(context: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext>> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[] = [];
+        const _ext = this.overrideExtVariables ?? ext;
 
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
@@ -102,7 +104,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
                 promptSteps.push(await DotnetRuntimeStep.createStep(context));
-                executeSteps.push(await DotnetProjectCreateStep.createStep(context));
+                executeSteps.push(await DotnetProjectCreateStep.createStep(context, _ext));
                 break;
             case ProjectLanguage.Python:
                 promptSteps.push(new ProgrammingModelStep({
@@ -134,7 +136,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
         }
 
-        await addInitVSCodeSteps(context, promptSteps, executeSteps);
+        await addInitVSCodeSteps(context, promptSteps, executeSteps, _ext);
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
@@ -144,6 +146,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             isProjectWizard: true,
             templateId: this._templateId,
             functionSettings: this._functionSettings,
+            overrideExtVariables: _ext,
         }));
 
         return wizardOptions;

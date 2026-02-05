@@ -26,19 +26,21 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
+    private readonly _ext: typeof ext;
 
     public constructor(options: IFunctionListStepOptions) {
         super();
         this._options = options;
         this._isProjectWizard = options.isProjectWizard;
         this._functionSettings = options.functionSettings || {};
+        this._ext = options.overrideExtVariables || ext;
     }
 
     public async configureBeforePrompt(context: IFunctionWizardContext): Promise<void> {
         if (this._options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
-            const templateProvider = ext.templateProvider.get(context);
+            const templateProvider = this._ext.templateProvider.get(context);
             const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
             const foundTemplate: FunctionTemplateBase | undefined = templates.find((t: FunctionTemplateBase) => {
                 if (this._options.templateId) {
@@ -87,7 +89,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         let templateFilter: TemplateFilter = context.templateSchemaVersion === TemplateSchemaVersion.v2 ? TemplateFilter.All :
             getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
-        const templateProvider = ext.templateProvider.get(context);
+        const templateProvider = this._ext.templateProvider.get(context);
         while (!context.functionTemplate) {
             let placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
@@ -132,8 +134,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
-        const templateProvider = ext.templateProvider.get(context);
-
+        const templateProvider = this._ext.templateProvider.get(context);
         const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[] = templates
@@ -193,6 +194,7 @@ interface IFunctionListStepOptions {
     isProjectWizard: boolean;
     templateId: string | undefined;
     functionSettings: { [key: string]: string | undefined } | undefined;
+    overrideExtVariables?: typeof ext;
 }
 
 type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI' | 'reloadTemplates';

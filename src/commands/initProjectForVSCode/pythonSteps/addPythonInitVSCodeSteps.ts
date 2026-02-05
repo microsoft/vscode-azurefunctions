@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, type AzureWizardExecuteStep, type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { ext } from "../../../extensionVariables";
 import { venvUtils } from '../../../utils/venvUtils';
 import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
@@ -16,7 +17,8 @@ import { PythonVenvListStep } from "./PythonVenvListStep";
 export async function addPythonInitVSCodeSteps(
     context: IProjectWizardContext & IPythonVenvWizardContext,
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
-    executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
+    executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[],
+    overrideExtensionVariables?: typeof ext): Promise<void> {
 
     const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>('createPythonVenv', context.workspacePath);
     const venvs: string[] = [];
@@ -44,5 +46,5 @@ export async function addPythonInitVSCodeSteps(
         executeSteps.push(new PythonVenvCreateStep());
     }
 
-    executeSteps.push(new PythonInitVSCodeStep());
+    executeSteps.push(new PythonInitVSCodeStep(overrideExtensionVariables));
 }

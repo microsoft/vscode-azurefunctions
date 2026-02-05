@@ -5,6 +5,9 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import { type FuncVersion } from '../../FuncVersion';
+import { type ProjectLanguage } from '../../constants';
+import { type IExtensionVariables } from '../../extensionVariables';
 import { type IBindingTemplate } from '../IBindingTemplate';
 import { type IFunctionTemplate } from '../IFunctionTemplate';
 import { type ITemplates } from '../ITemplates';
@@ -16,6 +19,10 @@ export class NodeV4Provider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
     // still hard-coded templates that are in the v1 schema
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined, overrideExtVariables?: IExtensionVariables) {
+        super(version, projectPath, language, projectTemplateKey, overrideExtVariables);
+    }
 
     protected get backupSubpath(): string {
         return path.join('nodejs-4.x');
