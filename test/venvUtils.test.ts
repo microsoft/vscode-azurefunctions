@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { pythonVenvSetting } from '../src/constants';
@@ -30,7 +31,7 @@ suite('venvUtils', () => {
             this.timeout(60 * 1000);
             await AzExtFsExtra.ensureDir(testFolder);
             const pyAlias: string = process.platform === 'win32' ? 'py' : 'python3';
-            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, '-m', 'venv', venvName);
+            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, composeArgs(withArg('-m', 'venv', venvName))());
         }
     });
 
