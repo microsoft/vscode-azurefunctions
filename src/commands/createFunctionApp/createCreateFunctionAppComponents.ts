@@ -71,7 +71,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     promptSteps.push(new SiteDomainNameLabelScopeStep());
     if (!wizardContext.advancedCreation) {
         wizardContext.newSiteDomainNameLabelScope = DomainNameLabelScope.Tenant;
-        context.telemetry.properties.siteDomainNameLabelScope = DomainNameLabelScope.Tenant;
+        wizardContext.telemetry.properties.siteDomainNameLabelScope = DomainNameLabelScope.Tenant;
     }
     // #endregion
 
