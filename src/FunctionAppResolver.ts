@@ -108,7 +108,7 @@ export class FunctionAppResolver implements AppResourceResolver {
 
             const siteModel = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
             if (!siteModel || siteModel.kind === 'functionapp,linux,container,azurecontainerapps') {
-                // Edge Case: `siteModel` can be `undefined` after calling `createFunctionApp` because the result does not propagate to Azure Resource Graph in time; a fallback fetch + count is needed
+                // Edge Case: `siteModel` can be `undefined` after calling `createFunctionApp` because the result does not propagate to MS Graph in time; a fallback fetch + count is needed
                 if (!siteModel) {
                     this.countSiteName(resource.name);
                 }
