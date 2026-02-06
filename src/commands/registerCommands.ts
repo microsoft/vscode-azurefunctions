@@ -126,10 +126,10 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.configureDeploymentSource', configureDeploymentSource);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.connectToGitHub', connectToGitHub);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.copyFunctionUrl', copyFunctionUrl);
-    registerCommand('azureFunctions.createFunction', createFunctionFromCommand);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunction', createFunctionFromCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
-    registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.createNewProject', createNewProjectFromCommand);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.createNewProjectWithDockerfile',
         async (context: IActionContext) =>
