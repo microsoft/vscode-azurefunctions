@@ -30,7 +30,7 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
 }
 
 type ResolvedFunctionAppResourceOptions = {
-    showLocationAsTreeItemDescription?: boolean;
+    showLocationInTreeItemDescription?: boolean;
 };
 
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
@@ -158,7 +158,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         if (this._isFlex && !description) {
             description = localize('flexFunctionAppState', 'Flex Consumption');
         }
-        if (this._options.showLocationAsTreeItemDescription) {
+        if (this._options.showLocationInTreeItemDescription) {
             if (description) {
                 description += ` (${this.dataModel.location})`;
             } else {

@@ -28,7 +28,7 @@ import { ImageTreeItem } from "./ImageTreeItem";
 export type ContainerSite = Site & { defaultHostUrl?: string; fullName?: string; isSlot?: boolean };
 
 type ResolvedContainerizedResourceOptions = {
-    showLocationAsTreeItemDescription?: boolean;
+    showLocationInTreeItemDescription?: boolean;
 };
 
 export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
@@ -80,7 +80,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public get description(): string | undefined {
-        return this._options.showLocationAsTreeItemDescription ? this.site.location : undefined;
+        return this._options.showLocationInTreeItemDescription ? this.site.location : undefined;
     }
 
     public get site(): ContainerSite {

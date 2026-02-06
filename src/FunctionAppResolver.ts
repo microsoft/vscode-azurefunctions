@@ -120,18 +120,18 @@ export class FunctionAppResolver implements AppResourceResolver {
                 if (fullSite.kind === 'functionapp,linux,container,azurecontainerapps') {
                     return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite, {
                         // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
-                        showLocationAsTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                        showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
                     });
                 }
 
                 return new ResolvedFunctionAppResource(subContext, fullSite, undefined, {
                     // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
-                    showLocationAsTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                    showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
                 });
             } else if (siteModel) {
                 return new ResolvedFunctionAppResource(subContext, undefined, siteModel, {
                     // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
-                    showLocationAsTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                    showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
                 });
             }
 
