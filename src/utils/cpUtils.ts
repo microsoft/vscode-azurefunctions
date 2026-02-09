@@ -70,14 +70,6 @@ export namespace cpUtils {
         const stdoutIntermediate = new Stream.PassThrough();
         const stderrIntermediate = new Stream.PassThrough();
 
-        let stdoutEnded = false;
-        let stderrEnded = false;
-
-        const checkAndEndCombined = () => {
-            if (stdoutEnded && stderrEnded) {
-                stdoutAndErrFinal.end();
-            }
-        };
 
         stdoutIntermediate.on('data', (chunk: Buffer) => {
             stdoutFinal.write(chunk);
@@ -88,23 +80,12 @@ export namespace cpUtils {
             }
         });
 
-        stdoutIntermediate.on('end', () => {
-            stdoutFinal.end();
-            stdoutEnded = true;
-            checkAndEndCombined();
-        });
-
         stderrIntermediate.on('data', (chunk: Buffer) => {
             stdoutAndErrFinal.write(chunk);
 
             if (outputChannel) {
                 outputChannel.append(bufferToString(chunk));
             }
-        });
-
-        stderrIntermediate.on('end', () => {
-            stderrEnded = true;
-            checkAndEndCombined();
         });
 
         const result: Partial<ICommandResult> = {};
@@ -136,6 +117,8 @@ export namespace cpUtils {
         } finally {
             stdoutIntermediate.end();
             stderrIntermediate.end();
+            stdoutFinal.end();
+            stdoutAndErrFinal.end();
 
             result.cmdOutput = await stdoutFinal.getString();
             result.cmdOutputIncludingStderr = await stdoutAndErrFinal.getString();
