@@ -134,6 +134,9 @@ export namespace cpUtils {
                 throw error;
             }
         } finally {
+            stdoutIntermediate.end();
+            stderrIntermediate.end();
+
             result.cmdOutput = await stdoutFinal.getString();
             result.cmdOutputIncludingStderr = await stdoutAndErrFinal.getString();
         }
