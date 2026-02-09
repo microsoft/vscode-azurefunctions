@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStepWithActivityOutput, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg, withNamedArg } from '@microsoft/vscode-processutils';
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
@@ -29,7 +30,12 @@ export class CreateDockerfileProjectStep extends AzureWizardExecuteStepWithActiv
         const language = nonNullValueAndProp(context, 'language').toLowerCase();
         // If the language is C# this command needs to be called earlier as the versioning in the .csproj file is different from the one in the template
         if (language !== 'c#') {
-            await cpUtils.executeCommand(ext.outputChannel, nonNullValueAndProp(context, 'projectPath'), "func", "init", "--worker-runtime", language, "--docker");
+            const args = composeArgs(
+                withArg('init'),
+                withNamedArg('--worker-runtime', language),
+                withArg('--docker'),
+            )();
+            await cpUtils.executeCommand(ext.outputChannel, nonNullValueAndProp(context, 'projectPath'), "func", args);
         }
     }
 
