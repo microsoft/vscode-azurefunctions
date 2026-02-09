@@ -33,6 +33,7 @@ export async function createSqlClient(context: AzExtClientContext): Promise<SqlM
 }
 
 export async function createWebSiteClient(context: AzExtClientContext): Promise<WebSiteManagementClient> {
+    // For typecast reasoning, see: https://github.com/microsoft/vscode-azuretools/pull/2184
     return createAzureClient(context, (await import('@azure/arm-appservice')).WebSiteManagementClient as unknown as AzExtClientType<WebSiteManagementClient>);
 }
 
