@@ -70,6 +70,7 @@ export namespace cpUtils {
         const stdoutIntermediate = new Stream.PassThrough();
         const stderrIntermediate = new Stream.PassThrough();
 
+
         stdoutIntermediate.on('data', (chunk: Buffer) => {
             stdoutFinal.write(chunk);
             stdoutAndErrFinal.write(chunk);
@@ -114,6 +115,11 @@ export namespace cpUtils {
                 throw error;
             }
         } finally {
+            stdoutIntermediate.end();
+            stderrIntermediate.end();
+            stdoutFinal.end();
+            stdoutAndErrFinal.end();
+
             result.cmdOutput = await stdoutFinal.getString();
             result.cmdOutputIncludingStderr = await stdoutAndErrFinal.getString();
         }
