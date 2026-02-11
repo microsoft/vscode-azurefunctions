@@ -25,6 +25,14 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
         return !context.managedIdentity;
     }
 
+    public async configureBeforePrompt(context: T): Promise<void> {
+        // Ensure newResourceGroupName is set for identity name generation
+        // If not already set and we have a site name, use it as a base for the resource group name
+        if (!context.newResourceGroupName && !context.resourceGroup && context.newSiteName) {
+            context.newResourceGroupName = context.newSiteName;
+        }
+    }
+
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
         if (context.useManagedIdentity) {
             const promptSteps: AzureWizardPromptStep<T>[] = [];
