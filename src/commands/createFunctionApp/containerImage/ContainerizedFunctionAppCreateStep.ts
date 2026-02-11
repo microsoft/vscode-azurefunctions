@@ -3,7 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
+import { type NameValuePair, type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
+import { type Identity } from "@azure/arm-resources";
 import { type ServiceClient } from "@azure/core-client";
 import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
 import { LocationListStep, createGenericClient } from "@microsoft/vscode-azext-azureutils";
@@ -13,6 +14,7 @@ import { type Progress } from "vscode";
 import { webProvider } from "../../../constants";
 import { localize } from "../../../localize";
 import { createWebSiteClient } from "../../../utils/azureClients";
+import { createAzureWebJobsStorageManagedIdentitySettings } from "../../../utils/managedIdentityUtils";
 import { getStorageConnectionString } from "../../appSettings/connectionSettings/azureWebJobsStorage/getStorageConnectionString";
 import { type IFunctionAppWizardContext } from "../IFunctionAppWizardContext";
 
@@ -59,6 +61,47 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
 
     private async getNewSite(context: IFunctionAppWizardContext): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
+        
+        let identity: Identity | undefined = undefined;
+        if (context.managedIdentity) {
+            const userAssignedIdentities = {};
+            userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
+                { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
+            identity = { type: 'UserAssigned', userAssignedIdentities };
+        }
+
+        const appSettings: NameValuePair[] = [
+            {
+                name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',
+                value: context.appInsightsComponent?.connectionString
+            },
+            {
+                name: 'FUNCTIONS_EXTENSION_VERSION',
+                value: context.version
+            },
+            {
+                name: 'DOCKER_REGISTRY_SERVER_URL',
+                value: context.deployWorkspaceResult?.registryLoginServer
+            },
+            {
+                name: 'DOCKER_REGISTRY_SERVER_USERNAME',
+                value: context.deployWorkspaceResult?.registryUsername
+            },
+            {
+                name: 'DOCKER_REGISTRY_SERVER_PASSWORD',
+                value: context.deployWorkspaceResult?.registryPassword
+            }
+        ];
+
+        if (context.managedIdentity) {
+            appSettings.push(...createAzureWebJobsStorageManagedIdentitySettings(context));
+        } else {
+            appSettings.push({
+                name: 'AzureWebJobsStorage',
+                value: (await getStorageConnectionString(context)).connectionString
+            });
+        }
+
         return {
             name: context.newSiteName,
             kind: 'functionapp',
@@ -66,33 +109,9 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
             managedEnvironmentId: context.deployWorkspaceResult?.managedEnvironmentId,
             siteConfig: {
                 linuxFxVersion: `Docker|${context.deployWorkspaceResult?.registryLoginServer}/${context.deployWorkspaceResult?.imageName}`,
-                appSettings: [
-                    {
-                        name: 'AzureWebJobsStorage',
-                        value: (await getStorageConnectionString(context)).connectionString
-                    },
-                    {
-                        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',
-                        value: context.appInsightsComponent?.connectionString
-                    },
-                    {
-                        name: 'FUNCTIONS_EXTENSION_VERSION',
-                        value: context.version
-                    },
-                    {
-                        name: 'DOCKER_REGISTRY_SERVER_URL',
-                        value: context.deployWorkspaceResult?.registryLoginServer
-                    },
-                    {
-                        name: 'DOCKER_REGISTRY_SERVER_USERNAME',
-                        value: context.deployWorkspaceResult?.registryUsername
-                    },
-                    {
-                        name: 'DOCKER_REGISTRY_SERVER_PASSWORD',
-                        value: context.deployWorkspaceResult?.registryPassword
-                    }
-                ]
-            }
+                appSettings
+            },
+            identity
         };
     }
 }
