@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type NameValuePair, type Site, type WebSiteManagementClient } from "@azure/arm-appservice";
-import { type Identity } from "@azure/arm-resources";
+import { type Identity, type IdentityUserAssignedIdentitiesValue } from "@azure/arm-resources";
 import { type ServiceClient } from "@azure/core-client";
 import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
 import { LocationListStep, createGenericClient } from "@microsoft/vscode-azext-azureutils";
@@ -64,7 +64,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
         
         let identity: Identity | undefined = undefined;
         if (context.managedIdentity) {
-            const userAssignedIdentities = {};
+            const userAssignedIdentities: Record<string, IdentityUserAssignedIdentitiesValue> = {};
             userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
                 { principalId: context.managedIdentity?.principalId, clientId: context.managedIdentity?.clientId };
             identity = { type: 'UserAssigned', userAssignedIdentities };
