@@ -62,7 +62,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
     private async getNewSite(context: IFunctionAppWizardContext): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
         
-        let identity: Identity | undefined = undefined;
+        let identity: Identity | undefined;
         if (context.managedIdentity) {
             const userAssignedIdentities: Record<string, IdentityUserAssignedIdentitiesValue> = {};
             userAssignedIdentities[nonNullProp(context.managedIdentity, 'id')] =
