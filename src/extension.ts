@@ -17,6 +17,7 @@ import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFr
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
+import { runPostMcpProjectCreateStepsFromCache } from './commands/createNewProject/mcpServerSteps/MCPProjectCreateStep';
 import { startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
@@ -62,6 +63,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         void runPostFunctionCreateStepsFromCache();
+        void runPostMcpProjectCreateStepsFromCache();
 
         void validateFuncCoreToolsIsLatest();
 

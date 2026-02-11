@@ -26,7 +26,6 @@ import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 import { MCPDownloadSnippetsExecuteStep } from './mcpServerSteps/MCPDownloadSnippetsExecuteStep';
 import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnippetsPromptStep';
-import { MCPOpenFileStep } from './mcpServerSteps/MCPOpenFileStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
 
@@ -128,7 +127,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.SelfHostedMCPServer:
                 promptSteps.push(new MCPServerLanguagePromptStep(), new MCPDownloadSnippetsPromptStep());
-                executeSteps.push(new MCPDownloadSnippetsExecuteStep(), new MCPProjectCreateStep(), new MCPOpenFileStep());
+                executeSteps.push(new MCPDownloadSnippetsExecuteStep(), new MCPProjectCreateStep());
                 break;
             default:
                 executeSteps.push(new ScriptProjectCreateStep());
