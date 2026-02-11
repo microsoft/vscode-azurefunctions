@@ -83,8 +83,6 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
         }
 
         runPostMcpProjectCreateSteps(cachedProject);
-        
-        return;
     }
 
     private setSampleMcpRepoUrl(context: MCPProjectWizardContext): void {
