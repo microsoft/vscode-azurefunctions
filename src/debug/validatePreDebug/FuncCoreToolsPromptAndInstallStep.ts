@@ -11,11 +11,15 @@ import { localize } from '../../localize';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
 /**
- * @remarks A hybrid prompt and execute step
+ * @remarks This step merges prompt and execute behavior (normally separate in wizards).
+ * This design preserves legacy behavior where we check if func core tools is installed.
+ * If not, we prompt to install. If installation is declined, we throw to cancel
+ * the wizard since debugging can't proceed without the tool and the user had indicated to validate the tool.
  */
 export class FuncCoreToolsPromptAndInstallStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async configureBeforePrompt(context: T): Promise<void> {
         try {
+            // Check if the user has a custom func CLI path in settings set.  If it's set, we trust it automatically and don't need to validate it further.
             context.funcCoreToolsVersion ??= await getLocalFuncCoreToolsVersion(context, context.workspaceFolder.uri.fsPath);
         } catch { /** Do nothing */ }
     }

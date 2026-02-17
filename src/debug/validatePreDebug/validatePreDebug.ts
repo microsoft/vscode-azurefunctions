@@ -37,7 +37,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
         projectPath,
         projectLanguage: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
         projectLanguageModel: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
-        validateFuncCoreTools: getWorkspaceSetting(validateFuncCoreToolsSetting, workspaceFolder.uri.fsPath) !== false /** This setting defaults to 'true' */,
+        validateFuncCoreTools: getWorkspaceSetting(validateFuncCoreToolsSetting, workspaceFolder.uri.fsPath) !== false /** This setting defaults to 'true'; meaning 'undefined' should also resolve to true */,
     };
 
     wizardContext.telemetry.properties.debugType = debugConfig.type;
@@ -59,7 +59,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
         new GetStorageProviderConnectionsValidateSteps(),
     ];
 
-    const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
+    const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard<IPreDebugValidateContext>(wizardContext, {
         title: localize('prepareDebugSessionTitle', 'Prepare debug session for Azure Functions workspace project'),
         promptSteps,
         executeSteps,
