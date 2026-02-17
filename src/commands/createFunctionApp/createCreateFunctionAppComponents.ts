@@ -7,7 +7,7 @@ import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCrea
 import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
-import { DurableBackend, funcVersionSetting } from "../../constants";
+import { StorageProviderType, funcVersionSetting } from "../../constants";
 import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersion";
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -188,7 +188,7 @@ function getAvailableFunctionAppHostingPlans(context: IFunctionAppWizardContext)
             availablePlans.add(FunctionAppHostingPlans.Flex);
             break;
 
-        case context.durableStorageType === DurableBackend.DTS:
+        case context.durableStorageType === StorageProviderType.DTS:
             if (context.advancedCreation) {
                 availablePlans.add(FunctionAppHostingPlans.Premium);
             }

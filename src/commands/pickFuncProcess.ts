@@ -8,7 +8,7 @@ import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type
 import psTree, { type PS } from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
-import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
+import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';

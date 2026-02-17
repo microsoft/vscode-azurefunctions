@@ -8,7 +8,7 @@ import * as path from "path";
 import { type Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { type IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { DurableBackend, ProjectLanguage, hostFileName, requirementsFileName } from "../constants";
+import { ProjectLanguage, StorageProviderType, hostFileName, requirementsFileName } from "../constants";
 import { type IHostJsonV2 } from "../funcConfig/host";
 import { dotnetUtils } from "./dotnetUtils";
 import { hasNodeJsDependency } from "./nodeJsUtils";
@@ -44,7 +44,7 @@ export namespace durableUtils {
         return durableOrchestrator.test(templateId) || durableEntity.test(templateId);
     }
 
-    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<DurableBackend | undefined> {
+    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<StorageProviderType | undefined> {
         const hasDurableStorage: boolean = await verifyHasDurableStorage(language, projectPath);
         if (!hasDurableStorage) {
             return undefined;
@@ -56,19 +56,19 @@ export namespace durableUtils {
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
-        const hostStorageType: DurableBackend | undefined = hostJson.extensions?.durableTask?.storageProvider?.type;
+        const hostStorageType: StorageProviderType | undefined = hostJson.extensions?.durableTask?.storageProvider?.type;
 
         switch (hostStorageType) {
-            case DurableBackend.Netherite:
-                return DurableBackend.Netherite;
-            case DurableBackend.DTS:
-                return DurableBackend.DTS;
-            case DurableBackend.SQL:
-                return DurableBackend.SQL;
-            case DurableBackend.Storage:
+            case StorageProviderType.Netherite:
+                return StorageProviderType.Netherite;
+            case StorageProviderType.DTS:
+                return StorageProviderType.DTS;
+            case StorageProviderType.SQL:
+                return StorageProviderType.SQL;
+            case StorageProviderType.Storage:
             default:
                 // New DF's will use the more specific type 'DurableBackend.Storage', but legacy implementations may return this value as 'undefined'
-                return DurableBackend.Storage;
+                return StorageProviderType.Storage;
         }
     }
 

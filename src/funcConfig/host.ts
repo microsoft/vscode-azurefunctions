@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type DurableBackend } from "../constants";
+import { type StorageProviderType } from "../constants";
 import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
@@ -62,7 +62,7 @@ export type IDurableTaskJson = IStorageTaskJson | INetheriteTaskJson | IDTSTaskJ
 
 export interface IStorageTaskJson {
     storageProvider?: {
-        type?: DurableBackend.Storage;
+        type?: StorageProviderType.Storage;
     }
 }
 
@@ -70,7 +70,7 @@ export interface INetheriteTaskJson {
     hubName?: string;
     useGracefulShutdown?: boolean;
     storageProvider?: {
-        type?: DurableBackend.Netherite;
+        type?: StorageProviderType.Netherite;
         partitionCount?: number;
         StorageConnectionName?: string;
         EventHubsConnectionName?: string;
@@ -80,14 +80,14 @@ export interface INetheriteTaskJson {
 export interface IDTSTaskJson {
     hubName?: string;
     storageProvider?: {
-        type?: DurableBackend.DTS;
+        type?: StorageProviderType.DTS;
         connectionStringName?: string;
     }
 }
 
 export interface ISqlTaskJson {
     storageProvider?: {
-        type?: DurableBackend.SQL;
+        type?: StorageProviderType.SQL;
         connectionStringName?: string;
         taskEventLockTimeout?: string;
         createDatabaseIfNotExists?: boolean;

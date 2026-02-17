@@ -4,11 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { ThemeColor, ThemeIcon } from "vscode";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
 export const projectLanguageModelSetting: string = 'projectLanguageModel';
+export const validateFuncCoreToolsSetting: string = 'validateFuncCoreTools';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const projectSubpathSetting: string = 'projectSubpath';
 export const templateFilterSetting: string = 'templateFilter';
@@ -127,7 +129,7 @@ export enum ConnectionType {
     Custom = 'Custom',
 }
 
-export enum DurableBackend {
+export enum StorageProviderType {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
     DTS = 'azureManaged',
@@ -246,3 +248,5 @@ export enum McpProjectType {
     McpExtensionServer = 'McpExtensionServer',
     SelfHostedMcpServer = 'SelfHostedMcpServer'
 }
+
+export const warningIcon: ThemeIcon = new ThemeIcon('warning', new ThemeColor('charts.orange'));
