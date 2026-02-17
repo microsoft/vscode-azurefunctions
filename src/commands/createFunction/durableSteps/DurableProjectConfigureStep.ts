@@ -176,9 +176,11 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
 
         switch (context.newDurableStorageType) {
             case StorageProviderType.Netherite:
-                isDotnetIsolated ?
-                    packages.push({ name: durableUtils.dotnetIsolatedDfNetheritePackage }) :
+                if (isDotnetIsolated) {
+                    packages.push({ name: durableUtils.dotnetIsolatedDfNetheritePackage });
+                } else {
                     packages.push({ name: durableUtils.dotnetInProcDfNetheritePackage });
+                }
                 break;
             case StorageProviderType.DTS:
                 // Todo: Remove prerelease flag once this functionality is out of preview
@@ -189,9 +191,11 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 }
                 break;
             case StorageProviderType.SQL:
-                isDotnetIsolated ?
-                    packages.push({ name: durableUtils.dotnetIsolatedDfSqlPackage }) :
+                if (isDotnetIsolated) {
+                    packages.push({ name: durableUtils.dotnetIsolatedDfSqlPackage });
+                } else {
                     packages.push({ name: durableUtils.dotnetInProcDfSqlPackage });
+                }
                 break;
             case StorageProviderType.Storage:
             default:
