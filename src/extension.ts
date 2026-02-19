@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
@@ -16,7 +16,14 @@ import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
+import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
+import { createFunctionInternal } from './commands/createFunction/createFunction';
+import { createFunctionApp, createFunctionAppAdvanced } from './commands/createFunctionApp/createFunctionApp';
+import { createNewProjectInternal } from './commands/createNewProject/createNewProject';
+import { deleteFunctionApp } from './commands/deleteFunctionApp';
+import { deployProductionSlot } from './commands/deploy/deploy';
+import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
@@ -33,6 +40,7 @@ import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCore
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import type { TestApi } from './testApi';
 import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -44,14 +52,6 @@ import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigO
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
-import { createFunctionApp, createFunctionAppAdvanced } from './commands/createFunctionApp/createFunctionApp';
-import { deleteFunctionApp } from './commands/deleteFunctionApp';
-import { deployProductionSlot } from './commands/deploy/deploy';
-import { copyFunctionUrl } from './commands/copyFunctionUrl';
-import { createNewProjectInternal } from './commands/createNewProject/createNewProject';
-import { createFunctionInternal } from './commands/createFunction/createFunction';
-import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
-import type { TestApi } from './testApi';
 
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
@@ -144,9 +144,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             'DurableTaskSchedulerEmulator',
             new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
-
-    console.log('Activated Azure Functions extension...');
-    console.log('**********************************************');
 
     const apis: (AzureFunctionsExtensionApi | TestApi)[] = [
         <AzureFunctionsExtensionApi>{
