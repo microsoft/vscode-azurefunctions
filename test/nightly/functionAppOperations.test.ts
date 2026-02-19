@@ -8,21 +8,21 @@ import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import { DialogResponses } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import { createFunctionAppAdvanced } from '../../src/commands/createFunctionApp/createFunctionApp';
-import { deleteFunctionApp } from '../../src/commands/deleteFunctionApp';
 import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
+import { getCachedTestApi } from '../utils/testApiAccess';
 import { getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
 suite('Function App Operations', function (this: Mocha.Suite): void {
-    this.timeout(7 * 60 * 1000);
+    this.timeout(10 * 60 * 1000);
 
     let appName: string;
     let app2Name: string;
     let rgName: string;
     let saName: string;
     let aiName: string;
+    let miName: string;
     let location: string;
 
     suiteSetup(async function (this: Mocha.Context): Promise<void> {
@@ -39,14 +39,16 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         resourceGroupsToDelete.push(rgName);
         saName = getRandomHexString().toLowerCase(); // storage account must have lower case name
         aiName = getRandomHexString();
+        miName = getRandomHexString();
         location = getRotatingLocation();
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: (string | RegExp)[] = [appName, 'Flex Consumption', location, /\.net/i, '4096', '100', 'Managed identity', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, '$(plus) Create new user assigned identity'];
+        const testInputs: (string | RegExp)[] = [appName, 'Flex Consumption', location, /\.net/i, '4096', '100', '$(plus) Create new resource group', rgName, 'Managed identity', '$(plus) Create new user-assigned identity', miName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
+        const testApi = getCachedTestApi();
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
-                await createFunctionAppAdvanced(context);
+                await testApi.commands.createFunctionAppAdvanced(context);
             });
         });
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
@@ -54,10 +56,11 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: (string | RegExp)[] = [app2Name, 'Flex Consumption', location, /\.net/i, '4096', '100', 'Managed identity', rgName, saName, aiName, '$(plus) Create new user assigned identity'];
+        const testInputs: (string | RegExp)[] = [app2Name, 'Flex Consumption', location, /\.net/i, '4096', '100', rgName, 'Managed identity', '$(plus) Create new user-assigned identity', app2Name, app2Name, app2Name];
+        const testApi = getCachedTestApi();
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
             await context.ui.runWithInputs(testInputs, async () => {
-                await createFunctionAppAdvanced(context);
+                await testApi.commands.createFunctionAppAdvanced(context);
             });
         });
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
@@ -65,9 +68,10 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Delete', async () => {
+        const testApi = getCachedTestApi();
         await runWithTestActionContext('deleteFunctionApp', async context => {
             await context.ui.runWithInputs([appName, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
-                await deleteFunctionApp(context);
+                await testApi.commands.deleteFunctionApp(context);
             });
         });
         const site: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
@@ -75,9 +79,10 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Delete - Existing RG/SA/AI', async () => {
+        const testApi = getCachedTestApi();
         await runWithTestActionContext('deleteFunctionApp', async context => {
             await context.ui.runWithInputs([app2Name, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
-                await deleteFunctionApp(context);
+                await testApi.commands.deleteFunctionApp(context);
             });
         });
         const site: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);

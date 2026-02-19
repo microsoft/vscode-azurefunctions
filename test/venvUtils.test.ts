@@ -30,7 +30,12 @@ suite('venvUtils', () => {
         if (longRunningTestsEnabled) {
             this.timeout(60 * 1000);
             await AzExtFsExtra.ensureDir(testFolder);
-            const pyAlias: string = process.platform === 'win32' ? 'py' : 'python3';
+            const pyAlias: string | undefined = await findPythonAlias();
+            if (!pyAlias) {
+                console.log('No Python installation found, skipping venvUtils tests');
+                this.skip();
+                return;
+            }
             await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, composeArgs(withArg('-m', 'venv', venvName))());
         }
     });
@@ -124,6 +129,19 @@ suite('venvUtils', () => {
         assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'linux'), '.venv/bin/python -m do a thing');
     });
 });
+
+async function findPythonAlias(): Promise<string | undefined> {
+    const aliases = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
+    for (const alias of aliases) {
+        try {
+            await cpUtils.executeCommand(undefined, undefined, alias, '--version');
+            return alias;
+        } catch {
+            // try next alias
+        }
+    }
+    return undefined;
+}
 
 async function runWithWindowsTerminal(terminalPath: string, callback: () => void): Promise<void> {
     if (!(await AzExtFsExtra.pathExists(terminalPath))) {

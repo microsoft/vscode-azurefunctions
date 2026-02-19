@@ -196,31 +196,36 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
-    const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
-        appSettings,
-        node,
-        projectPath: context.projectPath
-    });
 
-    if (connectionStringWarningMessage) {
-        deploymentWarningMessages.push(connectionStringWarningMessage);
-    }
+    // Skip all deployment warnings for newly created apps since the app was
+    // just configured during creation and warnings would be noise
+    if (!context.isNewApp) {
+        const connectionStringWarningMessage = await getWarningsForConnectionSettings(context, {
+            appSettings,
+            node,
+            projectPath: context.projectPath
+        });
 
-    const eolWarningMessage = await getEolWarningMessages({ ...context, ...subscriptionContext }, {
-        site: site.rawSite,
-        isLinux: client.isLinux,
-        isFlex: isFlexConsumption,
-        client
-    });
+        if (connectionStringWarningMessage) {
+            deploymentWarningMessages.push(connectionStringWarningMessage);
+        }
 
-    if (eolWarningMessage) {
-        deploymentWarningMessages.push(eolWarningMessage);
-    }
+        const eolWarningMessage = await getEolWarningMessages({ ...context, ...subscriptionContext }, {
+            site: site.rawSite,
+            isLinux: client.isLinux,
+            isFlex: isFlexConsumption,
+            client
+        });
 
-    const extensionBundleWarningMessage: string | undefined = await getWarningForExtensionBundle(context);
+        if (eolWarningMessage) {
+            deploymentWarningMessages.push(eolWarningMessage);
+        }
 
-    if (extensionBundleWarningMessage) {
-        deploymentWarningMessages.push(extensionBundleWarningMessage);
+        const extensionBundleWarningMessage: string | undefined = await getWarningForExtensionBundle(context);
+
+        if (extensionBundleWarningMessage) {
+            deploymentWarningMessages.push(extensionBundleWarningMessage);
+        }
     }
 
     if ((getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) ||
