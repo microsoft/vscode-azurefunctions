@@ -22,7 +22,7 @@ export async function unassignManagedIdentity(context: IActionContext, node: Use
         managedIdentity: node.identity,
         ...node.subscription,
         ...(await createActivityContext())
-    }
+    };
 
     await context.ui.showWarningMessage(
         localize('unassignManagedIdentityWarning', "'{0}' will not be able to request access tokens for the user assigned managed identity '{1}'. Do you want to continue?",
@@ -33,7 +33,7 @@ export async function unassignManagedIdentity(context: IActionContext, node: Use
     );
 
     const title: string = localize('assignManagedIdentity', 'Unassign User Assigned Identity to Function App');
-    const wizard: AzureWizard<ManagedIdentityAssignContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<ManagedIdentityAssignContext>(wizardContext, {
         title,
         promptSteps: [],
         executeSteps: [
@@ -49,5 +49,5 @@ export async function unassignManagedIdentity(context: IActionContext, node: Use
         await wizard.execute();
     });
 
-    void slotTreeItem.refresh(context)
+    void slotTreeItem.refresh(context);
 }

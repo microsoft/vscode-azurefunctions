@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg, withFlagArg } from '@microsoft/vscode-processutils';
 import * as path from "path";
 import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
@@ -175,20 +176,26 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
 
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
-                isDotnetIsolated ?
-                    packages.push({ name: durableUtils.dotnetIsolatedDfNetheritePackage }) :
+                if (isDotnetIsolated) {
+                    packages.push({ name: durableUtils.dotnetIsolatedDfNetheritePackage });
+                } else {
                     packages.push({ name: durableUtils.dotnetInProcDfNetheritePackage });
+                }
                 break;
             case DurableBackend.DTS:
                 // Todo: Remove prerelease flag once this functionality is out of preview
-                isDotnetIsolated ?
-                    packages.push({ name: durableUtils.dotnetIsolatedDTSPackage, prerelease: true }) :
+                if (isDotnetIsolated) {
+                    packages.push({ name: durableUtils.dotnetIsolatedDTSPackage, prerelease: true });
+                } else {
                     packages.push({ name: durableUtils.dotnetInProcDTSPackage, prerelease: true });
+                }
                 break;
             case DurableBackend.SQL:
-                isDotnetIsolated ?
-                    packages.push({ name: durableUtils.dotnetIsolatedDfSqlPackage }) :
+                if (isDotnetIsolated) {
+                    packages.push({ name: durableUtils.dotnetIsolatedDfSqlPackage });
+                } else {
                     packages.push({ name: durableUtils.dotnetInProcDfSqlPackage });
+                }
                 break;
             case DurableBackend.Storage:
             default:
@@ -205,11 +212,11 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         const failedPackages: string[] = [];
         for (const p of packages) {
             try {
-                const packageArgs: string[] = [p.name];
-                if (p.prerelease) {
-                    packageArgs.push('--prerelease');
-                }
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', ...packageArgs);
+                const args = composeArgs(
+                    withArg('add', 'package', p.name),
+                    withFlagArg('--prerelease', p.prerelease),
+                )();
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', args);
             } catch {
                 failedPackages.push(p.name);
             }
@@ -223,7 +230,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
     private async installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
             const packageVersion = context.languageModel === 4 ? '3' : '2';
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', `${durableUtils.nodeDfPackage}@${packageVersion}`);
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', composeArgs(withArg('install', `${durableUtils.nodeDfPackage}@${packageVersion}`))());
         } catch (error) {
             const pError: IParsedError = parseError(error);
             const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.nodeDfPackage);

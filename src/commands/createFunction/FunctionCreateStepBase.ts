@@ -104,7 +104,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 hostJson.concurrency = {
                     dynamicConcurrencyEnabled: true,
                     snapshotPersistenceEnabled: true
-                }
+                };
                 await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             } else if (context.functionTemplate?.isMcpTrigger) {
                 const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
@@ -121,7 +121,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                         system: {
                             webhookAuthorizationLevel: "System"
                         }
-                    }
+                    };
                 }
                 await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }

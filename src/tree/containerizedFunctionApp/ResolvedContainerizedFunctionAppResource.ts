@@ -89,13 +89,13 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     }
 
     public async isReadOnly(): Promise<boolean> {
-        return true
+        return true;
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
         let result: IParsedHostJson | undefined = this._cachedHostJson;
         if (!result) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-unassigned-vars
             let data: any;
             const version: FuncVersion = await this.getVersion(context);
             result = parseHostJson(data, version);
@@ -119,7 +119,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             result = version || latestGAVersion;
             this._cachedVersion = result;
         }
-        return result
+        return result;
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
@@ -149,7 +149,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             contextValuesToAdd: ['azFunc', 'container'],
         });
 
-        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._imageTreeItem,]
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._imageTreeItem,];
 
         return children;
     }
@@ -190,7 +190,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
             }
         }
 
-        return undefined
+        return undefined;
     }
 
     public compareChildrenImpl(): number {

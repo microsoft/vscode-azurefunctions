@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { validateCSharpNamespace } from '../extension.bundle';
+import { validateCSharpNamespace } from '../src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 
 suite('validateCSharpNamespace', () => {
     test('Valid values', async () => {

@@ -30,7 +30,7 @@ export async function getWarningForExtensionBundle(context: IFuncDeployContext):
                 return warningMessage;
             }
         }
-    } catch (error) {
+    } catch (_error) {
         return;
     }
     return;

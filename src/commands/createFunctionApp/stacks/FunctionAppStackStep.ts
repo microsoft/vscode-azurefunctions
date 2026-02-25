@@ -66,7 +66,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
             promptSteps.push(new FunctionAppEOLWarningStep());
         }
         if (context.newSiteOS === undefined) {
-            promptSteps.push(new SiteOSStep())
+            promptSteps.push(new SiteOSStep());
         } else {
             await setLocationsTask(context);
         }
@@ -91,7 +91,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
             const noPicksMessage = context.stackFilter ?
                 localize('noStacksFoundWithFilter', '$(warning) No stacks found for "{0}" on Azure Functions v{1}', context.stackFilter, majorVersion) :
                 localize('noStacksFound', '$(warning) No stacks found for Azure Functions v{0}', majorVersion);
-            const upgradeMessage = localize('eolWarning', '$(warning) No stacks found for Azure Functions v{0} due to being EOL. Learn how to upgrade to V4...', majorVersion)
+            const upgradeMessage = localize('eolWarning', '$(warning) No stacks found for Azure Functions v{0} due to being EOL. Learn how to upgrade to V4...', majorVersion);
             picks.push({
                 label: isEol ? upgradeMessage : noPicksMessage,
                 data: undefined,
@@ -99,7 +99,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFlexFunctionApp
                     await openUrl('https://aka.ms/function-runtime-host-warning');
                 },
                 agentMetadata: { notApplicableToAgentPick: true }
-            })
+            });
         }
 
         picks.push({

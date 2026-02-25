@@ -30,7 +30,7 @@ export async function validateStorageConnectionPreDebug(context: IActionContext,
         newStorageConnectionSettingKey: storageConnectionKey,
     });
 
-    const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<IStorageConnectionWizardContext>(wizardContext, {
         promptSteps: [new StorageConnectionListStep(availableDebugConnectionTypes)],
     });
 

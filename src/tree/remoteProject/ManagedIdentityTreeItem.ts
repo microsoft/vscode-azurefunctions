@@ -14,7 +14,7 @@ import { UserAssignedIdentitiesTreeItem } from './UserAssignedIdentitiesTreeItem
 export class ManagedIdentityTreeItem extends AzExtParentTreeItem {
     public readonly label: string = localize('Identity', 'Identity');
     public static contextValue: string = 'azFuncManagedIdentity';
-    public readonly parent: SlotTreeItem;
+    declare public readonly parent: SlotTreeItem;
     public readonly site: ParsedSite;
     public suppressMaskLabel: boolean = true;
 

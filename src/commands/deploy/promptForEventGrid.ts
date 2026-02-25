@@ -5,7 +5,7 @@
 
 import { type FunctionEnvelope } from "@azure/arm-appservice";
 import { DialogResponses, type IActionContext, type IAzureMessageOptions } from "@microsoft/vscode-azext-utils";
-import * as retry from 'p-retry';
+import retry from 'p-retry';
 import { type WorkspaceFolder } from "vscode";
 import { localize } from "../../localize";
 import { type IBindingTemplate } from "../../templates/IBindingTemplate";

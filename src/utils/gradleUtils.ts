@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as vscode from 'vscode';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
@@ -13,7 +14,7 @@ export namespace gradleUtils {
 
     export async function validateGradleInstalled(context: IActionContext): Promise<void> {
         try {
-            await cpUtils.executeCommand(undefined, undefined, gradleCommand, '--version');
+            await cpUtils.executeCommand(undefined, undefined, gradleCommand, composeArgs(withArg('--version'))());
         } catch (error) {
             const message: string = localize('gradleNotFound', 'Failed to find "gradle", please ensure that the gradle bin directory is in your system path.');
 
@@ -23,7 +24,7 @@ export namespace gradleUtils {
                 context.errorHandling.suppressDisplay = true;
             }
 
-            throw new Error(message);
+            throw new Error(message, { cause: error });
         }
     }
 }

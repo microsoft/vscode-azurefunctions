@@ -90,7 +90,7 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+             
             const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
@@ -155,7 +155,7 @@ export class FuncTaskProvider implements TaskProvider {
                 debugProvider = this._javaDebugProvider;
                 break;
             case ProjectLanguage.Ballerina:
-                debugProvider = this._ballerinaDebugProvider
+                debugProvider = this._ballerinaDebugProvider;
                 break;
             case ProjectLanguage.PowerShell:
                 debugProvider = this._powershellDebugProvider;

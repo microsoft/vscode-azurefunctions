@@ -4,9 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as path from 'path';
-import { cpUtils, delay, ext, getGlobalSetting, getRandomHexString, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
+import { pythonVenvSetting } from '../src/constants';
+import { ext } from '../src/extensionVariables';
+import { cpUtils } from '../src/utils/cpUtils';
+import { delay } from '../src/utils/delay';
+import { getRandomHexString } from '../src/utils/fs';
+import { venvUtils } from '../src/utils/venvUtils';
+import { getGlobalSetting, updateGlobalSetting } from '../src/vsCodeConfig/settings';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
@@ -24,7 +31,7 @@ suite('venvUtils', () => {
             this.timeout(60 * 1000);
             await AzExtFsExtra.ensureDir(testFolder);
             const pyAlias: string = process.platform === 'win32' ? 'py' : 'python3';
-            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, '-m', 'venv', venvName);
+            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, composeArgs(withArg('-m', 'venv', venvName))());
         }
     });
 

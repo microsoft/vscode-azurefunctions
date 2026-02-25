@@ -22,7 +22,7 @@ export class DurableTaskSchedulerEmulatorsWorkspaceResourceModel implements Dura
         this.getEmulatorsTask = this.emulatorClient.getEmulators();
 
         try {
-            const emulators = await this.getEmulatorsTask
+            const emulators = await this.getEmulatorsTask;
 
             return emulators.map(emulator => new DurableTaskSchedulerEmulatorWorkspaceResourceModel(emulator));
         }

@@ -68,7 +68,10 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
                 try {
                     data = await AzExtFsExtra.readJSON(hostJsonPath);
                 } catch (error) {
-                    throw new Error(localize('failedToParseHostJson', 'Failed to parse host.json: "{0}"', parseError(error).message));
+                    throw new Error(
+                        localize('failedToParseHostJson', 'Failed to parse host.json: "{0}"', parseError(error).message),
+                        { cause: error }
+                    );
                 }
             }
         }
