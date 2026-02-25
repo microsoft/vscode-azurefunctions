@@ -21,7 +21,7 @@ export interface FuncHostErrorContextOptions {
 }
 
 // eslint-disable-next-line no-control-regex
-const redAnsiRegex = /\u001b\[(?:[0-9;]*31m|[0-9;]*91m|38;5;(9|1)m)/;
+const redAnsiRegex = /\u001b\[(?:[0-9;]*31m|[0-9;]*91m)/;
 
 export function isFuncHostErrorLog(log: string): boolean {
     return redAnsiRegex.test(log);

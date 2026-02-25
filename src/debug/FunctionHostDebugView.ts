@@ -92,9 +92,10 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
                 return getHostErrorTreeItem(element);
             case 'hostTask':
                 return getHostTaskTreeItem(element);
-            default:
-                // Exhaustive check
-                return getNoHostTreeItem();
+            default: {
+                // Exhaustive check: if we reach here, the FuncHostDebugNode union is out of sync with this switch.
+                throw new Error(`Unexpected FuncHostDebugNode kind: ${(element as { kind?: unknown }).kind}`);
+            }
         }
     }
 

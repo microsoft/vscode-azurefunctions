@@ -33,6 +33,11 @@ export interface IRunningFuncTask {
      * This avoids repeatedly stealing focus / opening the view for every subsequent error.
      */
     hasReportedLiveErrors?: boolean;
+    /**
+     * AbortController used to signal when the stream iteration should stop.
+     * This prevents the async iteration loop from hanging indefinitely when the task ends.
+     */
+    streamAbortController?: AbortController;
 }
 
 function addErrorLog(task: IRunningFuncTask, rawChunk: string): void {
@@ -189,6 +194,7 @@ export function registerFuncHostTaskEvents(): void {
                 logs,
                 errorLogs: [],
                 hasReportedLiveErrors: false,
+                streamAbortController: new AbortController(),
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
@@ -212,6 +218,13 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            const task = runningFuncTaskMap.get(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            
+            // Abort the stream iteration to prevent it from hanging indefinitely
+            if (task?.streamAbortController) {
+                task.streamAbortController.abort();
+            }
+            
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
 
             runningFuncTasksChangedEmitter.fire();
@@ -233,18 +246,39 @@ export function registerFuncHostTaskEvents(): void {
             return;
         }
 
-        for await (const chunk of task.stream ?? []) {
-            task.logs.push(chunk);
+        const maxLogEntries = 1000;
 
-            // Keep track of errors for the Debug view.
-            if (isFuncHostErrorLog(chunk)) {
-                const beforeCount = task.errorLogs?.length ?? 0;
-                addErrorLog(task, chunk);
-                const afterCount = task.errorLogs?.length ?? 0;
-                if (afterCount > beforeCount) {
-                    runningFuncTasksChangedEmitter.fire();
+        try {
+            for await (const chunk of task.stream ?? []) {
+                // Check if the stream iteration should be aborted
+                if (task.streamAbortController?.signal.aborted) {
+                    break;
+                }
+
+                task.logs.push(chunk);
+                if (task.logs.length > maxLogEntries) {
+                    task.logs.splice(0, task.logs.length - maxLogEntries);
+                }
+
+                // Keep track of errors for the Debug view.
+                if (isFuncHostErrorLog(chunk)) {
+                    const beforeCount = task.errorLogs?.length ?? 0;
+                    addErrorLog(task, chunk);
+                    const afterCount = task.errorLogs?.length ?? 0;
+                    if (afterCount > beforeCount) {
+                        runningFuncTasksChangedEmitter.fire();
+                    }
                 }
             }
+        } catch (error) {
+            // If the stream encounters an error or is aborted, gracefully exit the loop
+            // This prevents the event handler from hanging indefinitely
+            if (task.streamAbortController?.signal.aborted) {
+                // Expected when the task ends - no need to log
+                return;
+            }
+            // Log unexpected errors but don't throw to avoid crashing the extension
+            console.error('Error reading func host task stream:', error);
         }
     });
 
