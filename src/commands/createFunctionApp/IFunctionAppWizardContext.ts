@@ -26,6 +26,8 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     durableStorageType?: DurableBackend;
     useFlexConsumptionPlan?: boolean;
     useManagedIdentity?: boolean;
+    /** When true, AZD handles all resource provisioning (including managed identity) via Bicep */
+    useAzdProvisioning?: boolean;
 }
 
 export interface IFlexFunctionAppWizardContext extends IFunctionAppWizardContext {

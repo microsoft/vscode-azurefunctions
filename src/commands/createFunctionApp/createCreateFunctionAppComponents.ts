@@ -18,6 +18,8 @@ import { FunctionAppCreateStep } from "./FunctionAppCreateStep";
 import { allAvailableFunctionAppHostingPlans, FunctionAppHostingPlans, FunctionAppHostingPlanStep } from "./FunctionAppHostingPlanStep";
 import { type IFunctionAppWizardContext } from "./IFunctionAppWizardContext";
 import { ConfigureCommonNamesStep } from "./UniqueNamePromptStep";
+import { AzdProvisionExecuteStep } from "./azd/AzdProvisionExecuteStep";
+import { isAzdInstalled } from "./azd/isAzdInstalled";
 import { ContainerizedFunctionAppCreateStep } from "./containerImage/ContainerizedFunctionAppCreateStep";
 import { DeployWorkspaceProjectStep } from "./containerImage/DeployWorkspaceProjectStep";
 import { detectDockerfile } from "./containerImage/detectDockerfile";
@@ -33,6 +35,9 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
 
     const version: FuncVersion = await getDefaultFuncVersion(context);
     context.telemetry.properties.projectRuntime = version;
+
+    // Check AZD availability early (runs in parallel with other setup)
+    const azdAvailableTask: Promise<boolean> = isAzdInstalled();
 
     const wizardContext: IFunctionAppWizardContext = Object.assign(context, subscription, {
         newSiteKind: AppKind.functionapp,
@@ -73,18 +78,31 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     }
     promptSteps.push(new AuthenticationPromptStep());
 
+    // Await the AZD check now — by this point it should already be resolved
+    const useAzd: boolean = await azdAvailableTask;
+
     if (!wizardContext.advancedCreation) {
         LocationListStep.addStep(wizardContext, promptSteps);
         // if the user is deploying to a container app, do not use a flex consumption plan
         wizardContext.useFlexConsumptionPlan = !wizardContext.dockerfilePath;
         wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
-        executeSteps.push(new ResourceGroupCreateStep());
-        executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
-        executeSteps.push(new AppInsightsCreateStep());
-        if (!wizardContext.dockerfilePath) {
-            executeSteps.push(new AppServicePlanCreateStep());
-            executeSteps.push(new LogAnalyticsCreateStep());
+
+        // For standard (non-Docker) basic creation: use AZD if available, otherwise fall back to ARM
+        if (useAzd && !wizardContext.dockerfilePath) {
+            context.telemetry.properties.provisioningMethod = 'azd';
+            wizardContext.useAzdProvisioning = true;
+            // AZD handles all resource creation in a single step via Bicep template
+            executeSteps.push(new AzdProvisionExecuteStep());
+        } else {
+            context.telemetry.properties.provisioningMethod = 'arm';
+            executeSteps.push(new ResourceGroupCreateStep());
+            executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+            executeSteps.push(new AppInsightsCreateStep());
+            if (!wizardContext.dockerfilePath) {
+                executeSteps.push(new AppServicePlanCreateStep());
+                executeSteps.push(new LogAnalyticsCreateStep());
+            }
         }
     } else {
         promptSteps.push(new ResourceGroupListStep());
@@ -107,15 +125,20 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
         promptSteps.push(new AppInsightsListStep());
     }
 
-    executeSteps.push(new RoleAssignmentExecuteStep(() => {
-        const role: Role = {
-            scopeId: wizardContext?.storageAccount?.id,
-            roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataContributor),
-            roleDefinitionName: CommonRoleDefinitions.storageBlobDataContributor.roleName
-        };
+    // Role assignment and storage provider filtering are still needed for both AZD and ARM paths
+    // In the AZD path, the role assignment is handled within the Bicep template, but the
+    // RoleAssignmentExecuteStep's shouldExecute will check if the role already exists
+    if (!useAzd || wizardContext.advancedCreation || wizardContext.dockerfilePath) {
+        executeSteps.push(new RoleAssignmentExecuteStep(() => {
+            const role: Role = {
+                scopeId: wizardContext?.storageAccount?.id,
+                roleDefinitionId: createRoleId(wizardContext?.subscriptionId, CommonRoleDefinitions.storageBlobDataContributor),
+                roleDefinitionName: CommonRoleDefinitions.storageBlobDataContributor.roleName
+            };
 
-        return [role];
-    }));
+            return [role];
+        }));
+    }
     const storageProvider = 'Microsoft.Storage';
     LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
 

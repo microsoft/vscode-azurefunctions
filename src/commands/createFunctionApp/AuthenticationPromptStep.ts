@@ -31,7 +31,9 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
             const executeSteps: AzureWizardExecuteStep<T>[] = [];
             if (context.advancedCreation) {
                 promptSteps.push(new UserAssignedIdentityListStep());
-            } else {
+            } else if (!context.useAzdProvisioning) {
+                // Only add the ARM-based identity create step when NOT using AZD.
+                // In the AZD path, the Bicep template handles identity creation.
                 executeSteps.push(new UserAssignedIdentityCreateStep());
             }
 
