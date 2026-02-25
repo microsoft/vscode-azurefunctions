@@ -196,6 +196,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     Object.assign(context, await getStorageConnectionIfNeeded(Object.assign(context, subscriptionContext), appSettings, site, context.projectPath));
 
     const deploymentWarningMessages: string[] = [];
+    let eolWarningMessage: string | undefined;
 
     // Skip all deployment warnings for newly created apps since the app was
     // just configured during creation and warnings would be noise
@@ -210,7 +211,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             deploymentWarningMessages.push(connectionStringWarningMessage);
         }
 
-        const eolWarningMessage = await getEolWarningMessages({ ...context, ...subscriptionContext }, {
+        eolWarningMessage = await getEolWarningMessages({ ...context, ...subscriptionContext }, {
             site: site.rawSite,
             isLinux: client.isLinux,
             isFlex: isFlexConsumption,

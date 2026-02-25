@@ -78,7 +78,7 @@ async function findPythonAlias(): Promise<string | undefined> {
     const aliases = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
     for (const alias of aliases) {
         try {
-            await cpUtils.executeCommand(undefined, undefined, alias, '--version');
+            await cpUtils.executeCommand(undefined, undefined, alias, ['--version']);
             return alias;
         } catch {
             // try next alias

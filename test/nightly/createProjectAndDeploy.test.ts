@@ -24,7 +24,7 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
     title: string;
     buildMachineOsToSkip?: NodeJS.Platform | NodeJS.Platform[];
 }
-const confirmDeploy = 'Deploy';
+// const confirmDeploy = 'Deploy';
 
 const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
