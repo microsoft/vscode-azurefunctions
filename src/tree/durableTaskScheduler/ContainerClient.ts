@@ -36,18 +36,18 @@ export class ShellContainerClient implements ContainerClient {
 
                 return containers.map(
                     container =>
-                        ({
-                            id: container.id,
-                            image: container.image.image as string,
-                            name: container.name,
-                            ports: container.ports.reduce(
-                                (previous, port) => {
-                                    previous[port.containerPort] = port.hostPort;
+                    ({
+                        id: container.id,
+                        image: container.image.image as string,
+                        name: container.name,
+                        ports: container.ports.reduce(
+                            (previous, port) => {
+                                previous[port.containerPort] = port.hostPort;
 
-                                    return previous;
-                                },
-                                {})
-                        }));
+                                return previous;
+                            },
+                            {})
+                    }));
             });
     }
 
@@ -96,8 +96,11 @@ export class ShellContainerClient implements ContainerClient {
         try {
             return await command();
         }
-        catch (_error) {
-            throw new Error(localize('containerRuntimeError', 'Unable to perform container command. Is a container runtime installed and running?'));
+        catch (error) {
+            throw new Error(
+                localize('containerRuntimeError', 'Unable to perform container command. Is a container runtime installed and running?'),
+                { cause: error }
+            );
         }
     }
 }
