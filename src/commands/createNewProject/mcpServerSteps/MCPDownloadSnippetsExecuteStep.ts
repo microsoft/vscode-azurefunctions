@@ -39,7 +39,8 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
     }
 
     private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
-        for (const item of items) {
+        // Download all files and directories at this level in parallel
+        await Promise.all(items.map(async (item) => {
             if (item.type === 'file') {
                 await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
                     context, item,
@@ -59,7 +60,7 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
                 // Recursively download directory contents
                 await this.downloadFilesRecursively(context, dirContents, dirPath);
             }
-        }
+        }));
     }
 
     public shouldExecute(context: MCPProjectWizardContext): boolean {
