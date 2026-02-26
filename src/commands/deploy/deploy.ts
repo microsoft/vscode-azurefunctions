@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site, type SiteConfigResource, type StringDictionary } from '@azure/arm-appservice';
+import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
@@ -133,8 +133,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     void showCoreToolsWarning(context, version, site.fullName);
 
     const client = await site.createClient(actionContext);
-    const siteConfig: SiteConfigResource = await client.getSiteConfig();
-    const isConsumption: boolean = await client.getIsConsumption(actionContext);
+    // Parallelize independent read-only calls: site config and consumption check
+    const [siteConfig, isConsumption] = await Promise.all([
+        client.getSiteConfig(),
+        client.getIsConsumption(actionContext),
+    ]);
     let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
     if (!isZipDeploy && site.isLinux && isConsumption) {
         ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: site.fullName });
@@ -167,9 +170,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'flexconsumption';
     }
 
-    const appSettings: StringDictionary = await client.listApplicationSettings();
-
-    const durableStorageType: DurableBackend | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
+    // Parallelize remote app settings fetch and local workspace durable storage detection
+    const [appSettings, durableStorageType] = await Promise.all([
+        client.listApplicationSettings(),
+        durableUtils.getStorageTypeFromWorkspace(language, context.projectPath),
+    ]);
     context.telemetry.properties.durableStorageType = durableStorageType;
 
     if (durableStorageType === DurableBackend.SQL && isFlexConsumption) {

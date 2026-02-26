@@ -48,7 +48,7 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     const executeSteps: AzureWizardExecuteStep<IFunctionAppWizardContext>[] = [];
 
     const storageAccountCreateOptions: INewStorageAccountDefaults = {
-        kind: StorageAccountKind.Storage,
+        kind: StorageAccountKind.StorageV2,
         performance: StorageAccountPerformance.Standard,
         replication: StorageAccountReplication.LRS
     };

@@ -95,7 +95,7 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
         let result: IParsedHostJson | undefined = this._cachedHostJson;
         if (!result) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-unassigned-vars
             let data: any;
             const version: FuncVersion = await this.getVersion(context);
             result = parseHostJson(data, version);

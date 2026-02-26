@@ -16,7 +16,7 @@ export namespace mavenUtils {
     export async function validateMavenInstalled(context: IActionContext): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, undefined, mvnCommand, composeArgs(withArg('--version'))());
-        } catch (_error) {
+        } catch (error) {
             const message: string = localize('mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
 
             if (!context.errorHandling.suppressDisplay) {
@@ -29,7 +29,7 @@ export namespace mavenUtils {
                 context.errorHandling.suppressDisplay = true;
             }
 
-            throw new Error(message);
+            throw new Error(message, { cause: error });
         }
     }
 

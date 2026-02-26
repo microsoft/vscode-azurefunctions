@@ -293,8 +293,8 @@ export interface eolWarningOptions {
  * This function checks the end of life date for stack and returns a message if the stack is end of life or will be end of life in 6 months.
  */
 export async function getEolWarningMessages(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<string> {
-    let isEOL = false;
-    let willBeEOL = false;
+    let isEOL: boolean;
+    let willBeEOL: boolean;
     let version: string | undefined;
     let displayInfo: {
         endOfLife: Date | undefined;
