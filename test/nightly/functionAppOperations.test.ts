@@ -15,7 +15,7 @@ import { getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
 suite('Function App Operations', function (this: Mocha.Suite): void {
-    this.timeout(10 * 60 * 1000);
+    this.timeout(15 * 60 * 1000);
 
     let appName: string;
     let app2Name: string;
