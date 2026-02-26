@@ -18,7 +18,18 @@ export async function detectDockerfile(context: ICreateFunctionAppContext): Prom
         return undefined;
     }
 
-    context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
+    try {
+        context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
+    } catch {
+        // If the user cancels workspace folder selection (e.g., in a multi-root workspace),
+        // skip dockerfile detection rather than failing the entire creation flow
+        return undefined;
+    }
+
+    if (!context.workspaceFolder) {
+        return undefined;
+    }
+
     context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'prompt') ?? context.workspaceFolder.uri.fsPath;
 
     const pattern: RelativePattern = new RelativePattern(context.rootPath, `**/${dockerfileGlobPattern}`);

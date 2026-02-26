@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
@@ -16,6 +16,7 @@ import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvide
 import { envUtils } from '../src/utils/envUtils';
 import { getRandomHexString } from '../src/utils/fs';
 import { getGlobalSetting, updateGlobalSetting, updateWorkspaceSetting } from '../src/vsCodeConfig/settings';
+import { getTestApi } from './utils/testApiAccess';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -50,6 +51,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
+    testGlobalSetup();
 
     await AzExtFsExtra.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
@@ -60,11 +62,18 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     }
     await funcExtension.activate(); // activate the extension before tests begin
 
-    this.skip();
     ext.outputChannel = new TestOutputChannel();
 
     registerOnActionStartHandler(context => {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
+        context.ui = new TestUserInput(vscode);
+    });
+
+    // Also register the handler in the BUNDLE's vscode-azext-utils instance.
+    // The test module and the bundle each have their own copy of vscode-azext-utils,
+    // so handlers registered above don't apply to action contexts created within the bundle.
+    const testApi = await getTestApi();
+    testApi.testing.registerOnActionStartHandler(context => {
         context.ui = new TestUserInput(vscode);
     });
 
