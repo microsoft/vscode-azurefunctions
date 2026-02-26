@@ -101,7 +101,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const subscriptionContext: ISubscriptionContext & { subscription: AzureSubscription } = {
         ...node.subscription,
-        subscription: await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider, {
+        // Use context.subscription if already set (e.g., by SubscriptionListStep during app creation),
+        // otherwise fall back to subscriptionExperience for existing app deployments
+        subscription: context.subscription ?? await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider, {
             selectBySubscriptionId: node.subscription.subscriptionId,
         }),
     };
