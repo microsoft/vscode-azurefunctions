@@ -35,7 +35,7 @@ export class FuncCoreToolsPromptAndInstallStep<T extends IPreDebugValidateContex
         context.activityChildren?.push(
             new ActivityChildItem({
                 label: localize('installCoreTools', 'Install Azure Functions Core Tools'),
-                description: lastCoreToolsInstallCommand[0] /** The package manager alias */,
+                description: lastCoreToolsInstallCommand.join(' '),
                 contextValue: createContextValue(['funcCoreToolsPromptStepAndInstallItem', activitySuccessContext]),
                 activityType: ActivityChildType.Success,
                 iconPath: activitySuccessIcon,

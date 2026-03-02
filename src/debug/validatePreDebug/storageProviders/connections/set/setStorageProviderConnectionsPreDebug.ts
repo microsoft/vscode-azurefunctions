@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageProviderType } from "../../../../../constants";
+import { StorageType } from "../../../../../constants";
 import { durableUtils } from "../../../../../utils/durableUtils";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 import { setDTSConnectionPreDebugIfNeeded } from "./setDTSConnectionPreDebug";
@@ -16,19 +16,19 @@ export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPr
     context.telemetry.properties.durableStorageType = context.durableStorageType;
 
     switch (context.durableStorageType) {
-        case StorageProviderType.DTS:
+        case StorageType.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
             await setDTSConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case StorageProviderType.Netherite:
+        case StorageType.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
             await setNetheriteConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case StorageProviderType.SQL:
+        case StorageType.SQL:
             context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
             await setSQLConnectionPreDebugIfNeeded(context, context.projectPath);
             break;
-        case StorageProviderType.Storage:
+        case StorageType.Storage:
         default:
     }
 

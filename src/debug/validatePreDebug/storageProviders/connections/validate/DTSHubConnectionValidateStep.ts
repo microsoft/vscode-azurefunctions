@@ -5,7 +5,7 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { StorageProviderType, warningIcon } from "../../../../../constants";
+import { StorageType, warningIcon } from "../../../../../constants";
 import { localize } from "../../../../../localize";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 
@@ -35,7 +35,7 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
     }
 
     public shouldExecute(context: T): boolean {
-        return context.durableStorageType === StorageProviderType.DTS;
+        return context.durableStorageType === StorageType.DTS;
     }
 
     public createFailOutput(): ExecuteActivityOutput {

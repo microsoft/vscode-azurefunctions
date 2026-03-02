@@ -6,19 +6,18 @@
 import { AzureWizard, maskUserInfo, parseError, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../../commands/createNewProject/verifyIsProject';
-import { CodeAction, projectLanguageModelSetting, validateFuncCoreToolsSetting } from "../../constants";
+import { CodeAction, projectLanguageModelSetting, projectLanguageSetting, validateFuncCoreToolsSetting } from "../../constants";
 import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
+import { FuncCoreToolsMinimumVersionConfirmStep } from "./FuncCoreToolsMinimumVersionConfirmStep";
 import { FuncCoreToolsPromptAndInstallStep } from './FuncCoreToolsPromptAndInstallStep';
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
-import { FuncCoreToolsVersionConfirmStep } from './FuncCoreToolsVersionConfirmStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 import { setStorageProviderConnectionsPreDebugIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
 import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/connections/validate/GetStorageProviderConnectionsValidateSteps';
-import { LocalEmulatorsListStep } from './storageProviders/emulators/LocalEmulatorsListStep';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -35,7 +34,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
         action: CodeAction.Debug,
         workspaceFolder,
         projectPath,
-        projectLanguage: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
+        projectLanguage: getWorkspaceSetting(projectLanguageSetting, projectPath),
         projectLanguageModel: getWorkspaceSetting(projectLanguageModelSetting, projectPath),
         validateFuncCoreTools: getWorkspaceSetting(validateFuncCoreToolsSetting, workspaceFolder.uri.fsPath) !== false /** This setting defaults to 'true'; meaning 'undefined' should also resolve to true */,
     };
@@ -49,8 +48,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsPromptAndInstallStep(),
-        new FuncCoreToolsVersionConfirmStep(),
-        new LocalEmulatorsListStep(),
+        new FuncCoreToolsMinimumVersionConfirmStep(),
     ];
 
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [

@@ -129,7 +129,7 @@ export enum ConnectionType {
     Custom = 'Custom',
 }
 
-export enum StorageProviderType {
+export enum StorageType {
     Storage = 'AzureStorage',
     Netherite = 'Netherite',
     DTS = 'azureManaged',

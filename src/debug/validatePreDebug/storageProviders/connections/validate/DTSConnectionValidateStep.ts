@@ -29,7 +29,6 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         this.options.continueOnFail = true;
-
         progress.report({ message: localize('checkingDTSConnection', 'Checking for DTS connection...') });
 
         if (!context.newDTSConnectionSettingKey || !context.newDTSHubConnectionSettingKey) {

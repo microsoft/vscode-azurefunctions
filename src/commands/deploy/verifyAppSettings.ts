@@ -9,7 +9,7 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { default as retry } from 'p-retry';
 import * as vscode from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { azureWebJobsFeatureFlags, StorageProviderType, extensionVersionKey, runFromPackageKey, workerRuntimeKey, type ProjectLanguage } from '../../constants';
+import { azureWebJobsFeatureFlags, extensionVersionKey, runFromPackageKey, StorageType, workerRuntimeKey, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
@@ -32,7 +32,7 @@ export async function verifyAppSettings(options: {
     language: ProjectLanguage,
     languageModel: number | undefined,
     bools: VerifyAppSettingBooleans,
-    durableStorageType: StorageProviderType | undefined,
+    durableStorageType: StorageType | undefined,
     appSettings: StringDictionary,
 }): Promise<void> {
 
@@ -79,10 +79,10 @@ export async function verifyAppSettings(options: {
     }
 }
 
-export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: StorageProviderType | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: StorageType | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
     let didUpdate: boolean = false;
     switch (durableStorageType) {
-        case StorageProviderType.Netherite:
+        case StorageType.Netherite:
             if (context.newEventHubsNamespaceConnectionSettingKey && context.newEventHubsNamespaceConnectionSettingValue) {
                 const updatedNamespaceConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newEventHubsNamespaceConnectionSettingKey, context.newEventHubsNamespaceConnectionSettingValue);
                 didUpdate ||= updatedNamespaceConnection;
@@ -92,7 +92,7 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
                 didUpdate ||= updatedEventHubConnection;
             }
             break;
-        case StorageProviderType.DTS:
+        case StorageType.DTS:
             if (context.newDTSConnectionSettingKey && context.newDTSConnectionSettingValue) {
                 const updatedDTSConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newDTSConnectionSettingKey, context.newDTSConnectionSettingValue);
                 didUpdate ||= updatedDTSConnection;
@@ -102,13 +102,13 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
                 didUpdate ||= updatedDTSHub;
             }
             break;
-        case StorageProviderType.SQL:
+        case StorageType.SQL:
             if (context.newSQLStorageConnectionSettingKey && context.newSQLStorageConnectionSettingValue) {
                 const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, context.newSQLStorageConnectionSettingKey, context.newSQLStorageConnectionSettingValue);
                 didUpdate ||= updatedSqlDbConnection;
             }
             break;
-        case StorageProviderType.Storage:
+        case StorageType.Storage:
         default:
     }
 

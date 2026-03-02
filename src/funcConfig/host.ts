@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type StorageProviderType } from "../constants";
+import { type StorageType } from "../constants";
 import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
@@ -62,7 +62,7 @@ export type IDurableTaskJson = IStorageTaskJson | INetheriteTaskJson | IDTSTaskJ
 
 export interface IStorageTaskJson {
     storageProvider?: {
-        type?: StorageProviderType.Storage;
+        type?: StorageType.Storage;
     }
 }
 
@@ -70,7 +70,7 @@ export interface INetheriteTaskJson {
     hubName?: string;
     useGracefulShutdown?: boolean;
     storageProvider?: {
-        type?: StorageProviderType.Netherite;
+        type?: StorageType.Netherite;
         partitionCount?: number;
         StorageConnectionName?: string;
         EventHubsConnectionName?: string;
@@ -80,14 +80,14 @@ export interface INetheriteTaskJson {
 export interface IDTSTaskJson {
     hubName?: string;
     storageProvider?: {
-        type?: StorageProviderType.DTS;
+        type?: StorageType.DTS;
         connectionStringName?: string;
     }
 }
 
 export interface ISqlTaskJson {
     storageProvider?: {
-        type?: StorageProviderType.SQL;
+        type?: StorageType.SQL;
         connectionStringName?: string;
         taskEventLockTimeout?: string;
         createDatabaseIfNotExists?: boolean;

@@ -10,6 +10,7 @@ import { localize } from '../../localize';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
+// Todo: Double check this logic against the old logic
 /**
  * Automatically adds or validates the worker runtime setting required in `local.settings.json` for debugging.
  */
@@ -21,8 +22,8 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
     protected getOutputLogSuccess = () => localize('validateWorkerRuntimeSuccess', 'Successfully verified a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getOutputLogFail = () => localize('validateWorkerRuntimeFail', 'Failed to find a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getTreeItemLabel = () => this._newWorkerRuntimeSetting ?
-        localize('setWorkerRuntimeLabel', 'Set "{0}" as "{1}" in "{2}"', workerRuntimeKey, this._newWorkerRuntimeSetting, localSettingsFileName) :
-        localize('validateWorkerRuntimeLabel', 'Validate: "{0}" has value in "{1}"', workerRuntimeKey, localSettingsFileName);
+        localize('setWorkerRuntimeLabel', 'Assign "{0}" key to "{1}" in "{2}"', workerRuntimeKey, this._newWorkerRuntimeSetting, localSettingsFileName) :
+        localize('validateWorkerRuntimeLabel', 'Validate "{0}" key in "{1}"', workerRuntimeKey, localSettingsFileName);
 
     private _newWorkerRuntimeSetting?: string;
 

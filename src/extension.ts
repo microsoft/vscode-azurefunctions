@@ -52,6 +52,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     console.log('Activating Azure Functions extension...');
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
+    ext.emulatorClient = emulatorClient;
     context.subscriptions.push(ext.outputChannel);
 
     registerUIExtensionVariables(ext);

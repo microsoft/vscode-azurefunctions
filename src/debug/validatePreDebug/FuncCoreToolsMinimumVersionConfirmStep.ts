@@ -11,7 +11,7 @@ import { localize } from '../../localize';
 import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
-export class FuncCoreToolsVersionConfirmStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
+export class FuncCoreToolsMinimumVersionConfirmStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         // Ensure that that Python V2+ projects have an appropriate version of Functions Core Tools installed.
         if (isPythonV2Plus(context.projectLanguage, context.projectLanguageModel)) {
@@ -24,7 +24,7 @@ export class FuncCoreToolsVersionConfirmStep<T extends IPreDebugValidateContext>
             const expectedVersionRange = '>=4.0.4742';
 
             if (context.funcCoreToolsVersion && !semver.satisfies(context.funcCoreToolsVersion, expectedVersionRange)) {
-                const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}").', context.funcCoreToolsVersion, expectedVersionRange);
+                const message: string = localize('invalidFunctionVersion', 'The version of Functions Core Tools "{0}" is not sufficient for this project type ("{1}").', context.funcCoreToolsVersion, expectedVersionRange);
                 const debugAnyway: MessageItem = { title: localize('debugWithInvalidFunctionVersionAnyway', 'Debug anyway') };
 
                 const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'failedWithInvalidFunctionVersion' }, debugAnyway);

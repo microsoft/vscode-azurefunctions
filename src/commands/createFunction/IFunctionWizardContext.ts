@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ExecuteActivityContext, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { type StorageProviderType } from "../../constants";
+import { type StorageType } from "../../constants";
 import { type BindingSettingValue } from "../../funcConfig/function";
 import { type IBindingSetting } from "../../templates/IBindingTemplate";
 import { type FunctionTemplateBase } from "../../templates/IFunctionTemplate";
@@ -17,7 +17,7 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
 
     // Durable Functions
     hasDurableStorage?: boolean;
-    newDurableStorageType?: StorageProviderType;
+    newDurableStorageType?: StorageType;
 
     useStorageEmulator?: boolean;
 }

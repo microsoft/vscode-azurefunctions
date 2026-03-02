@@ -10,6 +10,7 @@ import { type EventGridCodeLensProvider } from './commands/executeFunction/event
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
+import { type DurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
 import { type IFunction } from './workspace/LocalFunction';
 import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
@@ -63,6 +64,7 @@ export namespace ext {
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap = new Map<string, FunctionTreeItemBase | IFunction>();
     export let isExecutingFunction: boolean | undefined;
+    export let emulatorClient: DurableTaskSchedulerEmulatorClient;
 }
 
 export enum TemplateSource {

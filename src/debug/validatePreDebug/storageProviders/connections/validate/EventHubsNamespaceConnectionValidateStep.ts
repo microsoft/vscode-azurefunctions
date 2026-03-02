@@ -6,7 +6,7 @@
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type AzureWizardExecuteStep, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
 import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
-import { ConnectionType, localEventHubsEmulatorConnectionRegExp, StorageProviderType, warningIcon } from "../../../../../constants";
+import { ConnectionType, localEventHubsEmulatorConnectionRegExp, StorageType, warningIcon } from "../../../../../constants";
 import { localize } from "../../../../../localize";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 import { EventHubConnectionValidateStep } from "./EventHubConnectionValidateStep";
@@ -52,7 +52,7 @@ export class EventHubsNamespaceConnectionValidateStep<T extends IPreDebugValidat
     }
 
     public shouldExecute(context: T): boolean {
-        return context.durableStorageType === StorageProviderType.Netherite;
+        return context.durableStorageType === StorageType.Netherite;
     }
 
     public addExecuteSteps(): AzureWizardExecuteStep<T>[] {

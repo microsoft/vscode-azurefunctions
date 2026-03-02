@@ -5,7 +5,7 @@
 
 import { type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { type ExecuteActivityContext, type IAzureAgentInput, type ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
-import { type StorageProviderType } from '../../constants';
+import { type StorageType } from '../../constants';
 import { type FuncVersion } from '../../FuncVersion';
 import { type ICreateFunctionAppContext } from '../../tree/SubscriptionTreeItem';
 import { type AppStackMajorVersion, type AppStackMinorVersion } from './stacks/models/AppStackModel';
@@ -23,7 +23,7 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
-    durableStorageType?: StorageProviderType;
+    durableStorageType?: StorageType;
     useFlexConsumptionPlan?: boolean;
     useManagedIdentity?: boolean;
 }

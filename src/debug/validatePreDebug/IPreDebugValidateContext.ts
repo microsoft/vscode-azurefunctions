@@ -6,7 +6,7 @@
 import { type ExecuteActivityContext } from "@microsoft/vscode-azext-utils";
 import { type WorkspaceFolder } from "vscode";
 import { type ISetConnectionSettingContext } from "../../commands/appSettings/connectionSettings/ISetConnectionSettingContext";
-import { type StorageProviderType } from "../../constants";
+import { type StorageType } from "../../constants";
 
 export interface IPreDebugValidateContext extends ISetConnectionSettingContext, ExecuteActivityContext {
     workspaceFolder: WorkspaceFolder;
@@ -18,6 +18,6 @@ export interface IPreDebugValidateContext extends ISetConnectionSettingContext, 
     validateFuncCoreTools: boolean;
 
     abortDebug?: boolean;
-    durableStorageType?: StorageProviderType;
+    durableStorageType?: StorageType;
     funcCoreToolsVersion?: string | null;
 }
