@@ -20,7 +20,6 @@ import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 import { setStorageProviderConnectionsPreDebugIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
 import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/connections/validate/GetStorageProviderConnectionsValidateSteps';
-import { LocalEmulatorsListStep } from './storageProviders/emulators/LocalEmulatorsListStep';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -52,7 +51,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsPromptAndInstallStep(),
         new FuncCoreToolsVersionConfirmStep(),
-        new LocalEmulatorsListStep(),
+        // new LocalEmulatorsListStep(),
     ];
 
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
