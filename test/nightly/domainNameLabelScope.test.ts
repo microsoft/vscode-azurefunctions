@@ -107,7 +107,7 @@ suite('Domain Name Label Scope', function (this: Mocha.Suite): void {
         const testInputs: (string | RegExp)[] = [
             location,                                   // Location
             rgName,                                     // Use existing RG
-            /global.*default|global/i,                  // Domain scope (Global)
+            /global.*default|legacy/i,                  // Domain scope (Legacy)
             appName,                                    // App name
             'Flex Consumption',                         // Hosting plan
             /\.net/i,                                   // Stack
