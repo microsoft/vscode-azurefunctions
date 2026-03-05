@@ -5,27 +5,14 @@
 
 import { AzExtFsExtra, nonNullProp, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { RelativePattern, workspace, type MessageItem, type Uri, type WorkspaceFolder } from 'vscode';
+import { RelativePattern, workspace, type MessageItem, type Uri } from 'vscode';
 import { browseItem, dockerfileGlobPattern } from '../../../constants';
 import { getAzureContainerAppsApi } from '../../../getExtensionApi';
 import { localize } from '../../../localize';
 import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeItem';
-import { getRootWorkspaceFolder } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
 export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<string | undefined> {
-    if (!workspace.workspaceFolders?.length) {
-        return undefined;
-    }
-
-    try {
-        context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
-    } catch {
-        // If the user cancels workspace folder selection (e.g., in a multi-root workspace),
-        // skip dockerfile detection rather than failing the entire creation flow
-        return undefined;
-    }
-
     if (!context.workspaceFolder) {
         return undefined;
     }

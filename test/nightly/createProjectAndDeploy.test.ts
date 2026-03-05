@@ -16,9 +16,9 @@ import { getRandomAlphanumericString, getRandomHexString } from '../../src/utils
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
 import { NodeModelVersion, PythonModelVersion, defaultTestFuncVersion, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { getCachedTestApi } from '../utils/testApiAccess';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
-import { getCachedTestApi } from '../utils/testApiAccess';
 
 interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions {
     title: string;
@@ -97,7 +97,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, getRotatingLocation(), ...options.deployInputs], async () => {
+        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, getRotatingLocation(), appName, ...options.deployInputs], async () => {
             await testApi.commands.deployProductionSlot(context)
         });
     });
