@@ -9,7 +9,6 @@ import { type ISqlDatabaseConnectionWizardContext } from "../../../../../command
 import { SqlConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/sqlDatabase/SqlConnectionListStep";
 import { CodeAction, ConnectionType } from "../../../../../constants";
 import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
 
 export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -25,7 +24,6 @@ export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, 
     // Todo: Use Object.assign() if we ever introduce an emulator option so we can carry over the same preference for azureWebJobsStorage
     const wizardContext: ISqlDatabaseConnectionWizardContext = {
         ...context,
-        ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
         newSQLStorageConnectionSettingKey: sqlDbConnectionKey,
@@ -33,7 +31,7 @@ export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, 
     };
 
     const wizard: AzureWizard<ISqlDatabaseConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareSqlDbConnectionDebug', 'Prepare SQL database debug connection'),
+        title: localize('prepareSqlDbConnectionDebug', 'Prepare SQL database debug configuration'),
         promptSteps: [new SqlConnectionListStep(availableDebugConnectionTypes)],
         showLoadingPrompt: true,
     });

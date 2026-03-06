@@ -14,7 +14,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
 
-    private static readonly _terminalRevealDelayMs: number = 1000;
+    private static readonly _terminalRevealDelayMs: number = 2000;
     private readonly _debugPorts = new Map<WorkspaceFolder | undefined, number | undefined>();
 
     public abstract getWorkerArgValue(folder: WorkspaceFolder): Promise<string>;

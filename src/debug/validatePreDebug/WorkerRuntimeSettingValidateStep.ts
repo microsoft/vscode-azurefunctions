@@ -18,11 +18,12 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
     public priority: number = 330;
     public stepName: string = 'workerRuntimeSettingValidateStep';
 
+    // Todo: Add activity log context explaining how this setting works
     protected getOutputLogSuccess = () => localize('validateWorkerRuntimeSuccess', 'Successfully verified a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getOutputLogFail = () => localize('validateWorkerRuntimeFail', 'Failed to find a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getTreeItemLabel = () => this._newWorkerRuntimeSetting ?
         localize('setWorkerRuntimeLabel', 'Set "{0}" as "{1}" in "{2}"', workerRuntimeKey, this._newWorkerRuntimeSetting, localSettingsFileName) :
-        localize('validateWorkerRuntimeLabel', 'Validate: "{0}" has value in "{1}"', workerRuntimeKey, localSettingsFileName);
+        localize('validateWorkerRuntimeLabel', 'Validate: "{0}" setting', workerRuntimeKey);
 
     private _newWorkerRuntimeSetting?: string;
 

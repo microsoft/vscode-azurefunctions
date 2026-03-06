@@ -15,6 +15,7 @@ import { type IStorageAzureConnectionWizard, type IStorageConnectionWizardContex
 import { StorageConnectionSetSettingStep } from './StorageConnectionSetSettingStep';
 import { StorageAccountGetConnectionStep } from './azure/StorageAccountGetConnectionStep';
 import { StorageEmulatorGetConnectionStep } from './emulator/StorageEmulatorGetConnectionStep';
+import { StorageEmulatorStartStep } from './emulator/StorageEmulatorStartStep';
 
 export class StorageConnectionListStep<T extends IStorageConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(readonly connectionTypes: Set<Exclude<ConnectionType, 'Custom'>>) {
@@ -93,7 +94,10 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                 executeSteps.push(new StorageAccountGetConnectionStep());
                 break;
             case ConnectionType.Emulator:
-                executeSteps.push(new StorageEmulatorGetConnectionStep());
+                executeSteps.push(
+                    new StorageEmulatorStartStep(),
+                    new StorageEmulatorGetConnectionStep(),
+                );
                 break;
             default:
                 return undefined;

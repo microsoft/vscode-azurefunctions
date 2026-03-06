@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, type ExecuteActivityContext, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { DTSConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
 import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
 import { type IDTSConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
@@ -11,7 +11,7 @@ import { CodeAction, ConnectionType } from "../../../../../constants";
 import { localize } from "../../../../../localize";
 import { requestUtils } from "../../../../../utils/requestUtils";
 
-export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
+export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext & ExecuteActivityContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
     const {
@@ -28,6 +28,7 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
 
     const wizardContext: IDTSConnectionWizardContext = Object.assign(context, {
         projectPath,
+        activityChildren: [],
         action: CodeAction.Debug,
         newDTSConnectionSettingKey: dtsConnectionKey,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
@@ -36,7 +37,7 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
     });
 
     const wizard: AzureWizard<IDTSConnectionWizardContext> = new AzureWizard(wizardContext, {
-        title: localize('acquireDTSConnection', 'Acquire DTS connection'),
+        title: localize('prepareDTSConnection', 'Prepare Durable Task Scheduler debug configuration'),
         promptSteps: [new DTSConnectionListStep(availableDebugConnectionTypes)],
     });
 

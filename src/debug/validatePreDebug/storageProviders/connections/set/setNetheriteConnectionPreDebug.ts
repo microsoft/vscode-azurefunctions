@@ -10,7 +10,6 @@ import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../..
 import { type INetheriteConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
 import { CodeAction, ConnectionType } from "../../../../../constants";
 import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
 
 export async function setNetheriteConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -27,7 +26,6 @@ export async function setNetheriteConnectionPreDebugIfNeeded(context: IActionCon
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
     const wizardContext: INetheriteConnectionWizardContext = Object.assign(context, {
-        ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
         newEventHubsNamespaceConnectionSettingKey: eventHubsNamespaceConnectionKey,

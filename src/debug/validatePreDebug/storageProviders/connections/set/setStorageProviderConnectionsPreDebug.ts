@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageProviderType } from "../../../../../constants";
-import { durableUtils } from "../../../../../utils/durableUtils";
+import { cloneWithNewActivityContext } from "../../../../../utils/activityUtils";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
 import { setDTSConnectionPreDebugIfNeeded } from "./setDTSConnectionPreDebug";
 import { setNetheriteConnectionPreDebugIfNeeded } from "./setNetheriteConnectionPreDebug";
@@ -12,26 +12,23 @@ import { setSQLConnectionPreDebugIfNeeded } from "./setSQLConnectionPreDebug";
 import { setStorageConnectionPreDebugIfNeeded } from "./setStorageConnectionPreDebug";
 
 export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPreDebugValidateContext): Promise<void> {
-    context.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(context.projectLanguage, context.projectPath);
-    context.telemetry.properties.durableStorageType = context.durableStorageType;
-
     switch (context.durableStorageType) {
         case StorageProviderType.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
-            await setDTSConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setDTSConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
             break;
         case StorageProviderType.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-            await setNetheriteConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setNetheriteConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
             break;
         case StorageProviderType.SQL:
             context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-            await setSQLConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setSQLConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
             break;
         case StorageProviderType.Storage:
         default:
     }
 
     context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-    await setStorageConnectionPreDebugIfNeeded(context, context.projectPath);
+    await setStorageConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
 }

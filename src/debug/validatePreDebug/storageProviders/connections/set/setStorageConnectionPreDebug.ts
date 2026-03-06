@@ -4,19 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { getStorageLocalSettingsValue } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
 import { type IStorageConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
 import { StorageConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../../funcConfig/local.settings";
+import { localize } from "../../../../../localize";
 
 export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
-    const projectPathContext = Object.assign(context, { projectPath });
     const storageConnectionKey: string = ConnectionKey.Storage;
-    const storageConnection: string | undefined = await getStorageLocalSettingsValue(projectPathContext, storageConnectionKey);
+    const [storageConnection, isEmulator] = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
     const storageIdentityConnection: string | undefined = (await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath))[0];
 
-    if (storageConnection || storageIdentityConnection) {
+    if (storageIdentityConnection) {
+        return;
+    }
+
+    if (storageConnection && !isEmulator) {
         return;
     }
 
@@ -24,13 +27,16 @@ export async function setStorageConnectionPreDebugIfNeeded(context: IActionConte
 
     const wizardContext: IStorageConnectionWizardContext = Object.assign(context, {
         projectPath,
+        activityChildren: [],
         action: CodeAction.Debug,
+        azureWebJobsStorageType: storageConnection ? ConnectionType.Emulator as const : undefined,
         // If the user hasn't already set up a managed identity, we can default to connection string for ease of use
         // in the future we can explore if we want to include managed identity here as well
         newStorageConnectionSettingKey: storageConnectionKey,
     });
 
     const wizard: AzureWizard<IStorageConnectionWizardContext> = new AzureWizard(wizardContext, {
+        title: localize('prepareStorageConnection', 'Prepare Azure Storage debug configuration'),
         promptSteps: [new StorageConnectionListStep(availableDebugConnectionTypes)],
     });
 

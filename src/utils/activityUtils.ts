@@ -14,3 +14,11 @@ export async function createActivityContext(options?: { withChildren?: boolean }
         activityChildren: options?.withChildren ? [] : undefined,
     };
 }
+
+/**
+ * Creates a copy of the context with a fresh activity context so that sub-wizards
+ * don't share activity log state (e.g. activityChildren) with the calling wizard.
+ */
+export async function cloneWithNewActivityContext<T extends ExecuteActivityContext>(context: T): Promise<T> {
+    return { ...context, ...await createActivityContext() };
+}

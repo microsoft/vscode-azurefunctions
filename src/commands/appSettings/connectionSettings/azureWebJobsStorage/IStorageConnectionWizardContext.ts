@@ -8,6 +8,7 @@ import { type StorageConnectionType } from "../IConnectionTypesContext";
 import { type ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
 export interface IStorageConnectionWizardContext extends ISetConnectionSettingContext {
+    abortDebug?: boolean;
     azureWebJobsStorageType?: StorageConnectionType;
 
     // All properties from `IStorageConnectionSetSettingsContext` apply
