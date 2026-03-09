@@ -50,7 +50,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
     }
 
     public configureBeforeExecute(context: IPythonVenvWizardContext): void | Promise<void> {
-        if (!context.venvName) {
+        if (!context.venvName && this.shouldExecute(context)) {
             context.venvName = '.venv';
         }
     }

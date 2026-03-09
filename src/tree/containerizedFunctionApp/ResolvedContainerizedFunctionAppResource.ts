@@ -27,12 +27,17 @@ import { ImageTreeItem } from "./ImageTreeItem";
 
 export type ContainerSite = Site & { defaultHostUrl?: string; fullName?: string; isSlot?: boolean };
 
+type ResolvedContainerizedResourceOptions = {
+    showLocationInTreeItemDescription?: boolean;
+};
+
 export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     protected _site: ContainerSite;
     public maskedValuesToAdd: string[] = [];
     public contextValuesToAdd?: string[] | undefined;
     public static containerContextValue: string = 'azFuncContainer';
     private _subscription: ISubscriptionContext;
+    private _options: ResolvedContainerizedResourceOptions;
 
     public appSettingsTreeItem: AppSettingsTreeItem;
     private _functionsTreeItem: ContainerFunctionsTreeItem;
@@ -44,10 +49,11 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public readonly source: ProjectSource = ProjectSource.Remote;
 
-    public constructor(subscription: ISubscriptionContext, site: Site) {
+    public constructor(subscription: ISubscriptionContext, site: Site, options?: ResolvedContainerizedResourceOptions) {
         super();
         this._site = Object.assign(site, { defaultHostUrl: `https://${site.defaultHostName}`, fullName: site.name, isSlot: false });
         this._subscription = subscription;
+        this._options = options ?? {};
         this.contextValuesToAdd = ['azFuncProductionSlot', 'container'];
 
         const valuesToMask = [
@@ -62,8 +68,8 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
         }
     }
 
-    public static async createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): Promise<ResolvedContainerizedFunctionAppResource> {
-        const resource = new ResolvedContainerizedFunctionAppResource(subscription, site);
+    public static async createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site, options?: ResolvedContainerizedResourceOptions): Promise<ResolvedContainerizedFunctionAppResource> {
+        const resource = new ResolvedContainerizedFunctionAppResource(subscription, site, options);
         const client = await createWebSiteClient([context, subscription]);
         resource.site.siteConfig = await client.webApps.getConfiguration(nonNullProp(resource.site, 'resourceGroup'), nonNullProp(resource.site, 'name'));
         return resource;
@@ -71,6 +77,10 @@ export class ResolvedContainerizedFunctionAppResource extends ResolvedFunctionAp
 
     public get label(): string {
         return nonNullProp(this.site, 'name');
+    }
+
+    public get description(): string | undefined {
+        return this._options.showLocationInTreeItemDescription ? this.site.location : undefined;
     }
 
     public get site(): ContainerSite {

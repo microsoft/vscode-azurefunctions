@@ -8,14 +8,14 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { type Disposable } from 'vscode';
-import { createFunctionInternal } from '../../src/commands/createFunction/createFunction';
 import { ProjectLanguage, TemplateFilter } from '../../src/constants';
 import { TemplateSource } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { FunctionTemplateBase } from '../../src/templates/IFunctionTemplate';
 import { getRandomHexString } from '../../src/utils/fs';
 import { addParallelSuite, type ParallelSuiteOptions, type ParallelTest } from '../addParallelSuite';
-import { runForTemplateSource, testFolderPath } from '../global.test';
+import { testFolderPath } from '../global.test';
+import { getCachedTestApi } from '../utils/testApiAccess';
 
 export interface CreateFunctionTestCase {
     functionName: string;
@@ -48,21 +48,19 @@ export abstract class FunctionTesterBase implements Disposable {
 
     public async initAsync(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionInit', async context => {
-            await runForTemplateSource(context, this.source, async (templateProvider) => {
-                await this.initializeTestFolder(this.projectPath);
+            await this.initializeTestFolder(this.projectPath);
 
-                // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
-                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
-            });
+            // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
+            const testApi = getCachedTestApi();
+            await testApi.commands.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined, this.source);
         });
     }
 
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
-            await runForTemplateSource(context, this.source, async (templateProvider) => {
-                const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
-                assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
-            });
+            const testApi = getCachedTestApi();
+            const templates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined, this.source);
+            assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
         });
     }
 
@@ -94,9 +92,7 @@ export abstract class FunctionTesterBase implements Disposable {
         this.testedFunctions.push(templateName);
         await runWithTestActionContext('testCreateFunction', async context => {
             try {
-                await runForTemplateSource(context, this.source, async () => {
-                    await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
-                });
+                await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
             } catch (e) {
                 if ((e as Error).message?.includes('SyntaxError: Unexpected end of JSON input')) {
                     // ignore
@@ -140,7 +136,8 @@ export abstract class FunctionTesterBase implements Disposable {
         inputs.unshift(templateName); // Select the function template
 
         await context.ui.runWithInputs(inputs, async () => {
-            await createFunctionInternal(context, {
+            const testApi = getCachedTestApi();
+            await testApi.commands.createFunctionInternal(context, {
                 folderPath: testFolder,
                 language: <any>this.language,
                 version: this.version
