@@ -61,7 +61,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
-        title: localize('prepareDebugSessionTitle', 'Prepare debug session for Azure Functions workspace project'),
+        title: localize('validateDebugSessionTitle', 'Validate debug configuration for Azure Functions workspace project'),
         promptSteps,
         executeSteps,
     });
