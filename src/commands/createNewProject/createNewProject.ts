@@ -20,6 +20,7 @@ import { NewProjectLanguageStep } from './NewProjectLanguageStep';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
+import { TemplateGalleryPanel } from './TemplateGalleryPanel';
 
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
@@ -32,19 +33,28 @@ export async function createNewProjectFromCommand(
     openFolder: boolean = true,
     templateId?: string,
     functionName?: string,
-    functionSettings?: { [key: string]: string | undefined }): Promise<void> {
+    functionSettings?: { [key: string]: string | undefined },
+    options?: { startFromScratch?: boolean }): Promise<void> {
 
-    await createNewProjectInternal(context, {
-        // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
-        folderPath: typeof folderPath === 'string' ? folderPath : undefined,
-        templateId,
-        functionName,
-        functionSettings,
-        suppressOpenFolder: !openFolder,
-        // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
-        language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
-        version: <api.ProjectVersion>version
-    });
+    // If startFromScratch is true, use the traditional wizard flow
+    // Otherwise, show the template gallery webview
+    if (options?.startFromScratch || templateId) {
+        await createNewProjectInternal(context, {
+            // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
+            folderPath: typeof folderPath === 'string' ? folderPath : undefined,
+            templateId,
+            functionName,
+            functionSettings,
+            suppressOpenFolder: !openFolder,
+            // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
+            language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
+            version: <api.ProjectVersion>version
+        });
+    } else {
+        // Show the template gallery webview
+        context.telemetry.properties.flow = 'templateGallery';
+        TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+    }
 }
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {

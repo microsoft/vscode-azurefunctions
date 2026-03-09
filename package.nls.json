@@ -141,8 +141,15 @@
     "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image.",
     "azureFunctions.showBallerinaProjectCreation": "Show the option to create a Ballerina Function projects when creating a new Function project.",
     "azureFunctions.getMcpHostKey": "Retrieve the MCP host key for the Function App specified by the resource ID.",
+    "azureFunctions.validateFunctionApp": "Validate Function App (Copilot)",
+    "azureFunctions.smartDeploy": "Deploy Function App",
     "azureFunctions.mcpProjectType": "The type of MCP integration the project uses.",
     "azureFunctions.mcpProjectType.NoMcpServer": "Runs the standard Azure Functions runtime with no MCP integration.",
     "azureFunctions.mcpProjectType.McpExtensionServer": "Runs the Functions host with an embedded MCP server provided by the Azure Functions MCP extension.",
-    "azureFunctions.mcpProjectType.SelfHostedMcpServer": "Runs the Functions host in custom-handler mode, forwarding requests to a self-hosted MCP server process."
+    "azureFunctions.mcpProjectType.SelfHostedMcpServer": "Runs the Functions host in custom-handler mode, forwarding requests to a self-hosted MCP server process.",
+    "azureFunctions.projectTemplates.manifestUrl": "URL of the project template manifest. Organizations can host custom manifests to provide team-specific templates.",
+    "azureFunctions.projectTemplates.additionalManifestUrls": "Additional template manifest URLs to merge with the primary manifest.",
+    "azureFunctions.projectTemplates.cacheExpirationHours": "Template manifest cache expiration time in hours.",
+    "azureFunctions.projectTemplates.preferTemplateFlow": "Pre-select 'Start from template' in the project creation wizard.",
+    "azureFunctions.projectTemplates.showBicepPrompt": "Prompt to deploy infrastructure when templates include Bicep files."
 }

@@ -10,7 +10,6 @@ import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { type IProjectWizardContext } from './IProjectWizardContext';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
@@ -21,6 +20,7 @@ import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProje
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
+import { StartingPointStep } from './StartingPointStep';
 import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
@@ -138,13 +138,11 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
-        // All languages except Java support creating a function after creating a project
-        // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        promptSteps.push(new FunctionListStep({
-            isProjectWizard: true,
-            templateId: this._templateId,
-            functionSettings: this._functionSettings,
-        }));
+        // Add StartingPointStep which handles both template and scratch paths
+        // For template path: shows template selection and clones project
+        // For scratch path: shows existing function trigger selection (FunctionListStep)
+        // Note: Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
+        promptSteps.push(new StartingPointStep(this._templateId, this._functionSettings));
 
         return wizardOptions;
     }
