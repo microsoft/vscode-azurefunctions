@@ -45,6 +45,7 @@ import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
 import { deleteFunctionApp } from './deleteFunctionApp';
 import { deleteNode } from './deleteNode';
+import { deployWithAzd } from './deploy/azd/deployWithAzd';
 import { deployProductionSlot, deployProductionSlotByFunctionAppId, deploySlot } from './deploy/deploy';
 import { connectToGitHub } from './deployments/connectToGitHub';
 import { disconnectRepo } from './deployments/disconnectRepo';
@@ -151,6 +152,7 @@ export function registerCommands(
     // See: https://github.com/microsoft/vscode-azurefunctions/pull/4125
     registerCommand('azureFunctions.deployByFunctionAppId', deployProductionSlotByFunctionAppId);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deployWithAzd', deployWithAzd);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.executeFunction', executeFunction);

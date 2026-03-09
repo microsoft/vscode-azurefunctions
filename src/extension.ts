@@ -33,6 +33,7 @@ import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCore
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import { AzdProvisioningTreeDataProvider } from './tree/azdProvisioning/AzdProvisioningTreeDataProvider';
 import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -110,6 +111,15 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('ballerina', ballerinaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, ballerinaDebugProvider, powershellDebugProvider)));
+
+        // Register AZD provisioning tree view
+        const azdProvisioningTreeProvider = new AzdProvisioningTreeDataProvider();
+        ext.azdProvisioningTreeProvider = azdProvisioningTreeProvider;
+        const azdProvisioningTreeView = vscode.window.createTreeView('azureFunctions.azdProvisioning', {
+            treeDataProvider: azdProvisioningTreeProvider,
+            showCollapseAll: true,
+        });
+        context.subscriptions.push(azdProvisioningTreeView, azdProvisioningTreeProvider);
 
         context.subscriptions.push(vscode.window.registerUriHandler({
             handleUri

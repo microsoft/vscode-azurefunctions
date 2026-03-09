@@ -10,6 +10,7 @@ import { type EventGridCodeLensProvider } from './commands/executeFunction/event
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
+import { type AzdProvisioningTreeDataProvider } from './tree/azdProvisioning/AzdProvisioningTreeDataProvider';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
 import { type IFunction } from './workspace/LocalFunction';
 import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
@@ -60,6 +61,7 @@ export namespace ext {
     export let rgApi: AzureHostExtensionApi;
     export let rgApiV2: AzureResourcesExtensionApi;
     export let eventGridProvider: EventGridCodeLensProvider;
+    export let azdProvisioningTreeProvider: AzdProvisioningTreeDataProvider;
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap = new Map<string, FunctionTreeItemBase | IFunction>();
     export let isExecutingFunction: boolean | undefined;

@@ -3,95 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { nonNullProp } from '@microsoft/vscode-azext-utils';
-import { getMajorVersion } from '../../../FuncVersion';
-import { type FullFunctionAppStack, type IFlexFunctionAppWizardContext, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { type Site, type StringDictionary } from '@azure/arm-appservice';
 
-/**
- * Determines the hosting plan type string used in Bicep parameters
- * based on the wizard context's plan SKU.
- */
-function getHostingPlanType(context: IFunctionAppWizardContext): string {
-    const tier = context.newPlanSku?.tier?.toLowerCase();
-    switch (tier) {
-        case 'dynamic':
-            return 'consumption';
-        case 'flexconsumption':
-            return 'flex';
-        case 'elasticpremium':
-            return 'premium';
-        default:
-            return 'dedicated';
-    }
-}
-
-/**
- * Extracts the Function App runtime name and version from the wizard context
- * for use in Bicep parameter values.
- */
-function getRuntimeInfo(context: IFlexFunctionAppWizardContext): { runtimeName: string; runtimeVersion: string } {
-    if (context.newFlexSku) {
-        return {
-            runtimeName: context.newFlexSku.functionAppConfigProperties.runtime.name,
-            runtimeVersion: context.newFlexSku.functionAppConfigProperties.runtime.version,
-        };
-    }
-
-    const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
-    const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
-    const stackSettings = os === WebsiteOS.linux
-        ? stack.minorVersion.stackSettings.linuxRuntimeSettings
-        : stack.minorVersion.stackSettings.windowsRuntimeSettings;
-
-    const workerRuntime = stackSettings?.appSettingsDictionary?.FUNCTIONS_WORKER_RUNTIME ?? stack.stack.value;
-    // Extract version from the linuxFxVersion (e.g., "NODE|20") or similar
-    const linuxFxVersion = stackSettings?.siteConfigPropertiesDictionary?.linuxFxVersion;
-    let runtimeVersion = stack.majorVersion.value;
-
-    if (linuxFxVersion) {
-        const parts = linuxFxVersion.split('|');
-        if (parts.length === 2) {
-            runtimeVersion = parts[1];
-        }
-    }
-
-    return {
-        runtimeName: workerRuntime,
-        runtimeVersion: runtimeVersion,
-    };
-}
-
-/**
- * Resolves the App Service Plan SKU object for Bicep based on the hosting plan type
- * and the user-selected SKU from the wizard context.
- */
-function getPlanSkuBicep(context: IFunctionAppWizardContext, hostingPlanType: string): string {
-    const sku = context.newPlanSku;
-    if (sku) {
-        return `{
-    name: '${sku.name ?? 'Y1'}'
-    tier: '${sku.tier ?? 'Dynamic'}'
-    size: '${sku.size ?? sku.name ?? 'Y1'}'
-    family: '${sku.family ?? 'Y'}'
-    capacity: ${sku.capacity ?? 0}
-  }`;
-    }
-
-    // Fallback defaults by plan type
-    switch (hostingPlanType) {
-        case 'consumption':
-            return `{ name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 }`;
-        case 'flex':
-            return `{ name: 'FC1', tier: 'FlexConsumption', size: 'FC', family: 'FC' }`;
-        case 'premium':
-            return `{ name: 'EP1', tier: 'ElasticPremium', size: 'EP1', family: 'EP', capacity: 1 }`;
-        default:
-            return `{ name: 'B1', tier: 'Basic', size: 'B1', family: 'B', capacity: 1 }`;
-    }
-}
-
-export interface BicepGenerationResult {
+export interface BicepFromSiteResult {
     /** The main.bicep content (resource-group-scoped, all resources inline) */
     bicepContent: string;
     /** The parameters JSON content */
@@ -99,48 +13,128 @@ export interface BicepGenerationResult {
 }
 
 /**
- * Generates a Bicep template and parameters file from the wizard context.
- * All resources are defined inline (no modules) so that each resource
- * appears as a separate progress line during `azd provision`.
+ * Extracts the storage account name from app settings.
+ * Checks both managed identity (URI) and connection string patterns.
+ */
+function deriveStorageAccountName(appSettings: StringDictionary, fallbackName: string): string {
+    const blobUri = appSettings?.properties?.['AzureWebJobsStorage__blobServiceUri'];
+    if (blobUri) {
+        const match = blobUri.match(/https:\/\/([^.]+)\./);
+        if (match?.[1]) { return match[1]; }
+    }
+
+    const connString = appSettings?.properties?.AzureWebJobsStorage;
+    if (connString) {
+        const match = connString.match(/AccountName=([^;]+)/i);
+        if (match?.[1]) { return match[1]; }
+    }
+
+    return fallbackName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 24);
+}
+
+/**
+ * Parses the linuxFxVersion string (e.g. "NODE|20") into runtime name and version.
+ */
+function parseLinuxFxVersion(linuxFxVersion?: string): { runtimeName: string; runtimeVersion: string } | undefined {
+    if (!linuxFxVersion) { return undefined; }
+    const parts = linuxFxVersion.split('|');
+    if (parts.length !== 2) { return undefined; }
+    return { runtimeName: parts[0].toLowerCase(), runtimeVersion: parts[1] };
+}
+
+/**
+ * Determines the runtime name and version from the site envelope and app settings.
+ */
+function getRuntimeFromSite(site: Site, appSettings: StringDictionary): { runtimeName: string; runtimeVersion: string } {
+    // Flex consumption has explicit runtime config
+    if (site.functionAppConfig?.runtime) {
+        return {
+            runtimeName: site.functionAppConfig.runtime.name ?? 'node',
+            runtimeVersion: site.functionAppConfig.runtime.version ?? '20',
+        };
+    }
+
+    // Try linuxFxVersion from site config
+    const parsed = parseLinuxFxVersion(site.siteConfig?.linuxFxVersion);
+    if (parsed) { return parsed; }
+
+    // Fall back to app settings
+    const workerRuntime = appSettings?.properties?.FUNCTIONS_WORKER_RUNTIME ?? 'node';
+    return { runtimeName: workerRuntime, runtimeVersion: '20' };
+}
+
+/**
+ * Determines the App Service Plan SKU Bicep fragment based on site properties.
+ * Without an actual API call to the server farm, we infer the plan type from the site.
+ */
+function inferPlanSkuBicep(site: Site): string {
+    // Flex consumption detected via functionAppConfig
+    if (site.functionAppConfig) {
+        return `{ name: 'FC1', tier: 'FlexConsumption', size: 'FC', family: 'FC' }`;
+    }
+
+    // Elastic Premium detected via kind containing 'elastic'
+    if (site.kind?.toLowerCase().includes('elastic')) {
+        return `{ name: 'EP1', tier: 'ElasticPremium', size: 'EP1', family: 'EP', capacity: 1 }`;
+    }
+
+    // Default to Consumption (Y1/Dynamic) — adjust in generated template if needed
+    return `{ name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 }`;
+}
+
+/**
+ * Generates a Bicep template and parameters file from an existing Function App's
+ * site envelope and app settings. This mirrors the existing infrastructure so that
+ * the generated template can be used with `azd deploy` or `azd up`.
  *
- * Resources provisioned:
+ * Resources defined:
  * - Storage Account
  * - Log Analytics Workspace
  * - Application Insights
  * - App Service Plan
  * - Function App
  * - (Optional) User-assigned Managed Identity + role assignment
- *
- * The resource group is pre-created via the ARM SDK before azd runs,
- * so the template uses the default resourceGroup scope and azd finds
- * the existing RG via AZURE_RESOURCE_GROUP.
  */
-export function generateBicepTemplate(context: IFlexFunctionAppWizardContext): BicepGenerationResult {
-    const siteName = nonNullProp(context, 'newSiteName');
-    const hostingPlanType = getHostingPlanType(context);
-    const isLinux = context.newSiteOS === WebsiteOS.linux;
-    const isFlex = hostingPlanType === 'flex';
-    const isConsumption = hostingPlanType === 'consumption';
-    const isPremium = hostingPlanType === 'premium';
-    const useManagedIdentity = context.useManagedIdentity === true;
-    const disableSharedKeyAccess = useManagedIdentity && isFlex;
-    const { runtimeName, runtimeVersion } = getRuntimeInfo(context);
-    const functionsVersion = getMajorVersion(context.version);
-
-    const storageAccountName = context.newStorageAccountName ?? siteName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 24);
-    const planName = context.newPlanName ?? `ASP-${siteName}`;
-    const appInsightsName = context.newAppInsightsName ?? siteName;
-
-    const flexInstanceMemoryMB = (context as IFlexFunctionAppWizardContext).newFlexInstanceMemoryMB ?? 2048;
-    const flexMaxInstanceCount = (context as IFlexFunctionAppWizardContext).newFlexMaximumInstanceCount ?? 100;
-
+export function generateBicepFromSite(site: Site, appSettings: StringDictionary): BicepFromSiteResult {
+    const siteName = site.name ?? 'unknown';
+    const isLinux = site.kind?.includes('linux') ?? false;
     const siteKind = isLinux ? 'functionapp,linux' : 'functionapp';
+    const isFlex = !!site.functionAppConfig;
 
-    // main.bicep — resource-group-scoped with all resources inline for individual progress tracking
-    const bicepContent = `// Auto-generated Bicep template for Azure Function App provisioning
-// Generated by Azure Functions VS Code extension
-// All resources are defined inline (no modules) so each one appears
-// as a separate progress line during azd provision.
+    // Parse plan name from serverFarmId
+    const planName = site.serverFarmId?.split('/').pop() ?? `ASP-${siteName}`;
+
+    // Managed identity detection
+    const hasManagedIdentity = site.identity?.type?.toLowerCase().includes('userassigned') ?? false;
+    const identityIds = site.identity?.userAssignedIdentities ? Object.keys(site.identity.userAssignedIdentities) : [];
+    const identityName = identityIds.length > 0 ? identityIds[0].split('/').pop() ?? `id-${siteName}` : `id-${siteName}`;
+    const disableSharedKeyAccess = hasManagedIdentity && isFlex;
+
+    // Runtime info
+    const { runtimeName, runtimeVersion } = getRuntimeFromSite(site, appSettings);
+    const workerRuntime = appSettings?.properties?.FUNCTIONS_WORKER_RUNTIME ?? runtimeName;
+    const functionsExtVersion = appSettings?.properties?.FUNCTIONS_EXTENSION_VERSION ?? '~4';
+    const functionsVersion = functionsExtVersion.replace('~', '');
+
+    // Resource names derived from existing app
+    const storageAccountName = deriveStorageAccountName(appSettings, siteName);
+    const appInsightsName = siteName; // convention
+
+    // Flex consumption details
+    const flexInstanceMemoryMB = site.functionAppConfig?.scaleAndConcurrency?.instanceMemoryMB ?? 2048;
+    const flexMaxInstanceCount = site.functionAppConfig?.scaleAndConcurrency?.maximumInstanceCount ?? 100;
+
+    // Plan SKU
+    const planSkuBicep = inferPlanSkuBicep(site);
+
+    // Determine if consumption or premium for content share settings
+    const isConsumption = planSkuBicep.includes("'Dynamic'");
+    const isPremium = planSkuBicep.includes("'ElasticPremium'");
+
+    const bicepContent = `// Auto-generated Bicep template from existing Function App "${siteName}"
+// Generated by Azure Functions VS Code extension (deploy with AZD)
+// This template mirrors the current infrastructure configuration.
+// Review and adjust the App Service Plan SKU if it does not match your actual plan.
 
 @description('Name of the function app')
 param functionAppName string
@@ -158,7 +152,7 @@ param appInsightsName string
 param location string
 
 @description('Use managed identity for storage access')
-param useManagedIdentity bool = ${useManagedIdentity}
+param useManagedIdentity bool = ${hasManagedIdentity}
 
 // ========== Storage Account ==========
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -175,9 +169,9 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-${useManagedIdentity ? `// ========== User-Assigned Managed Identity ==========
+${hasManagedIdentity ? `// ========== User-Assigned Managed Identity ==========
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${context.newManagedIdentityName ?? `id-${siteName}`}'
+  name: '${identityName}'
   location: location
 }
 
@@ -219,7 +213,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
   location: location
-  sku: ${getPlanSkuBicep(context, hostingPlanType)}
+  sku: ${planSkuBicep}
   kind: '${isLinux ? 'linux' : 'app'}'
   properties: {
     reserved: ${isLinux}
@@ -230,7 +224,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: functionAppName
   location: location
-  kind: '${siteKind}'${useManagedIdentity ? `
+  kind: '${siteKind}'${hasManagedIdentity ? `
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -246,7 +240,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         storage: {
           type: 'blobContainer'
           value: '\${storageAccount.properties.primaryEndpoints.blob}app-package-\${toLower(take(functionAppName, 32))}'
-          authentication: ${useManagedIdentity ? `{
+          authentication: ${hasManagedIdentity ? `{
             type: 'UserAssignedIdentity'
             userAssignedIdentityResourceId: managedIdentity.id
           }` : `{
@@ -267,19 +261,17 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {${!isFlex ? `
       ${isLinux ? `linuxFxVersion: '${runtimeName.toUpperCase()}|${runtimeVersion}'` : ''}${!isLinux && runtimeName === 'dotnet' ? `
       netFrameworkVersion: '${runtimeVersion}'` : ''}` : ''}
-      appSettings: [${useManagedIdentity ? `
+      appSettings: [${hasManagedIdentity ? `
         { name: 'AzureWebJobsStorage__blobServiceUri', value: 'https://\${storageAccount.name}.blob.core.windows.net' }
         { name: 'AzureWebJobsStorage__queueServiceUri', value: 'https://\${storageAccount.name}.queue.core.windows.net' }
-        { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://\${storageAccount.name}.table.core.windows.net' }
-        { name: 'AzureWebJobsStorage__clientId', value: managedIdentity.properties.clientId }
-        { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }` : `
+        { name: 'AzureWebJobsStorage__tableServiceUri', value: 'https://\${storageAccount.name}.table.core.windows.net' }` : `
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=\${storageAccount.name};AccountKey=\${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }`}
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~${functionsVersion}' }${!isFlex ? `
-        { name: 'FUNCTIONS_WORKER_RUNTIME', value: '${runtimeName}' }` : ''}
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }${(isConsumption || isPremium) && !useManagedIdentity ? `
+        { name: 'FUNCTIONS_WORKER_RUNTIME', value: '${workerRuntime}' }` : ''}
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }${(isConsumption || isPremium) && !hasManagedIdentity ? `
         { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: 'DefaultEndpointsProtocol=https;AccountName=\${storageAccount.name};AccountKey=\${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }
         { name: 'WEBSITE_CONTENTSHARE', value: toLower(functionAppName) }` : ''}${!isLinux && !isFlex ? `
-        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }` : ''}${isFlex && !useManagedIdentity ? `
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }` : ''}${isFlex && !hasManagedIdentity ? `
         { name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING', value: 'DefaultEndpointsProtocol=https;AccountName=\${storageAccount.name};AccountKey=\${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }` : ''}
       ]
     }
@@ -293,7 +285,7 @@ output functionAppDefaultHostName string = functionApp.properties.defaultHostNam
 output storageAccountName string = storageAccount.name
 output storageAccountId string = storageAccount.id
 output appInsightsName string = appInsights.name
-output appInsightsConnectionString string = appInsights.properties.ConnectionString${useManagedIdentity ? `
+output appInsightsConnectionString string = appInsights.properties.ConnectionString${hasManagedIdentity ? `
 output managedIdentityPrincipalId string = managedIdentity.properties.principalId
 output managedIdentityClientId string = managedIdentity.properties.clientId
 output managedIdentityId string = managedIdentity.id` : ''}
@@ -308,7 +300,7 @@ output managedIdentityId string = managedIdentity.id` : ''}
             appServicePlanName: { value: planName },
             appInsightsName: { value: appInsightsName },
             location: { value: '${AZURE_LOCATION}' },
-            useManagedIdentity: { value: useManagedIdentity },
+            useManagedIdentity: { value: hasManagedIdentity },
         }
     }, null, 2);
 

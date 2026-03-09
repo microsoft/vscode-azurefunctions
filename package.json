@@ -90,6 +90,14 @@
                 ]
             }
         },
+        "views": {
+            "azure": [
+                {
+                    "id": "azureFunctions.azdProvisioning",
+                    "name": "%azureFunctions.azdProvisioning%"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "azureFunctions.addBinding",
@@ -255,6 +263,13 @@
                 "command": "azureFunctions.deploySlot",
                 "title": "%azureFunctions.deploySlot%",
                 "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
+                "command": "azureFunctions.deployWithAzd",
+                "title": "%azureFunctions.deployWithAzd%",
+                "category": "Azure Functions",
+                "icon": "$(cloud-upload)",
                 "enablement": "!virtualWorkspace"
             },
             {
@@ -1501,6 +1516,7 @@
         "open": "^8.0.4",
         "p-retry": "^4.6.2",
         "ps-tree": "^1.1.1",
+        "puppeteer-core": "^24.37.5",
         "semver": "^7.7.3",
         "vscode-nls": "^4.1.1",
         "vscode-uri": "^3.1.0",
