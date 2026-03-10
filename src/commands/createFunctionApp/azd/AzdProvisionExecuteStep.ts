@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type WebSiteManagementClient } from '@azure/arm-appservice';
-import { LocationListStep, createAzureClient, parseClientContext } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { type AppResource } from '@microsoft/vscode-azext-utils/hostapi';
-import type { ResourceManagementClient } from '@azure/arm-resources';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -46,11 +45,11 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
 
         // 1. Generate the Bicep template and azure.yaml from wizard context
         progress.report({ message: localize('generatingInfra', 'Generating infrastructure template...') });
-        const { bicepContent, parametersContent } = generateBicepTemplate(context);
+        const { mainBicepContent, resourcesBicepContent, parametersContent } = generateBicepTemplate(context);
         const azdYaml = generateAzdYaml(context);
 
         // 2. Write to a temporary AZD project directory
-        const tmpDir = await this.createTempAzdProject(siteName, bicepContent, parametersContent, azdYaml);
+        const tmpDir = await this.createTempAzdProject(siteName, mainBicepContent, resourcesBicepContent, parametersContent, azdYaml);
 
         try {
             // 2b. Open the generated Bicep file in the editor so the user can see the template
@@ -70,11 +69,6 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
 
             await this.writeAzdEnvironment(tmpDir, envName, azdEnvVars);
 
-            // 3b. Pre-create the resource group so azd finds it and doesn't prompt
-            progress.report({ message: localize('creatingRg', 'Creating resource group "{0}"...', rgName) });
-            const resourceClient = await this.createResourcesClient(context);
-            await resourceClient.resourceGroups.createOrUpdate(rgName, { location: locationName });
-
             // 4. Run azd provision in a VS Code terminal with output streamed to the provisioning tree view
             //    Pass env vars both via .env file AND as terminal process env to ensure azd reads them
             progress.report({ message: localize('provisioning', 'Provisioning resources with AZD for "{0}"...', siteName) });
@@ -85,6 +79,7 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
             const planName = context.newPlanName ?? `ASP-${siteName}`;
             const appInsightsName = context.newAppInsightsName ?? siteName;
             const expectedResources: { name: string; type: string }[] = [
+                { name: rgName, type: 'Resource group' },
                 { name: storageAccountName, type: 'Storage account' },
                 { name: `workspace-${appInsightsName}`, type: 'Log Analytics workspace' },
                 { name: appInsightsName, type: 'Application Insights' },
@@ -133,10 +128,12 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
      *     infra/
      *       main.bicep
      *       main.parameters.json
+     *       resources.bicep
      */
     private async createTempAzdProject(
         siteName: string,
-        bicepContent: string,
+        mainBicepContent: string,
+        resourcesBicepContent: string,
         parametersContent: string,
         azdYaml: string,
     ): Promise<string> {
@@ -146,7 +143,8 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
         await fs.promises.mkdir(infraDir, { recursive: true });
         await Promise.all([
             fs.promises.writeFile(path.join(tmpDir, 'azure.yaml'), azdYaml, 'utf-8'),
-            fs.promises.writeFile(path.join(infraDir, 'main.bicep'), bicepContent, 'utf-8'),
+            fs.promises.writeFile(path.join(infraDir, 'main.bicep'), mainBicepContent, 'utf-8'),
+            fs.promises.writeFile(path.join(infraDir, 'resources.bicep'), resourcesBicepContent, 'utf-8'),
             fs.promises.writeFile(path.join(infraDir, 'main.parameters.json'), parametersContent, 'utf-8'),
         ]);
 
@@ -189,16 +187,6 @@ export class AzdProvisionExecuteStep extends AzureWizardExecuteStepWithActivityO
         } catch {
             // Ignore cleanup errors — the OS will clean temp eventually
         }
-    }
-
-    /**
-     * Creates an ARM ResourceManagementClient, handling custom clouds.
-     */
-    private async createResourcesClient(context: IFunctionAppWizardContext): Promise<ResourceManagementClient> {
-        if (parseClientContext(context).isCustomCloud) {
-            return createAzureClient(context, (await import('@azure/arm-resources-profile-2020-09-01-hybrid')).ResourceManagementClient) as unknown as ResourceManagementClient;
-        }
-        return createAzureClient(context, (await import('@azure/arm-resources')).ResourceManagementClient);
     }
 
     protected getTreeItemLabel(context: IFunctionAppWizardContext): string {
