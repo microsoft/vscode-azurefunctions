@@ -18,10 +18,10 @@ export class SQLConnectionValidateStep<T extends IPreDebugValidateContext> exten
     protected getOutputLogSuccess = () => localize('validateSQLSuccess', 'Successfully found a SQL database connection value for setting "{0}".', this._sqlConnectionKey);
     protected getOutputLogFail = () => localize('validateSQLFail', 'Failed to find a valid SQL database connection value for setting "{0}".', this._sqlConnectionKey);
     protected getTreeItemLabel = () => !this._sqlConnectionKey ?
-        localize('validateSQLGenericLabel', 'Validate: SQL database connection setting') :
+        localize('validateSQLGenericLabel', 'SQL database connection setting') :
         this._connectionType ?
-            localize('validateSQLLabelWithType', 'Validate: SQL database connection setting "{0}" ({1})', this._sqlConnectionKey, this._connectionType.toLowerCase()) :
-            localize('validateSQLLabel', 'Validate: SQL database connection setting "{0}"', this._sqlConnectionKey);
+            localize('validateSQLLabelWithType', 'SQL database connection setting "{0}" ({1})', this._sqlConnectionKey, this._connectionType.toLowerCase()) :
+            localize('validateSQLLabel', 'SQL database connection setting "{0}"', this._sqlConnectionKey);
 
     private _sqlConnectionKey?: string;
     private _sqlConnectionValue?: string | undefined;

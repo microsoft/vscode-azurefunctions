@@ -9,7 +9,7 @@ import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../co
 import { ConnectionType, warningIcon } from "../../../../../constants";
 import { localize } from "../../../../../localize";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
-import { isAliveConnection } from "../set/setDTSConnectionPreDebug";
+import { isAliveConnection } from "../../emulators/dtsEmulatorProvider";
 import { DTSHubConnectionValidateStep } from "./DTSHubConnectionValidateStep";
 
 export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -20,10 +20,10 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
     protected getOutputLogSuccess = (context: T) => localize('validateDTSSuccess', 'Successfully found DTS connection value for setting "{0}".', context.newDTSConnectionSettingKey);
     protected getOutputLogFail = (context: T) => localize('validateDTSFail', 'Failed to find DTS connection value for setting "{0}".', context.newDTSConnectionSettingKey);
     protected getTreeItemLabel = (context: T) => !context.newDTSConnectionSettingKey ?
-        localize('validateDTSGenericLabel', 'Validate: DTS connection setting') :
+        localize('validateDTSGenericLabel', 'DTS connection setting') :
         this._connectionType ?
-            localize('validateDTSLabelWithType', 'Validate: DTS connection setting "{0}" ({1})', context.newDTSConnectionSettingKey, this._connectionType.toLowerCase()) :
-            localize('validateDTSLabel', 'Validate: DTS connection setting "{0}"', context.newDTSConnectionSettingKey);
+            localize('validateDTSLabelWithType', '"{0}" setting ({1})', context.newDTSConnectionSettingKey, this._connectionType.toLowerCase()) :
+            localize('validateDTSLabel', '"{0}" setting', context.newDTSConnectionSettingKey);
 
     private _connectionType?: string;
 

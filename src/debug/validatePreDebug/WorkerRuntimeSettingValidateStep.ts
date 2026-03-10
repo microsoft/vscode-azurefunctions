@@ -21,11 +21,7 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
     // Todo: Add activity log context explaining how this setting works
     protected getOutputLogSuccess = () => localize('validateWorkerRuntimeSuccess', 'Successfully verified a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getOutputLogFail = () => localize('validateWorkerRuntimeFail', 'Failed to find a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
-    protected getTreeItemLabel = () => this._newWorkerRuntimeSetting ?
-        localize('setWorkerRuntimeLabel', 'Set "{0}" as "{1}" in "{2}"', workerRuntimeKey, this._newWorkerRuntimeSetting, localSettingsFileName) :
-        localize('validateWorkerRuntimeLabel', 'Validate: "{0}" setting', workerRuntimeKey);
-
-    private _newWorkerRuntimeSetting?: string;
+    protected getTreeItemLabel = () => localize('validateWorkerRuntimeLabel', '"{0}" setting', workerRuntimeKey);
 
     public async execute(context: T): Promise<void> {
         this.options.continueOnFail = true;
@@ -41,7 +37,6 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
         }
 
         await setLocalAppSetting(context, context.projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
-        this._newWorkerRuntimeSetting = runtime;
     }
 
     public shouldExecute(): boolean {

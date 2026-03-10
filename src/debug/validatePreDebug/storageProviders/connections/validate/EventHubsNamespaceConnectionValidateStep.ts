@@ -19,10 +19,10 @@ export class EventHubsNamespaceConnectionValidateStep<T extends IPreDebugValidat
     protected getOutputLogSuccess = () => localize('validateEHNSuccess', 'Successfully found Event Hubs Namespace connection value for setting "{0}".', this._eventHubsNamespaceConnectionKey);
     protected getOutputLogFail = () => localize('validateEHNFail', 'Failed to find a valid Event Hubs Namespace connection value for setting "{0}".', this._eventHubsNamespaceConnectionKey);
     protected getTreeItemLabel = () => !this._eventHubsNamespaceConnectionKey ?
-        localize('validateEHNGenericLabel', 'Validate: Event Hubs Namespace connection setting') :
+        localize('validateEHNGenericLabel', 'Event Hubs Namespace connection setting') :
         this._connectionType ?
-            localize('validateEHNLabelWithType', 'Validate: Event Hubs Namespace connection setting "{0}" ({1})', this._eventHubsNamespaceConnectionKey, this._connectionType.toLowerCase()) :
-            localize('validateEHNLabel', 'Validate: Event Hubs Namespace connection setting "{0}"', this._eventHubsNamespaceConnectionKey);
+            localize('validateEHNLabelWithType', 'Event Hubs Namespace connection setting "{0}" ({1})', this._eventHubsNamespaceConnectionKey, this._connectionType.toLowerCase()) :
+            localize('validateEHNLabel', 'Event Hubs Namespace connection setting "{0}"', this._eventHubsNamespaceConnectionKey);
 
     private _eventHubsNamespaceConnectionKey?: string;
     private _eventHubsNamespaceConnectionValue?: string | undefined;

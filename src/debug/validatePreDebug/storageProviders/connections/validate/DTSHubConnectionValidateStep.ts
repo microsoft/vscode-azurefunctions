@@ -17,8 +17,8 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
     protected getOutputLogSuccess = () => localize('validateDTSHubSuccess', 'Successfully found a DTS Hub connection.');
     protected getOutputLogFail = () => localize('validateDTSHubFail', 'Failed to find a DTS Hub connection.');
     protected getTreeItemLabel = () => this._dtsHubConnectionValue ?
-        localize('validateDTSLabelWithValue', 'Validate: DTS Hub "{0}"', this._dtsHubConnectionValue) :
-        localize('validateDTSLabel', 'Validate: DTS Hub');
+        localize('validateDTSLabelWithValue', '"{0}" setting', this._dtsHubConnectionValue) :
+        localize('validateDTSLabel', 'DTS Hub setting');
 
     constructor(readonly _dtsHubConnectionKey: string | undefined, readonly _dtsHubConnectionValue: string | undefined) {
         super();
@@ -26,7 +26,6 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
 
     public async execute(_: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         this.options.continueOnFail = true;
-
         progress.report({ message: localize('checkingDTSConnection', 'Checking for DTS hub connection...') });
 
         if (!this._dtsHubConnectionValue) {

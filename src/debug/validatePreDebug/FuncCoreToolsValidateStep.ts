@@ -14,8 +14,8 @@ export class FuncCoreToolsValidateStep<T extends IPreDebugValidateContext> exten
     protected getOutputLogSuccess = (context: T) => localize('funcCoreToolsSuccess', 'Successfully found Azure Functions Core Tools (v{0}).', context.funcCoreToolsVersion);
     protected getOutputLogFail = () => localize('funcCoreToolsFail', 'Failed to find Azure Functions Core Tools.');
     protected getTreeItemLabel = (context: T) => context.funcCoreToolsVersion ?
-        localize('funcCoreToolsVersionLabel', 'Validate: Azure Functions Core Tools (v{0})', context.funcCoreToolsVersion) :
-        localize('funcCoreToolsLabel', 'Validate: Azure Functions Core Tools');
+        localize('funcCoreToolsVersionLabel', 'Azure Functions Core Tools (v{0})', context.funcCoreToolsVersion) :
+        localize('funcCoreToolsLabel', 'Azure Functions Core Tools');
 
     public async execute(context: T): Promise<void> {
         context.funcCoreToolsVersion ??= await getLocalFuncCoreToolsVersion(context, context.workspaceFolder.uri.fsPath);

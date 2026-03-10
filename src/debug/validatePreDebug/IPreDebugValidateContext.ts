@@ -20,4 +20,6 @@ export interface IPreDebugValidateContext extends ISetConnectionSettingContext, 
     abortDebug?: boolean;
     durableStorageType?: StorageProviderType;
     funcCoreToolsVersion?: string | null;
+
+    startStorageEmulator?: boolean;
 }

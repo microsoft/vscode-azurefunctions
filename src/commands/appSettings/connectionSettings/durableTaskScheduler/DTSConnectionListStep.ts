@@ -16,8 +16,6 @@ import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromp
 import { DTSHubNameCustomPromptStep } from './custom/DTSHubNameCustomPromptStep';
 import { DTSConnectionSetSettingStep } from './DTSConnectionSetSettingStep';
 import { DTSHubNameSetSettingStep } from './DTSHubNameSetSettingStep';
-import { DTSEmulatorGetConnectionsStep } from './emulator/DTSEmulatorGetConnectionsStep';
-import { DTSEmulatorStartStep } from './emulator/DTSEmulatorStartStep';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
 export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
@@ -79,18 +77,13 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                     new DurableTaskSchedulerGetConnectionStep(),
                 );
                 break;
-            case ConnectionType.Emulator:
-                executeSteps.push(
-                    new DTSEmulatorStartStep(),
-                    new DTSEmulatorGetConnectionsStep(),
-                );
-                break;
             case ConnectionType.Custom:
                 promptSteps.push(
                     new DTSConnectionCustomPromptStep(),
                     new DTSHubNameCustomPromptStep(),
                 );
                 break;
+            case ConnectionType.Emulator: // Defer to `preDebugValidate` wizard
             default:
                 return undefined;
         }

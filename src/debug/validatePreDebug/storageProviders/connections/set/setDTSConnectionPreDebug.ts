@@ -9,9 +9,10 @@ import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../co
 import { type IDTSConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
 import { CodeAction, ConnectionType } from "../../../../../constants";
 import { localize } from "../../../../../localize";
-import { requestUtils } from "../../../../../utils/requestUtils";
 
-export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext & ExecuteActivityContext, projectPath: string): Promise<void> {
+type UseEmulator = boolean;
+
+export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext & ExecuteActivityContext, projectPath: string): Promise<UseEmulator | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
     const {
@@ -19,9 +20,8 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext &
         dtsHubConnectionValue: dtsHubConnection,
     } = await getDTSLocalSettingsValues(projectPathContext, { dtsConnectionKey, dtsHubConnectionKey }) ?? {};
 
-    const isAliveDTSConnection = dtsConnection && await isAliveConnection(context, dtsConnection);
-    if (isAliveDTSConnection && dtsHubConnection) {
-        return;
+    if (dtsConnection && dtsHubConnection) {
+        return undefined;
     }
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Emulator, ConnectionType.Custom]);
@@ -31,8 +31,8 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext &
         activityChildren: [],
         action: CodeAction.Debug,
         newDTSConnectionSettingKey: dtsConnectionKey,
+        newDTSConnectionSettingValue: dtsConnection,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
-        newDTSConnectionSettingValue: isAliveDTSConnection ? dtsConnection : undefined,
         newDTSHubConnectionSettingValue: dtsHubConnection,
     });
 
@@ -43,28 +43,11 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext &
 
     await wizard.prompt();
 
-    if (wizardContext.dtsConnectionType) {
+    if (wizardContext.dtsConnectionType === ConnectionType.Emulator) {
+        return true;
+    } else if (wizardContext.dtsConnectionType) {
         await wizard.execute();
     }
-}
 
-/**
- * Checks whether a given DTS connection is still alive (i.e. has not gone stale)
- */
-export async function isAliveConnection(context: IActionContext, dtsConnection: string): Promise<boolean> {
-    // We need to extract the endpoint from a string like: Endpoint=http://localhost:55053/;Authentication=None
-    const endpointMatch = dtsConnection.match(/Endpoint=([^;]+)/);
-    if (!endpointMatch) {
-        return false;
-    }
-
-    try {
-        const url: string = endpointMatch[1];
-        await requestUtils.sendRequestWithExtTimeout(context, { url, method: 'GET' });
-        return true;
-    } catch (e) {
-        // Even if we get back an error, if we can read a status code, the connection provided a response and is still alive
-        const statusCode = (e as { statusCode?: number })?.statusCode;
-        return !!statusCode;
-    }
+    return undefined;
 }

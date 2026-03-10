@@ -18,8 +18,8 @@ export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> e
     protected getOutputLogSuccess = () => localize('validateStorageSuccess', 'Successfully found a storage connection for "{0}".', this._storageConnectionKey);
     protected getOutputLogFail = () => localize('validateStorageFail', 'Failed to find a valid storage connection for "{0}".', this._storageConnectionKey);
     protected getTreeItemLabel = () => this._connectionType ?
-        localize('validateStorageLabelWithType', 'Validate: Storage connection setting "{0}" ({1})', this._storageConnectionKey, this._connectionType.toLowerCase()) :
-        localize('validateStorageLabel', 'Validate: Storage connection setting "{0}"', this._storageConnectionKey);
+        localize('validateStorageLabelWithType', '"{0}" setting ({1})', this._storageConnectionKey, this._connectionType.toLowerCase()) :
+        localize('validateStorageLabel', '"{0}" setting', this._storageConnectionKey);
 
     private _storageConnectionKey: string = ConnectionKey.Storage;
     private _storageConnectionValue?: string | undefined;

@@ -16,9 +16,11 @@ import { FuncCoreToolsPromptAndInstallStep } from './FuncCoreToolsPromptAndInsta
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { FuncCoreToolsVersionConfirmStep } from './FuncCoreToolsVersionConfirmStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
-import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 import { setStorageProviderConnectionsPreDebugIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
 import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/connections/validate/GetStorageProviderConnectionsValidateSteps';
+import { getEmulatorProviders } from './storageProviders/emulators/getEmulatorProviders';
+import { LocalEmulatorProvidersStep } from './storageProviders/emulators/LocalEmulatorProvidersStep';
+import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -52,6 +54,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsPromptAndInstallStep(),
         new FuncCoreToolsVersionConfirmStep(),
+        new LocalEmulatorProvidersStep(getEmulatorProviders(wizardContext)),
     ];
 
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
@@ -61,7 +64,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard(wizardContext, {
-        title: localize('validateDebugSessionTitle', 'Validate debug configuration for Azure Functions workspace project'),
+        title: localize('validateDebugSessionTitle', 'Validate debug configuration for Azure Functions project'),
         promptSteps,
         executeSteps,
     });

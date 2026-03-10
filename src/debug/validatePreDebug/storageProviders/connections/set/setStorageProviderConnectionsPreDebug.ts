@@ -12,10 +12,11 @@ import { setSQLConnectionPreDebugIfNeeded } from "./setSQLConnectionPreDebug";
 import { setStorageConnectionPreDebugIfNeeded } from "./setStorageConnectionPreDebug";
 
 export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPreDebugValidateContext): Promise<void> {
+    let useEmulator: boolean | undefined;
     switch (context.durableStorageType) {
         case StorageProviderType.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
-            await setDTSConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
+            useEmulator ??= await setDTSConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
             break;
         case StorageProviderType.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
@@ -30,5 +31,5 @@ export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPr
     }
 
     context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-    await setStorageConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath);
+    await setStorageConnectionPreDebugIfNeeded(await cloneWithNewActivityContext(context), context.projectPath, useEmulator);
 }

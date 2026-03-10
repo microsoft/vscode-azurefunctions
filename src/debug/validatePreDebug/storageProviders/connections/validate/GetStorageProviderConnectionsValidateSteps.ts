@@ -19,7 +19,7 @@ export class GetStorageProviderConnectionsValidateSteps<T extends IPreDebugValid
     }
 
     public shouldExecute(): boolean {
-        return true;
+        return false;
     }
 
     public async addExecuteSteps(context: T): Promise<AzureWizardExecuteStep<T>[]> {
