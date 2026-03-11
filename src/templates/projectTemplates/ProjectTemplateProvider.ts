@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { type ProjectLanguage } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -17,7 +17,7 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
 export class ProjectTemplateProvider {
     private static readonly CACHE_KEY = 'projectTemplatesManifest';
     private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
-    private static readonly DEFAULT_MANIFEST_URL = 'https://manifest-h5bkgrbdfzh4hma3.b01.azurefd.net/templates/manifest.json?sp=r&st=2026-02-13T19:00:49Z&se=2026-09-04T02:15:49Z&spr=https&sv=2024-11-04&sr=c&sig=YCuWH4OWVA36PVQNTz0xjXuRNhfzZWFPlEwWvcAL7MQ%3D';
+    private static readonly DEFAULT_MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
     /**
@@ -25,15 +25,58 @@ export class ProjectTemplateProvider {
      */
     public async getTemplates(context: IActionContext, language?: ProjectLanguage, languageModel?: number): Promise<IProjectTemplate[]> {
         const manifest = await this.getManifest(context);
-        // Normalize: ensure every template has a proper 'categories' array.
-        // Handles old manifests that use the singular "category" string field.
+        // Normalize manifest field names so the rest of the code works against a
+        // consistent shape regardless of which manifest version was fetched.
         let templates = manifest.templates.map(t => {
-            const raw = t as unknown as { category?: string; categories?: TemplateCategory[] };
-            if (raw.categories?.length) {
-                return t;
-            }
-            const legacy = raw.category;
-            return { ...t, categories: legacy ? [legacy as TemplateCategory] : [] };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const raw = t as any;
+
+            // categories: accept singular 'category' string from older manifests
+            const categories: TemplateCategory[] =
+                raw.categories?.length ? raw.categories
+                : raw.category ? [raw.category as TemplateCategory]
+                : [];
+
+            // displayName: accept 'name' or 'title' as fallbacks
+            const displayName: string = raw.displayName ?? raw.name ?? raw.title ?? '';
+
+            // shortDescription: accept 'description' or 'summary' as fallbacks
+            const shortDescription: string =
+                raw.shortDescription ?? raw.description ?? raw.summary ?? '';
+
+            // repositoryUrl: accept 'repoUrl', 'repo', or 'repository' as fallbacks
+            const repositoryUrl: string =
+                raw.repositoryUrl ?? raw.repoUrl ?? raw.repo ?? raw.repository ?? '';
+
+            // languages: new manifest uses singular 'language' string; older manifests
+            // and our interface use a 'languages' array. Remap and normalise the value
+            // so it matches the ProjectLanguage enum (e.g. "CSharp" → "C#").
+            const languages: ProjectLanguage[] =
+                raw.languages?.length ? raw.languages
+                : raw.language ? [normalizeLanguage(raw.language as string)]
+                : [];
+
+            // prerequisites: not present in new manifest — default to empty array
+            // so downstream code can safely call .filter() / .length on it.
+            const prerequisites = raw.prerequisites ?? [];
+
+            // folderPath: canonical new field — no alias needed
+            const folderPath: string | undefined = raw.folderPath;
+
+            // subdirectory: legacy field kept for backward compatibility
+            const subdirectory: string | undefined = raw.subdirectory;
+
+            return {
+                ...t,
+                categories,
+                displayName,
+                shortDescription,
+                repositoryUrl,
+                languages,
+                prerequisites,
+                ...(folderPath !== undefined ? { folderPath } : {}),
+                ...(subdirectory !== undefined ? { subdirectory } : {}),
+            } as IProjectTemplate;
         });
 
         // Filter by language if specified
@@ -229,4 +272,24 @@ export class ProjectTemplateProvider {
         const manifestContent = await AzExtFsExtra.readFile(bundledPath);
         return JSON.parse(manifestContent) as ITemplateManifest;
     }
+}
+
+/**
+ * Map manifest language strings to ProjectLanguage enum values.
+ * The new manifest uses names like "CSharp" while the enum uses "C#".
+ * Unknown values are passed through as-is so they can still be displayed.
+ */
+function normalizeLanguage(language: string): ProjectLanguage {
+    const map: Record<string, ProjectLanguage> = {
+        'CSharp':     ProjectLanguage.CSharp,
+        'FSharp':     ProjectLanguage.FSharp,
+        'Java':       ProjectLanguage.Java,
+        'JavaScript': ProjectLanguage.JavaScript,
+        'PowerShell': ProjectLanguage.PowerShell,
+        'Python':     ProjectLanguage.Python,
+        'TypeScript': ProjectLanguage.TypeScript,
+        'Ballerina':  ProjectLanguage.Ballerina,
+        'Custom':     ProjectLanguage.Custom,
+    };
+    return map[language] ?? language as ProjectLanguage;
 }

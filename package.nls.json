@@ -143,6 +143,7 @@
     "azureFunctions.getMcpHostKey": "Retrieve the MCP host key for the Function App specified by the resource ID.",
     "azureFunctions.validateFunctionApp": "Validate Function App (Copilot)",
     "azureFunctions.smartDeploy": "Deploy Function App",
+    "azureFunctions.runFunctionApp": "Run Function App",
     "azureFunctions.mcpProjectType": "The type of MCP integration the project uses.",
     "azureFunctions.mcpProjectType.NoMcpServer": "Runs the standard Azure Functions runtime with no MCP integration.",
     "azureFunctions.mcpProjectType.McpExtensionServer": "Runs the Functions host with an embedded MCP server provided by the Azure Functions MCP extension.",

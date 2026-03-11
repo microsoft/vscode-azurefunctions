@@ -33,23 +33,38 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
             await AzExtFsExtra.ensureDir(tempDir);
 
             try {
-                // Clone the repository
                 const branch = template.branch || 'main';
-                const cloneCommand = `git clone --depth 1 --branch ${branch} "${template.repositoryUrl}" "${tempDir}"`;
 
-                progress.report({ message: localize('cloningRepository', 'Cloning repository...') });
-                await cpUtils.executeCommand(undefined, undefined, cloneCommand);
+                // folderPath → sparse checkout (only that folder is downloaded; fast for monorepos)
+                // subdirectory → full clone then pick the subfolder (legacy behaviour)
+                // neither → full clone of the whole repo
+                let sourceDir: string;
 
-                // Determine source directory (subdirectory if specified, otherwise root)
-                let sourceDir = tempDir;
-                if (template.subdirectory) {
-                    sourceDir = path.join(tempDir, template.subdirectory);
+                if (template.folderPath) {
+                    progress.report({ message: localize('cloningRepository', 'Cloning repository (sparse)...') });
+                    await this.sparseCheckout(tempDir, template.repositoryUrl, branch, template.folderPath);
+
+                    sourceDir = path.join(tempDir, template.folderPath);
                     if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                        throw new Error(localize('subdirectoryNotFound', 'Template subdirectory "{0}" not found in repository', template.subdirectory));
+                        throw new Error(localize('folderPathNotFound', 'Template folder "{0}" not found in repository', template.folderPath));
                     }
+                    context.telemetry.properties.cloneMethod = 'sparse';
+                } else {
+                    progress.report({ message: localize('cloningRepository', 'Cloning repository...') });
+                    await cpUtils.executeCommand(undefined, undefined,
+                        `git clone --depth 1 --branch ${branch} "${template.repositoryUrl}" "${tempDir}"`);
+
+                    sourceDir = tempDir;
+                    if (template.subdirectory) {
+                        sourceDir = path.join(tempDir, template.subdirectory);
+                        if (!await AzExtFsExtra.pathExists(sourceDir)) {
+                            throw new Error(localize('subdirectoryNotFound', 'Template subdirectory "{0}" not found in repository', template.subdirectory));
+                        }
+                    }
+                    context.telemetry.properties.cloneMethod = 'full';
                 }
 
-                // Remove .git directory from source
+                // Remove .git directory so it is not included in the project
                 const gitDir = path.join(tempDir, '.git');
                 if (await AzExtFsExtra.pathExists(gitDir)) {
                     progress.report({ message: localize('cleaningUp', 'Setting up project files...') });
@@ -103,6 +118,37 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
 
     public shouldExecute(context: IProjectWizardContext): boolean {
         return context.startingPoint === 'template' && context.selectedTemplate !== undefined && !context.clonedFromTemplate;
+    }
+
+    /**
+     * Clone only a specific folder from a repository using git sparse-checkout.
+     *
+     * Strategy:
+     *   1. `git clone --depth 1 --no-checkout --filter=blob:none` — fetches commit/tree
+     *      objects but no file blobs, keeping the initial download tiny.
+     *   2. `git sparse-checkout init --cone` — switches to cone mode, which operates on
+     *      whole directories (much faster than pattern mode).
+     *   3. `git sparse-checkout set <folderPath>` — registers the target directory.
+     *   4. `git checkout <branch>` — materialises only the blobs inside that directory.
+     *
+     * Result: `destDir/<folderPath>/` contains the template files; nothing else is present.
+     */
+    private async sparseCheckout(destDir: string, repoUrl: string, branch: string, folderPath: string): Promise<void> {
+        // Step 1 — shallow clone without checking out any files
+        await cpUtils.executeCommand(undefined, undefined,
+            `git clone --depth 1 --no-checkout --filter=blob:none "${repoUrl}" "${destDir}"`);
+
+        // Step 2 — enable cone-mode sparse checkout
+        await cpUtils.executeCommand(undefined, undefined,
+            `git -C "${destDir}" sparse-checkout init --cone`);
+
+        // Step 3 — limit the working tree to the requested folder
+        await cpUtils.executeCommand(undefined, undefined,
+            `git -C "${destDir}" sparse-checkout set "${folderPath}"`);
+
+        // Step 4 — materialise the blobs for that folder on the target branch
+        await cpUtils.executeCommand(undefined, undefined,
+            `git -C "${destDir}" checkout ${branch}`);
     }
 
     /**

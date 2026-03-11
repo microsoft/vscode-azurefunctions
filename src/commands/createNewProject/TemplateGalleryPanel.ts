@@ -218,9 +218,16 @@ export class TemplateGalleryPanel {
         }
 
         try {
+            // Open Copilot Chat with the query pre-filled in a single command so
+            // there is no race condition between session creation and query injection.
+            // `newSession: true` is supported in VS Code 1.99+ and creates a fresh
+            // chat session atomically alongside setting the query. On older VS Code
+            // versions the flag is silently ignored and the query is still pre-filled
+            // in the existing session, which is better than losing it entirely.
             await vscode.commands.executeCommand('workbench.action.chat.open', {
                 query: chatQuery,
-                isPartialQuery: true
+                isPartialQuery: true,
+                newSession: true
             });
             await this._panel.webview.postMessage({ type: 'chatOpened' });
         } catch (error) {

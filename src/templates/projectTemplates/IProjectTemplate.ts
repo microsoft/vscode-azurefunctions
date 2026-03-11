@@ -33,7 +33,19 @@ export interface IProjectTemplate {
     /** Git repository URL for cloning */
     repositoryUrl: string;
 
-    /** Subdirectory within the repository if template is not at root */
+    /**
+     * Folder path within the repository to use as the project root.
+     * When set, a git sparse-checkout is performed so only this folder is downloaded,
+     * making the operation significantly faster for large monorepos.
+     * Takes precedence over `subdirectory` when both are present.
+     */
+    folderPath?: string;
+
+    /**
+     * Subdirectory within the repository if template is not at root (legacy).
+     * Prefer `folderPath` for new manifests — `subdirectory` triggers a full clone
+     * followed by a directory copy, whereas `folderPath` uses sparse-checkout.
+     */
     subdirectory?: string;
 
     /** Branch to clone from (default: main) */

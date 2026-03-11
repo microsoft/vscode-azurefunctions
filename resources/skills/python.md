@@ -55,8 +55,9 @@ are present.
   Multiple `FunctionApp` instances in the same project cause routing conflicts.
 
 - RULE AF031 [warning]: `http_auth_level` on `@app.route()` decorators should not be
-  `func.AuthLevel.ANONYMOUS` in production — prefer `func.AuthLevel.FUNCTION` or
-  `func.AuthLevel.ADMIN`.
+  `func.AuthLevel.ANONYMOUS` unless there is an explicit reason (e.g. a public webhook
+  with its own HMAC validation). `func.AuthLevel.FUNCTION` and `func.AuthLevel.ADMIN`
+  are both correct and secure choices — do NOT flag them. Only flag `ANONYMOUS`.
 
 - RULE AF032 [info]: Use `@app.schedule()` instead of a separate Timer trigger
   `function.json` for cleaner, co-located scheduling logic (v2 model only).
@@ -185,8 +186,11 @@ are present.
   introduces breaking changes or, in the worst case, cause process crashes (signal 139 /
   SIGSEGV) from ABI-incompatible native extensions.
 
-- RULE AF112 [info]: The `azure-functions` package should be version `1.17.0` or later
-  for full v2 programming model support and recent bug fixes.
+- RULE AF112 [warning]: Only flag this rule when `azure-functions` is pinned to a
+  version **older than `1.17.0`** (e.g. `azure-functions==1.14.0`). If the package is
+  unpinned (e.g. `azure-functions` with no version) or pinned to `1.17.0` or later, it
+  is valid — do NOT report a finding. Versions before `1.17.0` lack full v2 programming
+  model support and important bug fixes.
 
 - RULE AF113 [warning]: Do not generate `requirements.txt` using `pip freeze` output
   directly. `pip freeze` captures every installed package in your local environment
