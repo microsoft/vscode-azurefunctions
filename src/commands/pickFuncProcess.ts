@@ -41,7 +41,7 @@ export interface IStartFuncProcessResult {
      * An async iterable stream of terminal output from the function host task.
      * This stream provides real-time access to the output of the `func host start` command,
      * allowing consumers to monitor host status, capture logs, and detect errors.
-     * 
+     *
      * The stream will be undefined if the host failed to start or if output streaming is not available.
      * Consumers should iterate over the stream asynchronously to read output lines as they are produced.
      * The stream remains active for the lifetime of the function host process.
@@ -169,7 +169,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
                 throw taskError;
@@ -200,7 +199,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                         }
                     }
                 }
-
             }
 
             await delay(intervalMs);

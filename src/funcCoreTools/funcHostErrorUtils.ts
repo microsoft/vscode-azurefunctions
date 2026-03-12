@@ -4,6 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
+import { type IRunningFuncTask } from './funcHostTask';
+
+export function getRecentLogs(task: IRunningFuncTask | undefined, limit: number = 250): string {
+    const logs = task?.logs ?? [];
+    const recent = logs.slice(Math.max(0, logs.length - limit));
+    return recent.join('');
+}
+
+export function getRecentLogsPlainText(task: IRunningFuncTask | undefined, limit: number = 250): string {
+    return stripAnsiControlCharacters(getRecentLogs(task, limit));
+}
 
 /**
  * Regex that matches a Functions-host timestamp prefix, e.g. `[2026-03-11T19:57:44.622Z]`.
@@ -19,21 +30,6 @@ const funcHostTimestampRegex = /(?=\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z\])
  */
 function normalizeWhitespace(text: string): string {
     return text.replace(/\s+/g, ' ').trim();
-}
-
-export interface FuncHostErrorContextOptions {
-    /**
-     * Number of log lines to include before an error line
-     */
-    before?: number;
-    /**
-     * Number of log lines to include after an error line
-     */
-    after?: number;
-    /**
-     * Maximum number of log lines to return (keeps the most recent)
-     */
-    max?: number;
 }
 
 // Detect red/bright-red foreground in any of the common SGR forms:
@@ -94,66 +90,4 @@ export function addErrorLinesFromChunk(errorLogs: string[], rawChunk: string): b
     }
 
     return added;
-}
-
-/**
- * Extracts context for only a single relevant error line (as selected in the UI).
- *
- * @param errorMessage A plain-text error line (ANSI/control chars already removed).
- */
-export function extractFuncHostErrorContextForErrorMessage(
-    logs: readonly string[],
-    errorMessage: string,
-    options?: FuncHostErrorContextOptions
-): string[] {
-    const target = (errorMessage ?? '').trim();
-    if (!target) {
-        return [];
-    }
-
-    const before = options?.before ?? 5;
-    const after = options?.after ?? 15;
-    const max = options?.max ?? 250;
-
-    let bestIndex = -1;
-    let bestScore = 0;
-
-    for (let i = 0; i < logs.length; i++) {
-        const line = logs[i];
-        if (!isFuncHostErrorLog(line)) {
-            continue;
-        }
-
-        const plain = stripAnsiControlCharacters(line).trim();
-        if (!plain) {
-            continue;
-        }
-
-        let score = 0;
-        if (plain === target) {
-            score = 2;
-        } else if (plain.includes(target) || target.includes(plain)) {
-            score = 1;
-        }
-
-        if (score > 0 && (score > bestScore || (score === bestScore && i > bestIndex))) {
-            bestScore = score;
-            bestIndex = i;
-        }
-    }
-
-    if (bestIndex < 0) {
-        return [];
-    }
-
-    const start = Math.max(0, bestIndex - before);
-    const end = Math.min(logs.length - 1, bestIndex + after);
-
-    const result = logs.slice(start, end + 1);
-
-    if (result.length > max) {
-        return result.slice(result.length - max);
-    }
-
-    return result;
 }

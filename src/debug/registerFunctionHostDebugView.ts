@@ -5,43 +5,20 @@
 
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { getRecentLogsPlainText } from '../funcCoreTools/funcHostErrorUtils';
 import { onRunningFuncTasksChanged, refreshFuncHostDebugContext, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
-import { openCopilotChat } from '../utils/copilotChat';
 import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode } from './FunctionHostDebugView';
 
 const viewId = 'azureFunctions.funcHostDebugView';
 
 function isHostTaskNode(node: unknown): node is IHostTaskNode {
-    if (!node || typeof node !== 'object') {
-        return false;
-    }
-
-    const n = node as Partial<IHostTaskNode>;
-    const scope = (n as { workspaceFolder?: unknown }).workspaceFolder;
-    const hasValidScope = typeof scope === 'object' || typeof scope === 'number';
-
-    return n.kind === 'hostTask'
-        && hasValidScope
-        && typeof n.portNumber === 'string'
-        && (n.cwd === undefined || typeof n.cwd === 'string');
+    return !!node && typeof node === 'object' && (node as IHostTaskNode).kind === 'hostTask';
 }
 
 function isHostErrorNode(node: unknown): node is IHostErrorNode {
-    if (!node || typeof node !== 'object') {
-        return false;
-    }
-
-    const n = node as Partial<IHostErrorNode>;
-    const scope = (n as { workspaceFolder?: unknown }).workspaceFolder;
-    const hasValidScope = typeof scope === 'object' || typeof scope === 'number';
-
-    return n.kind === 'hostError'
-        && hasValidScope
-        && typeof n.portNumber === 'string'
-        && typeof n.message === 'string'
-        && (n.cwd === undefined || typeof n.cwd === 'string');
+    return !!node && typeof node === 'object' && (node as IHostErrorNode).kind === 'hostError';
 }
 
 async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
@@ -72,16 +49,6 @@ async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
     } catch {
         // If this fails, leave flags untouched so we can try again later.
     }
-}
-
-function getRecentLogs(task: IRunningFuncTask | undefined, limit: number = 250): string {
-    const logs = task?.logs ?? [];
-    const recent = logs.slice(Math.max(0, logs.length - limit));
-    return recent.join('');
-}
-
-function getRecentLogsPlainText(task: IRunningFuncTask | undefined, limit: number = 250): string {
-    return stripAnsiControlCharacters(getRecentLogs(task, limit));
 }
 
 export function registerFunctionHostDebugView(context: vscode.ExtensionContext): void {
@@ -167,7 +134,7 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
             errorContext,
         ].filter((l): l is string => Boolean(l)).join('\n');
 
-        await openCopilotChat(prompt);
+        await vscode.commands.executeCommand('workbench.action.chat.open', { mode: 'agent', query: prompt });
     });
 
     registerCommand('azureFunctions.funcHostDebug.refresh', async (actionContext: IActionContext) => {
