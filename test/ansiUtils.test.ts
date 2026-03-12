@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { stripAnsiControlCharacters } from '../extension.bundle';
+import { stripAnsiControlCharacters } from '../src/utils/ansiUtils';
 
 suite('stripAnsiControlCharacters', () => {
     test('removes CSI color sequences', () => {

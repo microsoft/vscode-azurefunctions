@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import { addErrorLinesFromChunk, isFuncHostErrorLog } from '../src/funcCoreTools/funcHostErrorUtils';
 
-// eslint-disable-next-line no-restricted-imports
-import { addErrorLinesFromChunk, isFuncHostErrorLog } from '../extension.bundle';
 
 suite('isFuncHostErrorLog', () => {
     test('detects basic red (31m)', () => {
