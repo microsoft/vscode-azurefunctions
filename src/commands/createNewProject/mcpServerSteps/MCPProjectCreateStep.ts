@@ -3,51 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, callWithTelemetryAndErrorHandling, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { nonNullProp } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
-import { l10n, Uri, window, workspace, type Progress } from "vscode";
+import { l10n, type Progress } from "vscode";
 import { McpProjectType, ProjectLanguage, type GitHubFileMetadata } from "../../../constants";
-import { ext } from "../../../extensionVariables";
 import { feedUtils } from "../../../utils/feedUtils";
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from "../../../utils/mcpUtils";
-import { getContainingWorkspace } from "../../../utils/workspace";
 import { type MCPProjectWizardContext } from "../IProjectWizardContext";
 import { ProjectCreateStepBase } from "../ProjectCreateStep/ProjectCreateStepBase";
 import { MCPDownloadSnippetsExecuteStep } from "./MCPDownloadSnippetsExecuteStep";
-
-interface ICachedMcpProject {
-    projectPath: string;
-}
-
-const mcpProjectCacheKey: string = 'azFuncPostMcpProjectCreate';
-
-export async function runPostMcpProjectCreateStepsFromCache(): Promise<void> {
-    const cachedProject: ICachedMcpProject | undefined = ext.context.globalState.get(mcpProjectCacheKey);
-    if (cachedProject) {
-        try {
-            runPostMcpProjectCreateSteps(cachedProject);
-        } finally {
-            await ext.context.globalState.update(mcpProjectCacheKey, undefined);
-        }
-    }
-}
-
-function runPostMcpProjectCreateSteps(project: ICachedMcpProject): void {
-    // Don't wait
-    void callWithTelemetryAndErrorHandling('postMcpProjectCreate', async (context: IActionContext) => {
-        context.telemetry.suppressIfSuccessful = true;
-
-        // Open mcp.json file in an editor
-        if (getContainingWorkspace(project.projectPath)) {
-            const mcpJsonFilePath: string = path.join(project.projectPath, '.vscode', 'mcp.json');
-            if (await AzExtFsExtra.pathExists(mcpJsonFilePath)) {
-                const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
-                await window.showTextDocument(mcpJsonFile, { preview: false });
-            }
-        }
-    });
-}
-
 export class MCPProjectCreateStep extends ProjectCreateStepBase {
     public async executeCore(context: MCPProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         context.mcpProjectType = McpProjectType.SelfHostedMcpServer;
@@ -72,17 +36,7 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
                 });
             }
         }
-        
-        const cachedProject: ICachedMcpProject = { projectPath: context.projectPath };
-        
-        if (context.openBehavior) {
-            // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            await ext.context.globalState.update(mcpProjectCacheKey, cachedProject);
-            // Delete cached information if the extension host was not restarted after 5 seconds
-            setTimeout(() => { void ext.context.globalState.update(mcpProjectCacheKey, undefined); }, 5 * 1000);
-        }
-
-        runPostMcpProjectCreateSteps(cachedProject);
+        return;
     }
 
     private setSampleMcpRepoUrl(context: MCPProjectWizardContext): void {
