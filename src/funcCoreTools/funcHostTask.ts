@@ -68,8 +68,15 @@ class RunningFunctionTaskMap {
         return values.find(t => {
             const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
             // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
-            const resolvedBuildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
+            const workspacePath = typeof t.taskExecution.task?.scope === 'object'
+                ? (t.taskExecution.task.scope as vscode.WorkspaceFolder).uri?.path
+                : undefined;
+            const taskDirectory = workspacePath
+                ? taskExecution.options?.cwd?.replace('${workspaceFolder}', workspacePath)
+                : taskExecution.options?.cwd;
+            const resolvedBuildPath = workspacePath
+                ? buildPath?.replace('${workspaceFolder}', workspacePath)
+                : buildPath;
 
             // When neither cwd is set, both tasks use the default working directory — treat as a match
             if (!taskDirectory && !resolvedBuildPath) {
@@ -111,6 +118,11 @@ export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
 const runningFuncTasksChangedEmitter = new vscode.EventEmitter<void>();
 export const onRunningFuncTasksChanged = runningFuncTasksChangedEmitter.event;
+
+export function disposeFuncHostTaskEmitters(): void {
+    funcTaskStartedEmitter.dispose();
+    runningFuncTasksChangedEmitter.dispose();
+}
 
 const funcHostDebugContextKey = 'azureFunctions.funcHostDebugVisible';
 const alwaysShowFuncHostDebugViewSetting = 'alwaysShowFuncHostDebugView';
