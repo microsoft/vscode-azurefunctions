@@ -8,21 +8,37 @@ import { nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import { type IFunctionAppWizardContext } from "../commands/createFunctionApp/IFunctionAppWizardContext";
 import { ConnectionKey } from "../constants";
 
+const defaultStorageEndpointSuffix = 'core.windows.net';
+
+/**
+ * Gets the storage endpoint suffix from the Azure environment, stripping any leading dot.
+ * Falls back to 'core.windows.net' if the environment doesn't provide one.
+ */
+function getStorageEndpointSuffix(context: IFunctionAppWizardContext): string {
+    let suffix: string = context.environment?.storageEndpointSuffix ?? defaultStorageEndpointSuffix;
+    // https://github.com/Azure/azure-sdk-for-node/issues/4706
+    if (suffix.startsWith('.')) {
+        suffix = suffix.substring(1);
+    }
+    return suffix;
+}
+
 export function createAzureWebJobsStorageManagedIdentitySettings(context: IFunctionAppWizardContext): NameValuePair[] {
     const appSettings: NameValuePair[] = [];
     const storageAccountName = context.newStorageAccountName ?? context.storageAccount?.name;
     if (context.managedIdentity) {
+        const endpointSuffix = getStorageEndpointSuffix(context);
         appSettings.push({
             name: `${ConnectionKey.Storage}__blobServiceUri`,
-            value: `https://${storageAccountName}.blob.core.windows.net`
+            value: `https://${storageAccountName}.blob.${endpointSuffix}`
         });
         appSettings.push({
             name: `${ConnectionKey.Storage}__queueServiceUri`,
-            value: `https://${storageAccountName}.queue.core.windows.net`
+            value: `https://${storageAccountName}.queue.${endpointSuffix}`
         });
         appSettings.push({
             name: `${ConnectionKey.Storage}__tableServiceUri`,
-            value: `https://${storageAccountName}.table.core.windows.net`
+            value: `https://${storageAccountName}.table.${endpointSuffix}`
         });
         appSettings.push({
             name: `${ConnectionKey.Storage}__clientId`,
