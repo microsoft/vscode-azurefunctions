@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { funcPackageName, PackageManager } from '../constants';
 import { FuncVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
@@ -17,11 +18,13 @@ export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<
 
     // Always check for npm (mac, windows, linux)
     try {
-        isFuncInstalled ?
-            await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', '-g', funcPackageName) :
-            await cpUtils.executeCommand(undefined, undefined, 'npm', '--version');
+        if (isFuncInstalled) {
+            await cpUtils.executeCommand(undefined, undefined, 'npm', composeArgs(withArg('ls', '-g', funcPackageName))());
+        } else {
+            await cpUtils.executeCommand(undefined, undefined, 'npm', composeArgs(withArg('--version'))());
+        }
         result.push(PackageManager.npm);
-    } catch (error) {
+    } catch (_error) {
         // an error indicates no npm
     }
 
@@ -38,9 +41,9 @@ async function hasBrew(isFuncInstalled: boolean): Promise<boolean> {
                 }
             } else {
                 try {
-                    await cpUtils.executeCommand(undefined, undefined, 'brew', '--version');
+                    await cpUtils.executeCommand(undefined, undefined, 'brew', composeArgs(withArg('--version'))());
                     return true;
-                } catch (error) {
+                } catch (_error) {
                     // an error indicates no brew
                 }
             }

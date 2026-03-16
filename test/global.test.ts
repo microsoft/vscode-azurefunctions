@@ -3,13 +3,20 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
+import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateSource, updateGlobalSetting, updateWorkspaceSetting, type IActionContext } from '../extension.bundle';
+import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, projectLanguageSetting, pythonVenvSetting } from '../src/constants';
+import { ext, TemplateSource } from '../src/extensionVariables';
+import { FuncVersion } from '../src/FuncVersion';
+import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
+import { envUtils } from '../src/utils/envUtils';
+import { getRandomHexString } from '../src/utils/fs';
+import { getGlobalSetting, updateGlobalSetting, updateWorkspaceSetting } from '../src/vsCodeConfig/settings';
+import { getTestApi } from './utils/testApiAccess';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -44,6 +51,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
+    testGlobalSetup();
 
     await AzExtFsExtra.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
@@ -61,12 +69,16 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         context.ui = new TestUserInput(vscode);
     });
 
+    // Also register the handler in the BUNDLE's vscode-azext-utils instance.
+    // The test module and the bundle each have their own copy of vscode-azext-utils,
+    // so handlers registered above don't apply to action contexts created within the bundle.
+    const testApi = await getTestApi();
+    testApi.testing.registerOnActionStartHandler(context => {
+        context.ui = new TestUserInput(vscode);
+    });
+
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
-
-    if (!updateBackupTemplates) {
-        await preLoadTemplates();
-    }
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
@@ -83,36 +95,6 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     }
     await updateGlobalSetting(requestTimeoutKey, oldRequestTimeout);
 });
-
-/**
- * Pre-load templates so that the first related unit test doesn't time out
- */
-async function preLoadTemplates(): Promise<void> {
-    const providers = [ext.templateProvider.get(await createTestActionContext())];
-    for (const source of backupLatestTemplateSources) {
-        const provider = new CentralTemplateProvider(source);
-        templateProviderMap.set(source, provider);
-        providers.push(provider);
-    }
-
-    const tasks: Promise<unknown>[] = [];
-    for (const provider of providers) {
-        await runWithTestActionContext('preLoadTemplates', async context => {
-            ext.templateProvider.registerActionVariable(provider, context);
-            for (const version of Object.values(FuncVersion)) {
-                if (version === FuncVersion.v4) {
-                    // v4 doesn't have templates yet
-                    continue;
-                }
-
-                for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, undefined));
-                }
-            }
-        });
-    }
-    await Promise.all(tasks);
-}
 
 /**
  * Not worth testing older versions for every build

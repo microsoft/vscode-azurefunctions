@@ -4,9 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as path from 'path';
-import { cpUtils, delay, ext, getGlobalSetting, getRandomHexString, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
+import { pythonVenvSetting } from '../src/constants';
+import { ext } from '../src/extensionVariables';
+import { cpUtils } from '../src/utils/cpUtils';
+import { delay } from '../src/utils/delay';
+import { getRandomHexString } from '../src/utils/fs';
+import { venvUtils } from '../src/utils/venvUtils';
+import { getGlobalSetting, updateGlobalSetting } from '../src/vsCodeConfig/settings';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
@@ -23,8 +30,13 @@ suite('venvUtils', () => {
         if (longRunningTestsEnabled) {
             this.timeout(60 * 1000);
             await AzExtFsExtra.ensureDir(testFolder);
-            const pyAlias: string = process.platform === 'win32' ? 'py' : 'python3';
-            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, '-m', 'venv', venvName);
+            const pyAlias: string | undefined = await findPythonAlias();
+            if (!pyAlias) {
+                console.log('No Python installation found, skipping venvUtils tests');
+                this.skip();
+                return;
+            }
+            await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, composeArgs(withArg('-m', 'venv', venvName))());
         }
     });
 
@@ -117,6 +129,19 @@ suite('venvUtils', () => {
         assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'linux'), '.venv/bin/python -m do a thing');
     });
 });
+
+async function findPythonAlias(): Promise<string | undefined> {
+    const aliases = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
+    for (const alias of aliases) {
+        try {
+            await cpUtils.executeCommand(undefined, undefined, alias, ['--version']);
+            return alias;
+        } catch {
+            // try next alias
+        }
+    }
+    return undefined;
+}
 
 async function runWithWindowsTerminal(terminalPath: string, callback: () => void): Promise<void> {
     if (!(await AzExtFsExtra.pathExists(terminalPath))) {

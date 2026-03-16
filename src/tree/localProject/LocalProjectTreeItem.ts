@@ -88,7 +88,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         return false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._localFunctionsTreeItem, this._localSettingsTreeItem];
     }

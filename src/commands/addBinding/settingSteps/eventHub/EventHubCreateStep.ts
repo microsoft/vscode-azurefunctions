@@ -19,7 +19,7 @@ export class EventHubCreateStep extends AzureWizardExecuteStep<IEventHubWizardCo
 
         const client: EventHubManagementClient = await createEventHubClient(context);
         // TODO: use randomUtils when the utils package is updated
-        const eventHubName = `${namespaceName}-${getRandomHexString()}`
+        const eventHubName = `${namespaceName}-${getRandomHexString()}`;
         // don't bother prompting the user-- just create one with a default name and properties
         context.eventhubname = (await client.eventHubs.createOrUpdate(resourceGroupName, namespaceName, eventHubName, {})).name;
         // it won't have any auth rules since it was just created so just use root namespace rule

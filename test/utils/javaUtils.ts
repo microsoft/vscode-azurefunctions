@@ -6,8 +6,9 @@
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { createNewProjectInternal, ProjectLanguage } from '../../extension.bundle';
+import { ProjectLanguage } from '../../src/constants';
 import { cleanTestWorkspace } from '../global.test';
+import { getCachedTestApi } from './testApiAccess';
 
 export namespace javaUtils {
     export async function addJavaProjectToWorkspace(testWorkspacePath: string): Promise<void> {
@@ -17,7 +18,8 @@ export namespace javaUtils {
             await cleanTestWorkspace();
             await runWithTestActionContext('createNewProject', async context => {
                 await context.ui.runWithInputs(inputs, async () => {
-                    await createNewProjectInternal(context, {});
+                    const testApi = getCachedTestApi();
+                    await testApi.commands.createNewProjectInternal(context, {});
                 });
             });
         }

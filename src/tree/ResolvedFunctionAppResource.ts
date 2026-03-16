@@ -29,12 +29,17 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedFunctionAppRes
     return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
 
+type ResolvedFunctionAppResourceOptions = {
+    showLocationInTreeItemDescription?: boolean;
+};
+
 export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase implements ResolvedAppResourceBase {
     protected _site: ParsedSite | undefined = undefined;
-    public data: Site;
+    declare public data: Site;
     public dataModel: FunctionAppModel;
 
     private _subscription: ISubscriptionContext;
+    private _options: ResolvedFunctionAppResourceOptions;
     public logStreamPath: string = '';
     public appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
@@ -67,9 +72,10 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
 
-    public constructor(subscription: ISubscriptionContext, site: Site | undefined, dataModel?: FunctionAppModel) {
+    public constructor(subscription: ISubscriptionContext, site: Site | undefined, dataModel?: FunctionAppModel, options?: ResolvedFunctionAppResourceOptions) {
         super();
         this._subscription = subscription;
+        this._options = options ?? {};
         this.contextValuesToAdd = [];
         if (dataModel) {
             this._isFlex = dataModel.isFlex;
@@ -148,11 +154,18 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
     }
 
     public get description(): string | undefined {
-        let state = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
-        if (this._isFlex && !state) {
-            state = localize('flexFunctionAppState', 'Flex Consumption');
+        let description = this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        if (this._isFlex && !description) {
+            description = localize('flexFunctionAppState', 'Flex Consumption');
         }
-        return state;
+        if (this._options.showLocationInTreeItemDescription) {
+            if (description) {
+                description += ` (${this.dataModel.location})`;
+            } else {
+                description = this.dataModel.location;
+            }
+        }
+        return description;
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -177,6 +190,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         this._cachedIsConsumption = undefined;
 
         // on refresh, we should reinitialize the site to ensure we have the latest data
+        await this.initSite(context);
         const client = await this.site.createClient(context);
         const site = await client.getSite();
         if (site) {
@@ -211,7 +225,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
             let data: any;
             try {
                 await this.initSite(context);
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
                 data = JSON.parse((await getFile(context, this.site, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
@@ -301,7 +315,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         return children;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
         return await callWithTelemetryAndErrorHandling('functionApp.pickTreeItem', async (context: IActionContext) => {
             await this.initSite(context);
@@ -365,7 +379,7 @@ export class ResolvedFunctionAppResource extends ResolvedFunctionAppBase impleme
         try {
             const appSettings: StringDictionary = await client.listApplicationSettings();
             return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
-        } catch (error) {
+        } catch (_error) {
             // if we can't read the app settings, just assume that this is read-only
             return true;
         }

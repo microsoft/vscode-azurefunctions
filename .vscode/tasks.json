@@ -2,22 +2,43 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "npm",
-            "script": "compile",
+            "label": "Watch: ESBuild",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "build:esbuild",
+                "--",
+                "--watch",
+            ],
+            "problemMatcher": "$esbuild-watch",
+            "presentation": {
+                "reveal": "silent",
+            },
             "group": {
                 "kind": "build",
-                "isDefault": true
             },
             "isBackground": true,
-            "presentation": {
-                "reveal": "never"
-            },
-            "problemMatcher": "$tsc-watch"
         },
         {
-            "type": "npm",
-            "script": "lint",
-            "problemMatcher": "$eslint-stylish"
-        }
+            "label": "Watch: Check Types",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "build:check",
+                "--",
+                "--watch",
+            ],
+            "problemMatcher": "$tsc-watch",
+            "presentation": {
+                "revealProblems": "onProblem",
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true,
+            },
+            "isBackground": true,
+        },
     ]
 }

@@ -112,7 +112,7 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
 
             const parsedActions: ParsedAction[] = [];
             for (const action of job.actions) {
-                const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase())
+                const parsedAction = templateV2.actions.find(a => a.name.toLowerCase() === action.toLowerCase());
                 if (parsedAction) {
                     parsedActions.push(parsedAction);
                 }

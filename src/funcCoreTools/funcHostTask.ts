@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -25,7 +26,7 @@ interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
 
 namespace DotnetDebugDebugConfiguration {
     export function is(debugConfiguration: vscode.DebugConfiguration): debugConfiguration is DotnetDebugDebugConfiguration {
-        return debugConfiguration.type === 'coreclr' && 'launchServiceData' in debugConfiguration
+        return debugConfiguration.type === 'coreclr' && 'launchServiceData' in debugConfiguration;
     }
 }
 
@@ -34,7 +35,7 @@ class RunningFunctionTaskMap {
 
     public set(key: vscode.WorkspaceFolder | vscode.TaskScope, value: IRunningFuncTask): void {
         const values = this._map.get(key) || [];
-        values.push(value)
+        values.push(value);
         this._map.set(key, values);
     }
 
@@ -43,8 +44,8 @@ class RunningFunctionTaskMap {
         return values.find(t => {
             const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
             // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
+            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
+            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
             return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
         });
     }
@@ -58,7 +59,7 @@ class RunningFunctionTaskMap {
     }
 
     public delete(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): void {
-        const value = this.get(key, buildPath)
+        const value = this.get(key, buildPath);
         const values = this._map.get(key) || [];
 
         if (value) {
@@ -112,16 +113,16 @@ export function registerFuncHostTaskEvents(): void {
 
         // Used to stop the task started with pickFuncProcess.ts startFuncProcessFromApi.
         if (DotnetDebugDebugConfiguration.is(debugSession.configuration) && debugSession.configuration.launchServiceData.buildPath) {
-            const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath)
+            const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath);
 
-            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath)
+            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath);
             if (workspaceFolder === undefined) {
                 throw new Error(localize('noWorkspaceFolderForBuildPath', 'No workspace folder found for path "{0}".', buildPathUri.fsPath));
             }
 
             await stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, false);
 
-            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath)
+            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath);
         }
 
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
@@ -144,9 +145,9 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
 
     if (runningFuncTask !== undefined && runningFuncTask.length > 0) {
         for (const runningFuncTaskItem of runningFuncTask) {
-            if (!runningFuncTaskItem) break;
+            if (!runningFuncTaskItem) {break;}
             if (terminate) {
-                runningFuncTaskItem.taskExecution.terminate()
+                runningFuncTaskItem.taskExecution.terminate();
             } else {
                 // Try to find the real func process by port first, fall back to shell PID
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
@@ -178,7 +179,7 @@ async function killFuncProcessByPortOrPid(runningFuncTask: IRunningFuncTask, wor
         }
 
         throw new Error(`Could not find func process for port ${runningFuncTask.portNumber}`);
-    } catch (error) {
+    } catch (_error) {
         // don't look for the port and just terminate the whole process
         await stopFuncTaskIfRunning(workspaceFolder, undefined, true, true);
     }
@@ -230,7 +231,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
 
         if (process.platform === 'win32') {
             // Windows: Use netstat to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', '-ano');
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', composeArgs(withArg('-ano'))());
             if (result.code === 0) {
                 const lines = result.cmdOutput.split('\n');
                 for (const line of lines) {
@@ -248,8 +249,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
                     undefined,
                     undefined,
                     'powershell',
-                    '-Command',
-                    `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`
+                    composeArgs(withArg('-Command', `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`))()
                 );
                 if (psResult.code === 0 && psResult.cmdOutput.trim()) {
                     const pid = parseInt(psResult.cmdOutput.trim(), 10);
@@ -262,7 +262,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
             }
         } else {
             // Linux/Mac: Use lsof to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', '-ti', `:${portNumber}`);
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', composeArgs(withArg('-ti', `:${portNumber}`))());
             if (result.code === 0 && result.cmdOutput.trim()) {
                 const pid = parseInt(result.cmdOutput.trim(), 10);
                 if (!isNaN(pid)) {
@@ -270,7 +270,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
                 }
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // ignore error
     }
 

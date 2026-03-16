@@ -100,7 +100,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
     for (const rawTemplate of rawTemplates) {
         try {
             functionTemplates.push(parseDotnetTemplate(<IRawTemplate>rawTemplate));
-        } catch (error) {
+        } catch (_error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }

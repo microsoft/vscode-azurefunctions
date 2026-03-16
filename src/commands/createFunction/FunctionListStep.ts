@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import * as escape from 'escape-string-regexp';
+import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -90,7 +90,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 localize('selectFuncTemplate', 'Select a template for your function');
 
             if (templateProvider.templateSource) {
-                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource)
+                placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource);
             }
 
             const result: FunctionTemplateBase | TemplatePromptResult =
@@ -137,7 +137,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 suppressPersistence: true,
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
-            })
+            });
         } else if (language === ProjectLanguage.CSharp ||
             language === ProjectLanguage.Java ||
             (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||
@@ -213,12 +213,12 @@ function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number
             return 4;
         }
     }
-    
+
     const priorityDiff = getPriority(a.id) - getPriority(b.id);
     if (priorityDiff !== 0) {
         return priorityDiff;
     }
-    
+
     // If priorities are the same, sort alphabetically by name
     return a.name.localeCompare(b.name);
 }

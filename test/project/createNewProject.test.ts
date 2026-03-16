@@ -4,11 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
+import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
+import { TemplateSource } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
-import { backupLatestTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
+import { shouldSkipVersion } from '../global.test';
+import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelVersion } from './validateProject';
+
+const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
@@ -80,9 +85,9 @@ for (const testCase of testCases) {
             suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {
                 await runWithTestActionContext('createProject', async context => {
-                    await runForTemplateSource(context, source, async () => {
-                        await createAndValidateProject(context, testCase);
-                    });
+                    const testApi = getCachedTestApi();
+                    testApi.commands.registerTemplateSource(context, source);
+                    await createAndValidateProject(context, testCase);
                 });
             }
         })
@@ -91,5 +96,8 @@ for (const testCase of testCases) {
 
 addParallelSuite(parallelTests, {
     title: 'Create New Project',
-    timeoutMS: 2 * 60 * 1000
+    timeoutMS: 2 * 60 * 1000,
+    suiteSetup: async () => {
+        await getTestApi();
+    }
 });

@@ -88,9 +88,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         // Ensure all the providers are registered before
         const registerProvidersTask = registerProviders(context, subscription);
-        const { wizardContext, promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, subscription.subscription, language)
+        const { wizardContext, promptSteps, executeSteps } = await createCreateFunctionAppComponents(context, subscription.subscription, language);
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
-        const wizard: AzureWizard<IFunctionAppWizardContext> = new AzureWizard(wizardContext, {
+        const wizard = new AzureWizard<IFunctionAppWizardContext>(wizardContext, {
             promptSteps,
             executeSteps,
             title,
@@ -101,7 +101,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         // if the providers aren't registered yet, await it here because it is required by this point
         await registerProvidersTask;
-        wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
+        wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'));
         // only disable shared key access if the user is using a managed identity and a flex consumption plan since other app service plans
         // and containerized function still rely on connection strings
         wizardContext.disableSharedKeyAccess = wizardContext.useManagedIdentity && wizardContext.useFlexConsumptionPlan;
@@ -110,7 +110,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         let node: SlotTreeItem | ContainerTreeItem;
 
         if (context.dockerfilePath) {
-            const resolved = new ResolvedContainerizedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'))
+            const resolved = new ResolvedContainerizedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
             node = new ContainerTreeItem(subscription, resolved);
         } else {
             const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));

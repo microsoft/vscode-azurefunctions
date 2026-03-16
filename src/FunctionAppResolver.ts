@@ -1,3 +1,8 @@
+﻿/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { type ResourceGraphClient } from "@azure/arm-resourcegraph";
 import { createWebSiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
@@ -6,6 +11,7 @@ import { type AppResource, type AppResourceResolver } from "@microsoft/vscode-az
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { ResolvedContainerizedFunctionAppResource } from "./tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
 import { createResourceGraphClient } from "./utils/azureClients";
+import { getGlobalSetting } from "./vsCodeConfig/settings";
 
 export type FunctionAppModel = {
     isFlex: boolean,
@@ -34,6 +40,7 @@ export class FunctionAppResolver implements AppResourceResolver {
     private loaded: boolean = false;
     private siteCacheLastUpdated = 0;
     private siteCache: Map<string, FunctionAppModel> = new Map<string, FunctionAppModel>();
+    private siteNameCounter: Map<string, number> = new Map<string, number>();
     private listFunctionAppsTask: Promise<void> | undefined;
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | ResolvedContainerizedFunctionAppResource | undefined> {
@@ -43,8 +50,10 @@ export class FunctionAppResolver implements AppResourceResolver {
                 // do this before the graph client is created because the async graph client create takes enough time to mess up the following resolves
                 this.loaded = false;
                 this.siteCache.clear(); // clear the cache before fetching new data
+                this.siteNameCounter.clear();
                 this.siteCacheLastUpdated = Date.now();
                 const graphClient = await createResourceGraphClient({ ...context, ...subContext });
+
                 async function fetchAllApps(graphClient: ResourceGraphClient, subContext: ISubscriptionContext, resolver: FunctionAppResolver): Promise<void> {
                     const query = `resources | where type == 'microsoft.web/sites' and kind contains 'functionapp' and kind !contains 'workflowapp'`;
 
@@ -60,6 +69,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                         const record = response.data as Record<string, FunctionQueryModel>;
                         // seems as if properties can be null, so we need to check for that
                         Object.values(record).forEach(data => {
+                            resolver.countSiteName(data.name);
                             const dataModel: FunctionAppModel = {
                                 isFlex: data.properties?.sku?.toLocaleLowerCase() === 'flexconsumption',
                                 id: data.id,
@@ -69,7 +79,7 @@ export class FunctionAppResolver implements AppResourceResolver {
                                 resourceGroup: data.resourceGroup,
                                 status: data.properties?.state,
                                 location: data.location
-                            }
+                            };
                             resolver.siteCache.set(dataModel.id.toLowerCase(), dataModel);
                         });
 
@@ -93,18 +103,36 @@ export class FunctionAppResolver implements AppResourceResolver {
                 await this.listFunctionAppsTask;
             }
 
+            const groupBy: string | undefined = getGlobalSetting<string>('groupBy', 'azureResourceGroups');
+            const hasDuplicateSiteName: boolean = (this.siteNameCounter.get(resource.name) ?? 1) > 1;
+
             const siteModel = this.siteCache.get(nonNullProp(resource, 'id').toLowerCase());
             if (!siteModel || siteModel.kind === 'functionapp,linux,container,azurecontainerapps') {
+                // Edge Case: `siteModel` can be `undefined` after calling `createFunctionApp` because the result does not propagate to MS Graph in time; a fallback fetch + count is needed
+                if (!siteModel) {
+                    this.countSiteName(resource.name);
+                }
+
                 // if the site model is not found or if it's a containerized function app, we need the full site details
                 const client = await createWebSiteClient({ ...context, ...subContext });
                 const fullSite = await client.webApps.get(getResourceGroupFromId(resource.id), resource.name);
+
                 if (fullSite.kind === 'functionapp,linux,container,azurecontainerapps') {
-                    return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite);
+                    return ResolvedContainerizedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, fullSite, {
+                        // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
+                        showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                    });
                 }
 
-                return new ResolvedFunctionAppResource(subContext, fullSite);
+                return new ResolvedFunctionAppResource(subContext, fullSite, undefined, {
+                    // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
+                    showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                });
             } else if (siteModel) {
-                return new ResolvedFunctionAppResource(subContext, undefined, siteModel);
+                return new ResolvedFunctionAppResource(subContext, undefined, siteModel, {
+                    // Display the location as well if there is a duplicate name, otherwise they won't be easily distinguishable in the tree view
+                    showLocationInTreeItemDescription: groupBy === 'resourceType' && hasDuplicateSiteName,
+                });
             }
 
             return undefined;
@@ -115,5 +143,10 @@ export class FunctionAppResolver implements AppResourceResolver {
         return resource.type.toLowerCase() === 'microsoft.web/sites'
             && !!resource.kind?.includes('functionapp')
             && !resource.kind?.includes('workflowapp'); // exclude logic apps
+    }
+
+    private countSiteName(siteName: string): void {
+        const count: number = (this.siteNameCounter.get(siteName) ?? 0) + 1;
+        this.siteNameCounter.set(siteName, count);
     }
 }

@@ -46,7 +46,7 @@ export class ConnectionsListStep extends AzureWizardPromptStep<AddMIConnectionsC
     }
 
     private async getPicks(context: AddMIConnectionsContext): Promise<IAzureQuickPickItem<Connection>[]> {
-        return context.functionapp ? this.getRemoteQuickPicks(context) : this.getLocalQuickPicks(context)
+        return context.functionapp ? this.getRemoteQuickPicks(context) : this.getLocalQuickPicks(context);
     }
 
     private async getLocalQuickPicks(context: AddMIConnectionsContext, workspaceFolder?: vscode.WorkspaceFolder): Promise<IAzureQuickPickItem<Connection>[]> {

@@ -34,7 +34,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
     picks.push(learnMoreQp);
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };
-    // eslint-disable-next-line no-constant-condition
+     
     while (true) {
         const version: FuncVersion | undefined = (await context.ui.showQuickPick(picks, options)).data;
         if (version === undefined) {

@@ -32,7 +32,7 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
 
         const client: EventHubManagementClient = await createEventHubClient(context);
         const eventHubs = await uiUtils.listAllIterator(client.eventHubs.listByNamespace(resourceGroupName, namespaceName));
-        picks.push(...eventHubs.map((eb: Eventhub) => { return { data: eb, label: nonNullProp(eb, 'name') } }))
+        picks.push(...eventHubs.map((eb: Eventhub) => { return { data: eb, label: nonNullProp(eb, 'name') }; }));
 
         const result: Eventhub | undefined = (await context.ui.showQuickPick(picks, { placeHolder })).data;
 

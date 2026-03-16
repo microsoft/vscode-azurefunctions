@@ -42,7 +42,7 @@ export class ContainerAppSettingsClient implements IAppSettingsClient {
     }
 
     public async listApplicationSettings(): Promise<StringDictionary> {
-        return await this._client.webApps.listApplicationSettings(this._resourceGroup, this._siteName)
+        return await this._client.webApps.listApplicationSettings(this._resourceGroup, this._siteName);
     }
 
     public async updateApplicationSettings(appSettings: StringDictionary): Promise<StringDictionary> {

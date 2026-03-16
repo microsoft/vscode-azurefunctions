@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg, withNamedArg, withQuotedArg, type CommandLineArgs } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { coerce as semVerCoerce, type SemVer } from 'semver';
 import { type FuncVersion } from '../../FuncVersion';
@@ -11,20 +12,21 @@ import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
+export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', additionalArgs?: CommandLineArgs): Promise<string> {
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
+
+    const args = composeArgs(
+        withNamedArg('--roll-forward', 'Major'),
+        withQuotedArg(jsonDllPath),
+        withNamedArg('--templateDir', getDotnetTemplateDir(context, version, projTemplateKey), { shouldQuote: true }),
+        withNamedArg('--operation', operation),
+        withArg(...(additionalArgs ?? [])),
+    )();
     return await cpUtils.executeCommand(
         undefined,
         workingDirectory,
         'dotnet',
-        '--roll-forward',
-        'Major',
-        cpUtils.wrapArgInQuotes(jsonDllPath),
-        '--templateDir',
-        cpUtils.wrapArgInQuotes(getDotnetTemplateDir(context, version, projTemplateKey)),
-        '--operation',
-        operation,
-        ...args);
+        args);
 }
 
 export function getDotnetItemTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {
@@ -50,13 +52,13 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
     if (!cachedFramework) {
         let versions: string = '';
         try {
-            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--version');
+            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', composeArgs(withArg('--version'))());
         } catch {
             // ignore
         }
 
         try {
-            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--list-sdks');
+            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', composeArgs(withArg('--list-sdks'))());
         } catch {
             // ignore
         }

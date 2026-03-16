@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { funcPackageName } from '../constants';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
@@ -33,9 +34,9 @@ export async function tryGetInstalledBrewPackageName(version: FuncVersion): Prom
 
 async function isBrewPackageInstalled(packageName: string): Promise<boolean> {
     try {
-        await cpUtils.executeCommand(undefined, undefined, 'brew', 'ls', packageName);
+        await cpUtils.executeCommand(undefined, undefined, 'brew', composeArgs(withArg('ls', packageName))());
         return true;
-    } catch (error) {
+    } catch (_error) {
         return false;
     }
 }

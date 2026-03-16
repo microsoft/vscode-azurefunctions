@@ -214,7 +214,7 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
 
         return {
             asyncOperation: response.headers.get('Azure-AsyncOperation') ?? undefined
-        }
+        };
     }
 
     private async getAsJson<T>(url: string, authentication: AzureAuthentication): Promise<T | undefined> {
@@ -246,7 +246,7 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
         return {
             asyncOperation: response.headers.get('Azure-AsyncOperation') ?? undefined,
             value
-        }
+        };
     }
 
     private async fetch(options: FetchOptions): Promise<Response> {
