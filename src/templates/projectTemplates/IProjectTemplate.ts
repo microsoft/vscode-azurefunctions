@@ -132,7 +132,7 @@ export enum TemplateCategory {
     Starter = 'starter',
     WebAPIs = 'web-apis',
     EventProcessing = 'event-processing',
-    ScheduledTasks = 'scheduled-tasks',
+    ScheduledTasks = 'scheduling',
     AiMl = 'ai-ml',
     DataProcessing = 'data-processing',
     Workflows = 'workflows',

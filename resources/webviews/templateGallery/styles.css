@@ -177,6 +177,20 @@ body {
     border-color: var(--vscode-button-background);
 }
 
+/* Language filter chips — idle state shows a colored left border as a hint */
+#language-filters .filter-chip[data-value="python"] { border-left: 3px solid #3776AB; }
+#language-filters .filter-chip[data-value="node"]   { border-left: 3px solid #339933; }
+#language-filters .filter-chip[data-value="java"]   { border-left: 3px solid #ED8B00; }
+#language-filters .filter-chip[data-value="dotnet"] { border-left: 3px solid #512BD4; }
+#language-filters .filter-chip[data-value="powershell"] { border-left: 3px solid #012456; }
+
+/* Active state fills with the language color */
+#language-filters .filter-chip.active[data-value="python"]     { background-color: #3776AB; color: white; border-color: #3776AB; }
+#language-filters .filter-chip.active[data-value="node"]       { background-color: #339933; color: white; border-color: #339933; }
+#language-filters .filter-chip.active[data-value="java"]       { background-color: #ED8B00; color: white; border-color: #ED8B00; }
+#language-filters .filter-chip.active[data-value="dotnet"]     { background-color: #512BD4; color: white; border-color: #512BD4; }
+#language-filters .filter-chip.active[data-value="powershell"] { background-color: #012456; color: white; border-color: #012456; }
+
 /* Results Bar */
 .results-bar {
     display: flex;
@@ -630,6 +644,18 @@ body {
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
     margin-top: 4px;
+}
+
+.form-static {
+    display: block;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .location-input-group {

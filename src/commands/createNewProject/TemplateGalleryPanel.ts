@@ -264,30 +264,55 @@ export class TemplateGalleryPanel {
                     context.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
                     if (gitInstalled) {
-                        await this._sendProgress('Cloning template repository...');
-                        const cloneCommand = `git clone --depth 1 --branch ${branch} "${template.repositoryUrl}" "${tempDir}"`;
-                        await cpUtils.executeCommand(undefined, undefined, cloneCommand);
+                        let sourceDir: string;
+
+                        if (template.folderPath) {
+                            // Sparse checkout — only download the specific folder
+                            await this._sendProgress('Cloning template (sparse)...');
+                            await cpUtils.executeCommand(undefined, undefined,
+                                'git', 'clone', '--depth', '1', '--filter=blob:none', '--sparse',
+                                '--branch', branch, template.repositoryUrl, tempDir);
+                            await cpUtils.executeCommand(undefined, tempDir,
+                                'git', 'sparse-checkout', 'set', template.folderPath);
+
+                            sourceDir = path.join(tempDir, template.folderPath);
+                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
+                                throw new Error(`Template folder "${template.folderPath}" not found in repository`);
+                            }
+                        } else {
+                            // Full clone
+                            await this._sendProgress('Cloning template repository...');
+                            await cpUtils.executeCommand(undefined, undefined,
+                                'git', 'clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir);
+
+                            sourceDir = tempDir;
+                            if (template.subdirectory) {
+                                sourceDir = path.join(tempDir, template.subdirectory);
+                            }
+                        }
 
                         // Remove .git so the project has no remote origin
                         const gitDir = path.join(tempDir, '.git');
                         if (await AzExtFsExtra.pathExists(gitDir)) {
                             await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
                         }
+
+                        await this._sendProgress('Setting up project files...');
+                        await this._copyDirectory(sourceDir, projectPath);
                     } else {
                         await this._sendProgress('Downloading template (git not found, using zip)...');
                         await this._downloadAndExtractZip(template.repositoryUrl, branch, tempDir);
+
+                        await this._sendProgress('Setting up project files...');
+
+                        let sourceDir = tempDir;
+                        if (template.folderPath) {
+                            sourceDir = path.join(tempDir, template.folderPath);
+                        } else if (template.subdirectory) {
+                            sourceDir = path.join(tempDir, template.subdirectory);
+                        }
+                        await this._copyDirectory(sourceDir, projectPath);
                     }
-
-                    await this._sendProgress('Setting up project files...');
-
-                    // Determine source directory (handle subdirectory if specified)
-                    let sourceDir = tempDir;
-                    if (template.subdirectory) {
-                        sourceDir = path.join(tempDir, template.subdirectory);
-                    }
-
-                    // Copy files to project path
-                    await this._copyDirectory(sourceDir, projectPath);
 
                     await this._sendProgress('Initializing git repository...');
                     await cpUtils.executeCommand(undefined, projectPath, 'git init');
@@ -772,7 +797,7 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                         <button class="filter-chip" data-value="starter" role="checkbox" aria-checked="false">Starter</button>
                         <button class="filter-chip" data-value="web-apis" role="checkbox" aria-checked="false">Web APIs</button>
                         <button class="filter-chip" data-value="event-processing" role="checkbox" aria-checked="false">Event Processing</button>
-                        <button class="filter-chip" data-value="scheduled-tasks" role="checkbox" aria-checked="false">Scheduled Tasks</button>
+                        <button class="filter-chip" data-value="scheduling" role="checkbox" aria-checked="false">Scheduling</button>
                         <button class="filter-chip" data-value="ai-ml" role="checkbox" aria-checked="false">AI & ML</button>
                         <button class="filter-chip" data-value="data-processing" role="checkbox" aria-checked="false">Data Processing</button>
                         <button class="filter-chip" data-value="workflows" role="checkbox" aria-checked="false">Workflows</button>
@@ -999,8 +1024,9 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                     <form id="config-form" class="config-form">
                         <div class="form-group">
                             <label for="language-select">Language</label>
-                            <select id="language-select" class="form-select" required>
+                            <select id="language-select" class="form-select">
                             </select>
+                            <span id="language-display" class="form-static hidden"></span>
                             <span class="form-hint" id="language-hint"></span>
                         </div>
 

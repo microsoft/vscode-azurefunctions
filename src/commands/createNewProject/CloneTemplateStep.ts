@@ -52,7 +52,7 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
                 } else {
                     progress.report({ message: localize('cloningRepository', 'Cloning repository...') });
                     await cpUtils.executeCommand(undefined, undefined,
-                        `git clone --depth 1 --branch ${branch} "${template.repositoryUrl}" "${tempDir}"`);
+                        'git', 'clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir);
 
                     sourceDir = tempDir;
                     if (template.subdirectory) {
@@ -124,31 +124,23 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
      * Clone only a specific folder from a repository using git sparse-checkout.
      *
      * Strategy:
-     *   1. `git clone --depth 1 --no-checkout --filter=blob:none` — fetches commit/tree
-     *      objects but no file blobs, keeping the initial download tiny.
-     *   2. `git sparse-checkout init --cone` — switches to cone mode, which operates on
-     *      whole directories (much faster than pattern mode).
-     *   3. `git sparse-checkout set <folderPath>` — registers the target directory.
-     *   4. `git checkout <branch>` — materialises only the blobs inside that directory.
+     *   1. `git clone --depth 1 --filter=blob:none --sparse --branch <branch>` — fetches
+     *      commit/tree objects but no file blobs, and initialises cone-mode sparse checkout
+     *      with only root-level files checked out.
+     *   2. `git sparse-checkout set <folderPath>` — switches the cone to the target folder
+     *      and triggers on-demand blob download for that folder only.
      *
      * Result: `destDir/<folderPath>/` contains the template files; nothing else is present.
      */
     private async sparseCheckout(destDir: string, repoUrl: string, branch: string, folderPath: string): Promise<void> {
-        // Step 1 — shallow clone without checking out any files
+        // Step 1 — shallow clone with sparse checkout wired up at clone time
         await cpUtils.executeCommand(undefined, undefined,
-            `git clone --depth 1 --no-checkout --filter=blob:none "${repoUrl}" "${destDir}"`);
+            'git', 'clone', '--depth', '1', '--filter=blob:none', '--sparse',
+            '--branch', branch, repoUrl, destDir);
 
-        // Step 2 — enable cone-mode sparse checkout
-        await cpUtils.executeCommand(undefined, undefined,
-            `git -C "${destDir}" sparse-checkout init --cone`);
-
-        // Step 3 — limit the working tree to the requested folder
-        await cpUtils.executeCommand(undefined, undefined,
-            `git -C "${destDir}" sparse-checkout set "${folderPath}"`);
-
-        // Step 4 — materialise the blobs for that folder on the target branch
-        await cpUtils.executeCommand(undefined, undefined,
-            `git -C "${destDir}" checkout ${branch}`);
+        // Step 2 — narrow the cone to the requested folder; blobs are fetched on demand
+        await cpUtils.executeCommand(undefined, destDir,
+            'git', 'sparse-checkout', 'set', folderPath);
     }
 
     /**

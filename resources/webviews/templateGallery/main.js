@@ -45,7 +45,7 @@
         'starter': 'Starter',
         'web-apis': 'Web APIs',
         'event-processing': 'Event Processing',
-        'scheduled-tasks': 'Scheduled Tasks',
+        scheduling: 'Scheduled Tasks',
         'ai-ml': 'AI & ML',
         'data-processing': 'Data Processing',
         'workflows': 'Workflows',
@@ -90,6 +90,7 @@
         backButton: document.getElementById('back-button'),
         selectedTemplateCard: document.getElementById('selected-template'),
         languageSelect: document.getElementById('language-select'),
+        languageDisplay: document.getElementById('language-display'),
         languageHint: document.getElementById('language-hint'),
         locationInput: document.getElementById('location-input'),
         browseButton: document.getElementById('browse-button'),
@@ -479,22 +480,42 @@
             <div class="card-languages">${languagesHtml}</div>
         `;
 
-        // Language select
+        // Language select or static display
         const select = elements.languageSelect;
+        const display = elements.languageDisplay;
         select.innerHTML = '';
 
         // Get unique languages for this template
         const uniqueLanguages = [...new Set(template.languages)];
-        uniqueLanguages.forEach(lang => {
+
+        if (uniqueLanguages.length === 1) {
+            // Single language — show as plain text, hide the dropdown
+            const lang = uniqueLanguages[0];
             const option = document.createElement('option');
             option.value = lang;
-            option.textContent = lang;
             select.appendChild(option);
-        });
+            select.classList.add('hidden');
+            if (display) {
+                display.textContent = lang;
+                display.classList.remove('hidden');
+            }
+        } else {
+            // Multiple languages — show dropdown
+            uniqueLanguages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = lang;
+                select.appendChild(option);
+            });
+            select.classList.remove('hidden');
+            if (display) {
+                display.classList.add('hidden');
+            }
+            select.addEventListener('change', updateLanguageHint);
+        }
 
         // Set hint based on language
         updateLanguageHint();
-        select.addEventListener('change', updateLanguageHint);
 
         // Render what's included list from template
         renderWhatsIncluded(template);

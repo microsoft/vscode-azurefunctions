@@ -99,7 +99,7 @@ export class TemplateListStep extends AzureWizardPromptStep<IProjectWizardContex
             [TemplateCategory.Starter]: localize('categoryStarter', 'Starter'),
             [TemplateCategory.WebAPIs]: localize('categoryWebApis', 'Web APIs'),
             [TemplateCategory.EventProcessing]: localize('categoryEventProcessing', 'Event Processing'),
-            [TemplateCategory.ScheduledTasks]: localize('categoryScheduledTasks', 'Scheduled Tasks'),
+            [TemplateCategory.ScheduledTasks]: localize('categoryScheduledTasks', 'Scheduling'),
             [TemplateCategory.AiMl]: localize('categoryAiMl', 'AI & Machine Learning'),
             [TemplateCategory.DataProcessing]: localize('categoryDataProcessing', 'Data Processing'),
             [TemplateCategory.Workflows]: localize('categoryWorkflows', 'Workflows'),
