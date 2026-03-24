@@ -6,7 +6,7 @@
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { getRecentLogsPlainText } from '../funcCoreTools/funcHostErrorUtils';
-import { onRunningFuncTasksChanged, refreshFuncHostDebugContext, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { onRunningFuncTasksChanged, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
 import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode } from './FunctionHostDebugView';
@@ -41,7 +41,8 @@ async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
 
     // Show Run & Debug view (Debug container) so the view (contributed under it) is visible.
     try {
-        await vscode.commands.executeCommand('workbench.view.debug');
+        // Focus the specific tree view to expand it within the Debug sidebar.
+        await vscode.commands.executeCommand(`${viewId}.focus`);
         // Mark as revealed only after the view open attempt, to avoid repeated calls.
         for (const t of newlyErroredTasks) {
             t.hasReportedLiveErrors = true;
@@ -61,9 +62,6 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
             void tryOpenDebugViewOnFirstFuncHostError();
         }),
     );
-
-    // Ensure the context key is correct on activation.
-    void refreshFuncHostDebugContext();
 
     registerCommand('azureFunctions.funcHostDebug.clearErrors', async (actionContext: IActionContext) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
@@ -140,6 +138,5 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
     registerCommand('azureFunctions.funcHostDebug.refresh', async (actionContext: IActionContext) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
         provider.refresh();
-        await refreshFuncHostDebugContext();
     });
 }

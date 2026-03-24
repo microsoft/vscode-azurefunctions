@@ -39,7 +39,6 @@
     "azureFunctions.disconnectRepo": "Disconnect from Repo...",
     "azureFunctions.enableFunction": "Enable Function",
     "azureFunctions.enableJavaRemoteDebugging": "Enable remote debugging for Java Functions Apps running on Windows. (experimental)",
-    "azureFunctions.alwaysShowFuncHostDebugView": "Always show the Function Host Debug view in Run and Debug, even when no host task is running.",
     "azureFunctions.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureFunctions.enableRemoteDebugging": "Enable remote debugging for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported. (experimental)",
     "azureFunctions.enableSystemIdentity": "Enable System Assigned Identity",

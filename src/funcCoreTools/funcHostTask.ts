@@ -124,31 +124,6 @@ export function disposeFuncHostTaskEmitters(): void {
     runningFuncTasksChangedEmitter.dispose();
 }
 
-const funcHostDebugContextKey = 'azureFunctions.funcHostDebugVisible';
-const alwaysShowFuncHostDebugViewSetting = 'alwaysShowFuncHostDebugView';
-
-function getAllRunningFuncTasks(): IRunningFuncTaskWithScope[] {
-    const tasks: IRunningFuncTaskWithScope[] = [];
-    for (const folder of vscode.workspace.workspaceFolders ?? []) {
-        for (const t of runningFuncTaskMap.getAll(folder)) {
-            if (t) {
-                tasks.push({ scope: folder, task: t });
-            }
-        }
-    }
-
-    return tasks;
-}
-
-async function updateFuncHostDebugContext(): Promise<void> {
-    const alwaysShow = !!getWorkspaceSetting<boolean>(alwaysShowFuncHostDebugViewSetting);
-    await vscode.commands.executeCommand('setContext', funcHostDebugContextKey, alwaysShow || getAllRunningFuncTasks().length > 0);
-}
-
-export async function refreshFuncHostDebugContext(): Promise<void> {
-    await updateFuncHostDebugContext();
-}
-
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
@@ -215,16 +190,6 @@ export function registerFuncHostTaskEvents(): void {
             funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
 
             runningFuncTasksChangedEmitter.fire();
-            await updateFuncHostDebugContext();
-        }
-    });
-
-    registerEvent('azureFunctions.onDidChangeConfiguration', vscode.workspace.onDidChangeConfiguration, async (context: IActionContext, e: vscode.ConfigurationChangeEvent) => {
-        context.errorHandling.suppressDisplay = true;
-        context.telemetry.suppressIfSuccessful = true;
-
-        if (e.affectsConfiguration(`azureFunctions.${alwaysShowFuncHostDebugViewSetting}`)) {
-            await updateFuncHostDebugContext();
         }
     });
 
@@ -242,7 +207,6 @@ export function registerFuncHostTaskEvents(): void {
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
 
             runningFuncTasksChangedEmitter.fire();
-            await updateFuncHostDebugContext();
         }
     });
 
@@ -349,7 +313,6 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
     }
 
     runningFuncTasksChangedEmitter.fire();
-    await updateFuncHostDebugContext();
 }
 
 /**

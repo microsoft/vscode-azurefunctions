@@ -95,7 +95,8 @@
                 {
                     "id": "azureFunctions.funcHostDebugView",
                     "name": "%azureFunctions.funcHostDebugView.title%",
-                    "when": "!virtualWorkspace && azureFunctions.funcHostDebugVisible",
+                    "when": "!virtualWorkspace",
+                    "visibility": "collapsed",
                     "icon": "resources/azure-functions.svg"
                 }
             ]
@@ -1271,11 +1272,6 @@
                     "azureFunctions.enableJavaRemoteDebugging": {
                         "type": "boolean",
                         "description": "%azureFunctions.enableJavaRemoteDebugging%",
-                        "default": false
-                    },
-                    "azureFunctions.alwaysShowFuncHostDebugView": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.alwaysShowFuncHostDebugView%",
                         "default": false
                     },
                     "azureFunctions.showProjectWarning": {
