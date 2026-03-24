@@ -9,6 +9,8 @@ import { type IStorageConnectionWizardContext } from "../../../../../commands/ap
 import { StorageConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../../constants";
 import { getLocalSettingsConnectionString } from "../../../../../funcConfig/local.settings";
+import { localize } from "../../../../../localize";
+import { createActivityContext } from "../../../../../utils/activityUtils";
 
 export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -22,15 +24,18 @@ export async function setStorageConnectionPreDebugIfNeeded(context: IActionConte
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;
 
-    const wizardContext: IStorageConnectionWizardContext = Object.assign(context, {
+    const wizardContext: IStorageConnectionWizardContext = {
+        ...context,
+        ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
         // If the user hasn't already set up a managed identity, we can default to connection string for ease of use
         // in the future we can explore if we want to include managed identity here as well
         newStorageConnectionSettingKey: storageConnectionKey,
-    });
+    };
 
     const wizard = new AzureWizard<IStorageConnectionWizardContext>(wizardContext, {
+        title: localize('prepareStorageDebug', 'Prepare storage connection for debug session'),
         promptSteps: [new StorageConnectionListStep(availableDebugConnectionTypes)],
     });
 

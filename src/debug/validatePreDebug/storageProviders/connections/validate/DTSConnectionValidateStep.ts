@@ -19,11 +19,9 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
 
     protected getOutputLogSuccess = (context: T) => localize('validateDTSSuccess', 'Successfully found DTS connection value for setting "{0}".', context.newDTSConnectionSettingKey);
     protected getOutputLogFail = (context: T) => localize('validateDTSFail', 'Failed to find DTS connection value for setting "{0}".', context.newDTSConnectionSettingKey);
-    protected getTreeItemLabel = (context: T) => !context.newDTSConnectionSettingKey ?
-        localize('validateDTSGenericLabel', 'Validate: DTS connection setting') :
-        this._connectionType ?
-            localize('validateDTSLabelWithType', 'Validate: DTS connection setting "{0}" ({1})', context.newDTSConnectionSettingKey, this._connectionType.toLowerCase()) :
-            localize('validateDTSLabel', 'Validate: DTS connection setting "{0}"', context.newDTSConnectionSettingKey);
+    protected getTreeItemLabel = (context: T) => context.newDTSConnectionSettingKey ?
+        localize('dtsConnectionSettingLabel', '"{0}" setting', context.newDTSConnectionSettingKey) :
+        localize('dtsConnectionSetting', 'DTS setting');
 
     private _connectionType?: string;
 
@@ -40,10 +38,10 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
         if (!context.newDTSConnectionSettingValue || !context.newDTSHubConnectionSettingValue) {
             const { dtsConnectionValue, dtsHubConnectionValue } = await getDTSLocalSettingsValues(context, {
                 dtsConnectionKey: context.newDTSConnectionSettingKey,
-                dtsHubConnectionKey: context.newDTSHubConnectionSettingValue,
+                dtsHubConnectionKey: context.newDTSHubConnectionSettingKey,
             }) ?? {};
             context.newDTSConnectionSettingValue = dtsConnectionValue;
-            context.newDTSHubConnectionSettingKey = dtsHubConnectionValue;
+            context.newDTSHubConnectionSettingValue = dtsHubConnectionValue;
         }
 
         if (!context.newDTSConnectionSettingValue) {
@@ -63,7 +61,7 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
     }
 
     public addExecuteSteps(context: T): AzureWizardExecuteStep<T>[] {
-        return [new DTSHubConnectionValidateStep(context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue)];
+        return [new DTSHubConnectionValidateStep(context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue, this._connectionType)];
     }
 
     private classifyConnectionType(dtsConnection: string): ConnectionType {
@@ -80,11 +78,19 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
         }
     }
 
+    public createSuccessOutput(context: T): ExecuteActivityOutput {
+        const output = super.createSuccessOutput(context);
+        if (output.item) {
+            output.item.description = this._connectionType ? `DTS (${this._connectionType.toLowerCase()})` : undefined;
+        }
+        return output;
+    }
+
     public createFailOutput(context: T): ExecuteActivityOutput {
         return {
             item: new ActivityChildItem({
                 label: this.getTreeItemLabel(context),
-                tooltip: this.getOutputLogFail(context),
+                description: this._connectionType ? `DTS (${this._connectionType.toLowerCase()})` : undefined,
                 activityType: ActivityChildType.Fail,
                 iconPath: warningIcon,
                 contextValue: createContextValue([`${this.stepName}Item`, activityFailContext]),

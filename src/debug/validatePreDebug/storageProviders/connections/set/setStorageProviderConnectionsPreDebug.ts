@@ -18,20 +18,20 @@ export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPr
     switch (context.durableStorageType) {
         case StorageType.DTS:
             context.telemetry.properties.lastValidateStep = 'dtsConnection';
-            await setDTSConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setDTSConnectionPreDebugIfNeeded({ ...context }, context.projectPath);
             break;
         case StorageType.Netherite:
             context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-            await setNetheriteConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setNetheriteConnectionPreDebugIfNeeded({ ...context }, context.projectPath);
             break;
         case StorageType.SQL:
             context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-            await setSQLConnectionPreDebugIfNeeded(context, context.projectPath);
+            await setSQLConnectionPreDebugIfNeeded({ ...context }, context.projectPath);
             break;
         case StorageType.Storage:
         default:
     }
 
     context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-    await setStorageConnectionPreDebugIfNeeded(context, context.projectPath);
+    await setStorageConnectionPreDebugIfNeeded({ ...context }, context.projectPath);
 }

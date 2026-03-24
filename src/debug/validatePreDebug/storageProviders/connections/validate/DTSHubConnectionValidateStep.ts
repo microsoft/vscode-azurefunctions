@@ -5,6 +5,7 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
+import { tryGetVariableSubstitutedKey } from "../../../../../commands/appSettings/connectionSettings/getVariableSubstitutedKey";
 import { StorageType, warningIcon } from "../../../../../constants";
 import { localize } from "../../../../../localize";
 import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
@@ -14,13 +15,14 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
     public priority: number = 351;
     public stepName: string = 'dtsHubConnectionValidateStep';
 
-    protected getOutputLogSuccess = () => localize('validateDTSHubSuccess', 'Successfully found a DTS Hub connection.');
-    protected getOutputLogFail = () => localize('validateDTSHubFail', 'Failed to find a DTS Hub connection.');
-    protected getTreeItemLabel = () => this._dtsHubConnectionValue ?
-        localize('validateDTSLabelWithValue', 'Validate: DTS Hub "{0}"', this._dtsHubConnectionValue) :
-        localize('validateDTSLabel', 'Validate: DTS Hub');
+    protected getOutputLogSuccess = () => localize('validateDTSHubSuccess', 'Successfully found a DTS hub connection.');
+    protected getOutputLogFail = () => localize('validateDTSHubFail', 'Failed to find a DTS hub connection.');
+    protected getTreeItemLabel = () => {
+        const hubKey = this._dtsHubConnectionKey ? (tryGetVariableSubstitutedKey(this._dtsHubConnectionKey) ?? this._dtsHubConnectionKey) : undefined;
+        return hubKey ? `"${hubKey}" setting` : localize('dtsHubLabel', 'DTS hub setting');
+    };
 
-    constructor(readonly _dtsHubConnectionKey: string | undefined, readonly _dtsHubConnectionValue: string | undefined) {
+    constructor(readonly _dtsHubConnectionKey: string | undefined, readonly _dtsHubConnectionValue: string | undefined, private readonly _connectionType: string | undefined) {
         super();
     }
 
@@ -38,10 +40,19 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
         return context.durableStorageType === StorageType.DTS;
     }
 
+    public createSuccessOutput(context: T): ExecuteActivityOutput {
+        const output = super.createSuccessOutput(context);
+        if (output.item) {
+            output.item.description = this._connectionType ? `DTS hub (${this._connectionType.toLowerCase()})` : undefined;
+        }
+        return output;
+    }
+
     public createFailOutput(): ExecuteActivityOutput {
         return {
             item: new ActivityChildItem({
                 label: this.getTreeItemLabel(),
+                description: this._connectionType ? `DTS hub (${this._connectionType.toLowerCase()})` : undefined,
                 tooltip: this.getOutputLogFail(),
                 activityType: ActivityChildType.Fail,
                 iconPath: warningIcon,

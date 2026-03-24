@@ -63,6 +63,8 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
 
         switch (context.dtsConnectionType) {
             case ConnectionType.Azure:
+                (context as IDTSAzureConnectionWizardContext).activityChildren = [];
+
                 if (!(context as IDTSAzureConnectionWizardContext).subscriptionId) {
                     Object.assign(context, createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)));
                 }

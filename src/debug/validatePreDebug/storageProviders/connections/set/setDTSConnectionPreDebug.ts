@@ -9,9 +9,10 @@ import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../co
 import { type IDTSConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
 import { CodeAction, ConnectionType } from "../../../../../constants";
 import { localize } from "../../../../../localize";
+import { createActivityContext } from "../../../../../utils/activityUtils";
 import { requestUtils } from "../../../../../utils/requestUtils";
 
-export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
+export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<ConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
     const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(projectPathContext) ?? {};
     const {
@@ -26,17 +27,19 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Emulator, ConnectionType.Custom]);
 
-    const wizardContext: IDTSConnectionWizardContext = Object.assign(context, {
+    const wizardContext: IDTSConnectionWizardContext = {
+        ...context,
+        ...await createActivityContext(),
         projectPath,
         action: CodeAction.Debug,
         newDTSConnectionSettingKey: dtsConnectionKey,
         newDTSHubConnectionSettingKey: dtsHubConnectionKey,
         newDTSConnectionSettingValue: isAliveDTSConnection ? dtsConnection : undefined,
         newDTSHubConnectionSettingValue: dtsHubConnection,
-    });
+    };
 
     const wizard = new AzureWizard<IDTSConnectionWizardContext>(wizardContext, {
-        title: localize('acquireDTSConnection', 'Acquire DTS connection'),
+        title: localize('prepareDTSDebug', 'Prepare DTS connection for debug session'),
         promptSteps: [new DTSConnectionListStep(availableDebugConnectionTypes)],
     });
 
@@ -45,6 +48,8 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
     if (wizardContext.dtsConnectionType) {
         await wizard.execute();
     }
+
+    return wizardContext.dtsConnectionType;
 }
 
 /**

@@ -21,17 +21,16 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
 
     protected getOutputLogSuccess = () => localize('validateWorkerRuntimeSuccess', 'Successfully verified a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
     protected getOutputLogFail = () => localize('validateWorkerRuntimeFail', 'Failed to find a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);
-    protected getTreeItemLabel = () => this._newWorkerRuntimeSetting ?
-        localize('setWorkerRuntimeLabel', 'Assign "{0}" key to "{1}" in "{2}"', workerRuntimeKey, this._newWorkerRuntimeSetting, localSettingsFileName) :
-        localize('validateWorkerRuntimeLabel', 'Validate "{0}" key in "{1}"', workerRuntimeKey, localSettingsFileName);
+    protected getTreeItemLabel = () => localize('workerRuntimeSettingLabel', '"{0}" setting', workerRuntimeKey);
 
-    private _newWorkerRuntimeSetting?: string;
+    private _workerRuntimeValue?: string;
 
     public async execute(context: T): Promise<void> {
         this.options.continueOnFail = true;
 
-        const hasWorkerRuntimeSetting: boolean = !!await getLocalAppSetting(context, context.projectPath, workerRuntimeKey);
-        if (hasWorkerRuntimeSetting) {
+        const existingValue: string | undefined = await getLocalAppSetting(context, context.projectPath, workerRuntimeKey);
+        if (existingValue) {
+            this._workerRuntimeValue = existingValue;
             return;
         }
 
@@ -41,17 +40,26 @@ export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext
         }
 
         await setLocalAppSetting(context, context.projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
-        this._newWorkerRuntimeSetting = runtime;
+        this._workerRuntimeValue = runtime;
     }
 
     public shouldExecute(): boolean {
         return true;
     }
 
+    public createSuccessOutput(context: T): ExecuteActivityOutput {
+        const output = super.createSuccessOutput(context);
+        if (output.item) {
+            output.item.description = this._workerRuntimeValue;
+        }
+        return output;
+    }
+
     public createFailOutput(): ExecuteActivityOutput {
         return {
             item: new ActivityChildItem({
                 label: this.getTreeItemLabel(),
+                description: this._workerRuntimeValue,
                 tooltip: this.getOutputLogFail(),
                 activityType: ActivityChildType.Fail,
                 iconPath: warningIcon,

@@ -11,8 +11,8 @@ import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
+import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep';
 import { FuncCoreToolsMinimumVersionConfirmStep } from "./FuncCoreToolsMinimumVersionConfirmStep";
-import { FuncCoreToolsPromptAndInstallStep } from './FuncCoreToolsPromptAndInstallStep';
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
@@ -47,7 +47,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     await setStorageProviderConnectionsPreDebugIfNeeded(wizardContext);
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
-        new FuncCoreToolsPromptAndInstallStep(),
+        new FuncCoreToolsInstallPromptStep(),
         new FuncCoreToolsMinimumVersionConfirmStep(),
     ];
 
@@ -58,7 +58,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard<IPreDebugValidateContext>(wizardContext, {
-        title: localize('prepareDebugSessionTitle', 'Prepare debug session for Azure Functions workspace project'),
+        title: localize('prepareDebugTitle', 'Pre-debug validation for Azure Functions workspace project'),
         promptSteps,
         executeSteps,
     });

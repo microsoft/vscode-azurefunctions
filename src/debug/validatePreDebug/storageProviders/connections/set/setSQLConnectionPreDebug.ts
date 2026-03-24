@@ -13,7 +13,7 @@ import { createActivityContext } from "../../../../../utils/activityUtils";
 
 export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
     const projectPathContext = Object.assign(context, { projectPath });
-    const sqlDbConnectionKey: string | undefined = await getSqlDbSettingsKey(Object.assign(context, { projectPath }));
+    const sqlDbConnectionKey: string | undefined = await getSqlDbSettingsKey(projectPathContext);
     const sqlDbConnectionValue: string | undefined = await getSqlDbLocalSettingsValue(projectPathContext, sqlDbConnectionKey);
 
     if (sqlDbConnectionValue) {
@@ -22,7 +22,6 @@ export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, 
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Custom]) satisfies Set<Exclude<ConnectionType, 'Emulator'>>;
 
-    // Todo: Use Object.assign() if we ever introduce an emulator option so we can carry over the same preference for azureWebJobsStorage
     const wizardContext: ISqlDatabaseConnectionWizardContext = {
         ...context,
         ...await createActivityContext(),

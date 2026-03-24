@@ -17,9 +17,7 @@ export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> e
 
     protected getOutputLogSuccess = () => localize('validateStorageSuccess', 'Successfully found a storage connection for "{0}".', this._storageConnectionKey);
     protected getOutputLogFail = () => localize('validateStorageFail', 'Failed to find a valid storage connection for "{0}".', this._storageConnectionKey);
-    protected getTreeItemLabel = () => this._connectionType ?
-        localize('validateStorageLabelWithType', 'Validate: Storage connection setting "{0}" ({1})', this._storageConnectionKey, this._connectionType.toLowerCase()) :
-        localize('validateStorageLabel', 'Validate: Storage connection setting "{0}"', this._storageConnectionKey);
+    protected getTreeItemLabel = () => localize('storageSettingLabel', '"{0}" setting', this._storageConnectionKey);
 
     private _storageConnectionKey: string = ConnectionKey.Storage;
     private _storageConnectionValue?: string | undefined;
@@ -53,10 +51,19 @@ export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> e
         }
     }
 
+    public createSuccessOutput(context: T): ExecuteActivityOutput {
+        const output = super.createSuccessOutput(context);
+        if (output.item) {
+            output.item.description = this._connectionType ? `storage (${this._connectionType.toLowerCase()})` : undefined;
+        }
+        return output;
+    }
+
     public createFailOutput(): ExecuteActivityOutput {
         return {
             item: new ActivityChildItem({
                 label: this.getTreeItemLabel(),
+                description: this._connectionType ? `storage (${this._connectionType.toLowerCase()})` : undefined,
                 tooltip: this.getOutputLogFail(),
                 activityType: ActivityChildType.Fail,
                 iconPath: warningIcon,
