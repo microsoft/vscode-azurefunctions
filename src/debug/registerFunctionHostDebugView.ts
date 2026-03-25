@@ -127,27 +127,51 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
 
     registerCommand('azureFunctions.funcHostDebug.askCopilot', async (actionContext: IActionContext, args: unknown) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
-        if (!isHostErrorNode(args)) {
+
+        let scopeLabel: string;
+        let portNumber: string;
+        let cwd: string | undefined;
+        let errorOutput: string;
+
+        if (isHostErrorNode(args)) {
+            scopeLabel = typeof args.workspaceFolder === 'object'
+                ? args.workspaceFolder.name
+                : localize('funcHostDebug.globalScope', 'Global');
+            portNumber = args.portNumber;
+            cwd = args.cwd;
+            errorOutput = stripAnsiControlCharacters(args.message).trim() || args.message;
+        } else if (isHostTaskNode(args)) {
+            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+            scopeLabel = typeof args.workspaceFolder === 'object'
+                ? args.workspaceFolder.name
+                : localize('funcHostDebug.globalScope', 'Global');
+            portNumber = args.portNumber;
+            cwd = args.cwd;
+            const errors = (task?.errorLogs ?? []).map(m => stripAnsiControlCharacters(m).trim()).filter(Boolean);
+            errorOutput = errors.join('\n\n') || localize('funcHostDebug.noErrors', 'No errors detected.');
+        } else if (isStoppedHostNode(args)) {
+            const stopped = args.stoppedTask;
+            scopeLabel = typeof stopped.workspaceFolder === 'object'
+                ? stopped.workspaceFolder.name
+                : localize('funcHostDebug.globalScope', 'Global');
+            portNumber = stopped.portNumber;
+            cwd = stopped.cwd;
+            const errors = stopped.errorLogs.map(m => stripAnsiControlCharacters(m).trim()).filter(Boolean);
+            errorOutput = errors.join('\n\n') || localize('funcHostDebug.noErrors', 'No errors detected.');
+        } else {
             return;
         }
 
-        // Use the exact message shown in the error node tooltip.
-        const errorContext = stripAnsiControlCharacters(args.message).trim() || args.message;
-
-        const scopeLabel = typeof args.workspaceFolder === 'object'
-            ? args.workspaceFolder.name
-            : localize('funcHostDebug.globalScope', 'Global');
-
         const prompt = [
             'I am debugging an Azure Functions project locally in VS Code.',
-            `Function Host Port: ${args.portNumber}`,
+            `Function Host Port: ${portNumber}`,
             `Workspace: ${scopeLabel}`,
-            args.cwd ? `CWD: ${args.cwd}` : undefined,
+            cwd ? `CWD: ${cwd}` : undefined,
             '',
             'The Functions host produced an error. Diagnose the likely cause and suggest concrete next steps to fix it.',
             '',
             'Error output:',
-            errorContext,
+            errorOutput,
         ].filter((l): l is string => Boolean(l)).join('\n');
 
         await vscode.commands.executeCommand('workbench.action.chat.open', { mode: 'agent', query: prompt });

@@ -594,6 +594,16 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "1@1"
+                },
+                {
                     "command": "azureFunctions.createFunction",
                     "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
                     "group": "inline"
