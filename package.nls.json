@@ -145,10 +145,11 @@
     "azureFunctions.mcpProjectType.NoMcpServer": "Runs the standard Azure Functions runtime with no MCP integration.",
     "azureFunctions.mcpProjectType.McpExtensionServer": "Runs the Functions host with an embedded MCP server provided by the Azure Functions MCP extension.",
     "azureFunctions.mcpProjectType.SelfHostedMcpServer": "Runs the Functions host in custom-handler mode, forwarding requests to a self-hosted MCP server process.",
-    "azureFunctions.funcHostDebugView.title": "Function Host Debug",
+    "azureFunctions.funcHostDebugView.title": "Functions Host Exceptions Debugger",
     "azureFunctions.funcHostDebug.refresh": "Refresh",
     "azureFunctions.funcHostDebug.clearErrors": "Clear Function Host Errors",
     "azureFunctions.funcHostDebug.showRecentLogs": "Show Recent Host Logs",
     "azureFunctions.funcHostDebug.copyRecentLogs": "Copy Recent Host Logs",
-    "azureFunctions.funcHostDebug.askCopilot": "Ask Copilot"
+    "azureFunctions.funcHostDebug.askCopilot": "Ask Copilot",
+    "azureFunctions.funcHostDebug.clearStoppedSessions": "Clear Stopped Sessions"
 }

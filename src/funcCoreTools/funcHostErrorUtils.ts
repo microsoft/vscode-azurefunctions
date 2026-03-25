@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
-import { type IRunningFuncTask } from './funcHostTask';
+import { type IRunningFuncTask, type IStoppedFuncTask } from './funcHostTask';
 
-export function getRecentLogs(task: IRunningFuncTask | undefined, limit: number = 250): string {
+export function getRecentLogs(task: IRunningFuncTask | IStoppedFuncTask | undefined, limit: number = 250): string {
     const logs = task?.logs ?? [];
     const recent = logs.slice(Math.max(0, logs.length - limit));
     return recent.join('');
 }
 
-export function getRecentLogsPlainText(task: IRunningFuncTask | undefined, limit: number = 250): string {
+export function getRecentLogsPlainText(task: IRunningFuncTask | IStoppedFuncTask | undefined, limit: number = 250): string {
     return stripAnsiControlCharacters(getRecentLogs(task, limit));
 }
 

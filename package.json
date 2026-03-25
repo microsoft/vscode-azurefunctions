@@ -508,6 +508,12 @@
                 "title": "%azureFunctions.funcHostDebug.askCopilot%",
                 "category": "Azure Functions",
                 "icon": "$(sparkle)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                "title": "%azureFunctions.funcHostDebug.clearStoppedSessions%",
+                "category": "Azure Functions",
+                "icon": "$(trash)"
             }
         ],
         "submenus": [
@@ -554,6 +560,11 @@
                     "command": "azureFunctions.funcHostDebug.clearErrors",
                     "when": "view == azureFunctions.funcHostDebugView",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
@@ -565,6 +576,16 @@
                 {
                     "command": "azureFunctions.funcHostDebug.copyRecentLogs",
                     "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
                     "group": "inline"
                 },
                 {

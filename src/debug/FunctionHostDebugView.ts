@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
+import { runningFuncTaskMap, stoppedFuncTasks, type IStoppedFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 
 enum FuncHostDebugContextValue {
     HostTask = 'azFunc.funcHostDebug.hostTask',
+    StoppedHostTask = 'azFunc.funcHostDebug.stoppedHostTask',
     HostError = 'azFunc.funcHostDebug.hostError',
 }
 
-type FuncHostDebugNode = INoHostNode | IHostTaskNode | IHostErrorNode;
+type FuncHostDebugNode = INoHostNode | IHostTaskNode | IStoppedHostNode | IHostErrorNode;
 
 interface INoHostNode {
     kind: 'noHost';
@@ -23,6 +24,12 @@ export interface IHostTaskNode {
     workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
     cwd?: string;
     portNumber: string;
+    startTime: Date;
+}
+
+export interface IStoppedHostNode {
+    kind: 'stoppedHost';
+    stoppedTask: IStoppedFuncTask;
 }
 
 export interface IHostErrorNode {
@@ -31,6 +38,28 @@ export interface IHostErrorNode {
     cwd?: string;
     portNumber: string;
     message: string;
+}
+
+function formatTimestamp(date: Date): string {
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function buildHostTooltip(opts: { label: string; scopeLabel: string; portNumber: string; startTime: Date; stopTime?: Date; cwd?: string; pid?: number }): vscode.MarkdownString {
+    const tooltip = new vscode.MarkdownString(undefined, true);
+    tooltip.appendMarkdown(`**${opts.label}**\n\n`);
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.workspace', 'Workspace')}: ${opts.scopeLabel}\n`);
+    if (opts.pid !== undefined) {
+        tooltip.appendMarkdown(`- ${localize('funcHostDebug.pid', 'PID')}: ${opts.pid}\n`);
+    }
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.port', 'Port')}: ${opts.portNumber}\n`);
+    tooltip.appendMarkdown(`- ${localize('funcHostDebug.started', 'Started')}: ${opts.startTime.toLocaleString()}\n`);
+    if (opts.stopTime) {
+        tooltip.appendMarkdown(`- ${localize('funcHostDebug.stopped', 'Stopped')}: ${opts.stopTime.toLocaleString()}\n`);
+    }
+    if (opts.cwd) {
+        tooltip.appendMarkdown(`- ${localize('funcHostDebug.cwd', 'CWD')}: ${opts.cwd}\n`);
+    }
+    return tooltip;
 }
 
 function getNoHostTreeItem(): vscode.TreeItem {
@@ -59,20 +88,32 @@ function getHostTaskTreeItem(element: IHostTaskNode): vscode.TreeItem {
 
     const label = localize('funcHostDebug.hostLabel', 'Function Host ({0})', element.portNumber);
 
-    const tooltip = new vscode.MarkdownString(undefined, true);
-    tooltip.appendMarkdown(`**${label}**\n\n`);
-    tooltip.appendMarkdown(`- ${localize('funcHostDebug.workspace', 'Workspace')}: ${scopeLabel}\n`);
-    tooltip.appendMarkdown(`- ${localize('funcHostDebug.pid', 'PID')}: ${task?.processId ?? localize('funcHostDebug.unknown', 'Unknown')}\n`);
-    tooltip.appendMarkdown(`- ${localize('funcHostDebug.port', 'Port')}: ${element.portNumber}\n`);
-    if (element.cwd) {
-        tooltip.appendMarkdown(`- ${localize('funcHostDebug.cwd', 'CWD')}: ${element.cwd}\n`);
-    }
+    const tooltip = buildHostTooltip({ label, scopeLabel, portNumber: element.portNumber, startTime: element.startTime, cwd: element.cwd, pid: task?.processId });
 
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
-    item.description = scopeLabel;
+    item.description = `${scopeLabel} - ${formatTimestamp(element.startTime)}`;
     item.tooltip = tooltip;
     item.contextValue = FuncHostDebugContextValue.HostTask;
     item.iconPath = new vscode.ThemeIcon('server-process');
+    return item;
+}
+
+function getStoppedHostTreeItem(element: IStoppedHostNode): vscode.TreeItem {
+    const stopped = element.stoppedTask;
+    const scopeLabel = typeof stopped.workspaceFolder === 'object'
+        ? stopped.workspaceFolder.name
+        : localize('funcHostDebug.globalScope', 'Global');
+
+    const label = localize('funcHostDebug.stoppedHostLabel', 'Function Host ({0}) — Stopped', stopped.portNumber);
+
+    const tooltip = buildHostTooltip({ label, scopeLabel, portNumber: stopped.portNumber, startTime: stopped.startTime, stopTime: stopped.stopTime, cwd: stopped.cwd });
+
+    const errorCount = stopped.errorLogs.length;
+    const item = new vscode.TreeItem(label, errorCount > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+    item.description = `${scopeLabel} - ${formatTimestamp(stopped.startTime)} → ${formatTimestamp(stopped.stopTime)}`;
+    item.tooltip = tooltip;
+    item.contextValue = FuncHostDebugContextValue.StoppedHostTask;
+    item.iconPath = new vscode.ThemeIcon('debug-stop', new vscode.ThemeColor('disabledForeground'));
     return item;
 }
 
@@ -92,6 +133,8 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
                 return getHostErrorTreeItem(element);
             case 'hostTask':
                 return getHostTaskTreeItem(element);
+            case 'stoppedHost':
+                return getStoppedHostTreeItem(element);
             default: {
                 // Exhaustive check: if we reach here, the FuncHostDebugNode union is out of sync with this switch.
                 throw new Error(`Unexpected FuncHostDebugNode kind: ${(element as { kind?: unknown }).kind}`);
@@ -103,7 +146,6 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
         if (element?.kind === 'hostTask') {
             const task = runningFuncTaskMap.get(element.workspaceFolder, element.cwd);
             const errors = task?.errorLogs ?? [];
-            // Show most recent errors first.
             return errors
                 .slice()
                 .reverse()
@@ -114,26 +156,47 @@ export class FuncHostDebugViewProvider implements vscode.TreeDataProvider<FuncHo
                     portNumber: element.portNumber,
                     message,
                 }));
+        } else if (element?.kind === 'stoppedHost') {
+            const stopped = element.stoppedTask;
+            return stopped.errorLogs
+                .slice()
+                .reverse()
+                .map((message): IHostErrorNode => ({
+                    kind: 'hostError',
+                    workspaceFolder: stopped.workspaceFolder,
+                    cwd: stopped.cwd,
+                    portNumber: stopped.portNumber,
+                    message,
+                }));
         } else if (element) {
             return [];
         }
 
-        const hostTasks: IHostTaskNode[] = [];
+        const nodes: FuncHostDebugNode[] = [];
+        let hasRunning = false;
 
+        // Running sessions first (newest on top by insertion order).
         for (const folder of vscode.workspace.workspaceFolders ?? []) {
             for (const t of runningFuncTaskMap.getAll(folder)) {
                 if (!t) {
                     continue;
                 }
                 const cwd = (t.taskExecution.task.execution as vscode.ShellExecution | undefined)?.options?.cwd;
-                hostTasks.push({ kind: 'hostTask', workspaceFolder: folder, cwd, portNumber: t.portNumber });
+                nodes.push({ kind: 'hostTask', workspaceFolder: folder, cwd, portNumber: t.portNumber, startTime: t.startTime });
+                hasRunning = true;
             }
         }
 
-        if (hostTasks.length === 0) {
-            return [{ kind: 'noHost' }];
+        // Always show the hint node when no host is actively running.
+        if (!hasRunning) {
+            nodes.push({ kind: 'noHost' });
         }
 
-        return hostTasks;
+        // Stopped sessions (already newest-first in the array).
+        for (const stopped of stoppedFuncTasks) {
+            nodes.push({ kind: 'stoppedHost', stoppedTask: stopped });
+        }
+
+        return nodes;
     }
 }

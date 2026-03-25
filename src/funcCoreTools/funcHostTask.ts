@@ -19,6 +19,7 @@ export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
+    startTime: Date;
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
     logs: string[];
@@ -37,6 +38,16 @@ export interface IRunningFuncTask {
      * This prevents the async iteration loop from hanging indefinitely when the task ends.
      */
     streamAbortController?: AbortController;
+}
+
+export interface IStoppedFuncTask {
+    portNumber: string;
+    startTime: Date;
+    stopTime: Date;
+    workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
+    cwd?: string;
+    logs: string[];
+    errorLogs: string[];
 }
 
 export interface IRunningFuncTaskWithScope {
@@ -113,6 +124,17 @@ class RunningFunctionTaskMap {
 
 export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
 
+/**
+ * Sessions that have stopped but are preserved in the tree view so users can
+ * review errors that occurred before the host exited.  Newest first.
+ */
+export const stoppedFuncTasks: IStoppedFuncTask[] = [];
+
+export function clearStoppedSessions(): void {
+    stoppedFuncTasks.length = 0;
+    runningFuncTasksChangedEmitter.fire();
+}
+
 const funcTaskStartedEmitter = new vscode.EventEmitter<{ scope: vscode.WorkspaceFolder | vscode.TaskScope, execution?: vscode.ShellExecution }>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
@@ -179,6 +201,7 @@ export function registerFuncHostTaskEvents(): void {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
+                startTime: new Date(),
                 stream: latestTerminalShellExecutionEvent?.execution.read(),
                 logs,
                 errorLogs: [],
@@ -197,14 +220,28 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const task = runningFuncTaskMap.get(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const cwd = (e.execution.task.execution as vscode.ShellExecution).options?.cwd;
+            const task = runningFuncTaskMap.get(e.execution.task.scope, cwd);
 
             // Abort the stream iteration to prevent it from hanging indefinitely
             if (task?.streamAbortController) {
                 task.streamAbortController.abort();
             }
 
-            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            // Preserve the session so users can review errors after the host exits.
+            if (task) {
+                stoppedFuncTasks.unshift({
+                    portNumber: task.portNumber,
+                    startTime: task.startTime,
+                    stopTime: new Date(),
+                    workspaceFolder: e.execution.task.scope,
+                    cwd,
+                    logs: task.logs.slice(),
+                    errorLogs: (task.errorLogs ?? []).slice(),
+                });
+            }
+
+            runningFuncTaskMap.delete(e.execution.task.scope, cwd);
 
             runningFuncTasksChangedEmitter.fire();
         }

@@ -6,15 +6,19 @@
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { getRecentLogsPlainText } from '../funcCoreTools/funcHostErrorUtils';
-import { onRunningFuncTasksChanged, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { clearStoppedSessions, onRunningFuncTasksChanged, runningFuncTaskMap, stoppedFuncTasks, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
-import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode } from './FunctionHostDebugView';
+import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode, type IStoppedHostNode } from './FunctionHostDebugView';
 
 const viewId = 'azureFunctions.funcHostDebugView';
 
 function isHostTaskNode(node: unknown): node is IHostTaskNode {
     return !!node && typeof node === 'object' && (node as IHostTaskNode).kind === 'hostTask';
+}
+
+function isStoppedHostNode(node: unknown): node is IStoppedHostNode {
+    return !!node && typeof node === 'object' && (node as IStoppedHostNode).kind === 'stoppedHost';
 }
 
 function isHostErrorNode(node: unknown): node is IHostErrorNode {
@@ -77,28 +81,42 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
             }
         }
 
+        // Also clear errors from stopped sessions.
+        for (const s of stoppedFuncTasks) {
+            s.errorLogs = [];
+        }
+
         provider.refresh();
+    });
+
+    registerCommand('azureFunctions.funcHostDebug.clearStoppedSessions', async (actionContext: IActionContext) => {
+        actionContext.telemetry.properties.source = 'funcHostDebugView';
+        clearStoppedSessions();
     });
 
     registerCommand('azureFunctions.funcHostDebug.copyRecentLogs', async (actionContext: IActionContext, args: unknown) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
-        if (!isHostTaskNode(args)) {
-            return;
+        if (isHostTaskNode(args)) {
+            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+            const text = getRecentLogsPlainText(task);
+            await vscode.env.clipboard.writeText(text);
+        } else if (isStoppedHostNode(args)) {
+            const text = getRecentLogsPlainText(args.stoppedTask);
+            await vscode.env.clipboard.writeText(text);
         }
-
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-        const text = getRecentLogsPlainText(task);
-        await vscode.env.clipboard.writeText(text);
     });
 
     registerCommand('azureFunctions.funcHostDebug.showRecentLogs', async (actionContext: IActionContext, args: unknown) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
-        if (!isHostTaskNode(args)) {
+        let text: string | undefined;
+        if (isHostTaskNode(args)) {
+            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+            text = getRecentLogsPlainText(task);
+        } else if (isStoppedHostNode(args)) {
+            text = getRecentLogsPlainText(args.stoppedTask);
+        } else {
             return;
         }
-
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-        const text = getRecentLogsPlainText(task);
 
         const doc = await vscode.workspace.openTextDocument({
             content: text || localize('funcHostDebug.noLogs', 'No logs captured yet.'),
