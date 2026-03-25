@@ -15,9 +15,11 @@ import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep
 import { FuncCoreToolsMinimumVersionConfirmStep } from "./FuncCoreToolsMinimumVersionConfirmStep";
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
+import { LocalEmulatorProvidersListStep } from './LocalEmulatorProvidersListStep';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
-import { setStorageProviderConnectionsPreDebugIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
+import { setStorageProviderConnectionsPreDebugIfNeeded as setNonEmulatorStorageProviderConnectionsIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
 import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/connections/validate/GetStorageProviderConnectionsValidateSteps';
+import { getEmulatorProviders } from "./storageProviders/emulators/getEmulatorProviders";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -44,11 +46,12 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     wizardContext.telemetry.properties.projectLanguageModel = wizardContext.projectLanguageModel?.toString();
     wizardContext.telemetry.properties.validateFuncCoreTools = wizardContext.validateFuncCoreTools ? String(wizardContext.validateFuncCoreTools) : undefined;
 
-    await setStorageProviderConnectionsPreDebugIfNeeded(wizardContext);
+    await setNonEmulatorStorageProviderConnectionsIfNeeded(wizardContext);
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsInstallPromptStep(),
         new FuncCoreToolsMinimumVersionConfirmStep(),
+        new LocalEmulatorProvidersListStep(getEmulatorProviders(wizardContext)),
     ];
 
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
@@ -101,4 +104,6 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
 
     throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
 }
+
+
 

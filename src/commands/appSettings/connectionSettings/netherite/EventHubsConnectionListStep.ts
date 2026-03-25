@@ -18,8 +18,6 @@ import { EventHubListStep } from './azure/EventHubListStep';
 import { EventHubsNamespaceAuthRuleListStep } from './azure/EventHubsNamespaceAuthRuleListStep';
 import { EventHubsNamespaceGetConnectionStep } from './azure/EventHubsNamespaceGetConnectionStep';
 import { EventHubsNamespaceListStep } from './azure/EventHubsNamespaceListStep';
-import { NetheriteEmulatorGetConnectionStep } from './emulator/NetheriteEmulatorGetConnectionStep';
-import { NetheriteHostEventHubNameStep } from './emulator/NetheriteHostEventHubNameStep';
 
 export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardContext> extends AzureWizardPromptStep<T> {
     constructor(readonly connectionTypes: Set<Exclude<ConnectionType, 'Custom'>>) {
@@ -77,9 +75,8 @@ export class EventHubsConnectionListStep<T extends INetheriteConnectionWizardCon
                 );
                 break;
             case ConnectionType.Emulator:
-                promptSteps.push(new NetheriteHostEventHubNameStep());
-                executeSteps.push(new NetheriteEmulatorGetConnectionStep());
-                break;
+                // Emulator start and connection string setup is now handled automatically by LocalEmulatorsListStep during pre-debug validation preflight checks
+                return undefined;
             default:
                 return undefined;
         }

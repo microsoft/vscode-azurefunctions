@@ -48,7 +48,7 @@ function getLocalSettingsEmulatorConnectionString(): string {
     return `DefaultEndpointsProtocol=${protocol};AccountName=devstoreaccount1;AccountKey=${azuriteAccountKey}/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=${protocol}://${blobHost}:${blobPort}/devstoreaccount1;QueueEndpoint=${protocol}://${queueHost}:${queuePort}/devstoreaccount1;TableEndpoint=${protocol}://${tableHost}:${tablePort}/devstoreaccount1;`;
 }
 
-function isConnectionStringEmulator(connectionString: string | undefined): boolean {
+export function isConnectionStringEmulator(connectionString: string | undefined): boolean {
     const blobHost: string = getWorkspaceSetting('blobHost', undefined, 'azurite') || '127.0.0.1';
     const queueHost: string = getWorkspaceSetting('queueHost', undefined, 'azurite') || '127.0.0.1';
     const tableHost: string = getWorkspaceSetting('tableHost', undefined, 'azurite') || '127.0.0.1';

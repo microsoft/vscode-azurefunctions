@@ -14,7 +14,6 @@ import { type StorageConnectionType } from '../IConnectionTypesContext';
 import { type IStorageAzureConnectionWizard, type IStorageConnectionWizardContext } from './IStorageConnectionWizardContext';
 import { StorageConnectionSetSettingStep } from './StorageConnectionSetSettingStep';
 import { StorageAccountGetConnectionStep } from './azure/StorageAccountGetConnectionStep';
-import { StorageEmulatorGetConnectionStep } from './emulator/StorageEmulatorGetConnectionStep';
 
 export class StorageConnectionListStep<T extends IStorageConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(readonly connectionTypes: Set<Exclude<ConnectionType, 'Custom'>>) {
@@ -93,8 +92,8 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                 executeSteps.push(new StorageAccountGetConnectionStep());
                 break;
             case ConnectionType.Emulator:
-                executeSteps.push(new StorageEmulatorGetConnectionStep());
-                break;
+                // Emulator start and connection string setup is now handled automatically by LocalEmulatorsListStep during pre-debug validation preflight checks
+                return undefined;
             default:
                 return undefined;
         }

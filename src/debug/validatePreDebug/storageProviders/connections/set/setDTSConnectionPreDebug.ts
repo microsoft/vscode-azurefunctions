@@ -22,6 +22,9 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
 
     const isAliveDTSConnection = dtsConnection && await isAliveConnection(context, dtsConnection);
     if (isAliveDTSConnection && dtsHubConnection) {
+        if (isDTSEmulatorConnectionString(dtsConnection)) {
+            return ConnectionType.Emulator;
+        }
         return;
     }
 
@@ -71,4 +74,11 @@ export async function isAliveConnection(context: IActionContext, dtsConnection: 
         const statusCode = (e as { statusCode?: number })?.statusCode;
         return !!statusCode;
     }
+}
+
+/**
+ * DTS emulator connections use `Authentication=None` (e.g. `Endpoint=http://localhost:55053/;Authentication=None`)
+ */
+export function isDTSEmulatorConnectionString(connectionString: string): boolean {
+    return /Authentication=None/i.test(connectionString);
 }

@@ -16,8 +16,6 @@ import { DTSConnectionCustomPromptStep } from './custom/DTSConnectionCustomPromp
 import { DTSHubNameCustomPromptStep } from './custom/DTSHubNameCustomPromptStep';
 import { DTSConnectionSetSettingStep } from './DTSConnectionSetSettingStep';
 import { DTSHubNameSetSettingStep } from './DTSHubNameSetSettingStep';
-import { DTSEmulatorGetConnectionsStep } from './emulator/DTSEmulatorGetConnectionsStep';
-import { DTSEmulatorStartStep } from './emulator/DTSEmulatorStartStep';
 import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext } from './IDTSConnectionWizardContext';
 
 export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extends AzureWizardPromptStep<T> {
@@ -82,11 +80,8 @@ export class DTSConnectionListStep<T extends IDTSConnectionWizardContext> extend
                 );
                 break;
             case ConnectionType.Emulator:
-                executeSteps.push(
-                    new DTSEmulatorStartStep(),
-                    new DTSEmulatorGetConnectionsStep(),
-                );
-                break;
+                // Emulator start and connection string setup is now handled automatically by LocalEmulatorsListStep during pre-debug validation preflight checks
+                return undefined;
             case ConnectionType.Custom:
                 promptSteps.push(
                     new DTSConnectionCustomPromptStep(),

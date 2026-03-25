@@ -5,6 +5,7 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type CodeAction } from "../../../constants";
+import { type DurableTaskSchedulerEmulator } from "../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient";
 import { type IConnectionTypesContext } from "./IConnectionTypesContext";
 
 export interface ISetConnectionSettingContext extends IActionContext, IConnectionTypesContext, IDurableStorageProvidersSetSettingsContext {
@@ -41,6 +42,8 @@ export interface IDTSConnectionSetSettingsContext {
      */
     newDTSHubConnectionSettingKey?: string;
     newDTSHubConnectionSettingValue?: string;
+
+    dtsEmulator?: DurableTaskSchedulerEmulator;
 }
 
 export interface ISqlDbConnectionSetSettingsContext {

@@ -7,18 +7,22 @@ import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils"
 import { getStorageLocalSettingsValue } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
 import { type IStorageConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
 import { StorageConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
+import { type StorageConnectionType } from "../../../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
 import { CodeAction, ConnectionKey, ConnectionType } from "../../../../../constants";
-import { getLocalSettingsConnectionString } from "../../../../../funcConfig/local.settings";
+import { getLocalSettingsConnectionString, isConnectionStringEmulator } from "../../../../../funcConfig/local.settings";
 import { localize } from "../../../../../localize";
 import { createActivityContext } from "../../../../../utils/activityUtils";
 
-export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<void> {
+export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<StorageConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
     const storageConnectionKey: string = ConnectionKey.Storage;
     const storageConnection: string | undefined = await getStorageLocalSettingsValue(projectPathContext, storageConnectionKey);
     const storageIdentityConnection: string | undefined = (await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath))[0];
 
     if (storageConnection || storageIdentityConnection) {
+        if (isConnectionStringEmulator(storageConnection)) {
+            return ConnectionType.Emulator;
+        }
         return;
     }
 
@@ -41,4 +45,6 @@ export async function setStorageConnectionPreDebugIfNeeded(context: IActionConte
 
     await wizard.prompt();
     await wizard.execute();
+
+    return wizardContext.azureWebJobsStorageType;
 }
