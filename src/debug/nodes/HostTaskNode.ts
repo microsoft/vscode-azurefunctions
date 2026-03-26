@@ -8,10 +8,6 @@ import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { buildHostTooltip, formatTimestamp, getScopeLabel } from './funcHostDebugUtils';
 import { HostErrorNode } from './HostErrorNode';
 
-enum FuncHostDebugContextValue {
-    HostTask = 'azFunc.funcHostDebug.hostTask',
-}
-
 export class HostTaskNode {
     public readonly kind = 'hostTask' as const;
 
@@ -32,7 +28,7 @@ export class HostTaskNode {
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
         item.description = formatTimestamp(this.startTime);
         item.tooltip = tooltip;
-        item.contextValue = FuncHostDebugContextValue.HostTask;
+        item.contextValue = 'azFunc.funcHostDebug.hostTask';
         item.iconPath = new vscode.ThemeIcon('server-process');
         return item;
     }

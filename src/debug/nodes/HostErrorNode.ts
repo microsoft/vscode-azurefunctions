@@ -6,10 +6,6 @@
 import * as vscode from 'vscode';
 import { localize } from '../../localize';
 
-enum FuncHostDebugContextValue {
-    HostError = 'azFunc.funcHostDebug.hostError',
-}
-
 export class HostErrorNode {
     public readonly kind = 'hostError' as const;
 
@@ -27,7 +23,7 @@ export class HostErrorNode {
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         item.iconPath = new vscode.ThemeIcon('error');
         item.tooltip = this.message;
-        item.contextValue = FuncHostDebugContextValue.HostError;
+        item.contextValue = 'azFunc.funcHostDebug.hostError';
         return item;
     }
 

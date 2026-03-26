@@ -8,10 +8,6 @@ import { type IStoppedFuncTask } from '../../funcCoreTools/funcHostTask';
 import { buildHostTooltip, formatTimestamp, getScopeLabel } from './funcHostDebugUtils';
 import { HostErrorNode } from './HostErrorNode';
 
-enum FuncHostDebugContextValue {
-    StoppedHostTask = 'azFunc.funcHostDebug.stoppedHostTask',
-}
-
 export class StoppedHostNode {
     public readonly kind = 'stoppedHost' as const;
 
@@ -28,7 +24,7 @@ export class StoppedHostNode {
         const item = new vscode.TreeItem(label, errorCount > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
         item.description = `${formatTimestamp(stopped.startTime)} → ${formatTimestamp(stopped.stopTime)}`;
         item.tooltip = tooltip;
-        item.contextValue = FuncHostDebugContextValue.StoppedHostTask;
+        item.contextValue = 'azFunc.funcHostDebug.stoppedHostTask';
         item.iconPath = new vscode.ThemeIcon('debug-stop', new vscode.ThemeColor('disabledForeground'));
         return item;
     }
