@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../durableTaskScheduler/copySchedulerConnectionString';
-import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
+import { getSchedulerConnectionString, SchedulerAuthenticationType } from '../../../../commands/durableTaskScheduler/copySchedulerConnectionString';
+import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
 
-export class DTSEmulatorGetConnectionsStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+export class DTSEmulatorGetConnectionsStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
 
     public async execute(context: T): Promise<void> {

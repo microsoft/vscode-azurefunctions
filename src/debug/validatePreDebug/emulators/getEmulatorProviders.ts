@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageType } from "../../../../constants";
-import { IPreDebugValidateContext } from "../../IPreDebugValidateContext";
-import { AzuriteEmulatorProvider } from "./AzuriteEmulatorProvider";
-import { DTSEmulatorProvider } from "./DTSEmulatorProvider";
-import { NetheriteEmulatorProvider } from "./EventHubsEmulatorProvider";
+import { StorageType } from "../../../constants";
+import { IPreDebugValidateContext } from "../IPreDebugValidateContext";
+import { StorageEmulatorProvider } from "./storage/StorageEmulatorProvider";
+import { DTSEmulatorProvider } from "./dts/DTSEmulatorProvider";
+import { NetheriteEmulatorProvider } from "./netherite/EventHubsEmulatorProvider";
 import { IEmulatorProvider } from "./IEmulatorProvider";
 
 export function getEmulatorProviders(context: IPreDebugValidateContext): IEmulatorProvider<IPreDebugValidateContext>[] {
@@ -21,8 +21,6 @@ export function getEmulatorProviders(context: IPreDebugValidateContext): IEmulat
         providers.push(new NetheriteEmulatorProvider());
     }
 
-    // Storage emulator is always relevant
-    providers.push(new AzuriteEmulatorProvider());
-
+    providers.push(new StorageEmulatorProvider());
     return providers;
 }

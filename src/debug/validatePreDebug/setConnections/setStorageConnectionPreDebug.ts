@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { getStorageLocalSettingsValue } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
-import { type IStorageConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
-import { StorageConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
-import { type StorageConnectionType } from "../../../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
-import { CodeAction, ConnectionKey, ConnectionType } from "../../../../../constants";
-import { getLocalSettingsConnectionString, isConnectionStringEmulator } from "../../../../../funcConfig/local.settings";
-import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
+import { getStorageLocalSettingsValue } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
+import { type IStorageConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/IStorageConnectionWizardContext";
+import { StorageConnectionListStep } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionListStep";
+import { type StorageConnectionType } from "../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
+import { CodeAction, ConnectionKey, ConnectionType } from "../../../constants";
+import { getLocalSettingsConnectionString } from "../../../funcConfig/local.settings";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
+import { StorageConnectionValidateStep } from "../validateConnections/StorageConnectionValidateStep";
 
 export async function setStorageConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<StorageConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -20,10 +21,7 @@ export async function setStorageConnectionPreDebugIfNeeded(context: IActionConte
     const storageIdentityConnection: string | undefined = (await getLocalSettingsConnectionString(context, ConnectionKey.StorageIdentity, projectPath))[0];
 
     if (storageConnection || storageIdentityConnection) {
-        if (isConnectionStringEmulator(storageConnection)) {
-            return ConnectionType.Emulator;
-        }
-        return;
+        return storageConnection ? StorageConnectionValidateStep.classifyConnectionType(storageConnection) : ConnectionType.Azure;
     }
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;

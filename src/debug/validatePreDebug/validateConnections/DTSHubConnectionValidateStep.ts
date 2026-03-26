@@ -5,10 +5,10 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { tryGetVariableSubstitutedKey } from "../../../../../commands/appSettings/connectionSettings/getVariableSubstitutedKey";
-import { StorageType, warningIcon } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
+import { tryGetVariableSubstitutedKey } from "../../../commands/appSettings/connectionSettings/getVariableSubstitutedKey";
+import { StorageType, warningIcon } from "../../../constants";
+import { localize } from "../../../localize";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 
 export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:

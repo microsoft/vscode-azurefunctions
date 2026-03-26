@@ -11,15 +11,15 @@ import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
+import { getStorageProviderConnectionsValidateSteps } from "./validateConnections/getStorageProviderConnectionsValidateSteps";
+import { setStorageProviderConnectionsPreDebugIfNeeded } from './setConnections/setStorageProviderConnectionsPreDebug';
+import { getEmulatorProviders } from "./emulators/getEmulatorProviders";
+import { LocalEmulatorProvidersListStep } from './emulators/LocalEmulatorProvidersListStep';
 import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep';
 import { FuncCoreToolsMinimumVersionConfirmStep } from "./FuncCoreToolsMinimumVersionConfirmStep";
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
-import { LocalEmulatorProvidersListStep } from './LocalEmulatorProvidersListStep';
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
-import { setStorageProviderConnectionsPreDebugIfNeeded as setNonEmulatorStorageProviderConnectionsIfNeeded } from './storageProviders/connections/set/setStorageProviderConnectionsPreDebug';
-import { GetStorageProviderConnectionsValidateSteps } from './storageProviders/connections/validate/GetStorageProviderConnectionsValidateSteps';
-import { getEmulatorProviders } from "./storageProviders/emulators/getEmulatorProviders";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -46,7 +46,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     wizardContext.telemetry.properties.projectLanguageModel = wizardContext.projectLanguageModel?.toString();
     wizardContext.telemetry.properties.validateFuncCoreTools = wizardContext.validateFuncCoreTools ? String(wizardContext.validateFuncCoreTools) : undefined;
 
-    await setNonEmulatorStorageProviderConnectionsIfNeeded(wizardContext);
+    await setStorageProviderConnectionsPreDebugIfNeeded(wizardContext);
 
     const promptSteps: AzureWizardPromptStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsInstallPromptStep(),
@@ -57,7 +57,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [
         new FuncCoreToolsValidateStep(),
         new WorkerRuntimeSettingValidateStep(),
-        new GetStorageProviderConnectionsValidateSteps(),
+        ...getStorageProviderConnectionsValidateSteps(wizardContext),
     ];
 
     const wizard: AzureWizard<IPreDebugValidateContext> = new AzureWizard<IPreDebugValidateContext>(wizardContext, {

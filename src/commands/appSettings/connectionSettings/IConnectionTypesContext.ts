@@ -5,10 +5,10 @@
 
 import { type ConnectionType } from "../../../constants";
 
-export type StorageConnectionType = ConnectionType.Azure | ConnectionType.Emulator;
+export type StorageConnectionType = ConnectionType;
 export type DTSConnectionType = ConnectionType;
-export type EventHubsConnectionType = ConnectionType.Azure | ConnectionType.Emulator;
-export type SqlDbConnectionType = ConnectionType.Azure | ConnectionType.Custom;
+export type EventHubsConnectionType = ConnectionType;
+export type SqlDbConnectionType = ConnectionType;
 
 export interface IConnectionTypesContext {
     azureWebJobsStorageType?: StorageConnectionType;

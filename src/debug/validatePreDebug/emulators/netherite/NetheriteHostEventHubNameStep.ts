@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, validationUtils } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens } from '../../../../../constants-nls';
-import { localize } from '../../../../../localize';
-import { validateUtils } from '../../../../../utils/validateUtils';
-import { type INetheriteConnectionWizardContext } from '../INetheriteConnectionWizardContext';
+import { invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
+import { validateUtils } from '../../../../utils/validateUtils';
+import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
 
-export class NetheriteHostEventHubNameStep<T extends INetheriteConnectionWizardContext> extends AzureWizardPromptStep<T> {
+export class NetheriteHostEventHubNameStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         context.newEventHubConnectionSettingValue = (await context.ui.showInputBox({
             prompt: localize('eventHubNamePrompt', 'Enter a name for the event hub.'),

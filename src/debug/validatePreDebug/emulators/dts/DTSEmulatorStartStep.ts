@@ -5,12 +5,12 @@
 
 import { AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { commands, window } from 'vscode';
-import { ext } from '../../../../../extensionVariables';
-import { localize } from '../../../../../localize';
-import { type DurableTaskSchedulerEmulator } from '../../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
-import { type IDTSConnectionWizardContext } from '../IDTSConnectionWizardContext';
+import { ext } from '../../../../extensionVariables';
+import { localize } from '../../../../localize';
+import { type DurableTaskSchedulerEmulator } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
+import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
 
-export class DTSEmulatorStartStep<T extends IDTSConnectionWizardContext> extends AzureWizardExecuteStep<T> {
+export class DTSEmulatorStartStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 190;
 
     public async execute(context: T): Promise<void> {

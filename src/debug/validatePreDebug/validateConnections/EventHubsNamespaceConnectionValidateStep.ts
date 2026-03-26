@@ -5,10 +5,10 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type AzureWizardExecuteStep, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
-import { ConnectionType, localEventHubsEmulatorConnectionRegExp, StorageType, warningIcon } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
+import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
+import { ConnectionType, localEventHubsEmulatorConnectionRegExp, StorageType, warningIcon } from "../../../constants";
+import { localize } from "../../../localize";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 import { EventHubConnectionValidateStep } from "./EventHubConnectionValidateStep";
 
 export class EventHubsNamespaceConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -48,18 +48,14 @@ export class EventHubsNamespaceConnectionValidateStep<T extends IPreDebugValidat
             throw new Error();
         }
 
-        this._connectionType = this.classifyConnectionType(this._eventHubsNamespaceConnectionValue);
+        this._connectionType = EventHubsNamespaceConnectionValidateStep.classifyConnectionType(this._eventHubsNamespaceConnectionValue);
     }
 
     public shouldExecute(context: T): boolean {
         return context.durableStorageType === StorageType.Netherite;
     }
 
-    public addExecuteSteps(): AzureWizardExecuteStep<T>[] {
-        return [new EventHubConnectionValidateStep(this._eventHubConnectionKey, this._eventHubConnectionValue)];
-    }
-
-    private classifyConnectionType(ehnConnection: string): ConnectionType {
+    static classifyConnectionType(ehnConnection: string): ConnectionType {
         switch (true) {
             case localEventHubsEmulatorConnectionRegExp.test(ehnConnection):
                 return ConnectionType.Emulator;
@@ -68,6 +64,10 @@ export class EventHubsNamespaceConnectionValidateStep<T extends IPreDebugValidat
             default:
                 return ConnectionType.Custom;
         }
+    }
+
+    public addExecuteSteps(): AzureWizardExecuteStep<T>[] {
+        return [new EventHubConnectionValidateStep(this._eventHubConnectionKey, this._eventHubConnectionValue)];
     }
 
     public createFailOutput(): ExecuteActivityOutput {

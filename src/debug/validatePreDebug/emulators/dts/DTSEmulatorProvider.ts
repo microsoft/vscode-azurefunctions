@@ -7,14 +7,14 @@ import { type AzureWizardExecuteStep, type AzureWizardPromptStep } from '@micros
 import { commands } from 'vscode';
 import { DTSConnectionSetSettingStep } from '../../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionSetSettingStep';
 import { DTSHubNameSetSettingStep } from '../../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSHubNameSetSettingStep';
-import { DTSEmulatorGetConnectionsStep } from '../../../../commands/appSettings/connectionSettings/durableTaskScheduler/emulator/DTSEmulatorGetConnectionsStep';
-import { DTSEmulatorStartStep } from '../../../../commands/appSettings/connectionSettings/durableTaskScheduler/emulator/DTSEmulatorStartStep';
 import { getDTSLocalSettingsValues, getDTSSettingsKeys } from '../../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections';
 import { localize } from '../../../../localize';
 import { type DurableTaskSchedulerEmulator } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
-import { isDTSEmulatorConnectionString } from '../connections/set/setDTSConnectionPreDebug';
-import { type EmulatorStatus, type IEmulatorProvider } from './IEmulatorProvider';
+import { isDTSEmulatorConnectionString } from '../../setConnections/setDTSConnectionPreDebug';
+import { type EmulatorStatus, type IEmulatorProvider } from '../IEmulatorProvider';
+import { DTSEmulatorGetConnectionsStep } from './DTSEmulatorGetConnectionsStep';
+import { DTSEmulatorStartStep } from './DTSEmulatorStartStep';
 
 export class DTSEmulatorProvider<T extends IPreDebugValidateContext> implements IEmulatorProvider<T> {
     public readonly name: string = localize('dtsEmulator', 'DTS Emulator');

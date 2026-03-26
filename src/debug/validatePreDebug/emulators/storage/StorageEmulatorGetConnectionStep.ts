@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { localStorageEmulatorConnectionString } from '../../../../../constants';
-import { type IStorageAzureConnectionWizard } from '../IStorageConnectionWizardContext';
+import { localStorageEmulatorConnectionString } from '../../../../constants';
+import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
 
-export class StorageEmulatorGetConnectionStep<T extends IStorageAzureConnectionWizard> extends AzureWizardExecuteStep<T> {
+export class StorageEmulatorGetConnectionStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 
     public async execute(context: T): Promise<void> {
-        // Todo: We could probably create a similar step for starting the azurite emulator, similar to the DTS flow
         context.newStorageConnectionSettingValue = localStorageEmulatorConnectionString;
     }
 

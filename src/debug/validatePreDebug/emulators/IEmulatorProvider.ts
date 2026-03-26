@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
-import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
+import { type IPreDebugValidateContext } from '../IPreDebugValidateContext';
 
 export interface EmulatorStatus {
     /** Whether this project is configured for or needs an emulator */

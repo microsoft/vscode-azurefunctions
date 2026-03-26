@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../../../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
-import { type ISqlDatabaseConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
-import { SqlConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/sqlDatabase/SqlConnectionListStep";
-import { type SqlDbConnectionType } from "../../../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
-import { CodeAction, ConnectionType } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
+import { getSqlDbLocalSettingsValue, getSqlDbSettingsKey } from "../../../commands/appSettings/connectionSettings/sqlDatabase/getSqlDbLocalProjectConnections";
+import { type ISqlDatabaseConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
+import { SqlConnectionListStep } from "../../../commands/appSettings/connectionSettings/sqlDatabase/SqlConnectionListStep";
+import { type SqlDbConnectionType } from "../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
+import { SQLConnectionValidateStep } from "../validateConnections/SQLConnectionValidateStep";
 
 export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<SqlDbConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -18,7 +19,7 @@ export async function setSQLConnectionPreDebugIfNeeded(context: IActionContext, 
     const sqlDbConnectionValue: string | undefined = await getSqlDbLocalSettingsValue(projectPathContext, sqlDbConnectionKey);
 
     if (sqlDbConnectionValue) {
-        return;
+        return SQLConnectionValidateStep.classifyConnectionType(sqlDbConnectionValue);
     }
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Custom]) satisfies Set<Exclude<ConnectionType, 'Emulator'>>;

@@ -5,11 +5,11 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type AzureWizardExecuteStep, type ExecuteActivityOutput, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
-import { ConnectionType, warningIcon } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
-import { isAliveConnection } from "../set/setDTSConnectionPreDebug";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
+import { ConnectionType, warningIcon } from "../../../constants";
+import { localize } from "../../../localize";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
+import { isAliveConnection } from "../setConnections/setDTSConnectionPreDebug";
 import { DTSHubConnectionValidateStep } from "./DTSHubConnectionValidateStep";
 
 export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
@@ -53,7 +53,7 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
             throw new Error();
         }
 
-        this._connectionType = this.classifyConnectionType(context.newDTSConnectionSettingValue);
+        this._connectionType = DTSConnectionValidateStep.classifyConnectionType(context.newDTSConnectionSettingValue);
     }
 
     public shouldExecute(context: T): boolean {
@@ -62,20 +62,6 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
 
     public addExecuteSteps(context: T): AzureWizardExecuteStep<T>[] {
         return [new DTSHubConnectionValidateStep(context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue, this._connectionType)];
-    }
-
-    private classifyConnectionType(dtsConnection: string): ConnectionType {
-        const endpointMatch = dtsConnection.match(/Endpoint=([^;]+)/);
-
-        const url: string | undefined = endpointMatch?.[1] ?? '';
-        switch (true) {
-            case /localhost/i.test(url):
-                return ConnectionType.Emulator;
-            case /core\.windows\.net/i.test(url):
-                return ConnectionType.Azure;
-            default:
-                return ConnectionType.Custom;
-        }
     }
 
     public createSuccessOutput(context: T): ExecuteActivityOutput {
@@ -97,6 +83,20 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
             }),
             message: this.getOutputLogFail(context),
         };
+    }
+
+    static classifyConnectionType(dtsConnection: string): ConnectionType {
+        const endpointMatch = dtsConnection.match(/Endpoint=([^;]+)/);
+
+        const url: string | undefined = endpointMatch?.[1] ?? '';
+        switch (true) {
+            case /localhost/i.test(url):
+                return ConnectionType.Emulator;
+            case /core\.windows\.net/i.test(url):
+                return ConnectionType.Azure;
+            default:
+                return ConnectionType.Custom;
+        }
     }
 
     static async getDTSConnections(context: IActionContext & { projectPath: string }) {

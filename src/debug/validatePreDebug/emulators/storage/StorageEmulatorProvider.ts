@@ -5,17 +5,17 @@
 
 import { BlobServiceClient } from '@azure/storage-blob';
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
-import { AzuriteEmulatorStartStep } from '../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/emulator/AzuriteEmulatorStartStep';
-import { StorageEmulatorGetConnectionStep } from '../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/emulator/StorageEmulatorGetConnectionStep';
 import { StorageConnectionSetSettingStep } from '../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/StorageConnectionSetSettingStep';
 import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { localize } from '../../../../localize';
 import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
-import { type EmulatorStatus, type IEmulatorProvider } from './IEmulatorProvider';
+import { type EmulatorStatus, type IEmulatorProvider } from '../IEmulatorProvider';
+import { StorageEmulatorGetConnectionStep } from './StorageEmulatorGetConnectionStep';
+import { StorageEmulatorStartStep } from './StorageEmulatorStartStep';
 
-export class AzuriteEmulatorProvider<T extends IPreDebugValidateContext> implements IEmulatorProvider<T> {
-    public readonly name: string = localize('azuriteEmulator', 'Azurite');
+export class StorageEmulatorProvider<T extends IPreDebugValidateContext> implements IEmulatorProvider<T> {
+    public readonly name: string = localize('storageEmulator', 'Azurite');
     public readonly includeInSharedPrompt: boolean = true;
 
     public async checkEmulatorStatus(context: T): Promise<EmulatorStatus> {
@@ -26,13 +26,13 @@ export class AzuriteEmulatorProvider<T extends IPreDebugValidateContext> impleme
             return { isEmulatorRequired: false };
         }
 
-        // Has an existing connection string — check if the emulator is reachable
+        // User has an existing connection string; verify that the emulator is reachable
         if (connectionString && isEmulator) {
-            return { isEmulatorRequired: true, isEmulatorRunning: await this.checkAzuriteRunning(connectionString), needsConnectionSetup: false };
+            return { isEmulatorRequired: true, isEmulatorRunning: await this.checkStorageEmulatorRunning(connectionString), needsConnectionSetup: false };
         }
 
-        // No emulator connection string set — still probe the default emulator endpoint in case it's already running
-        return { isEmulatorRequired: true, isEmulatorRunning: await this.checkAzuriteRunning(localStorageEmulatorConnectionString), needsConnectionSetup: true };
+        // User has no connection string, assume the default and check to see if Azurite is running
+        return { isEmulatorRequired: true, isEmulatorRunning: await this.checkStorageEmulatorRunning(localStorageEmulatorConnectionString), needsConnectionSetup: true };
     }
 
     public getPromptSteps(_status: EmulatorStatus): AzureWizardPromptStep<T>[] {
@@ -40,28 +40,27 @@ export class AzuriteEmulatorProvider<T extends IPreDebugValidateContext> impleme
     }
 
     public getExecuteSteps(status: EmulatorStatus): AzureWizardExecuteStep<T>[] {
-        const steps: AzureWizardExecuteStep<T>[] = [];
+        const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
-        // Start the Azurite emulator if it's not already running
         if (!status.isEmulatorRunning) {
-            steps.push(new AzuriteEmulatorStartStep() as unknown as AzureWizardExecuteStep<T>);
+            executeSteps.push(new StorageEmulatorStartStep());
         }
 
         // Set the emulator connection string if it's missing or needs to be reset
         if (status.needsConnectionSetup) {
-            steps.push(
-                new StorageEmulatorGetConnectionStep() as unknown as AzureWizardExecuteStep<T>,
+            executeSteps.push(
+                new StorageEmulatorGetConnectionStep(),
                 new StorageConnectionSetSettingStep(),
             );
         }
 
-        return steps;
+        return executeSteps;
     }
 
     /**
      * Pings the Azurite blob service to check if the emulator is actually running.
      */
-    private async checkAzuriteRunning(connectionString: string): Promise<boolean> {
+    private async checkStorageEmulatorRunning(connectionString: string): Promise<boolean> {
         try {
             const client = BlobServiceClient.fromConnectionString(connectionString, { retryOptions: { maxTries: 1 } });
             await client.getProperties();

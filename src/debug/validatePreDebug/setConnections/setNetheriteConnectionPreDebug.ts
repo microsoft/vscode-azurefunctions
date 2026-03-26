@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { EventHubsConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/netherite/EventHubsConnectionListStep";
-import { parseEventHubsNamespaceName } from "../../../../../commands/appSettings/connectionSettings/netherite/getNetheriteConnection";
-import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
-import { type INetheriteConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
-import { type EventHubsConnectionType } from "../../../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
-import { CodeAction, ConnectionType, localEventHubsEmulatorConnectionRegExp } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
+import { EventHubsConnectionListStep } from "../../../commands/appSettings/connectionSettings/netherite/EventHubsConnectionListStep";
+import { parseEventHubsNamespaceName } from "../../../commands/appSettings/connectionSettings/netherite/getNetheriteConnection";
+import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from "../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections";
+import { type INetheriteConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/netherite/INetheriteConnectionWizardContext";
+import { type EventHubsConnectionType } from "../../../commands/appSettings/connectionSettings/IConnectionTypesContext";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
+import { EventHubsNamespaceConnectionValidateStep } from "../validateConnections/EventHubsNamespaceConnectionValidateStep";
 
 export async function setNetheriteConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<EventHubsConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -22,10 +23,7 @@ export async function setNetheriteConnectionPreDebugIfNeeded(context: IActionCon
     } = await getNetheriteLocalSettingsValues(projectPathContext, { eventHubsNamespaceConnectionKey, eventHubConnectionKey }) ?? {};
 
     if (!!eventHubsConnection && !!eventHubName) {
-        if (localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection)) {
-            return ConnectionType.Emulator;
-        }
-        return;
+        return EventHubsNamespaceConnectionValidateStep.classifyConnectionType(eventHubsConnection);
     }
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Azure, ConnectionType.Emulator]) satisfies Set<Exclude<ConnectionType, 'Custom'>>;

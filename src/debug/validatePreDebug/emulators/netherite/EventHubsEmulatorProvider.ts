@@ -6,13 +6,13 @@
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { EventHubSetSettingStep } from '../../../../commands/appSettings/connectionSettings/netherite/EventHubSetSettingStep';
 import { EventHubsNamespaceSetSettingStep } from '../../../../commands/appSettings/connectionSettings/netherite/EventHubsNamespaceSetSettingStep';
-import { NetheriteEmulatorGetConnectionStep } from '../../../../commands/appSettings/connectionSettings/netherite/emulator/NetheriteEmulatorGetConnectionStep';
-import { NetheriteHostEventHubNameStep } from '../../../../commands/appSettings/connectionSettings/netherite/emulator/NetheriteHostEventHubNameStep';
 import { getNetheriteLocalSettingsValues, getNetheriteSettingsKeys } from '../../../../commands/appSettings/connectionSettings/netherite/getNetheriteLocalProjectConnections';
 import { localEventHubsEmulatorConnectionRegExp } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
-import { type EmulatorStatus, type IEmulatorProvider } from './IEmulatorProvider';
+import { type EmulatorStatus, type IEmulatorProvider } from '../IEmulatorProvider';
+import { NetheriteEmulatorGetConnectionStep } from './NetheriteEmulatorGetConnectionStep';
+import { NetheriteHostEventHubNameStep } from './NetheriteHostEventHubNameStep';
 
 export class NetheriteEmulatorProvider<T extends IPreDebugValidateContext> implements IEmulatorProvider<T> {
     public readonly name: string = localize('eventHubsEmulator', 'Netherite Emulator');

@@ -3,14 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageType } from "../../../../../constants";
-import { durableUtils } from "../../../../../utils/durableUtils";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
+import { StorageType } from "../../../constants";
+import { durableUtils } from "../../../utils/durableUtils";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 import { setDTSConnectionPreDebugIfNeeded } from "./setDTSConnectionPreDebug";
 import { setNetheriteConnectionPreDebugIfNeeded } from "./setNetheriteConnectionPreDebug";
 import { setSQLConnectionPreDebugIfNeeded } from "./setSQLConnectionPreDebug";
 import { setStorageConnectionPreDebugIfNeeded } from "./setStorageConnectionPreDebug";
 
+/**
+ * Prompt and configure storage provider connections.
+ * Emulator work is deferred to `preDebugValidate`.
+ */
 export async function setStorageProviderConnectionsPreDebugIfNeeded(context: IPreDebugValidateContext): Promise<void> {
     context.durableStorageType = await durableUtils.getStorageTypeFromWorkspace(context.projectLanguage, context.projectPath);
     context.telemetry.properties.durableStorageType = context.durableStorageType;

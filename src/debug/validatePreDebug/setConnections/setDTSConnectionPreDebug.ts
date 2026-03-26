@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { DTSConnectionListStep } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
-import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
-import { type IDTSConnectionWizardContext } from "../../../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
-import { CodeAction, ConnectionType } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { createActivityContext } from "../../../../../utils/activityUtils";
-import { requestUtils } from "../../../../../utils/requestUtils";
+import { DTSConnectionListStep } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/DTSConnectionListStep";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
+import { type IDTSConnectionWizardContext } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/IDTSConnectionWizardContext";
+import { CodeAction, ConnectionType } from "../../../constants";
+import { localize } from "../../../localize";
+import { createActivityContext } from "../../../utils/activityUtils";
+import { requestUtils } from "../../../utils/requestUtils";
+import { DTSConnectionValidateStep } from "../validateConnections/DTSConnectionValidateStep";
 
 export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, projectPath: string): Promise<ConnectionType | undefined> {
     const projectPathContext = Object.assign(context, { projectPath });
@@ -22,10 +23,7 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
 
     const isAliveDTSConnection = dtsConnection && await isAliveConnection(context, dtsConnection);
     if (isAliveDTSConnection && dtsHubConnection) {
-        if (isDTSEmulatorConnectionString(dtsConnection)) {
-            return ConnectionType.Emulator;
-        }
-        return;
+        return DTSConnectionValidateStep.classifyConnectionType(dtsConnection);
     }
 
     const availableDebugConnectionTypes = new Set([ConnectionType.Emulator, ConnectionType.Custom]);

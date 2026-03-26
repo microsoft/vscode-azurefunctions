@@ -5,10 +5,11 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { getStorageLocalSettingsValue } from "../../../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, warningIcon } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
+import { getStorageLocalSettingsValue } from "../../../commands/appSettings/connectionSettings/azureWebJobsStorage/getStorageLocalProjectConnections";
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString, warningIcon } from "../../../constants";
+import { isConnectionStringEmulator } from "../../../funcConfig/local.settings";
+import { localize } from "../../../localize";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 
 export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:
@@ -33,22 +34,22 @@ export class StorageConnectionValidateStep<T extends IPreDebugValidateContext> e
             throw new Error();
         }
 
-        this._connectionType = this.classifyConnectionType(this._storageConnectionValue);
+        this._connectionType = StorageConnectionValidateStep.classifyConnectionType(this._storageConnectionValue);
     }
 
-    public shouldExecute(): boolean {
-        return true;
-    }
-
-    private classifyConnectionType(storageConnection: string): ConnectionType {
+    static classifyConnectionType(storageConnection: string): ConnectionType {
         switch (true) {
-            case storageConnection === localStorageEmulatorConnectionString:
+            case storageConnection === localStorageEmulatorConnectionString || isConnectionStringEmulator(storageConnection):
                 return ConnectionType.Emulator;
             case /core\.windows\.net/i.test(storageConnection):
                 return ConnectionType.Azure;
             default:
                 return ConnectionType.Custom;
         }
+    }
+
+    public shouldExecute(): boolean {
+        return true;
     }
 
     public createSuccessOutput(context: T): ExecuteActivityOutput {

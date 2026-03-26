@@ -5,9 +5,9 @@
 
 import { AzureWizardPromptStep, type AzureWizardExecuteStep, type AzureWizardPromptStep as AzureWizardPromptStepType, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
-import { localize } from '../../localize';
-import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
-import { type EmulatorStatus, type IEmulatorProvider } from './storageProviders/emulators/IEmulatorProvider';
+import { localize } from '../../../localize';
+import { type IPreDebugValidateContext } from '../IPreDebugValidateContext';
+import { type EmulatorStatus, type IEmulatorProvider } from './IEmulatorProvider';
 
 interface PendingProvider<T extends IPreDebugValidateContext> {
     provider: IEmulatorProvider<T>;
@@ -16,7 +16,6 @@ interface PendingProvider<T extends IPreDebugValidateContext> {
 
 export class LocalEmulatorProvidersListStep<T extends IPreDebugValidateContext> extends AzureWizardPromptStep<T> {
     public hideStepCount: boolean = true;
-
     private _pendingProviders: PendingProvider<T>[] = [];
 
     constructor(private readonly _providers: IEmulatorProvider<T>[]) {
@@ -25,6 +24,7 @@ export class LocalEmulatorProvidersListStep<T extends IPreDebugValidateContext> 
 
     public async configureBeforePrompt(context: T): Promise<void> {
         this._pendingProviders = [];
+
         for (const provider of this._providers) {
             const status = await provider.checkEmulatorStatus(context);
             if (status.isEmulatorRequired && (!status.isEmulatorRunning || status.needsConnectionSetup)) {
@@ -35,11 +35,6 @@ export class LocalEmulatorProvidersListStep<T extends IPreDebugValidateContext> 
 
     public async prompt(context: T): Promise<void> {
         const globalProviders = this._pendingProviders.filter(p => p.provider.includeInSharedPrompt);
-
-        if (globalProviders.length === 0) {
-            return;
-        }
-
         const emulatorList: string = globalProviders.map(p => p.provider.name).join(', ');
 
         const startButton: MessageItem = { title: localize('startEmulators', 'Start') };
@@ -52,7 +47,6 @@ export class LocalEmulatorProvidersListStep<T extends IPreDebugValidateContext> 
         );
 
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, startButton, skipButton);
-
         if (result === skipButton) {
             // Only remove global-prompt providers; custom-prompt providers handle their own flow
             this._pendingProviders = this._pendingProviders.filter(p => !p.provider.includeInSharedPrompt);
@@ -72,6 +66,6 @@ export class LocalEmulatorProvidersListStep<T extends IPreDebugValidateContext> 
             executeSteps.push(...provider.getExecuteSteps(status));
         }
 
-        return (promptSteps.length > 0 || executeSteps.length > 0) ? { promptSteps, executeSteps } : undefined;
+        return { promptSteps, executeSteps };
     }
 }

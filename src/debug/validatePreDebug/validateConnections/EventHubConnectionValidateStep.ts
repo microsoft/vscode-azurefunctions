@@ -5,9 +5,9 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
-import { StorageType, warningIcon } from "../../../../../constants";
-import { localize } from "../../../../../localize";
-import { type IPreDebugValidateContext } from "../../../IPreDebugValidateContext";
+import { StorageType, warningIcon } from "../../../constants";
+import { localize } from "../../../localize";
+import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 
 export class EventHubConnectionValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo:
