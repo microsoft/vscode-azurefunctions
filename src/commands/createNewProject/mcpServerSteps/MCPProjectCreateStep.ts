@@ -36,7 +36,6 @@ export class MCPProjectCreateStep extends ProjectCreateStepBase {
                 });
             }
         }
-        return;
     }
 
     private setSampleMcpRepoUrl(context: MCPProjectWizardContext): void {

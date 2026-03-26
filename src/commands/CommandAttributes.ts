@@ -30,5 +30,4 @@ export class CommandAttributes {
             "Task hub creation fails — if an existing parent DTS resource was selected, check that the scheduler is not stuck in a provisioning state.",
         ],
     };
-
 }

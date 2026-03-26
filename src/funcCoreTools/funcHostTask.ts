@@ -13,11 +13,46 @@ import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { addErrorLinesFromChunk } from './funcHostErrorUtils';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
+    startTime: Date;
+    // stream for reading `func host start`  output
+    stream: AsyncIterable<string> | undefined;
+    logs: string[];
+    /**
+     * A small set of recent error lines detected in the host output.
+     * Used by the Function Host Debug view to surface errors under the host node.
+     */
+    errorLogs?: string[];
+    /**
+     * Tracks whether we've already surfaced the "first error" UX for this host session (e.g. opening the Debug view).
+     * This avoids repeatedly stealing focus / opening the view for every subsequent error.
+     */
+    hasReportedLiveErrors?: boolean;
+    /**
+     * AbortController used to signal when the stream iteration should stop.
+     * This prevents the async iteration loop from hanging indefinitely when the task ends.
+     */
+    streamAbortController?: AbortController;
+}
+
+export interface IStoppedFuncTask {
+    portNumber: string;
+    startTime: Date;
+    stopTime: Date;
+    workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
+    cwd?: string;
+    logs: string[];
+    errorLogs: string[];
+}
+
+export interface IRunningFuncTaskWithScope {
+    scope: vscode.WorkspaceFolder | vscode.TaskScope;
+    task: IRunningFuncTask;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -44,9 +79,22 @@ class RunningFunctionTaskMap {
         return values.find(t => {
             const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
             // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
-            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path);
-            return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
+            const workspacePath = typeof t.taskExecution.task?.scope === 'object'
+                ? (t.taskExecution.task.scope as vscode.WorkspaceFolder).uri?.path
+                : undefined;
+            const taskDirectory = workspacePath
+                ? taskExecution.options?.cwd?.replace('${workspaceFolder}', workspacePath)
+                : taskExecution.options?.cwd;
+            const resolvedBuildPath = workspacePath
+                ? buildPath?.replace('${workspaceFolder}', workspacePath)
+                : buildPath;
+
+            // When neither cwd is set, both tasks use the default working directory — treat as a match
+            if (!taskDirectory && !resolvedBuildPath) {
+                return true;
+            }
+
+            return taskDirectory && resolvedBuildPath && normalizePath(taskDirectory) === normalizePath(resolvedBuildPath);
         });
     }
 
@@ -76,34 +124,173 @@ class RunningFunctionTaskMap {
 
 export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
 
-const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope>();
+/**
+ * Sessions that have stopped but are preserved in the tree view so users can
+ * review errors that occurred before the host exited.  Newest first.
+ */
+export const stoppedFuncTasks: IStoppedFuncTask[] = [];
+
+export function clearStoppedSessions(): void {
+    stoppedFuncTasks.length = 0;
+    runningFuncTasksChangedEmitter.fire();
+}
+
+const funcTaskStartedEmitter = new vscode.EventEmitter<{ scope: vscode.WorkspaceFolder | vscode.TaskScope, execution?: vscode.ShellExecution }>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
+
+const runningFuncTasksChangedEmitter = new vscode.EventEmitter<void>();
+export const onRunningFuncTasksChanged = runningFuncTasksChangedEmitter.event;
+
+export function disposeFuncHostTaskEmitters(): void {
+    funcTaskStartedEmitter.dispose();
+    runningFuncTasksChangedEmitter.dispose();
+}
 
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
+const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
 export function isFuncHostTask(task: vscode.Task): boolean {
-    const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
-    return /(func(?:\.exe)?)\s+host\s+start/i.test(commandLine || '');
+    const execution = task.execution as vscode.ShellExecution | undefined;
+    if (!execution) {
+        return false;
+    }
+
+    // String-based ShellExecution: `commandLine` contains the full command
+    if (execution.commandLine) {
+        return funcCommandRegex.test(execution.commandLine);
+    }
+
+    // Args-based ShellExecution: `command` + `args` are separate
+    // Reconstruct the command string to test against the regex
+    const command = typeof execution.command === 'string' ? execution.command : execution.command?.value;
+    if (command && execution.args) {
+        const argsStr = execution.args.map(a => typeof a === 'string' ? a : a.value).join(' ');
+        return funcCommandRegex.test(`${command} ${argsStr}`);
+    }
+
+    return false;
 }
 
+export function isFuncShellEvent(event: vscode.TerminalShellExecutionStartEvent): boolean {
+    const commandLine = event.execution && event.execution.commandLine;
+    return funcCommandRegex.test(commandLine.value || '');
+}
+
+
+let latestTerminalShellExecutionEvent: vscode.TerminalShellExecutionStartEvent | undefined;
+export let terminalEventReader: vscode.Disposable;
 export function registerFuncHostTaskEvents(): void {
+    // we need to register this listener before the func host task starts, so we can capture the terminal output stream
+    terminalEventReader = vscode.window.onDidStartTerminalShellExecution(async (terminalShellExecEvent) => {
+        /**
+         * This will pick up any terminal that, including those started outside of tasks (e.g. via the command palette).
+         * But we don't actually access the terminal stream until the `func host start` task starts, at which time this will be pointing to the correct terminal
+         * */
+        latestTerminalShellExecutionEvent = terminalShellExecEvent;
+    });
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
+
+
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const runningFuncTask = { processId: e.processId, taskExecution: e.execution, portNumber };
+            const logs: string[] = [];
+            const runningFuncTask: IRunningFuncTask = {
+                processId: e.processId,
+                taskExecution: e.execution,
+                portNumber,
+                startTime: new Date(),
+                stream: latestTerminalShellExecutionEvent?.execution.read(),
+                logs,
+                errorLogs: [],
+                hasReportedLiveErrors: false,
+                streamAbortController: new AbortController(),
+            };
+
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
-            funcTaskStartedEmitter.fire(e.execution.task.scope);
+            funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
+
+            runningFuncTasksChangedEmitter.fire();
         }
     });
 
-    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
+    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const cwd = (e.execution.task.execution as vscode.ShellExecution).options?.cwd;
+            const task = runningFuncTaskMap.get(e.execution.task.scope, cwd);
+
+            // Abort the stream iteration to prevent it from hanging indefinitely
+            if (task?.streamAbortController) {
+                task.streamAbortController.abort();
+            }
+
+            // Preserve the session so users can review errors after the host exits.
+            if (task) {
+                stoppedFuncTasks.unshift({
+                    portNumber: task.portNumber,
+                    startTime: task.startTime,
+                    stopTime: new Date(),
+                    workspaceFolder: e.execution.task.scope,
+                    cwd,
+                    logs: task.logs.slice(),
+                    errorLogs: (task.errorLogs ?? []).slice(),
+                });
+            }
+
+            runningFuncTaskMap.delete(e.execution.task.scope, cwd);
+
+            runningFuncTasksChangedEmitter.fire();
+        }
+    });
+
+    registerEvent('azureFunctions.onFuncTaskStarted', onFuncTaskStarted, async (
+        context: IActionContext,
+        event: { scope: vscode.WorkspaceFolder | vscode.TaskScope; execution?: vscode.ShellExecution }
+    ) => {
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
+
+        const { scope, execution } = event;
+
+        const task = runningFuncTaskMap.get(scope, execution?.options?.cwd);
+        if (!task) {
+            return;
+        }
+
+        const maxLogEntries = 1000;
+
+        try {
+            for await (const chunk of task.stream ?? []) {
+                // Check if the stream iteration should be aborted
+                if (task.streamAbortController?.signal.aborted) {
+                    break;
+                }
+
+                task.logs.push(chunk);
+                if (task.logs.length > maxLogEntries) {
+                    task.logs.splice(0, task.logs.length - maxLogEntries);
+                }
+
+                // Split chunk into log entries by timestamp, check each for red
+                // ANSI, and deduplicate against existing errors.
+                const errorArr = task.errorLogs ?? (task.errorLogs = []);
+                if (addErrorLinesFromChunk(errorArr, chunk)) {
+                    runningFuncTasksChangedEmitter.fire();
+                }
+            }
+        } catch (error) {
+            // If the stream encounters an error or is aborted, gracefully exit the loop
+            // This prevents the event handler from hanging indefinitely
+            if (task.streamAbortController?.signal.aborted) {
+                // Expected when the task ends - no need to log
+                return;
+            }
+            // Log unexpected errors but don't throw to avoid crashing the extension
+            console.error('Error reading func host task stream:', error);
         }
     });
 
@@ -129,7 +316,6 @@ export function registerFuncHostTaskEvents(): void {
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
             // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
             await stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, false);
-
         }
     });
 }
@@ -145,7 +331,7 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
 
     if (runningFuncTask !== undefined && runningFuncTask.length > 0) {
         for (const runningFuncTaskItem of runningFuncTask) {
-            if (!runningFuncTaskItem) {break;}
+            if (!runningFuncTaskItem) { break; }
             if (terminate) {
                 runningFuncTaskItem.taskExecution.terminate();
             } else {
@@ -162,6 +348,8 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
     if (killAll) {
         runningFuncTaskMap.delete(workspaceFolder);
     }
+
+    runningFuncTasksChangedEmitter.fire();
 }
 
 /**

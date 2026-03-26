@@ -24,7 +24,7 @@ import { createNewProjectInternal } from './commands/createNewProject/createNewP
 import { deleteFunctionApp } from './commands/deleteFunctionApp';
 import { deployProductionSlot } from './commands/deploy/deploy';
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
-import { startFuncProcessFromApi } from './commands/pickFuncProcess';
+import { disposeFuncTaskReadyEmitter, startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
@@ -33,9 +33,10 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
+import { registerFunctionHostDebugView } from './debug/registerFunctionHostDebugView';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext, TemplateSource } from './extensionVariables';
-import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
+import { disposeFuncHostTaskEmitters, registerFuncHostTaskEvents, terminalEventReader } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
@@ -56,8 +57,6 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
-    console.log('**********************************************');
-    console.log('Activating Azure Functions extension...');
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
@@ -103,6 +102,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         });
 
         registerFuncHostTaskEvents();
+        registerFunctionHostDebugView(context);
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
         const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();
@@ -224,4 +224,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
 export async function deactivateInternal(): Promise<void> {
     await emulatorClient.disposeAsync();
+    terminalEventReader?.dispose();
+    disposeFuncHostTaskEmitters();
+    disposeFuncTaskReadyEmitter();
 }
