@@ -90,6 +90,17 @@
                 ]
             }
         },
+        "views": {
+            "debug": [
+                {
+                    "id": "azureFunctions.funcHostDebugView",
+                    "name": "%azureFunctions.funcHostDebugView.title%",
+                    "when": "!virtualWorkspace",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure-functions.svg"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "azureFunctions.addBinding",
@@ -467,6 +478,36 @@
                 "command": "azureFunctions.getMcpHostKey",
                 "title": "%azureFunctions.getMcpHostKey%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.refresh",
+                "title": "%azureFunctions.funcHostDebug.refresh%",
+                "category": "Azure Functions",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                "title": "%azureFunctions.funcHostDebug.showRecentLogs%",
+                "category": "Azure Functions",
+                "icon": "$(output)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                "title": "%azureFunctions.funcHostDebug.copyRecentLogs%",
+                "category": "Azure Functions",
+                "icon": "$(copy)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.askCopilot",
+                "title": "%azureFunctions.funcHostDebug.askCopilot%",
+                "category": "Azure Functions",
+                "icon": "$(sparkle)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                "title": "%azureFunctions.funcHostDebug.clearStoppedSessions%",
+                "category": "Azure Functions",
+                "icon": "$(trash)"
             }
         ],
         "submenus": [
@@ -503,9 +544,54 @@
                     "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.refresh",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostError",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "1@1"
+                },
                 {
                     "command": "azureFunctions.createFunction",
                     "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
@@ -947,6 +1033,22 @@
                 {
                     "command": "azureFunctions.unassignManagedIdentity",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "never"
                 }
             ],
             "editor/context": [
@@ -990,6 +1092,12 @@
                 "properties": {
                     "command": {
                         "type": "string"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 }
             }
