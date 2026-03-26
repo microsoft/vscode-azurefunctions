@@ -86,12 +86,12 @@ function getHostTaskTreeItem(element: IHostTaskNode): vscode.TreeItem {
         ? element.workspaceFolder.name
         : localize('funcHostDebug.globalScope', 'Global');
 
-    const label = localize('funcHostDebug.hostLabel', 'Function Host ({0})', element.portNumber);
+    const label = `${scopeLabel} (${element.portNumber})`;
 
     const tooltip = buildHostTooltip({ label, scopeLabel, portNumber: element.portNumber, startTime: element.startTime, cwd: element.cwd, pid: task?.processId });
 
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
-    item.description = `${scopeLabel} - ${formatTimestamp(element.startTime)}`;
+    item.description = formatTimestamp(element.startTime);
     item.tooltip = tooltip;
     item.contextValue = FuncHostDebugContextValue.HostTask;
     item.iconPath = new vscode.ThemeIcon('server-process');
@@ -104,13 +104,13 @@ function getStoppedHostTreeItem(element: IStoppedHostNode): vscode.TreeItem {
         ? stopped.workspaceFolder.name
         : localize('funcHostDebug.globalScope', 'Global');
 
-    const label = localize('funcHostDebug.stoppedHostLabel', 'Function Host ({0}) — Stopped', stopped.portNumber);
+    const label = `${scopeLabel} (${stopped.portNumber}) — Stopped`;
 
     const tooltip = buildHostTooltip({ label, scopeLabel, portNumber: stopped.portNumber, startTime: stopped.startTime, stopTime: stopped.stopTime, cwd: stopped.cwd });
 
     const errorCount = stopped.errorLogs.length;
     const item = new vscode.TreeItem(label, errorCount > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
-    item.description = `${scopeLabel} - ${formatTimestamp(stopped.startTime)} → ${formatTimestamp(stopped.stopTime)}`;
+    item.description = `${formatTimestamp(stopped.startTime)} → ${formatTimestamp(stopped.stopTime)}`;
     item.tooltip = tooltip;
     item.contextValue = FuncHostDebugContextValue.StoppedHostTask;
     item.iconPath = new vscode.ThemeIcon('debug-stop', new vscode.ThemeColor('disabledForeground'));
