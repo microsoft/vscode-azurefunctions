@@ -6,23 +6,57 @@
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { getRecentLogsPlainText } from '../funcCoreTools/funcHostErrorUtils';
-import { clearStoppedSessions, onRunningFuncTasksChanged, runningFuncTaskMap, stoppedFuncTasks, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { clearStoppedSessions, onRunningFuncTasksChanged, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
-import { FuncHostDebugViewProvider, type IHostErrorNode, type IHostTaskNode, type IStoppedHostNode } from './FunctionHostDebugView';
+import { FuncHostDebugViewProvider, HostErrorNode, HostTaskNode, StoppedHostNode } from './FunctionHostDebugView';
+import { getScopeLabel } from './nodes/funcHostDebugUtils';
 
 const viewId = 'azureFunctions.funcHostDebugView';
 
-function isHostTaskNode(node: unknown): node is IHostTaskNode {
-    return !!node && typeof node === 'object' && (node as IHostTaskNode).kind === 'hostTask';
+function isHostTaskNode(node: unknown): node is HostTaskNode {
+    return node instanceof HostTaskNode;
 }
 
-function isStoppedHostNode(node: unknown): node is IStoppedHostNode {
-    return !!node && typeof node === 'object' && (node as IStoppedHostNode).kind === 'stoppedHost';
+function isStoppedHostNode(node: unknown): node is StoppedHostNode {
+    return node instanceof StoppedHostNode;
 }
 
-function isHostErrorNode(node: unknown): node is IHostErrorNode {
-    return !!node && typeof node === 'object' && (node as IHostErrorNode).kind === 'hostError';
+function isHostErrorNode(node: unknown): node is HostErrorNode {
+    return node instanceof HostErrorNode;
+}
+
+function formatErrorLogs(errorLogs: string[]): string {
+    return errorLogs.map(m => stripAnsiControlCharacters(m).trim()).filter(Boolean).join('\n\n')
+        || localize('funcHostDebug.noErrors', 'No errors detected.');
+}
+
+function getNodeContext(args: unknown): { scopeLabel: string; portNumber: string; cwd?: string; errorOutput: string } | undefined {
+    if (isHostErrorNode(args)) {
+        return {
+            scopeLabel: getScopeLabel(args.workspaceFolder),
+            portNumber: args.portNumber,
+            cwd: args.cwd,
+            errorOutput: stripAnsiControlCharacters(args.message).trim() || args.message,
+        };
+    } else if (isHostTaskNode(args)) {
+        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+        return {
+            scopeLabel: getScopeLabel(args.workspaceFolder),
+            portNumber: args.portNumber,
+            cwd: args.cwd,
+            errorOutput: formatErrorLogs(task?.errorLogs ?? []),
+        };
+    } else if (isStoppedHostNode(args)) {
+        const stopped = args.stoppedTask;
+        return {
+            scopeLabel: getScopeLabel(stopped.workspaceFolder),
+            portNumber: stopped.portNumber,
+            cwd: stopped.cwd,
+            errorOutput: formatErrorLogs(stopped.errorLogs),
+        };
+    }
+    return undefined;
 }
 
 async function tryOpenDebugViewOnFirstFuncHostError(): Promise<void> {
@@ -67,28 +101,6 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
         }),
     );
 
-    registerCommand('azureFunctions.funcHostDebug.clearErrors', async (actionContext: IActionContext) => {
-        actionContext.telemetry.properties.source = 'funcHostDebugView';
-        for (const folder of vscode.workspace.workspaceFolders ?? []) {
-            for (const t of runningFuncTaskMap.getAll(folder)) {
-                if (!t) {
-                    continue;
-                }
-
-                if ((t.errorLogs?.length ?? 0) > 0) {
-                    t.errorLogs = [];
-                }
-            }
-        }
-
-        // Also clear errors from stopped sessions.
-        for (const s of stoppedFuncTasks) {
-            s.errorLogs = [];
-        }
-
-        provider.refresh();
-    });
-
     registerCommand('azureFunctions.funcHostDebug.clearStoppedSessions', async (actionContext: IActionContext) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
         clearStoppedSessions();
@@ -128,39 +140,12 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
     registerCommand('azureFunctions.funcHostDebug.askCopilot', async (actionContext: IActionContext, args: unknown) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
 
-        let scopeLabel: string;
-        let portNumber: string;
-        let cwd: string | undefined;
-        let errorOutput: string;
-
-        if (isHostErrorNode(args)) {
-            scopeLabel = typeof args.workspaceFolder === 'object'
-                ? args.workspaceFolder.name
-                : localize('funcHostDebug.globalScope', 'Global');
-            portNumber = args.portNumber;
-            cwd = args.cwd;
-            errorOutput = stripAnsiControlCharacters(args.message).trim() || args.message;
-        } else if (isHostTaskNode(args)) {
-            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
-            scopeLabel = typeof args.workspaceFolder === 'object'
-                ? args.workspaceFolder.name
-                : localize('funcHostDebug.globalScope', 'Global');
-            portNumber = args.portNumber;
-            cwd = args.cwd;
-            const errors = (task?.errorLogs ?? []).map(m => stripAnsiControlCharacters(m).trim()).filter(Boolean);
-            errorOutput = errors.join('\n\n') || localize('funcHostDebug.noErrors', 'No errors detected.');
-        } else if (isStoppedHostNode(args)) {
-            const stopped = args.stoppedTask;
-            scopeLabel = typeof stopped.workspaceFolder === 'object'
-                ? stopped.workspaceFolder.name
-                : localize('funcHostDebug.globalScope', 'Global');
-            portNumber = stopped.portNumber;
-            cwd = stopped.cwd;
-            const errors = stopped.errorLogs.map(m => stripAnsiControlCharacters(m).trim()).filter(Boolean);
-            errorOutput = errors.join('\n\n') || localize('funcHostDebug.noErrors', 'No errors detected.');
-        } else {
+        const ctx = getNodeContext(args);
+        if (!ctx) {
             return;
         }
+
+        const { scopeLabel, portNumber, cwd, errorOutput } = ctx;
 
         const prompt = [
             'I am debugging an Azure Functions project locally in VS Code.',
