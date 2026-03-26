@@ -84,8 +84,11 @@ async function addStorageConnectionsAndRoles(context: AddMIConnectionsContext, c
             addRole(context, scope, CommonRoleDefinitions.storageBlobDataOwner);
             addRole(context, scope, CommonRoleDefinitions.storageQueueDataContributor);
         }
-    } catch (_e) {
-        throw new Error(localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value));
+    } catch (e) {
+        throw new Error(
+            localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value),
+            { cause: e },
+        );
     }
 
 }
@@ -106,8 +109,11 @@ async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, 
             },
             ...getClientIdAndCredentialPropertiesForRemote(context, cosmosDbAccountName)
         );
-    } catch (_e) {
-        throw new Error(localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value));
+    } catch (e) {
+        throw new Error(
+            localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value),
+            { cause: e }
+        );
     }
 }
 
@@ -142,8 +148,11 @@ async function addEventHubServiceBusConnectionsAndRoles(context: AddMIConnection
                 addRole(context, scope, CommonRoleDefinitions.azureServiceBusDataReceiver);
             }
         }
-    } catch (_e) {
-        throw new Error(localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value));
+    } catch (e) {
+        throw new Error(
+            localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value),
+            { cause: e }
+        );
     }
 }
 

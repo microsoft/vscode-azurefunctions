@@ -33,7 +33,10 @@ export namespace requestUtils {
             return await sendRequestWithTimeout(context, options, timeout, undefined);
         } catch (error) {
             if (isTimeoutError(error)) {
-                throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
+                throw new Error(
+                    localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey),
+                    { cause: error }
+                );
             } else {
                 throw error;
             }

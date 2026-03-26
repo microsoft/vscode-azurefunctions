@@ -6,17 +6,18 @@
 import { runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { initProjectForVSCode } from '../../src/commands/initProjectForVSCode/initProjectForVSCode';
 import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
 import { FuncVersion } from '../../src/FuncVersion';
 import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
+import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     this.timeout(30 * 1000);
 
     suiteSetup(async () => {
+        await getTestApi();
         await cleanTestWorkspace();
     });
 
@@ -380,7 +381,8 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
 
     await runWithTestActionContext('initProject', async context => {
         await context.ui.runWithInputs(options.inputs || [], async () => {
-            await initProjectForVSCode(context, projectPath);
+            const testApi = getCachedTestApi();
+            await testApi.commands.initProjectForVSCode(context, projectPath);
         });
     });
 

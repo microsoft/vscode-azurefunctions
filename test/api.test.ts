@@ -14,23 +14,35 @@ import { nonNullValue } from '../src/utils/nonNull';
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { getTestApi } from './utils/testApiAccess';
+import type { TestApi } from '../src/testApi';
 
 suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
+    let testApi: TestApi;
 
-    suiteSetup(() => {
+    suiteSetup(async function () {
+        this.timeout(2 * 60 * 1000);
         const extension: Extension<apiUtils.AzureExtensionApiProvider> | undefined = extensions.getExtension(extensionId);
         api = nonNullValue(extension).exports.getApi<AzureFunctionsExtensionApi>('^1.0.0');
+        testApi = await getTestApi();
     });
 
-    test('createFunction in a subfolder of a workspace', async () => {
+    // Use the bundle's registerOnActionStartHandler so TestUserInput is set on the bundle's action contexts.
+    // Cast needed because the test module and bundle have slightly different type definitions for IActionContext.
+    function bundleRegisterHandler(...args: Parameters<typeof registerOnActionStartHandler>): ReturnType<typeof registerOnActionStartHandler> {
+        return (testApi.testing.registerOnActionStartHandler as unknown as typeof registerOnActionStartHandler)(...args);
+    }
+
+    test('createFunction in a subfolder of a workspace', async function () {
+        this.timeout(2 * 60 * 1000);
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.JavaScript;
         const workspaceFolder = getTestWorkspaceFolder();
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, functionName], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 suppressOpenFolder: true,
@@ -51,12 +63,13 @@ suite(`AzureFunctionsExtensionApi`, () => {
         await validateProject(folderPath, validateOptions);
     });
 
-    test('createFunction', async () => {
+    test('createFunction', async function () {
+        this.timeout(2 * 60 * 1000);
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi2');
 
-        await runWithInputs('api.createFunction', [language], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -74,14 +87,15 @@ suite(`AzureFunctionsExtensionApi`, () => {
         await validateProject(folderPath, validateOptions);
     });
 
-    test('createFunction dotnet with targetFramework', async () => {
+    test('createFunction dotnet with targetFramework', async function () {
+        this.timeout(2 * 60 * 1000);
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.CSharp;
         const workspaceFolder = getTestWorkspaceFolder();
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /6/i, 'Company.Function', 'Anonymous'], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /6/i, 'Company.Function', 'Anonymous'], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -102,14 +116,15 @@ suite(`AzureFunctionsExtensionApi`, () => {
 
     // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) we throw an error. api.createFunction swallows the error and returns undefined.
     // In the incorrect case (when 8 is a pick) the test fails since the 2 provided test inputs have already been used, but there are more prompts.
-    test('createFunction with language not in targetFramework', async () => {
+    test('createFunction with language not in targetFramework', async function () {
+        this.timeout(2 * 60 * 1000);
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.CSharp;
         const workspaceFolder = getTestWorkspaceFolder();
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /8/i], registerOnActionStartHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /8/i], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,

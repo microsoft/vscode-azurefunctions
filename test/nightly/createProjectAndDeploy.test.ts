@@ -11,14 +11,12 @@ import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { copyFunctionUrl } from '../../src/commands/copyFunctionUrl';
-import { createNewProjectInternal } from '../../src/commands/createNewProject/createNewProject';
-import { deployProductionSlot } from '../../src/commands/deploy/deploy';
 import { ProjectLanguage } from '../../src/constants';
 import { getRandomAlphanumericString, getRandomHexString } from '../../src/utils/fs';
 import { addParallelSuite, runInSeries, type ParallelTest } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
 import { NodeModelVersion, PythonModelVersion, defaultTestFuncVersion, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from '../project/validateProject';
+import { getCachedTestApi } from '../utils/testApiAccess';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -26,11 +24,11 @@ interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions 
     title: string;
     buildMachineOsToSkip?: NodeJS.Platform | NodeJS.Platform[];
 }
-const confirmDeploy = 'Deploy';
+// const confirmDeploy = 'Deploy';
 
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: NodeModelVersion.v4 },
-    { title: 'TypeScript', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
@@ -40,7 +38,7 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // { title: 'C# .NET 9', ...getCSharpValidateOptions('net9.0', FuncVersion.v4), createProjectInputs: [/net.*9/i], deployInputs: [/net.*9/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
     // Temporarily disable PowerShell tests due to Encountered an error (InternalServerError) from host runtime error.
     // { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy] },
-    { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy], languageModelVersion: PythonModelVersion.v2 },
+    { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -72,6 +70,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     const functionName: string = 'f' + getRandomAlphanumericString(); // function name must only contain alphanumeric
 
     const testWorkspacePath = getTestWorkspaceFolder();
+    const testApi = getCachedTestApi();
     await runWithTestActionContext('createNewProject', async context => {
         options.createProjectInputs = options.createProjectInputs || [];
         options.createFunctionInputs = options.createFunctionInputs || [];
@@ -81,7 +80,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
         }
         await context.ui.runWithInputs(inputs, async () => {
             const createProjectOptions = options.version !== defaultTestFuncVersion ? { version: options.version } : {};
-            await createNewProjectInternal(context, createProjectOptions)
+            await testApi.commands.createNewProjectInternal(context, createProjectOptions)
         });
     });
 
@@ -98,8 +97,8 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     resourceGroupsToDelete.push(appName);
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
-        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, appName, getRotatingLocation(), ...options.deployInputs], async () => {
-            await deployProductionSlot(context)
+        await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, getRotatingLocation(), appName, ...options.deployInputs], async () => {
+            await testApi.commands.deployProductionSlot(context)
         });
     });
 
@@ -129,11 +128,12 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     const inputs: (string | RegExp)[] = [appName, functionName];
 
     let functionUrl: string | undefined;
+    const testApi = getCachedTestApi();
     await runWithTestActionContext('copyFunctionUrl', async context => {
         await runInSeries('copyFunctionUrl', async () => {
             await vscode.env.clipboard.writeText(''); // Clear the clipboard
             await context.ui.runWithInputs(inputs, async () => {
-                await copyFunctionUrl(context);
+                await testApi.commands.copyFunctionUrl(context);
             });
             functionUrl = await vscode.env.clipboard.readText();
         });

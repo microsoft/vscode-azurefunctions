@@ -123,7 +123,7 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
                     await context.ui.showWarningMessage(message, { modal: true, stepName: 'overwriteLocalSettings' }, overwriteButton);
                 } else {
                     const message: string = localize('failedToParse', 'Failed to parse "{0}": {1}.', localSettingsFileName, parseError(error).message);
-                    throw new Error(message);
+                    throw new Error(message, { cause: error });
                 }
             }
         }

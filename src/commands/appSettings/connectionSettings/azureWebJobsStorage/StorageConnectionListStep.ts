@@ -73,7 +73,7 @@ export class StorageConnectionListStep<T extends IStorageConnectionWizardContext
                 if (!(context as IStorageAzureConnectionWizard).storageAccount) {
                     promptSteps.push(new StorageAccountListStep(
                         { // INewStorageAccountDefaults
-                            kind: StorageAccountKind.Storage,
+                            kind: StorageAccountKind.StorageV2,
                             performance: StorageAccountPerformance.Standard,
                             replication: StorageAccountReplication.LRS
                         },
