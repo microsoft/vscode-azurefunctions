@@ -46,7 +46,7 @@ export async function setDTSConnectionPreDebugIfNeeded(context: IActionContext, 
 
     await wizard.prompt();
 
-    if (wizardContext.dtsConnectionType) {
+    if (wizardContext.dtsConnectionType && wizardContext.dtsConnectionType !== ConnectionType.Emulator) {
         await wizard.execute();
     }
 

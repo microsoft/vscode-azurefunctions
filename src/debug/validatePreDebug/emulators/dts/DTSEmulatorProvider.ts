@@ -46,21 +46,21 @@ export class DTSEmulatorProvider<T extends IPreDebugValidateContext> implements 
     }
 
     public getExecuteSteps(status: EmulatorStatus): AzureWizardExecuteStep<T>[] {
-        const steps: AzureWizardExecuteStep<T>[] = [];
+        const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!status.isEmulatorRunning) {
-            steps.push(new DTSEmulatorStartStep());
+            executeSteps.push(new DTSEmulatorStartStep());
         }
 
         if (status.needsConnectionSetup) {
-            steps.push(
+            executeSteps.push(
                 new DTSEmulatorGetConnectionsStep(),
-                new DTSConnectionSetSettingStep(),
-                new DTSHubNameSetSettingStep(),
+                new DTSConnectionSetSettingStep({ suppressActivityChildren: true }),
+                new DTSHubNameSetSettingStep({ suppressActivityChildren: true }),
             );
         }
 
-        return steps;
+        return executeSteps;
     }
 
     private async checkEmulatorRunning(context: T): Promise<boolean> {

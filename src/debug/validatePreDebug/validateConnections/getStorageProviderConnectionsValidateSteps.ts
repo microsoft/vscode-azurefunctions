@@ -12,23 +12,22 @@ import { SQLConnectionValidateStep } from './SQLConnectionValidateStep';
 import { StorageConnectionValidateStep } from './StorageConnectionValidateStep';
 
 export function getStorageProviderConnectionsValidateSteps(context: IPreDebugValidateContext): AzureWizardExecuteStep<IPreDebugValidateContext>[] {
-    const steps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IPreDebugValidateContext>[] = [];
 
     switch (context.durableStorageType) {
         case StorageType.DTS:
-            steps.push(new DTSConnectionValidateStep());
+            executeSteps.push(new DTSConnectionValidateStep());
             break;
         case StorageType.Netherite:
-            steps.push(new EventHubsNamespaceConnectionValidateStep());
+            executeSteps.push(new EventHubsNamespaceConnectionValidateStep());
             break;
         case StorageType.SQL:
-            steps.push(new SQLConnectionValidateStep());
+            executeSteps.push(new SQLConnectionValidateStep());
             break;
         case StorageType.Storage:
         default:
     }
 
-    steps.push(new StorageConnectionValidateStep());
-
-    return steps;
+    executeSteps.push(new StorageConnectionValidateStep());
+    return executeSteps;
 }

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
+import { ActivityOutputType, AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
 import { CodeAction, ConnectionKey, hostFileName } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
@@ -16,6 +16,13 @@ import { type IDTSAzureConnectionWizardContext, type IDTSConnectionWizardContext
 export class DTSConnectionSetSettingStep<T extends IDTSConnectionWizardContext | IDTSAzureConnectionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 240;
     public stepName: string = 'dtsConnectionSetSettingStep';
+
+    constructor(options?: { suppressActivityChildren?: boolean }) {
+        super();
+        if (options?.suppressActivityChildren) {
+            this.options.suppressActivityOutput = ActivityOutputType.Item;
+        }
+    }
 
     protected getOutputLogSuccess = (context: T) => localize('prepareDTSConnectionSuccess', 'Successfully prepared DTS connection: "{0}".', context.newDTSConnectionSettingValue);
     protected getOutputLogFail = (context: T) => localize('prepareDTSConnectionFail', 'Failed to prepare DTS connection: "{0}".', context.newDTSConnectionSettingValue);

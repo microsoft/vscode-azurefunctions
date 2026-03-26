@@ -9,7 +9,7 @@ import { localize } from '../../localize';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
 
 export class FuncCoreToolsValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
-    public priority: number = 320;
+    public priority: number = 170;
     public stepName: string = 'funcCoreToolsValidateStep';
     protected getOutputLogSuccess = (context: T) => localize('funcCoreToolsSuccess', 'Successfully found Functions Core Tools (v{0}).', context.funcCoreToolsVersion);
     protected getOutputLogFail = () => localize('funcCoreToolsFail', 'Failed to find Functions Core Tools.');

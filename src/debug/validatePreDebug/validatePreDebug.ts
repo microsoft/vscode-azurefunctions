@@ -11,14 +11,14 @@ import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../../vsCodeConfig/launch';
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
-import { getStorageProviderConnectionsValidateSteps } from "./validateConnections/getStorageProviderConnectionsValidateSteps";
-import { setStorageProviderConnectionsPreDebugIfNeeded } from './setConnections/setStorageProviderConnectionsPreDebug';
 import { getEmulatorProviders } from "./emulators/getEmulatorProviders";
 import { LocalEmulatorProvidersListStep } from './emulators/LocalEmulatorProvidersListStep';
 import { FuncCoreToolsInstallPromptStep } from './FuncCoreToolsInstallPromptStep';
 import { FuncCoreToolsMinimumVersionConfirmStep } from "./FuncCoreToolsMinimumVersionConfirmStep";
 import { FuncCoreToolsValidateStep } from './FuncCoreToolsValidateStep';
 import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
+import { setStorageProviderConnectionsPreDebugIfNeeded } from './setConnections/setStorageProviderConnectionsPreDebug';
+import { getStorageProviderConnectionsValidateSteps } from "./validateConnections/getStorageProviderConnectionsValidateSteps";
 import { WorkerRuntimeSettingValidateStep } from './WorkerRuntimeSettingValidateStep';
 
 export interface IPreDebugValidateResult {

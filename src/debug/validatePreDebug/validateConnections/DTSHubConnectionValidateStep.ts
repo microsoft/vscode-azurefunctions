@@ -5,6 +5,7 @@
 
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
+import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
 import { tryGetVariableSubstitutedKey } from "../../../commands/appSettings/connectionSettings/getVariableSubstitutedKey";
 import { StorageType, warningIcon } from "../../../constants";
 import { localize } from "../../../localize";
@@ -22,16 +23,26 @@ export class DTSHubConnectionValidateStep<T extends IPreDebugValidateContext> ex
         return hubKey ? `"${hubKey}" setting` : localize('dtsHubLabel', 'DTS hub setting');
     };
 
-    constructor(readonly _dtsHubConnectionKey: string | undefined, readonly _dtsHubConnectionValue: string | undefined, private readonly _connectionType: string | undefined) {
+    private _dtsHubConnectionKey: string | undefined;
+
+    constructor(private readonly _connectionType: string | undefined) {
         super();
     }
 
-    public async execute(_: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+    public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         this.options.continueOnFail = true;
 
         progress.report({ message: localize('checkingDTSConnection', 'Checking for DTS hub connection...') });
 
-        if (!this._dtsHubConnectionValue) {
+        const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(context) ?? {};
+        this._dtsHubConnectionKey = dtsHubConnectionKey;
+
+        const { dtsHubConnectionValue } = await getDTSLocalSettingsValues(context, {
+            dtsConnectionKey,
+            dtsHubConnectionKey,
+        }) ?? {};
+
+        if (!dtsHubConnectionValue) {
             throw new Error();
         }
     }

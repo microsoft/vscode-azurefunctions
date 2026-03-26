@@ -42,7 +42,10 @@ export async function setStorageConnectionPreDebugIfNeeded(context: IActionConte
     });
 
     await wizard.prompt();
-    await wizard.execute();
+
+    if (wizardContext.azureWebJobsStorageType && wizardContext.azureWebJobsStorageType !== ConnectionType.Emulator) {
+        await wizard.execute();
+    }
 
     return wizardContext.azureWebJobsStorageType;
 }

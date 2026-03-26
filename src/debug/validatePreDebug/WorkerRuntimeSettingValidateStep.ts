@@ -16,7 +16,7 @@ import { type IPreDebugValidateContext } from './IPreDebugValidateContext';
  */
 export class WorkerRuntimeSettingValidateStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     // Todo: Revisit priority
-    public priority: number = 330;
+    public priority: number = 180;
     public stepName: string = 'workerRuntimeSettingValidateStep';
 
     protected getOutputLogSuccess = () => localize('validateWorkerRuntimeSuccess', 'Successfully verified a value for "{0}" setting in "{1}".', workerRuntimeKey, localSettingsFileName);

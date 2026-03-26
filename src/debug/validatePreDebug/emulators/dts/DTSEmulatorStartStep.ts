@@ -3,15 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput, nonNullValue, type ExecuteActivityOutput } from '@microsoft/vscode-azext-utils';
 import { commands, window } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { type DurableTaskSchedulerEmulator } from '../../../../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { type IPreDebugValidateContext } from '../../IPreDebugValidateContext';
 
-export class DTSEmulatorStartStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStep<T> {
+export class DTSEmulatorStartStep<T extends IPreDebugValidateContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 190;
+    public stepName: string = 'dtsEmulatorStartStep';
+
+    protected getOutputLogSuccess = () => localize('startDTSEmulatorSuccess', 'Successfully started DTS emulator.');
+    protected getOutputLogFail = () => localize('startDTSEmulatorFail', 'Failed to start DTS emulator.');
+    protected getTreeItemLabel = () => localize('startDTSEmulatorLabel', 'Start Durable Task Scheduler (DTS) emulator');
+
+    public createSuccessOutput(context: T): ExecuteActivityOutput {
+        const output = super.createSuccessOutput(context);
+        if (output.item) {
+            output.item.description = 'container';
+        }
+        return output;
+    }
 
     public async execute(context: T): Promise<void> {
         const emulatorId: string = nonNullValue(

@@ -6,7 +6,7 @@
 import { ActivityChildItem, ActivityChildType, activityFailContext, AzureWizardExecuteStepWithActivityOutput, createContextValue, type AzureWizardExecuteStep, type ExecuteActivityOutput, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type Progress } from "vscode";
 import { getDTSLocalSettingsValues, getDTSSettingsKeys } from "../../../commands/appSettings/connectionSettings/durableTaskScheduler/getDTSLocalProjectConnections";
-import { ConnectionType, warningIcon } from "../../../constants";
+import { ConnectionType, StorageType, warningIcon } from "../../../constants";
 import { localize } from "../../../localize";
 import { type IPreDebugValidateContext } from "../IPreDebugValidateContext";
 import { isAliveConnection } from "../setConnections/setDTSConnectionPreDebug";
@@ -29,39 +29,42 @@ export class DTSConnectionValidateStep<T extends IPreDebugValidateContext> exten
         this.options.continueOnFail = true;
         progress.report({ message: localize('checkingDTSConnection', 'Checking for DTS connection...') });
 
-        if (!context.newDTSConnectionSettingKey || !context.newDTSHubConnectionSettingKey) {
-            const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(context) ?? {};
-            context.newDTSConnectionSettingKey = dtsConnectionKey;
-            context.newDTSHubConnectionSettingKey = dtsHubConnectionKey;
-        }
+        const { dtsConnectionKey, dtsHubConnectionKey } = await getDTSSettingsKeys(context) ?? {};
+        context.newDTSConnectionSettingKey = dtsConnectionKey;
+        context.newDTSHubConnectionSettingKey = dtsHubConnectionKey;
 
-        if (!context.newDTSConnectionSettingValue || !context.newDTSHubConnectionSettingValue) {
-            const { dtsConnectionValue, dtsHubConnectionValue } = await getDTSLocalSettingsValues(context, {
-                dtsConnectionKey: context.newDTSConnectionSettingKey,
-                dtsHubConnectionKey: context.newDTSHubConnectionSettingKey,
-            }) ?? {};
-            context.newDTSConnectionSettingValue = dtsConnectionValue;
-            context.newDTSHubConnectionSettingValue = dtsHubConnectionValue;
-        }
+        const { dtsConnectionValue, dtsHubConnectionValue } = await getDTSLocalSettingsValues(context, {
+            dtsConnectionKey,
+            dtsHubConnectionKey,
+        }) ?? {};
+        context.newDTSConnectionSettingValue = dtsConnectionValue;
+        context.newDTSHubConnectionSettingValue = dtsHubConnectionValue;
 
-        if (!context.newDTSConnectionSettingValue) {
+        if (!dtsConnectionValue) {
             throw new Error();
         }
 
-        if (!await isAliveConnection(context, context.newDTSConnectionSettingValue)) {
+        // If the emulator was already started earlier in the pre-debug flow, trust that it's
+        // running and skip the alive check which can fail due to port mismatches or race conditions
+        if (context.dtsEmulator) {
+            this._connectionType = ConnectionType.Emulator;
+            return;
+        }
+
+        if (!await isAliveConnection(context, dtsConnectionValue)) {
             this._connectionType = localize('stale', 'Stale');
             throw new Error();
         }
 
-        this._connectionType = DTSConnectionValidateStep.classifyConnectionType(context.newDTSConnectionSettingValue);
+        this._connectionType = DTSConnectionValidateStep.classifyConnectionType(dtsConnectionValue);
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.newDTSConnectionSettingKey || !context.newDTSConnectionSettingValue;
+        return context.durableStorageType === StorageType.DTS;
     }
 
-    public addExecuteSteps(context: T): AzureWizardExecuteStep<T>[] {
-        return [new DTSHubConnectionValidateStep(context.newDTSHubConnectionSettingKey, context.newDTSHubConnectionSettingValue, this._connectionType)];
+    public addExecuteSteps(_context: T): AzureWizardExecuteStep<T>[] {
+        return [new DTSHubConnectionValidateStep(this._connectionType)];
     }
 
     public createSuccessOutput(context: T): ExecuteActivityOutput {
