@@ -10,8 +10,8 @@ import { TemplateSource } from '../src/extensionVariables';
 import { FuncVersion } from '../src/FuncVersion';
 import { type FunctionTemplateBase } from '../src/templates/IFunctionTemplate';
 import { getTestWorkspaceFolder, longRunningTestsEnabled, shouldSkipVersion } from './global.test';
-import { getCachedTestApi, getTestApi } from './utils/testApiAccess';
 import { javaUtils } from './utils/javaUtils';
+import { getCachedTestApi, getTestApi } from './utils/testApiAccess';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
@@ -64,9 +64,12 @@ function addSuite(source: TemplateSource | undefined): void {
 
                 await runWithTestActionContext('getFunctionTemplates', async context => {
                     const testApi = getCachedTestApi();
-                    const templates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(
+                    const allTemplates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(
                         context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey, source
                     );
+                    // getFunctionTemplates now returns all templates with templateFilter set as a category.
+                    // Filter to Verified here to validate both the total return and correct classification.
+                    const templates = allTemplates.filter(t => t.templateFilter === TemplateFilter.Verified);
                     const expected = source === TemplateSource.Backup && backupExpectedCount !== undefined ? backupExpectedCount : expectedCount;
                     assert.equal(templates.length, expected);
                 });

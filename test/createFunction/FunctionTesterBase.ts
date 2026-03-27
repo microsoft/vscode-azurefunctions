@@ -59,7 +59,10 @@ export abstract class FunctionTesterBase implements Disposable {
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             const testApi = getCachedTestApi();
-            const templates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined, this.source);
+            const allTemplates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined, this.source);
+            // getFunctionTemplates now returns all templates with templateFilter set as a category.
+            // Filter to Verified here to match the tested subset.
+            const templates = allTemplates.filter(t => t.templateFilter === TemplateFilter.Verified);
             assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
         });
     }

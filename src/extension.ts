@@ -200,7 +200,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     }
                     ext.templateProvider.registerActionVariable(cached, context);
                 },
-                getFunctionTemplates: async (context, projectPath, language, languageModel, version, templateFilter, projectTemplateKey, source) => {
+                getFunctionTemplates: async (context, projectPath, language, languageModel, version, _templateFilter, projectTemplateKey, source) => {
                     let provider: CentralTemplateProvider;
                     if (source) {
                         let cached = testTemplateProviders.get(source);
@@ -213,7 +213,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     } else {
                         provider = ext.templateProvider.get(context);
                     }
-                    return provider.getFunctionTemplates(context, projectPath, language, languageModel, version, templateFilter, projectTemplateKey);
+                    return provider.getFunctionTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
                 }
             }
         });

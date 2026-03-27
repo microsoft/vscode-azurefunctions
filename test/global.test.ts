@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, projectLanguageSetting, pythonVenvSetting, templateFilterSetting } from '../src/constants';
+import { deploySubpathSetting, funcVersionSetting, preDeployTaskSetting, projectLanguageSetting, pythonVenvSetting } from '../src/constants';
 import { ext, TemplateSource } from '../src/extensionVariables';
 import { FuncVersion } from '../src/FuncVersion';
 import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
@@ -129,7 +129,6 @@ export async function cleanTestWorkspace(): Promise<void> {
         const settings: string[] = [
             projectLanguageSetting,
             funcVersionSetting,
-            templateFilterSetting,
             deploySubpathSetting,
             preDeployTaskSetting,
             pythonVenvSetting
