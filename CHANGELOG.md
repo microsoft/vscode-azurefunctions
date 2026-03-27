@@ -18,6 +18,7 @@
 * [[4915](https://github.com/microsoft/vscode-azurefunctions/pull/4915)] Fix not being able to get .NET latest templates
 * [[4923](https://github.com/microsoft/vscode-azurefunctions/pull/4923)] Performance improvements
 * [[4929](https://github.com/microsoft/vscode-azurefunctions/pull/4929)] Don't call for `storageConnectionString` if it's not needed
+* [[4944](https://github.com/microsoft/vscode-azurefunctions/pull/4944)] Remove `proxies.json` from JSON schema contribution
 
 ## 1.20.3 - 2025-12-16
 
