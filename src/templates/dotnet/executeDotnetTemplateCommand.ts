@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, withNamedArg, withQuotedArg, type CommandLineArgs } from '@microsoft/vscode-processutils';
+import { composeArgs, withArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -18,30 +18,12 @@ import { findShortNameByIdentity, parseTemplatesFromNupkg } from './parseNupkgTe
 const itemNupkgFileName = 'item.nupkg';
 const projectNupkgFileName = 'project.nupkg';
 
-export enum DotnetTemplateOperation {
-    List = 'list',
-    Create = 'create',
-}
-
 /**
  * Lists templates by parsing nupkg files directly (no longer uses the JsonCli DLL).
  */
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: DotnetTemplateOperation.List, additionalArgs?: CommandLineArgs): Promise<string>;
-/**
- * @deprecated For 'create' operations, use {@link executeDotnetTemplateCreate} instead.
- */
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: DotnetTemplateOperation, additionalArgs?: CommandLineArgs): Promise<string>;
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: DotnetTemplateOperation, additionalArgs?: CommandLineArgs): Promise<string> {
+export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string): Promise<string> {
     const templateDir = getDotnetTemplateDir(context, version, projTemplateKey);
-
-    if (operation === DotnetTemplateOperation.List) {
-        return await listDotnetTemplates(templateDir);
-    } else {
-        // Fallback for any remaining callers that haven't migrated to executeDotnetTemplateCreate
-        const { identity, templateArgs } = parseJsonCliStyleArgs(additionalArgs ?? []);
-        await executeDotnetTemplateCreate(context, version, projTemplateKey, workingDirectory, identity, templateArgs);
-        return '';
-    }
+    return await listDotnetTemplates(templateDir);
 }
 
 /**
@@ -139,30 +121,6 @@ export async function executeDotnetTemplateCreate(
         // Clean up isolated home directory
         await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
     }
-}
-
-/**
- * Parses JSON Cli-style arguments (--identity, --arg:name, etc.) into structured data.
- * Used only as a compatibility shim for callers that have not yet migrated to executeDotnetTemplateCreate.
- */
-function parseJsonCliStyleArgs(args: CommandLineArgs): { identity: string; templateArgs: Record<string, string> } {
-    const flatArgs: string[] = (Array.isArray(args) ? args : [args]).map(String);
-    let identity = '';
-    const templateArgs: Record<string, string> = {};
-
-    for (let i = 0; i < flatArgs.length; i++) {
-        const arg = flatArgs[i];
-        if (arg === '--identity' && i + 1 < flatArgs.length) {
-            identity = flatArgs[i + 1].replace(/^"|"$/g, '');
-            i++;
-        } else if (arg.startsWith('--arg:') && i + 1 < flatArgs.length) {
-            const paramName = arg.replace('--arg:', '');
-            templateArgs[paramName] = flatArgs[i + 1].replace(/^"|"$/g, '');
-            i++;
-        }
-    }
-
-    return { identity, templateArgs };
 }
 
 export function getDotnetItemTemplatePath(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {

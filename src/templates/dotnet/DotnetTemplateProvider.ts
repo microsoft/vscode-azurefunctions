@@ -19,7 +19,7 @@ import { type IBindingTemplate } from '../IBindingTemplate';
 import { type IFunctionTemplate } from '../IFunctionTemplate';
 import { type ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateSchemaVersion, TemplateType } from '../TemplateProviderBase';
-import { DotnetTemplateOperation, executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplateDir, validateDotnetInstalled } from './executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplateDir, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 
 export class DotnetTemplateProvider extends TemplateProviderBase {
@@ -165,7 +165,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     private async parseTemplates(context: IActionContext, projKey: string): Promise<ITemplates> {
-        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey, undefined, DotnetTemplateOperation.List));
+        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey));
         return parseDotnetTemplates(this._rawTemplates, this.version);
     }
 
