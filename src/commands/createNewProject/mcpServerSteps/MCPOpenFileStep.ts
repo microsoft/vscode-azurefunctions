@@ -15,14 +15,14 @@ export class MCPOpenFileStep extends AzureWizardExecuteStep<MCPProjectWizardCont
         const mcpJsonFilePath: string = path.join(context.projectPath, '.vscode', 'mcp.json');
         if (await AzExtFsExtra.pathExists(mcpJsonFilePath)) {
             const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
-            await window.showTextDocument(mcpJsonFile, { preview: false, viewColumn: ViewColumn.One });
+            await window.showTextDocument(mcpJsonFile, { preview: false });
         }
 
         // Open sample tool file in a side-by-side editor
         if (context.sampleToolFilePath) {
             if (await AzExtFsExtra.pathExists(context.sampleToolFilePath)) {
                 const doc = await workspace.openTextDocument(Uri.file(context.sampleToolFilePath));
-                await window.showTextDocument(doc, { preview: false, viewColumn: ViewColumn.Two });
+                await window.showTextDocument(doc, { preview: false, viewColumn: ViewColumn.Beside });
             }
         }
     }
