@@ -38,16 +38,27 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         await this.downloadFilesRecursively(context, sampleFiles, context.projectPath);
     }
 
+    private static readonly languageExtensions: Partial<Record<ProjectLanguage, string>> = {
+        [ProjectLanguage.TypeScript]: '.ts',
+        [ProjectLanguage.Python]: '.py',
+        [ProjectLanguage.CSharp]: '.cs',
+    };
+
     private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
+        const sourceExt = context.serverLanguage ? MCPDownloadSnippetsExecuteStep.languageExtensions[context.serverLanguage] : undefined;
         // Download all files and directories at this level in parallel
         await Promise.all(items.map(async (item) => {
             if (item.type === 'file') {
-                await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
+                const destPath = await MCPDownloadSnippetsExecuteStep.downloadSingleFile({
                     context, item,
                     destDirPath: basePath,
                     serverLanguage: context.serverLanguage,
                     projectName: path.basename(context.projectPath)
                 });
+                // Track the first source file matching the server language as the sample tool file
+                if (!context.sampleToolFilePath && sourceExt && destPath.endsWith(sourceExt)) {
+                    context.sampleToolFilePath = destPath;
+                }
             } else if (item.type === 'dir') {
                 // Create directory
                 const dirPath: string = path.join(basePath, item.name);
@@ -73,7 +84,7 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         destDirPath: string,
         projectName: string
         serverLanguage?: ProjectLanguage,
-    }): Promise<void> {
+    }): Promise<string> {
         const { context, item, destDirPath, serverLanguage, projectName } = options;
         const fileUrl: string = item.download_url;
         let destinationPath: string = path.join(destDirPath, item.name);
@@ -92,5 +103,6 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
             }
         }
         await AzExtFsExtra.writeFile(destinationPath, fileContent ?? '');
+        return destinationPath;
     }
 }

@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Uri, window, workspace } from 'vscode';
+import { Uri, ViewColumn, window, workspace } from 'vscode';
 import { type MCPProjectWizardContext } from '../IProjectWizardContext';
 
 export class MCPOpenFileStep extends AzureWizardExecuteStep<MCPProjectWizardContext> {
@@ -13,10 +13,17 @@ export class MCPOpenFileStep extends AzureWizardExecuteStep<MCPProjectWizardCont
 
     public async execute(context: MCPProjectWizardContext): Promise<void> {
         const mcpJsonFilePath: string = path.join(context.projectPath, '.vscode', 'mcp.json');
-        
         if (await AzExtFsExtra.pathExists(mcpJsonFilePath)) {
             const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
-            await window.showTextDocument(mcpJsonFile, { preview: false });
+            await window.showTextDocument(mcpJsonFile, { preview: false, viewColumn: ViewColumn.One });
+        }
+
+        // Open sample tool file in a side-by-side editor
+        if (context.sampleToolFilePath) {
+            if (await AzExtFsExtra.pathExists(context.sampleToolFilePath)) {
+                const doc = await workspace.openTextDocument(Uri.file(context.sampleToolFilePath));
+                await window.showTextDocument(doc, { preview: false, viewColumn: ViewColumn.Two });
+            }
         }
     }
 
