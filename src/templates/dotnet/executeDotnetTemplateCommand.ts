@@ -79,7 +79,7 @@ export async function executeDotnetTemplateCreate(
     const shortName = await findShortNameByIdentity(nupkgPaths, identity);
 
     // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state
-    // This is how the JSON CLI tool operateed
+    // This is how the JSON CLI tool operated
     const tempCliHome = path.join(os.tmpdir(), `azfunc-dotnet-home-${Date.now()}-${Math.random().toString(36).substring(2)}`);
     const prevDotnetCliHome = process.env.DOTNET_CLI_HOME;
 
