@@ -35,8 +35,16 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         progress.report({ message: localize('downloadingSampleCodeExecute', 'Downloading sample server code...') });
         const sampleMcpRepoUrl: string = nonNullProp(context, 'sampleMcpRepoUrl');
         const sampleFiles: GitHubFileMetadata[] = await feedUtils.getJsonFeed(context, sampleMcpRepoUrl);
-        await this.downloadFilesRecursively(context, sampleFiles, context.projectPath);
+        const downloadedFiles = await this.downloadFilesRecursively(context, sampleFiles, context.projectPath);
+        context.sampleToolFilePath = MCPDownloadSnippetsExecuteStep.selectSampleToolFile(context.serverLanguage, downloadedFiles);
     }
+
+    // Known entrypoint paths relative to the root of each language's sample GitHub repository
+    private static readonly knownToolPaths: Partial<Record<ProjectLanguage, string>> = {
+        [ProjectLanguage.TypeScript]: 'src/index.ts',
+        [ProjectLanguage.Python]: 'hello.py',
+        [ProjectLanguage.CSharp]: 'Tools/HelloTool.cs',
+    };
 
     private static readonly languageExtensions: Partial<Record<ProjectLanguage, string>> = {
         [ProjectLanguage.TypeScript]: '.ts',
@@ -44,8 +52,37 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         [ProjectLanguage.CSharp]: '.cs',
     };
 
-    private async downloadFilesRecursively(context: MCPProjectWizardContext, items: GitHubFileMetadata[], basePath: string): Promise<void> {
-        const sourceExt = context.serverLanguage ? MCPDownloadSnippetsExecuteStep.languageExtensions[context.serverLanguage] : undefined;
+    private static selectSampleToolFile(
+        language: ProjectLanguage | undefined,
+        files: { itemPath: string; destPath: string }[]
+    ): string | undefined {
+        if (!language) return undefined;
+
+        // Prefer the known entrypoint path for the language
+        const knownPath = MCPDownloadSnippetsExecuteStep.knownToolPaths[language];
+        if (knownPath) {
+            const match = files.find(f => f.itemPath === knownPath);
+            if (match) return match.destPath;
+        }
+
+        // Fallback: any file with the right extension, sorted for determinism
+        const sourceExt = MCPDownloadSnippetsExecuteStep.languageExtensions[language];
+        if (sourceExt) {
+            const candidates = files
+                .filter(f => f.destPath.endsWith(sourceExt))
+                .sort((a, b) => a.itemPath.localeCompare(b.itemPath));
+            return candidates[0]?.destPath;
+        }
+
+        return undefined;
+    }
+
+    private async downloadFilesRecursively(
+        context: MCPProjectWizardContext,
+        items: GitHubFileMetadata[],
+        basePath: string
+    ): Promise<{ itemPath: string; destPath: string }[]> {
+        const downloadedFiles: { itemPath: string; destPath: string }[] = [];
         // Download all files and directories at this level in parallel
         await Promise.all(items.map(async (item) => {
             if (item.type === 'file') {
@@ -55,10 +92,7 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
                     serverLanguage: context.serverLanguage,
                     projectName: path.basename(context.projectPath)
                 });
-                // Track the first source file matching the server language as the sample tool file
-                if (!context.sampleToolFilePath && sourceExt && destPath.endsWith(sourceExt)) {
-                    context.sampleToolFilePath = destPath;
-                }
+                downloadedFiles.push({ itemPath: item.path, destPath });
             } else if (item.type === 'dir') {
                 // Create directory
                 const dirPath: string = path.join(basePath, item.name);
@@ -69,9 +103,11 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
                 const dirContents: GitHubFileMetadata[] = parseJson<GitHubFileMetadata[]>(nonNullProp(response, 'bodyAsText'));
 
                 // Recursively download directory contents
-                await this.downloadFilesRecursively(context, dirContents, dirPath);
+                const subFiles = await this.downloadFilesRecursively(context, dirContents, dirPath);
+                downloadedFiles.push(...subFiles);
             }
         }));
+        return downloadedFiles;
     }
 
     public shouldExecute(context: MCPProjectWizardContext): boolean {
