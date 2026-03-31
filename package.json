@@ -894,7 +894,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i && config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
                 },
                 {
@@ -1007,8 +1007,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true"
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
@@ -1161,11 +1160,6 @@
             {
                 "title": "Durable Task Scheduler",
                 "properties": {
-                    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "%azureFunctions.durableTaskScheduler.enablePreviewFeatures%"
-                    },
                     "azureFunctions.durableTaskScheduler.emulatorRegistry": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorRegistry%",
