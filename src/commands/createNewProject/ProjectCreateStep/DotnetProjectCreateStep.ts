@@ -11,7 +11,7 @@ import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localS
 import { ext } from '../../../extensionVariables';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from "../../../localize";
-import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCreate, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
@@ -58,14 +58,15 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const functionsVersion: string = 'v' + majorVersion;
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
 
-        const args = composeArgs(
-            withNamedArg('--identity', identity),
-            withNamedArg('--arg:name', projectName, { shouldQuote: true }),
-            withNamedArg('--arg:AzureFunctionsVersion', functionsVersion),
-            withNamedArg('--arg:Framework', context.workerRuntime?.targetFramework, { shouldQuote: true }), // defaults to net6.0 if there is no targetFramework
-        )();
+        const templateArgs: Record<string, string> = {
+            name: projectName,
+            AzureFunctionsVersion: functionsVersion,
+        };
+        if (context.workerRuntime?.targetFramework) {
+            templateArgs.Framework = context.workerRuntime.targetFramework;
+        }
 
-        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', args);
+        await executeDotnetTemplateCreate(context, version, projTemplateKey, context.projectPath, identity, templateArgs);
 
         await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, '', MismatchBehavior.Overwrite);
     }

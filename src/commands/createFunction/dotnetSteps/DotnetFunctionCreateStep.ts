@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, withNamedArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { type FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
 import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
-import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCreate, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
@@ -32,20 +31,18 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
 
         const functionName: string = nonNullProp(context, 'functionName');
 
-        // Build setting args dynamically
-        const settingArgs = template.userPromptedSettings
-            .filter(setting => getBindingSetting(context, setting) !== undefined)
-            .flatMap(setting => {
-                const value = getBindingSetting(context, setting);
-                return withNamedArg(`--arg:${setting.name}`, String(value), { shouldQuote: true })();
-            });
+        // Build template args as a record
+        const templateArgs: Record<string, string> = {
+            name: functionName,
+            namespace: nonNullProp(context, 'namespace'),
+        };
 
-        const args = composeArgs(
-            withNamedArg('--identity', template.id),
-            withNamedArg('--arg:name', functionName, { shouldQuote: true }),
-            withNamedArg('--arg:namespace', nonNullProp(context, 'namespace'), { shouldQuote: true }),
-            withArg(...settingArgs),
-        )();
+        for (const setting of template.userPromptedSettings) {
+            const value = getBindingSetting(context, setting);
+            if (value !== undefined) {
+                templateArgs[setting.name] = String(value);
+            }
+        }
 
         const version: FuncVersion = nonNullProp(context, 'version');
         let projectTemplateKey = context.projectTemplateKey;
@@ -53,7 +50,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             const templateProvider = ext.templateProvider.get(context);
             projectTemplateKey = await templateProvider.getProjectTemplateKey(context, context.projectPath, nonNullProp(context, 'language'), undefined, context.version, undefined);
         }
-        await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', args);
+        await executeDotnetTemplateCreate(context, version, projectTemplateKey, context.projectPath, template.id, templateArgs);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

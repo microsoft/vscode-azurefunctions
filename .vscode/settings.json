@@ -7,9 +7,6 @@
     "editor.formatOnSave": true,
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
-    "files.exclude": {
-        "tools/JsonCli/src/**": true
-    },
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
     "search.exclude": {
