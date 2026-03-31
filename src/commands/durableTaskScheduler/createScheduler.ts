@@ -38,8 +38,8 @@ class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext>
 class SchedulerSkuStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
     async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
         const picks: IAzureQuickPickItem<DurableTaskSchedulerSku>[] = [
-            { label: localize('consumption', 'Consumption'), description: defaultDescription, data: DurableTaskSchedulerSku.Consumption },
-            { label: localize('dedicated', 'Dedicated'), data: DurableTaskSchedulerSku.Dedicated },
+            { label: localize('dtsSkuConsumption', 'Consumption'), description: defaultDescription, data: DurableTaskSchedulerSku.Consumption },
+            { label: localize('dtsSkuDedicated', 'Dedicated'), data: DurableTaskSchedulerSku.Dedicated },
         ];
         wizardContext.schedulerSku = (await wizardContext.ui.showQuickPick(picks, {
             placeHolder: localize('schedulerSkuPrompt', 'Select a plan for the scheduler'),
