@@ -56,13 +56,17 @@ export class MCPDownloadSnippetsExecuteStep extends AzureWizardExecuteStepWithAc
         language: ProjectLanguage | undefined,
         files: { itemPath: string; destPath: string }[]
     ): string | undefined {
-        if (!language) return undefined;
+        if (!language) {
+            return undefined;
+        }
 
         // Prefer the known entrypoint path for the language
         const knownPath = MCPDownloadSnippetsExecuteStep.knownToolPaths[language];
         if (knownPath) {
             const match = files.find(f => f.itemPath === knownPath);
-            if (match) return match.destPath;
+            if (match) {
+                return match.destPath;
+            }
         }
 
         // Fallback: any file with the right extension, sorted for determinism
