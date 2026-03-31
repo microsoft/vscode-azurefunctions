@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { randomUtils } from '@microsoft/vscode-azext-utils';
 import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -62,7 +63,7 @@ export interface RawTemplate {
  * This replaces the need for the Microsoft.TemplateEngine.JsonCli tool.
  */
 export async function parseTemplatesFromNupkg(nupkgPath: string): Promise<RawTemplate[]> {
-    const tempDir = path.join(os.tmpdir(), `azfunc-templates-${Date.now()}-${Math.random().toString(36).substring(2)}`);
+    const tempDir = path.join(os.tmpdir(), `azfunc-templates-${randomUtils.getRandomHexString()}`);
 
     try {
         await extract(nupkgPath, { dir: tempDir });

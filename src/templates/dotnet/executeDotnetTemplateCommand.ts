@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { randomUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -80,7 +80,7 @@ export async function executeDotnetTemplateCreate(
 
     // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state
     // This is how the JSON CLI tool operateed
-    const tempCliHome = path.join(os.tmpdir(), `azfunc-dotnet-home-${Date.now()}-${Math.random().toString(36).substring(2)}`);
+    const tempCliHome = path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
     const prevDotnetCliHome = process.env.DOTNET_CLI_HOME;
 
     try {
