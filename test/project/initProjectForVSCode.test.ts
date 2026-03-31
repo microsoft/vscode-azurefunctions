@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
 import { FuncVersion } from '../../src/FuncVersion';

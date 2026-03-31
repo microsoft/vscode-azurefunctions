@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, type TestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, runWithTestActionContext, TestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { type Disposable } from 'vscode';

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../../src/constants';
 import { cleanTestWorkspace } from '../global.test';

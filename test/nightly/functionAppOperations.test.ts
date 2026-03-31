@@ -5,8 +5,7 @@
 
 import { type Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { DialogResponses } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
