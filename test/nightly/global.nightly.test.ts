@@ -5,16 +5,15 @@
 
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { createTestActionContext } from '@microsoft/vscode-azext-dev';
 import { longRunningTestsEnabled } from '../global.test';
 
 import { createAzureClient } from '@microsoft/vscode-azext-azureutils';
-import { createSubscriptionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { createSubscriptionContext, createTestActionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { updateGlobalSetting } from '../../src/vsCodeConfig/settings';
-import { getTestApi } from '../utils/testApiAccess';
 import { getResourceGroupsTestApi } from '../utils/resourceGroupsTestApiAccess';
+import { getTestApi } from '../utils/testApiAccess';
 
 export let testClient: WebSiteManagementClient;
 export let subscriptionContext: ISubscriptionContext;

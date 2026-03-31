@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';

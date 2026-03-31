@@ -5,7 +5,7 @@
 
 import { type Site } from '@azure/arm-appservice';
 import { DomainNameLabelScope, tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { getRandomHexString } from '../../src/utils/fs';
 import { longRunningTestsEnabled } from '../global.test';

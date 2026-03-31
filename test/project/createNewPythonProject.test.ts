@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { cpUtils } from '../../src/utils/cpUtils';
 import { FuncVersion } from '../../src/FuncVersion';
+import { cpUtils } from '../../src/utils/cpUtils';
 import { getRandomHexString } from '../../src/utils/fs';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';

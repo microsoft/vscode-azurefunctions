@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type TestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
+import { TestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { hiddenStacksSetting, ProjectLanguage } from '../../src/constants';
 import { getRandomHexString } from '../../src/utils/fs';

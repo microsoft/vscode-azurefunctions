@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { ProjectLanguage, TemplateFilter } from '../src/constants';
 import { TemplateSource } from '../src/extensionVariables';
