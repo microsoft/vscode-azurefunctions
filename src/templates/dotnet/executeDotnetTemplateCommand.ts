@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, withFlagArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
+import { composeArgs, withArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -59,7 +59,6 @@ export async function executeDotnetTemplateCreate(
     workingDirectory: string | undefined,
     identity: string,
     templateArgs: Record<string, string>,
-    options?: { force?: boolean },
 ): Promise<void> {
     const templateDir = getDotnetTemplateDir(context, version, projTemplateKey);
     const itemNupkg = path.join(templateDir, itemNupkgFileName);
@@ -103,7 +102,6 @@ export async function executeDotnetTemplateCreate(
             ...Object.entries(templateArgs)
                 .filter(([, value]) => value !== undefined && value !== '')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
-            withFlagArg('--force', options?.force),
         )();
 
         await cpUtils.executeCommand(
