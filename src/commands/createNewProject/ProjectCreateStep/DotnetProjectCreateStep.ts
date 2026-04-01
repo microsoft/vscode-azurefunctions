@@ -66,7 +66,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
             templateArgs.Framework = context.workerRuntime.targetFramework;
         }
 
-        await executeDotnetTemplateCreate(context, version, projTemplateKey, context.projectPath, identity, templateArgs, { force: !!context.containerizedProject });
+        await executeDotnetTemplateCreate(context, version, projTemplateKey, context.projectPath, identity, templateArgs, { force: true });
 
         await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, '', MismatchBehavior.Overwrite);
     }
