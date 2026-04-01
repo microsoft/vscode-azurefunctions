@@ -33,6 +33,7 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
+import { registerLMTools } from './chat/tools/registerLMTools';
 import { registerFunctionHostDebugView } from './debug/registerFunctionHostDebugView';
 import { handleUri } from './downloadAzureProject/handleUri';
 import { ext, TemplateSource } from './extensionVariables';
@@ -103,6 +104,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerFuncHostTaskEvents();
         registerFunctionHostDebugView(context);
+        registerLMTools();
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
         const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();

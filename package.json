@@ -1497,6 +1497,96 @@
                 }
             }
         ],
+        "languageModelTools": [
+            {
+                "name": "azurefunctions_startDebugging",
+                "displayName": "Azure Functions: Start Debugging",
+                "icon": "$(debug-start)",
+                "modelDescription": "Starts an F5 local debug session for an Azure Functions project. Launches the 'func host start' task and attaches the debugger. Use this when the user asks to start, run, or debug their Azure Functions locally.",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureFunctionsStartDebugging",
+                "tags": ["azure", "functions", "debug"],
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "launchConfigurationName": {
+                            "type": "string",
+                            "description": "The name of the launch configuration from launch.json to run (e.g. 'Attach to Node Functions', 'Attach to Python Functions'). If not provided, the tool will return available configurations to choose from."
+                        },
+                        "workspaceFolderName": {
+                            "type": "string",
+                            "description": "The name of the workspace folder to start debugging in. Optional if only one workspace folder is open."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "azurefunctions_stopDebugging",
+                "displayName": "Azure Functions: Stop Debugging",
+                "icon": "$(debug-stop)",
+                "modelDescription": "Stops the running 'func host start' process and the attached debug session. Use this when the user asks to stop, kill, or terminate their local Azure Functions debug session.",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureFunctionsStopDebugging",
+                "tags": ["azure", "functions", "debug"],
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "workspaceFolderName": {
+                            "type": "string",
+                            "description": "The name of the workspace folder whose debug session should be stopped. Optional if only one workspace folder is open."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "azurefunctions_getFuncHostLogs",
+                "displayName": "Azure Functions: Get Func Host Logs",
+                "icon": "$(output)",
+                "modelDescription": "Returns recent output from the running 'func host start' process (stdout/stderr). Use this to monitor startup progress, read CLI output, or inspect what the Functions host printed after a debug session was started.",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureFunctionsGetLogs",
+                "tags": ["azure", "functions", "debug", "logs"],
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "workspaceFolderName": {
+                            "type": "string",
+                            "description": "The name of the workspace folder to read logs from. Optional if only one workspace folder is open."
+                        },
+                        "limit": {
+                            "type": "number",
+                            "description": "Maximum number of log chunks to return. Defaults to 250."
+                        },
+                        "includeHistory": {
+                            "type": "boolean",
+                            "description": "If true and no host is running, return logs from the most recently stopped session. Defaults to false."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "azurefunctions_getFuncHostErrors",
+                "displayName": "Azure Functions: Get Func Host Errors",
+                "icon": "$(error)",
+                "modelDescription": "Returns error output detected from the running or most recently stopped 'func host start' process. Errors are identified by red-colored terminal output. Use this to diagnose startup failures, runtime exceptions, or unexpected host shutdowns.",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureFunctionsGetErrors",
+                "tags": ["azure", "functions", "debug", "errors"],
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "workspaceFolderName": {
+                            "type": "string",
+                            "description": "The name of the workspace folder to read errors from. Optional if only one workspace folder is open."
+                        },
+                        "includeHistory": {
+                            "type": "boolean",
+                            "description": "If true, also check the most recently stopped session for errors. Defaults to true."
+                        }
+                    }
+                }
+            }
+        ],
         "walkthroughs": [
             {
                 "id": "functionsStart",
