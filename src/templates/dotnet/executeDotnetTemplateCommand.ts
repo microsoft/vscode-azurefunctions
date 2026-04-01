@@ -59,6 +59,7 @@ export async function executeDotnetTemplateCreate(
     workingDirectory: string | undefined,
     identity: string,
     templateArgs: Record<string, string>,
+    options?: { force?: boolean },
 ): Promise<void> {
     const templateDir = getDotnetTemplateDir(context, version, projTemplateKey);
     const itemNupkg = path.join(templateDir, itemNupkgFileName);
@@ -102,6 +103,7 @@ export async function executeDotnetTemplateCreate(
             ...Object.entries(templateArgs)
                 .filter(([, value]) => value !== undefined && value !== '')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
+            ...(options?.force ? [withArg('--force')] : []),
         )();
 
         await cpUtils.executeCommand(
