@@ -17,7 +17,7 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
 export class ProjectTemplateProvider {
     private static readonly CACHE_KEY = 'projectTemplatesManifest';
     private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
-    private static readonly DEFAULT_MANIFEST_URL = 'https://gavfuncstorage.blob.core.windows.net/manifest/manifest.json?sp=r&st=2026-03-25T18:38:49Z&se=2026-05-28T02:53:49Z&spr=https&sv=2025-11-05&sr=b&sig=UZNiaJYNoJCrAhyNEOJX9vQ78IbZoYb4ycb00r6PgbY%3D';
+    private static readonly DEFAULT_MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
     /**
@@ -34,8 +34,8 @@ export class ProjectTemplateProvider {
             // categories: accept singular 'category' string from older manifests
             const categories: TemplateCategory[] =
                 raw.categories?.length ? raw.categories
-                : raw.category ? [raw.category as TemplateCategory]
-                : [];
+                    : raw.category ? [raw.category as TemplateCategory]
+                        : [];
 
             // displayName: accept 'name' or 'title' as fallbacks
             const displayName: string = raw.displayName ?? raw.name ?? raw.title ?? '';
@@ -53,8 +53,8 @@ export class ProjectTemplateProvider {
             // so it matches the ProjectLanguage enum (e.g. "CSharp" → "C#").
             const languages: ProjectLanguage[] =
                 raw.languages?.length ? raw.languages
-                : raw.language ? [normalizeLanguage(raw.language as string)]
-                : [];
+                    : raw.language ? [normalizeLanguage(raw.language as string)]
+                        : [];
 
             // prerequisites: not present in new manifest — default to empty array
             // so downstream code can safely call .filter() / .length on it.
@@ -102,15 +102,6 @@ export class ProjectTemplateProvider {
      * Get the template manifest, using cache or fetching from remote
      */
     public async getManifest(context: IActionContext): Promise<ITemplateManifest> {
-        // TEMP: use local manifest.json from extension root for testing
-        const localManifestPath = path.join(ext.context.extensionPath, 'manifest.json');
-        if (await AzExtFsExtra.pathExists(localManifestPath)) {
-            context.telemetry.properties.manifestSource = 'local';
-            ext.outputChannel.appendLog(`[TEMP] Using local manifest.json from ${localManifestPath}`);
-            const content = await AzExtFsExtra.readFile(localManifestPath);
-            return JSON.parse(content) as ITemplateManifest;
-        }
-
         // Try to get cached manifest if not expired
         const cachedManifest = await this.getCachedManifest();
         if (cachedManifest) {
@@ -290,15 +281,15 @@ export class ProjectTemplateProvider {
  */
 function normalizeLanguage(language: string): ProjectLanguage {
     const map: Record<string, ProjectLanguage> = {
-        'CSharp':     ProjectLanguage.CSharp,
-        'FSharp':     ProjectLanguage.FSharp,
-        'Java':       ProjectLanguage.Java,
+        'CSharp': ProjectLanguage.CSharp,
+        'FSharp': ProjectLanguage.FSharp,
+        'Java': ProjectLanguage.Java,
         'JavaScript': ProjectLanguage.JavaScript,
         'PowerShell': ProjectLanguage.PowerShell,
-        'Python':     ProjectLanguage.Python,
+        'Python': ProjectLanguage.Python,
         'TypeScript': ProjectLanguage.TypeScript,
-        'Ballerina':  ProjectLanguage.Ballerina,
-        'Custom':     ProjectLanguage.Custom,
+        'Ballerina': ProjectLanguage.Ballerina,
+        'Custom': ProjectLanguage.Custom,
     };
     return map[language] ?? language as ProjectLanguage;
 }
