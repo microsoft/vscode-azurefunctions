@@ -60,7 +60,7 @@ export async function validateFunctionApp(context: IActionContext, resourceUri?:
             void vscode.window.showWarningMessage(
                 localize(
                     'validateNoRuntime',
-                    'Could not detect Azure Functions runtime. Ensure local.settings.json contains FUNCTIONS_WORKER_RUNTIME.'
+                    'Could not detect Azure Functions runtime. Add FUNCTIONS_WORKER_RUNTIME to local.settings.json and try again.'
                 )
             );
             return;
@@ -137,16 +137,60 @@ function resolveProjectRoot(resourceUri?: vscode.Uri): string | undefined {
 // ---------------------------------------------------------------------------
 
 function detectRuntime(projectRoot: string): string | undefined {
+    // 1. Try local.settings.json first — most explicit signal
     const settingsPath = path.join(projectRoot, 'local.settings.json');
-    if (!fs.existsSync(settingsPath)) return undefined;
-
-    try {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        const runtime: string | undefined = settings?.Values?.FUNCTIONS_WORKER_RUNTIME;
-        return runtime?.toLowerCase();
-    } catch {
-        return undefined;
+    if (fs.existsSync(settingsPath)) {
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+            const runtime: string | undefined = settings?.Values?.FUNCTIONS_WORKER_RUNTIME;
+            if (runtime) return runtime.toLowerCase();
+        } catch {
+            // fall through to file-based detection
+        }
     }
+
+    // 2. Infer from file extensions present in the project
+    return inferRuntimeFromFiles(projectRoot);
+}
+
+/** Walk the project (shallow) and infer runtime from the dominant source language. */
+function inferRuntimeFromFiles(projectRoot: string): string | undefined {
+    const extToRuntime: Record<string, string> = {
+        '.py': 'python',
+        '.js': 'node',
+        '.ts': 'node',
+        '.cs': 'dotnet',
+        '.java': 'java',
+        '.ps1': 'powershell',
+    };
+
+    const counts: Record<string, number> = {};
+
+    function walk(dir: string, depth: number): void {
+        if (depth > 2) return;
+        let entries: fs.Dirent[];
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+
+        for (const entry of entries) {
+            if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === '__pycache__') continue;
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                walk(fullPath, depth + 1);
+            } else {
+                const ext = path.extname(entry.name).toLowerCase();
+                const runtime = extToRuntime[ext];
+                if (runtime) counts[runtime] = (counts[runtime] ?? 0) + 1;
+            }
+        }
+    }
+
+    walk(projectRoot, 0);
+
+    // Return the runtime with the most matching files
+    const entries = Object.entries(counts);
+    if (entries.length === 0) return undefined;
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0][0];
 }
 
 // ---------------------------------------------------------------------------

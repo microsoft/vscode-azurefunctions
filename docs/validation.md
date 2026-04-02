@@ -6,10 +6,23 @@ The **Validate Function App** command (`azureFunctions.validateFunctionApp`) use
 
 ---
 
+## Trigger Points
+
+Validation runs automatically after project creation and can be re-run manually:
+
+| Trigger | How |
+|---|---|
+| **Auto** | Fires automatically at the end of `_createProject` in `TemplateGalleryPanel.ts` after the project folder is opened |
+| **Right-click (explorer)** | Right-click a folder → Azure Functions → Validate Function App |
+| **Right-click (tree view)** | Right-click a local Function App project node → Validate Function App with Copilot |
+| **Command Palette** | `Azure Functions: Validate Function App with Copilot` |
+
+---
+
 ## User Flow
 
 ```
-User clicks Validate (editor title bar, tree view, or context menu)
+Project created (auto) OR user right-clicks and selects Validate
       │
       ▼
 Resolve project root
@@ -86,24 +99,38 @@ Priority order:
 
 ## Runtime Detection
 
-Reads `local.settings.json`:
+Detection uses two strategies in priority order:
 
+**1. `local.settings.json`** (explicit — preferred)
 ```json
 { "Values": { "FUNCTIONS_WORKER_RUNTIME": "python" } }
 ```
 
-Maps to skill files:
+**2. File extension inference** (fallback — works for templates without `local.settings.json`)
 
-| `FUNCTIONS_WORKER_RUNTIME` | Skill file |
+Walks the project up to 2 levels deep and counts source files by extension:
+
+| Extension | Inferred runtime |
+|---|---|
+| `.py` | `python` |
+| `.js` / `.ts` | `node` |
+| `.cs` | `dotnet` |
+| `.java` | `java` |
+| `.ps1` | `powershell` |
+
+The runtime with the most matching files wins.
+
+**Skill file mapping:**
+
+| Runtime | Skill file |
 |---|---|
 | `python` | `python.md` |
 | `node` | `node.md` |
-| `dotnet` | `dotnet.md` |
-| `dotnet-isolated` | `dotnet.md` |
+| `dotnet` / `dotnet-isolated` | `dotnet.md` |
 | `java` | `java.md` |
 | `powershell` | `powershell.md` |
 
-If the runtime cannot be detected, the command shows a warning and exits early.
+Only if both strategies fail does the command show a warning and exit early.
 
 ---
 
@@ -189,17 +216,14 @@ const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? raw.match(/(\{[\s
 
 ## UI Surfaces
 
-The Validate button appears in four places:
+The Validate command is accessible in three places (the editor title bar button and tree view inline icon were removed — validation now runs automatically on project creation):
 
-### Editor title bar
-```json
-{
-  "command": "azureFunctions.validateFunctionApp",
-  "when": "editorIsOpen",
-  "group": "navigation@2"
-}
+### Auto-validate on project creation
+```typescript
+// src/commands/createNewProject/TemplateGalleryPanel.ts
+// After project folder is opened:
+void vscode.commands.executeCommand('azureFunctions.validateFunctionApp', vscode.Uri.file(projectPath));
 ```
-Visible whenever any file is open in the editor.
 
 ### Explorer context menu (right-click on folder)
 ```json
@@ -210,16 +234,7 @@ Visible whenever any file is open in the editor.
 }
 ```
 
-### Tree view inline icon (Function App project nodes)
-```json
-{
-  "command": "azureFunctions.validateFunctionApp",
-  "when": "view == azFuncTree && viewItem == azFuncLocalProject",
-  "group": "inline"
-}
-```
-
-### Workspace actions submenu
+### Workspace actions submenu (right-click on local project node)
 ```json
 {
   "command": "azureFunctions.validateFunctionApp",

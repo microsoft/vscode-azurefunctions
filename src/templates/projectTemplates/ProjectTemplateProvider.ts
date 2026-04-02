@@ -17,7 +17,7 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
 export class ProjectTemplateProvider {
     private static readonly CACHE_KEY = 'projectTemplatesManifest';
     private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
-    private static readonly DEFAULT_MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
+    private static readonly DEFAULT_MANIFEST_URL = 'https://gavfuncstorage.blob.core.windows.net/manifest/manifest.json?sp=r&st=2026-03-25T18:38:49Z&se=2026-05-28T02:53:49Z&spr=https&sv=2025-11-05&sr=b&sig=UZNiaJYNoJCrAhyNEOJX9vQ78IbZoYb4ycb00r6PgbY%3D';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
     /**
@@ -102,6 +102,15 @@ export class ProjectTemplateProvider {
      * Get the template manifest, using cache or fetching from remote
      */
     public async getManifest(context: IActionContext): Promise<ITemplateManifest> {
+        // TEMP: use local manifest.json from extension root for testing
+        const localManifestPath = path.join(ext.context.extensionPath, 'manifest.json');
+        if (await AzExtFsExtra.pathExists(localManifestPath)) {
+            context.telemetry.properties.manifestSource = 'local';
+            ext.outputChannel.appendLog(`[TEMP] Using local manifest.json from ${localManifestPath}`);
+            const content = await AzExtFsExtra.readFile(localManifestPath);
+            return JSON.parse(content) as ITemplateManifest;
+        }
+
         // Try to get cached manifest if not expired
         const cachedManifest = await this.getCachedManifest();
         if (cachedManifest) {

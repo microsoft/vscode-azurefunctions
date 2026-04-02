@@ -30,14 +30,15 @@
 
     // Language mapping for filter
     const languageFilterMap = {
-        'JavaScript': 'node',
-        'TypeScript': 'node',
+        'JavaScript': 'javascript',
+        'TypeScript': 'typescript',
         'Python': 'python',
         'CSharp': 'dotnet',
         'FSharp': 'dotnet',
         'C#': 'dotnet',
         'Java': 'java',
-        'PowerShell': 'powershell'
+        'PowerShell': 'powershell',
+        'Go': 'go'
     };
 
     // Category display names
@@ -48,14 +49,15 @@
         scheduling: 'Scheduled Tasks',
         'ai-ml': 'AI & ML',
         'data-processing': 'Data Processing',
-        'workflows': 'Workflows',
+        'workflows': 'Orchestrations',
         'other': 'Other'
     };
 
     // Language display names
     const languageDisplayNames = {
-        'JavaScript': 'Node.js',
-        'TypeScript': 'Node.js',
+        'JavaScript': 'JavaScript',
+        'TypeScript': 'TypeScript',
+        'Go': 'Go',
         'Python': 'Python',
         'CSharp': '.NET',
         'FSharp': '.NET',

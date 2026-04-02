@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
+import * as os from 'os';
 import * as path from 'path';
 import { FileType, type Progress } from 'vscode';
 import { ext } from '../../extensionVariables';
@@ -28,33 +29,35 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
         try {
             progress.report({ message: localize('cloningTemplate', 'Cloning template: {0}...', template.displayName) });
 
-            // Create a temporary directory for cloning
-            const tempDir = path.join(ext.context.globalStorageUri.fsPath, 'tempClone', Date.now().toString());
-            await AzExtFsExtra.ensureDir(tempDir);
+            const branch = template.branch || 'main';
+            // folderPath of "." means the whole repo root — treat as full clone
+            const specificFolder = template.folderPath && template.folderPath !== '.' ? template.folderPath : undefined;
+
+            // Always clone into a unique os.tmpdir() folder — never conflicts with a pre-existing projectPath
+            const tempDir = path.join(os.tmpdir(), `azfunc-template-${Date.now()}`);
 
             try {
-                const branch = template.branch || 'main';
-
-                // folderPath → sparse checkout (only that folder is downloaded; fast for monorepos)
-                // subdirectory → full clone then pick the subfolder (legacy behaviour)
-                // neither → full clone of the whole repo
-                let sourceDir: string;
-
-                if (template.folderPath) {
+                if (specificFolder) {
+                    // Sparse checkout — only download the target subfolder
                     progress.report({ message: localize('cloningRepository', 'Cloning repository (sparse)...') });
-                    await this.sparseCheckout(tempDir, template.repositoryUrl, branch, template.folderPath);
+                    await this.sparseCheckout(tempDir, template.repositoryUrl, branch, specificFolder);
 
-                    sourceDir = path.join(tempDir, template.folderPath);
+                    const sourceDir = path.join(tempDir, specificFolder);
                     if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                        throw new Error(localize('folderPathNotFound', 'Template folder "{0}" not found in repository', template.folderPath));
+                        throw new Error(localize('folderPathNotFound', 'Template folder "{0}" not found in repository', specificFolder));
                     }
                     context.telemetry.properties.cloneMethod = 'sparse';
+
+                    progress.report({ message: localize('copyingFiles', 'Copying template files...') });
+                    await AzExtFsExtra.ensureDir(projectPath);
+                    await this.copyDirectory(sourceDir, projectPath);
                 } else {
+                    // Full clone into temp, then copy to projectPath
                     progress.report({ message: localize('cloningRepository', 'Cloning repository...') });
                     await cpUtils.executeCommand(undefined, undefined,
                         'git', 'clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir);
 
-                    sourceDir = tempDir;
+                    let sourceDir = tempDir;
                     if (template.subdirectory) {
                         sourceDir = path.join(tempDir, template.subdirectory);
                         if (!await AzExtFsExtra.pathExists(sourceDir)) {
@@ -62,21 +65,11 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
                         }
                     }
                     context.telemetry.properties.cloneMethod = 'full';
+
+                    progress.report({ message: localize('copyingFiles', 'Copying template files...') });
+                    await AzExtFsExtra.ensureDir(projectPath);
+                    await this.copyDirectory(sourceDir, projectPath);
                 }
-
-                // Remove .git directory so it is not included in the project
-                const gitDir = path.join(tempDir, '.git');
-                if (await AzExtFsExtra.pathExists(gitDir)) {
-                    progress.report({ message: localize('cleaningUp', 'Setting up project files...') });
-                    await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
-                }
-
-                // Ensure project path exists
-                await AzExtFsExtra.ensureDir(projectPath);
-
-                // Copy files to project path
-                progress.report({ message: localize('copyingFiles', 'Copying template files...') });
-                await this.copyDirectory(sourceDir, projectPath);
 
                 context.clonedFromTemplate = true;
                 context.telemetry.properties.cloneSuccess = 'true';
@@ -85,11 +78,9 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
                 ext.outputChannel.appendLog(localize('templateCloned', 'Successfully cloned template "{0}" to "{1}"', template.displayName, projectPath));
 
             } finally {
-                // Clean up temp directory
                 try {
-                    const parentTempDir = path.join(ext.context.globalStorageUri.fsPath, 'tempClone');
-                    if (await AzExtFsExtra.pathExists(parentTempDir)) {
-                        await AzExtFsExtra.deleteResource(parentTempDir, { recursive: true });
+                    if (await AzExtFsExtra.pathExists(tempDir)) {
+                        await AzExtFsExtra.deleteResource(tempDir, { recursive: true });
                     }
                 } catch {
                     // Ignore cleanup errors

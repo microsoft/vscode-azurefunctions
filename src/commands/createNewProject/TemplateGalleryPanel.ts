@@ -5,6 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
@@ -210,11 +211,46 @@ export class TemplateGalleryPanel {
         let chatQuery: string;
 
         if (context === 'success' && projectData) {
-            chatQuery = `I generated an Azure Functions project: "${projectData.title || 'Azure Functions App'}". ${projectData.description || ''}\n\nMy original requirements: ${prompt}\n\nLanguage: ${language}\n\nI'd like to refine or extend this project. Can you help?`;
-        } else if (context === 'error') {
-            chatQuery = `I'm creating an Azure Functions app in ${language}. Here's what I need:\n\n${prompt}\n\nCan you help me design and generate this project?`;
+            chatQuery = [
+                `I have an Azure Functions project already generated: "${projectData.title || 'Azure Functions App'}".`,
+                projectData.description ? projectData.description : '',
+                `Language: ${language}`,
+                `My original requirements: ${prompt}`,
+                '',
+                `I'd like to refine or extend this project. Please follow Azure Functions best practices for ${language} and only use real trigger/binding types from the official Azure Functions SDK.`,
+            ].filter(Boolean).join('\n');
         } else {
-            chatQuery = `I want to create an Azure Functions app in ${language}. Here's what I need:\n\n${prompt}\n\nPlease help me design the architecture and generate the project files.`;
+            const preamble = context === 'error'
+                ? `GitHub Copilot couldn't auto-generate this project. Please help me build it instead.`
+                : `Please help me build an Azure Functions app.`;
+
+            chatQuery = [
+                preamble,
+                '',
+                `**What I want to build:** ${prompt}`,
+                '',
+                `**Language:** ${language}`,
+                '',
+                `**Programming model & project structure:**`,
+                _languageGrounding(language),
+                '',
+                `**General guidelines:**`,
+                `- Only use real trigger and binding types from the official Azure Functions SDK for ${language}`,
+                `- Include host.json with extensionBundle configured for any non-HTTP bindings`,
+                `- Include local.settings.json with the correct FUNCTIONS_WORKER_RUNTIME value`,
+                `- Add a README.md with local setup steps and how to run the app`,
+                `- Add brief inline comments explaining the key parts of the code`,
+                '',
+                `**Azure Functions best practices:**`,
+                `- Keep functions stateless — do not store shared state in global variables`,
+                `- Use output bindings instead of direct SDK/client calls where the binding supports it`,
+                `- Prefer async/await patterns to avoid blocking the function host`,
+                `- Use environment variables (application settings) for all secrets and connection strings, never hardcode them`,
+                `- Use Managed Identity over connection strings when connecting to Azure services`,
+                `- Keep each function focused on a single responsibility`,
+                `- Use Durable Functions for long-running workflows or fan-out/fan-in patterns`,
+                `- Handle errors gracefully and return meaningful HTTP status codes for HTTP triggers`,
+            ].join('\n');
         }
 
         try {
@@ -252,82 +288,81 @@ export class TemplateGalleryPanel {
             const projectPath = location;
 
             try {
-                await this._sendProgress('Creating project folder...');
-                await AzExtFsExtra.ensureDir(projectPath);
-
                 const branch = template.branch || 'main';
-                const tempDir = path.join(ext.context.globalStorageUri.fsPath, 'tempClone', Date.now().toString());
-                await AzExtFsExtra.ensureDir(tempDir);
+                // folderPath of "." means the whole repo root — treat as full clone
+                const specificFolder = template.folderPath && template.folderPath !== '.' ? template.folderPath : undefined;
+
+                // Always clone into a unique temp dir so we never conflict with a pre-existing projectPath
+                const tempDir = path.join(os.tmpdir(), `azfunc-template-${Date.now()}`);
 
                 try {
                     const gitInstalled = await this._isGitInstalled();
                     context.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
                     if (gitInstalled) {
-                        let sourceDir: string;
-
-                        if (template.folderPath) {
-                            // Sparse checkout — only download the specific folder
+                        if (specificFolder) {
+                            // Sparse checkout — only download the target subfolder
                             await this._sendProgress('Cloning template (sparse)...');
                             await cpUtils.executeCommand(undefined, undefined,
                                 'git', 'clone', '--depth', '1', '--filter=blob:none', '--sparse',
                                 '--branch', branch, template.repositoryUrl, tempDir);
                             await cpUtils.executeCommand(undefined, tempDir,
-                                'git', 'sparse-checkout', 'set', template.folderPath);
+                                'git', 'sparse-checkout', 'set', specificFolder);
 
-                            sourceDir = path.join(tempDir, template.folderPath);
+                            const sourceDir = path.join(tempDir, specificFolder);
                             if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                throw new Error(`Template folder "${template.folderPath}" not found in repository`);
+                                throw new Error(`Template folder "${specificFolder}" not found in repository`);
                             }
+                            await this._sendProgress('Setting up project files...');
+                            await AzExtFsExtra.ensureDir(projectPath);
+                            await this._copyDirectory(sourceDir, projectPath);
                         } else {
-                            // Full clone
+                            // Full clone into temp, then copy to projectPath
                             await this._sendProgress('Cloning template repository...');
                             await cpUtils.executeCommand(undefined, undefined,
                                 'git', 'clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir);
 
-                            sourceDir = tempDir;
+                            let sourceDir = tempDir;
                             if (template.subdirectory) {
                                 sourceDir = path.join(tempDir, template.subdirectory);
+                                if (!await AzExtFsExtra.pathExists(sourceDir)) {
+                                    throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
+                                }
                             }
+                            await this._sendProgress('Setting up project files...');
+                            await AzExtFsExtra.ensureDir(projectPath);
+                            await this._copyDirectory(sourceDir, projectPath);
                         }
-
-                        // Remove .git so the project has no remote origin
-                        const gitDir = path.join(tempDir, '.git');
-                        if (await AzExtFsExtra.pathExists(gitDir)) {
-                            await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
-                        }
-
-                        await this._sendProgress('Setting up project files...');
-                        await this._copyDirectory(sourceDir, projectPath);
                     } else {
+                        // No git — download zip to temp, extract, copy to projectPath
                         await this._sendProgress('Downloading template (git not found, using zip)...');
                         await this._downloadAndExtractZip(template.repositoryUrl, branch, tempDir);
 
                         await this._sendProgress('Setting up project files...');
-
                         let sourceDir = tempDir;
-                        if (template.folderPath) {
-                            sourceDir = path.join(tempDir, template.folderPath);
+                        if (specificFolder) {
+                            sourceDir = path.join(tempDir, specificFolder);
                         } else if (template.subdirectory) {
                             sourceDir = path.join(tempDir, template.subdirectory);
                         }
-                        await this._copyDirectory(sourceDir, projectPath);
+                        await AzExtFsExtra.ensureDir(projectPath);
+                        try {
+                            await this._copyDirectory(sourceDir, projectPath);
+                        } finally {
+                            try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
+                        }
                     }
 
                     await this._sendProgress('Initializing git repository...');
                     await cpUtils.executeCommand(undefined, projectPath, 'git init');
 
-                    await this._sendProgress('Finalizing...');
-                    await AzExtFsExtra.deleteResource(tempDir, { recursive: true });
-
                 } catch (downloadError) {
-                    try {
-                        await AzExtFsExtra.deleteResource(tempDir, { recursive: true });
-                    } catch {
-                        // Ignore cleanup errors
-                    }
+                    try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
                     throw downloadError;
                 }
+
+                // Clean up temp dir on success
+                try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
 
                 context.telemetry.properties.result = 'Succeeded';
 
@@ -353,6 +388,9 @@ export class TemplateGalleryPanel {
                         { uri: vscode.Uri.file(projectPath) }
                     );
                 }
+
+                // Auto-validate the new project with Copilot (fire-and-forget)
+                void vscode.commands.executeCommand('azureFunctions.validateFunctionApp', vscode.Uri.file(projectPath));
 
             } catch (error) {
                 context.telemetry.properties.result = 'Failed';
@@ -783,10 +821,12 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                     <div class="filter-chips" id="language-filters" role="radiogroup" aria-label="Filter by language">
                         <button class="filter-chip active" data-value="all" role="radio" aria-checked="true">All</button>
                         <button class="filter-chip" data-value="python" role="radio" aria-checked="false">Python</button>
-                        <button class="filter-chip" data-value="node" role="radio" aria-checked="false">Node.js</button>
+                        <button class="filter-chip" data-value="javascript" role="radio" aria-checked="false">JavaScript</button>
+                        <button class="filter-chip" data-value="typescript" role="radio" aria-checked="false">TypeScript</button>
                         <button class="filter-chip" data-value="java" role="radio" aria-checked="false">Java</button>
                         <button class="filter-chip" data-value="dotnet" role="radio" aria-checked="false">.NET</button>
                         <button class="filter-chip" data-value="powershell" role="radio" aria-checked="false">PowerShell</button>
+                        <button class="filter-chip" data-value="go" role="radio" aria-checked="false">Go</button>
                     </div>
                 </div>
 
@@ -800,7 +840,7 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                         <button class="filter-chip" data-value="scheduling" role="checkbox" aria-checked="false">Scheduling</button>
                         <button class="filter-chip" data-value="ai-ml" role="checkbox" aria-checked="false">AI & ML</button>
                         <button class="filter-chip" data-value="data-processing" role="checkbox" aria-checked="false">Data Processing</button>
-                        <button class="filter-chip" data-value="workflows" role="checkbox" aria-checked="false">Workflows</button>
+                        <button class="filter-chip" data-value="workflows" role="checkbox" aria-checked="false">Orchestrations</button>
                     </div>
                 </div>
             </div>
@@ -1107,4 +1147,86 @@ interface CreateAiProjectMessage extends WebviewMessage {
     type: 'createAiProject';
     files: Array<{ path: string; content: string }>;
     location: string;
+}
+
+/**
+ * Returns a language-specific grounding block describing the correct programming model,
+ * required packages, expected project files, and the FUNCTIONS_WORKER_RUNTIME value.
+ * Injected into the Copilot Chat prompt to reduce hallucination.
+ */
+function _languageGrounding(language: string): string {
+    const lang = language.toLowerCase();
+
+    if (lang === 'python') {
+        return [
+            `- Use the Azure Functions v2 programming model`,
+            `- Entry point: \`function_app.py\` using the \`@app\` decorator pattern (e.g. \`@app.route\`, \`@app.timer_trigger\`)`,
+            `- Required files: \`function_app.py\`, \`requirements.txt\`, \`host.json\`, \`local.settings.json\``,
+            `- Package: \`azure-functions>=1.21.0\` in requirements.txt`,
+            `- FUNCTIONS_WORKER_RUNTIME: \`python\``,
+            `- Prefer async functions (\`async def\`) to avoid blocking the worker`,
+        ].join('\n');
+    }
+
+    if (lang === 'typescript') {
+        return [
+            `- Use the Azure Functions v4 programming model`,
+            `- Define functions using \`app.http()\`, \`app.timer()\`, etc. from \`@azure/functions\``,
+            `- Required files: \`src/functions/<name>.ts\`, \`package.json\`, \`tsconfig.json\`, \`host.json\`, \`local.settings.json\``,
+            `- Packages: \`@azure/functions@^4.0.0\`, \`typescript@^5.0.0\` (devDependency)`,
+            `- FUNCTIONS_WORKER_RUNTIME: \`node\``,
+            `- Use \`async\` handler functions and return an \`HttpResponse\` for HTTP triggers`,
+        ].join('\n');
+    }
+
+    if (lang === 'javascript') {
+        return [
+            `- Use the Azure Functions v4 programming model`,
+            `- Define functions using \`app.http()\`, \`app.timer()\`, etc. from \`@azure/functions\``,
+            `- Required files: \`src/functions/<name>.js\`, \`package.json\`, \`host.json\`, \`local.settings.json\``,
+            `- Package: \`@azure/functions@^4.0.0\``,
+            `- FUNCTIONS_WORKER_RUNTIME: \`node\``,
+            `- Use \`async\` handler functions and return an \`HttpResponse\` for HTTP triggers`,
+        ].join('\n');
+    }
+
+    if (lang === 'c#' || lang === 'csharp') {
+        return [
+            `- Use the .NET isolated worker model (not the in-process model)`,
+            `- Entry point: \`Program.cs\` with \`HostBuilder\`; functions in individual class files`,
+            `- Required files: \`Program.cs\`, \`<ProjectName>.csproj\`, \`host.json\`, \`local.settings.json\``,
+            `- Packages: \`Microsoft.Azure.Functions.Worker\`, \`Microsoft.Azure.Functions.Worker.Sdk\`, \`Microsoft.Azure.Functions.Worker.Extensions.*\``,
+            `- FUNCTIONS_WORKER_RUNTIME: \`dotnet-isolated\``,
+            `- Use \`async Task\` methods and the \`[Function]\` attribute`,
+        ].join('\n');
+    }
+
+    if (lang === 'java') {
+        return [
+            `- Use the Azure Functions Java annotation model`,
+            `- Functions defined as methods with \`@FunctionName\` in a class`,
+            `- Required files: \`src/main/java/.../Function.java\`, \`pom.xml\`, \`host.json\`, \`local.settings.json\``,
+            `- Package: \`com.microsoft.azure.functions:azure-functions-java-library\` (latest stable)`,
+            `- FUNCTIONS_WORKER_RUNTIME: \`java\``,
+            `- Use the \`ExecutionContext\` parameter for logging`,
+        ].join('\n');
+    }
+
+    if (lang === 'powershell') {
+        return [
+            `- Use the Azure Functions PowerShell worker model`,
+            `- Each function in its own folder with \`run.ps1\` and \`function.json\``,
+            `- Required files: \`run.ps1\`, \`function.json\`, \`requirements.psd1\`, \`profile.ps1\`, \`host.json\`, \`local.settings.json\``,
+            `- Declare Az module dependencies in \`requirements.psd1\` (managed dependencies)`,
+            `- FUNCTIONS_WORKER_RUNTIME: \`powershell\``,
+            `- Use \`Push-OutputBinding\` to write output binding values`,
+        ].join('\n');
+    }
+
+    // Fallback for any other language
+    return [
+        `- Use the latest stable Azure Functions programming model for ${language}`,
+        `- Required files: function entry point, dependency manifest, \`host.json\`, \`local.settings.json\``,
+        `- Set FUNCTIONS_WORKER_RUNTIME to the correct value for ${language}`,
+    ].join('\n');
 }

@@ -104,7 +104,7 @@ async function runPythonFunctionApp(context: IActionContext, projectRoot: string
 
     // ── Step 3: run func start in an integrated terminal ─────────────────────
     context.telemetry.properties.startCommand = 'func start (python)';
-    openFuncTerminal(projectRoot, buildActivateAndFuncStartCommand(projectRoot, venvName));
+    openFuncTerminal(projectRoot, path.join(projectRoot, venvName));
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ async function runPythonFunctionApp(context: IActionContext, projectRoot: string
 // ---------------------------------------------------------------------------
 
 async function runGenericFunctionApp(projectRoot: string): Promise<void> {
-    openFuncTerminal(projectRoot, 'func start');
+    openFuncTerminal(projectRoot);
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +128,9 @@ async function runGenericFunctionApp(projectRoot: string): Promise<void> {
 async function resolveProjectRoot(resourceUri?: vscode.Uri): Promise<string | undefined> {
     let candidate: string | undefined;
 
-    if (resourceUri) {
+    // Only use resourceUri if it points to an actual file on disk — non-file schemes
+    // (e.g. walkThrough://, untitled://) cannot be resolved as filesystem paths.
+    if (resourceUri?.scheme === 'file') {
         const stat = await AzExtFsExtra.pathExists(resourceUri.fsPath)
             ? await vscode.workspace.fs.stat(resourceUri)
             : undefined;
@@ -192,41 +194,46 @@ async function findPythonAlias(): Promise<string | undefined> {
 }
 
 /**
- * Build the shell-appropriate "activate venv, then run func start" command.
+ * Open (or reuse) the "Azure Functions: Run" terminal and run `func start`.
+ * Disposes any existing run terminal first so each click starts fresh.
  *
- * Terminal shell variants:
- *   - bash / zsh (Unix or Git Bash on Windows): `source .venv/bin/activate && func start`
- *   - PowerShell / pwsh:                        `. .venv\Scripts\Activate.ps1; func start`
- *   - cmd.exe:                                  `.venv\Scripts\activate && func start`
+ * For Python projects, activation is sent first as a separate step.
+ * After a short pause both our activation and VS Code Python extension's
+ * auto-activation have completed and the terminal input buffer is clear,
+ * then func start is sent.  Running func start in a settled, already-active
+ * terminal matches the condition under which it is known to work correctly.
  */
-function buildActivateAndFuncStartCommand(projectRoot: string, venv: string): string {
+function openFuncTerminal(cwd: string, venvPath?: string): void {
+    vscode.window.terminals.find(t => t.name === 'Azure Functions: Run')?.dispose();
+
+    const terminal = vscode.window.createTerminal({ name: 'Azure Functions: Run', cwd });
+    terminal.show();
+
+    if (venvPath) {
+        // Send activation immediately so the venv is active and the terminal
+        // settles before func start starts.  VS Code's Python extension also
+        // auto-sends its own activation script; the 1.5 s window lets both
+        // activations finish and the input buffer drain before func start reads
+        // from stdin — matching the working "already-activated terminal" state.
+        terminal.sendText(buildActivationCommand(venvPath));
+        setTimeout(() => terminal.sendText('func start'), 1500);
+    } else {
+        terminal.sendText('func start');
+    }
+}
+
+function buildActivationCommand(venvPath: string): string {
     const shell = vscode.env.shell;
     const isWin = process.platform === 'win32';
     const isPowerShell = /(powershell|pwsh)/i.test(shell);
     const isBash = /bash|zsh/i.test(shell);
 
     if (!isWin || isBash) {
-        const activatePath = path.posix.join(venv, 'bin', 'activate');
-        return `source "${activatePath}" && func start`;
+        const activatePath = path.join(venvPath, 'bin', 'activate').replace(/\\/g, '/');
+        return `source "${activatePath}"`;
     } else if (isPowerShell) {
-        const activatePath = path.win32.join(projectRoot, venv, 'Scripts', 'Activate.ps1');
-        return `. "${activatePath}"; func start`;
+        return `& "${path.join(venvPath, 'Scripts', 'Activate.ps1')}"`;
     } else {
-        // cmd.exe
-        const activatePath = path.win32.join(venv, 'Scripts', 'activate');
-        return `"${activatePath}" && func start`;
+        return `"${path.join(venvPath, 'Scripts', 'activate.bat')}"`;
     }
-}
-
-/**
- * Open (or reuse) the "Azure Functions: Run" terminal and send the command.
- * Disposes any existing run terminal first so each click starts fresh
- * instead of stacking up duplicate terminals.
- */
-function openFuncTerminal(cwd: string, command: string): void {
-    vscode.window.terminals.find(t => t.name === 'Azure Functions: Run')?.dispose();
-
-    const terminal = vscode.window.createTerminal({ name: 'Azure Functions: Run', cwd });
-    terminal.show();
-    terminal.sendText(command);
 }

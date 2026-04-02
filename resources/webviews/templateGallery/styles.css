@@ -178,18 +178,22 @@ body {
 }
 
 /* Language filter chips — idle state shows a colored left border as a hint */
-#language-filters .filter-chip[data-value="python"] { border-left: 3px solid #3776AB; }
-#language-filters .filter-chip[data-value="node"]   { border-left: 3px solid #339933; }
-#language-filters .filter-chip[data-value="java"]   { border-left: 3px solid #ED8B00; }
-#language-filters .filter-chip[data-value="dotnet"] { border-left: 3px solid #512BD4; }
+#language-filters .filter-chip[data-value="python"]     { border-left: 3px solid #3776AB; }
+#language-filters .filter-chip[data-value="javascript"] { border-left: 3px solid #F7DF1E; }
+#language-filters .filter-chip[data-value="typescript"] { border-left: 3px solid #166534; }
+#language-filters .filter-chip[data-value="java"]       { border-left: 3px solid #ED8B00; }
+#language-filters .filter-chip[data-value="dotnet"]     { border-left: 3px solid #512BD4; }
 #language-filters .filter-chip[data-value="powershell"] { border-left: 3px solid #012456; }
+#language-filters .filter-chip[data-value="go"]         { border-left: 3px solid #00ADD8; }
 
 /* Active state fills with the language color */
 #language-filters .filter-chip.active[data-value="python"]     { background-color: #3776AB; color: white; border-color: #3776AB; }
-#language-filters .filter-chip.active[data-value="node"]       { background-color: #339933; color: white; border-color: #339933; }
+#language-filters .filter-chip.active[data-value="javascript"] { background-color: #F7DF1E; color: #222;  border-color: #F7DF1E; }
+#language-filters .filter-chip.active[data-value="typescript"] { background-color: #166534; color: white; border-color: #166534; }
 #language-filters .filter-chip.active[data-value="java"]       { background-color: #ED8B00; color: white; border-color: #ED8B00; }
 #language-filters .filter-chip.active[data-value="dotnet"]     { background-color: #512BD4; color: white; border-color: #512BD4; }
 #language-filters .filter-chip.active[data-value="powershell"] { background-color: #012456; color: white; border-color: #012456; }
+#language-filters .filter-chip.active[data-value="go"]         { background-color: #00ADD8; color: white; border-color: #00ADD8; }
 
 /* Results Bar */
 .results-bar {
@@ -254,11 +258,13 @@ body {
     font-weight: 500;
 }
 
-.language-badge.python { background-color: #3776AB; color: white; }
-.language-badge.node { background-color: #339933; color: white; }
-.language-badge.java { background-color: #ED8B00; color: white; }
-.language-badge.dotnet { background-color: #512BD4; color: white; }
+.language-badge.python     { background-color: #3776AB; color: white; }
+.language-badge.javascript { background-color: #F7DF1E; color: #222; }
+.language-badge.typescript { background-color: #166534; color: white; }
+.language-badge.java       { background-color: #ED8B00; color: white; }
+.language-badge.dotnet     { background-color: #512BD4; color: white; }
 .language-badge.powershell { background-color: #012456; color: white; }
+.language-badge.go         { background-color: #00ADD8; color: white; }
 
 .card-title {
     font-size: 15px;
