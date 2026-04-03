@@ -175,13 +175,44 @@ After a successful clone:
 
 ---
 
-## Wiring — package.json
+## Feature Flag — Opt-in Setting
 
-The `StartingPointStep` is inserted into the existing `createNewProject` wizard in `createNewProject.ts`. No new top-level command is needed — the template path is a branch within the existing wizard.
+The Template Gallery is **disabled by default**. The classic step-by-step wizard remains the default experience. Users opt in via VS Code Settings:
+
+**Setting:** `azureFunctions.enableTemplateGallery`  
+**Type:** `boolean`  
+**Default:** `false`  
+**Label:** *(Preview) Use the new Template Gallery experience when creating a new Azure Functions project.*
+
+To enable, add to `settings.json`:
+```json
+"azureFunctions.enableTemplateGallery": true
+```
+Or search **"Azure Functions Template Gallery"** in the VS Code Settings UI.
+
+### Branch logic (`createNewProject.ts`)
+
+```typescript
+const galleryEnabled = getWorkspaceSetting<boolean>('enableTemplateGallery') ?? false;
+
+if (options?.startFromScratch || templateId || !galleryEnabled) {
+    // classic wizard flow
+} else {
+    // Template Gallery webview
+    TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+}
+```
+
+`startFromScratch` and `templateId` (API callers) always bypass the gallery so programmatic and extension API flows are unaffected.
+
+---
+
+## Wiring — package.json
 
 **VS Code settings** added to `package.json` `contributes.configuration`:
 
 ```json
+"azureFunctions.enableTemplateGallery": { "type": "boolean", "default": false, "tags": ["preview"] }
 "azureFunctions.projectTemplates.manifestUrl": { ... }
 "azureFunctions.projectTemplates.additionalManifestUrls": { ... }
 "azureFunctions.projectTemplates.cacheExpirationHours": { ... }

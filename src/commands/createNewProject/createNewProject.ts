@@ -36,9 +36,12 @@ export async function createNewProjectFromCommand(
     functionSettings?: { [key: string]: string | undefined },
     options?: { startFromScratch?: boolean }): Promise<void> {
 
-    // If startFromScratch is true, use the traditional wizard flow
-    // Otherwise, show the template gallery webview
-    if (options?.startFromScratch || templateId) {
+    const galleryEnabled = getWorkspaceSetting<boolean>('enableTemplateGallery') ?? false;
+    context.telemetry.properties.templateGalleryEnabled = String(galleryEnabled);
+
+    // If startFromScratch is explicitly requested, or the template gallery
+    // preview is not opted-in, use the classic wizard flow.
+    if (options?.startFromScratch || templateId || !galleryEnabled) {
         await createNewProjectInternal(context, {
             // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
             folderPath: typeof folderPath === 'string' ? folderPath : undefined,
@@ -51,7 +54,7 @@ export async function createNewProjectFromCommand(
             version: <api.ProjectVersion>version
         });
     } else {
-        // Show the template gallery webview
+        // Template gallery preview is opted-in — show the new webview experience
         context.telemetry.properties.flow = 'templateGallery';
         TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
     }
