@@ -10,7 +10,7 @@ export class HostErrorNode {
     public readonly kind = 'hostError' as const;
 
     constructor(
-        public readonly workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope,
+        public readonly workspaceFolder: vscode.WorkspaceFolder,
         public readonly portNumber: string,
         public readonly message: string,
         public readonly cwd?: string,

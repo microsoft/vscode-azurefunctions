@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
+import { resolveAndNormalizeCwd, runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { buildHostTooltip, formatTimestamp, getScopeLabel } from './funcHostDebugUtils';
 import { HostErrorNode } from './HostErrorNode';
 
@@ -12,14 +12,14 @@ export class HostTaskNode {
     public readonly kind = 'hostTask' as const;
 
     constructor(
-        public readonly workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope,
+        public readonly workspaceFolder: vscode.WorkspaceFolder,
         public readonly portNumber: string,
         public readonly startTime: Date,
         public readonly cwd?: string,
     ) { }
 
     public getTreeItem(): vscode.TreeItem {
-        const task = runningFuncTaskMap.get(this.workspaceFolder, this.cwd);
+        const task = runningFuncTaskMap.get(this.workspaceFolder, resolveAndNormalizeCwd(this.workspaceFolder, this.cwd));
         const scopeLabel = getScopeLabel(this.workspaceFolder);
         const label = `${scopeLabel} (${this.portNumber})`;
 
@@ -34,7 +34,7 @@ export class HostTaskNode {
     }
 
     public getChildren(): HostErrorNode[] {
-        const task = runningFuncTaskMap.get(this.workspaceFolder, this.cwd);
+        const task = runningFuncTaskMap.get(this.workspaceFolder, resolveAndNormalizeCwd(this.workspaceFolder, this.cwd));
         const errors = task?.errorLogs ?? [];
         return errors
             .slice()
