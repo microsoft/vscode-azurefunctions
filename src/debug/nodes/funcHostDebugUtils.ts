@@ -10,10 +10,8 @@ export function formatTimestamp(date: Date): string {
     return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function getScopeLabel(scope: vscode.WorkspaceFolder | vscode.TaskScope): string {
-    return typeof scope === 'object'
-        ? scope.name
-        : localize('funcHostDebug.globalScope', 'Global');
+export function getScopeLabel(scope: vscode.WorkspaceFolder): string {
+    return scope.name;
 }
 
 export function buildHostTooltip(opts: { label: string; scopeLabel: string; portNumber: string; startTime: Date; stopTime?: Date; cwd?: string; pid?: number }): vscode.MarkdownString {
