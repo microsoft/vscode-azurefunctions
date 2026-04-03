@@ -9,10 +9,10 @@ import { ITask } from '../vsCodeConfig/tasks';
  * Resolves the full chain of tasks associated with a given `preLaunchTask`.
  * Recursively follows the `dependsOn` references found in the `tasks.json`.
  */
-export function getPreLaunchTaskChain(allTasks: ITask[], preLaunchTask: string): string[] {
+export function getPreLaunchTaskChain(tasks: ITask[], preLaunchTask: string): string[] {
     const allTasksMap = new Map<string, ITask>();
 
-    for (const task of allTasks) {
+    for (const task of tasks) {
         if (task.label) {
             allTasksMap.set(task.label, task);
         }
