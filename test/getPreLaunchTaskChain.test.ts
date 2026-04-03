@@ -3,31 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { getPreLaunchTaskChain } from '../src/debug/getPreLaunchTaskChain';
 import type { ITask } from '../src/vsCodeConfig/tasks';
 import { getTestWorkspaceFolder } from './global.test';
 
-suite('getPreLaunchTaskChain', () => {
+suite.only('getPreLaunchTaskChain', () => {
     let workspaceFolder: vscode.WorkspaceFolder;
 
-    suiteSetup(function (): void {
+    suiteSetup(async function (): Promise<void> {
         const testPath = getTestWorkspaceFolder();
         const folders = vscode.workspace.workspaceFolders;
         const folder = folders?.find(f => f.uri.fsPath === testPath);
         if (!folder) {
             throw new Error(`Could not find workspace folder for path: ${testPath}`);
         }
+
+        await AzExtFsExtra.emptyDir(workspaceFolder.uri.fsPath);
         workspaceFolder = folder;
     });
 
     async function setTasks(tasks: ITask[]): Promise<void> {
-        await vscode.workspace.getConfiguration('tasks', workspaceFolder.uri).update('tasks', tasks);
+        await vscode.workspace.getConfiguration('tasks', workspaceFolder.uri).update('tasks', tasks, vscode.ConfigurationTarget.WorkspaceFolder);
     }
 
     teardown(async () => {
-        await vscode.workspace.getConfiguration('tasks', workspaceFolder.uri).update('tasks', undefined);
+        await AzExtFsExtra.emptyDir(workspaceFolder.uri.fsPath);
     });
 
     test('returns only the preLaunchTask when it has no dependencies', async () => {
