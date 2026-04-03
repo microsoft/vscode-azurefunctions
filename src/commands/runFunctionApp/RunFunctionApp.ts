@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type ChildProcess, spawn } from 'child_process';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { requirementsFileName } from '../../constants';
@@ -197,43 +198,132 @@ async function findPythonAlias(): Promise<string | undefined> {
  * Open (or reuse) the "Azure Functions: Run" terminal and run `func start`.
  * Disposes any existing run terminal first so each click starts fresh.
  *
- * For Python projects, activation is sent first as a separate step.
- * After a short pause both our activation and VS Code Python extension's
- * auto-activation have completed and the terminal input buffer is clear,
- * then func start is sent.  Running func start in a settled, already-active
- * terminal matches the condition under which it is known to work correctly.
+ * For Python projects a **pseudo-terminal** is used instead of a regular
+ * shell terminal.  The VS Code Python extension automatically sends its
+ * own venv-activation command via `sendText` to every new shell terminal.
+ * That injected text reaches the running `func start` process through the
+ * PTY and causes it to exit prematurely.  A pseudo-terminal is immune to
+ * this because `sendText` calls are routed to `handleInput()`, which we
+ * control and can safely ignore.
+ *
+ * The venv is activated through environment variables (`VIRTUAL_ENV` and
+ * `PATH`) set on the child process — functionally identical to sourcing
+ * the activation script.
  */
 function openFuncTerminal(cwd: string, venvPath?: string): void {
     vscode.window.terminals.find(t => t.name === 'Azure Functions: Run')?.dispose();
 
-    const terminal = vscode.window.createTerminal({ name: 'Azure Functions: Run', cwd });
-    terminal.show();
-
     if (venvPath) {
-        // Send activation immediately so the venv is active and the terminal
-        // settles before func start starts.  VS Code's Python extension also
-        // auto-sends its own activation script; the 1.5 s window lets both
-        // activations finish and the input buffer drain before func start reads
-        // from stdin — matching the working "already-activated terminal" state.
-        terminal.sendText(buildActivationCommand(venvPath));
-        setTimeout(() => terminal.sendText('func start'), 1500);
+        const pty = new FuncStartTerminal(cwd, venvPath);
+        const terminal = vscode.window.createTerminal({ name: 'Azure Functions: Run', pty });
+        terminal.show();
     } else {
+        const terminal = vscode.window.createTerminal({ name: 'Azure Functions: Run', cwd });
+        terminal.show();
         terminal.sendText('func start');
     }
 }
 
-function buildActivationCommand(venvPath: string): string {
-    const shell = vscode.env.shell;
-    const isWin = process.platform === 'win32';
-    const isPowerShell = /(powershell|pwsh)/i.test(shell);
-    const isBash = /bash|zsh/i.test(shell);
+// ---------------------------------------------------------------------------
+// Pseudo-terminal that runs `func start` as a direct child process
+// ---------------------------------------------------------------------------
 
-    if (!isWin || isBash) {
-        const activatePath = path.join(venvPath, 'bin', 'activate').replace(/\\/g, '/');
-        return `source "${activatePath}"`;
-    } else if (isPowerShell) {
-        return `& "${path.join(venvPath, 'Scripts', 'Activate.ps1')}"`;
-    } else {
-        return `"${path.join(venvPath, 'Scripts', 'activate.bat')}"`;
+class FuncStartTerminal implements vscode.Pseudoterminal {
+    private readonly writeEmitter = new vscode.EventEmitter<string>();
+    readonly onDidWrite = this.writeEmitter.event;
+
+    private readonly closeEmitter = new vscode.EventEmitter<number | void>();
+    readonly onDidClose = this.closeEmitter.event;
+
+    private process: ChildProcess | null = null;
+    private exited = false;
+
+    constructor(
+        private readonly cwd: string,
+        private readonly venvPath: string,
+    ) {}
+
+    open(_initialDimensions: vscode.TerminalDimensions | undefined): void {
+        const isWin = process.platform === 'win32';
+        const binDir = path.join(this.venvPath, isWin ? 'Scripts' : 'bin');
+        const env = {
+            ...process.env,
+            VIRTUAL_ENV: this.venvPath,
+            PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+        };
+
+        this.writeLine(`\x1b[36m[venv]\x1b[0m ${path.basename(this.venvPath)} activated`);
+        this.writeLine(`\x1b[36m>\x1b[0m func start`);
+        this.writeLine('');
+
+        this.process = spawn('func', ['start'], {
+            cwd: this.cwd,
+            env,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: isWin,
+            windowsHide: true,
+        });
+
+        const onData = (data: Buffer) => {
+            // Convert bare \n to \r\n for the terminal emulator
+            this.writeEmitter.fire(data.toString().replace(/\r?\n/g, '\r\n'));
+        };
+
+        this.process.stdout?.on('data', onData);
+        this.process.stderr?.on('data', onData);
+
+        this.process.on('exit', (code) => {
+            this.exited = true;
+            this.writeLine('');
+            this.writeLine(
+                `\x1b[90mfunc start exited (code ${code ?? 'unknown'}). Press any key to close.\x1b[0m`,
+            );
+        });
+
+        this.process.on('error', (err) => {
+            this.exited = true;
+            this.writeLine(`\x1b[31mError starting func: ${err.message}\x1b[0m`);
+        });
+    }
+
+    close(): void {
+        this.killProcess();
+    }
+
+    handleInput(data: string): void {
+        // Ctrl+C — gracefully stop func start
+        if (data === '\x03') {
+            this.killProcess();
+            return;
+        }
+
+        // After the process exits, any key closes the terminal
+        if (this.exited) {
+            this.closeEmitter.fire(0);
+            return;
+        }
+
+        // All other input (including text injected by the Python extension's
+        // auto-activation via sendText) is silently dropped.  func start does
+        // not read stdin during normal operation.
+    }
+
+    private killProcess(): void {
+        if (!this.process || this.exited) {
+            return;
+        }
+
+        if (process.platform === 'win32') {
+            // Kill the entire process tree on Windows
+            spawn('taskkill', ['/pid', String(this.process.pid), '/f', '/t'], {
+                stdio: 'ignore',
+            });
+        } else {
+            this.process.kill('SIGTERM');
+        }
+    }
+
+    private writeLine(text: string): void {
+        this.writeEmitter.fire(`${text}\r\n`);
     }
 }
