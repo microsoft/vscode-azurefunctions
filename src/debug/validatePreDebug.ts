@@ -44,7 +44,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
     // If one of the `preLaunchTasks` already handles starting emulators, assume the user is already on top of automating this part of the setup
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
-    const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(getTasks(workspace), preLaunchTaskName) : [];
+    const preLaunchTaskChain: string[] = typeof preLaunchTaskName === 'string' ? getPreLaunchTaskChain(getTasks(workspace), preLaunchTaskName) : [];
     const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));
     const forceEmulatorValidation: boolean = !!getWorkspaceSetting<boolean>('forceEmulatorValidation');
     const skipEmulatorValidation: boolean = hasEmulatorTask && !forceEmulatorValidation;
