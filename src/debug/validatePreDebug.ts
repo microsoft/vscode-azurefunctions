@@ -41,7 +41,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     let shouldContinue: boolean;
     context.telemetry.properties.debugType = debugConfig.type;
 
-    // If one of the `preLaunchTasks` already handles starting emulators, assume we can skip our pre-validate setup for them
+    // If one of the `preLaunchTasks` already handles starting emulators, assume the user is already on top of automating this part of the setup
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(workspace, preLaunchTaskName) : [];
     const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));

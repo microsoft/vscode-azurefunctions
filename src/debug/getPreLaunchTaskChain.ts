@@ -23,15 +23,11 @@ export function getPreLaunchTaskChain(workspace: vscode.WorkspaceFolder, preLaun
     const dependentTasks = new Set<string>();
 
     function getDependentTasks(name: string): void {
-        if (dependentTasks.has(name)) {
+        const task = allTasksMap.get(name);
+        if (!task || dependentTasks.has(name)) {
             return;
         }
         dependentTasks.add(name);
-
-        const task = allTasksMap.get(name);
-        if (!task) {
-            return;
-        }
 
         const dependsOn: unknown = task?.dependsOn;
         if (typeof dependsOn === 'string') {
@@ -43,6 +39,10 @@ export function getPreLaunchTaskChain(workspace: vscode.WorkspaceFolder, preLaun
                 }
             }
         }
+    }
+
+    if (!allTasksMap.has(preLaunchTask)) {
+        return [];
     }
 
     getDependentTasks(preLaunchTask);
