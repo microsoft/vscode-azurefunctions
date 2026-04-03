@@ -10,18 +10,18 @@ import { ITask } from '../vsCodeConfig/tasks';
  * Recursively follows the `dependsOn` references found in the `tasks.json`.
  */
 export function getPreLaunchTaskChain(tasks: ITask[], preLaunchTask: string): string[] {
-    const allTasksMap = new Map<string, ITask>();
+    const tasksMap = new Map<string, ITask>();
 
     for (const task of tasks) {
         if (task.label) {
-            allTasksMap.set(task.label, task);
+            tasksMap.set(task.label, task);
         }
     }
 
     const dependentTasks = new Set<string>();
 
     function getDependentTasks(name: string): void {
-        const task = allTasksMap.get(name);
+        const task = tasksMap.get(name);
         if (!task || dependentTasks.has(name)) {
             return;
         }
@@ -39,7 +39,7 @@ export function getPreLaunchTaskChain(tasks: ITask[], preLaunchTask: string): st
         }
     }
 
-    if (!allTasksMap.has(preLaunchTask)) {
+    if (!tasksMap.has(preLaunchTask)) {
         return [];
     }
 
