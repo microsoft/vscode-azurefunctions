@@ -18,6 +18,7 @@ import { durableUtils } from '../utils/durableUtils';
 import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
+import { getPreLaunchTaskChain } from './getPreLaunchTaskChain';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
 import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
@@ -32,11 +33,19 @@ export interface IPreDebugContext extends Omit<ISetConnectionSettingContext, 'pr
     projectPath?: string;
 }
 
+const emulatorTaskRegExp: RegExp = /azurite|emulator/i;
+
 export async function preDebugValidate(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
     const context: IPreDebugContext = Object.assign(actionContext, { action: CodeAction.Debug });
     const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
     let shouldContinue: boolean;
     context.telemetry.properties.debugType = debugConfig.type;
+
+    // If one of the `preLaunchTasks` already handles starting emulators, we should skip the pre-validate prompts and setup for them
+    const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
+    const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(workspace, preLaunchTaskName) : [];
+    const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));
+    context.telemetry.properties.hasEmulatorTask = String(hasEmulatorTask);
 
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
@@ -62,28 +71,30 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
-                switch (durableStorageType) {
-                    case DurableBackend.DTS:
-                        context.telemetry.properties.lastValidateStep = 'dtsConnection';
-                        await validateDTSConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Netherite:
-                        context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                        await validateNetheriteConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.SQL:
-                        context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSQLConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Storage:
-                    default:
+                if (!hasEmulatorTask) {
+                    switch (durableStorageType) {
+                        case DurableBackend.DTS:
+                            context.telemetry.properties.lastValidateStep = 'dtsConnection';
+                            await validateDTSConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.Netherite:
+                            context.telemetry.properties.lastValidateStep = 'netheriteConnection';
+                            await validateNetheriteConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.SQL:
+                            context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
+                            await validateSQLConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.Storage:
+                        default:
+                    }
+
+                    context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
+                    await validateAzureWebJobsStorage(context, context.projectPath);
+
+                    context.telemetry.properties.lastValidateStep = 'emulatorRunning';
+                    shouldContinue = hasEmulatorTask || await validateEmulatorIsRunning(context, context.projectPath);
                 }
-
-                context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, context.projectPath);
-
-                context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
             }
         }
     } catch (error) {
