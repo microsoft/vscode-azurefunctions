@@ -46,7 +46,10 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(getTasks(workspace), preLaunchTaskName) : [];
     const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));
+    const forceEmulatorValidation: boolean = !!getWorkspaceSetting<boolean>('forceEmulatorValidation');
+    const skipEmulatorValidation: boolean = hasEmulatorTask && !forceEmulatorValidation;
     context.telemetry.properties.hasEmulatorTask = String(hasEmulatorTask);
+    context.telemetry.properties.forceEmulatorValidation = String(forceEmulatorValidation);
 
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
@@ -72,7 +75,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
-                if (!hasEmulatorTask) {
+                if (!skipEmulatorValidation) {
                     switch (durableStorageType) {
                         case DurableBackend.DTS:
                             context.telemetry.properties.lastValidateStep = 'dtsConnection';
@@ -94,7 +97,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                     await validateAzureWebJobsStorage(context, context.projectPath);
 
                     context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                    shouldContinue = hasEmulatorTask || await validateEmulatorIsRunning(context, context.projectPath);
+                    shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
                 }
             }
         }

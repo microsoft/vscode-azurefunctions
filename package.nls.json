@@ -111,6 +111,7 @@
     "azureFunctions.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azureFunctions.uninstallFuncCoreTools": "Uninstall Azure Functions Core Tools",
     "azureFunctions.validateFuncCoreTools": "Validate the Azure Functions Core Tools is installed before debugging.",
+    "azureFunctions.forceEmulatorValidation": "Force the extension to validate and set up emulator connections before debugging, even when a pre-launch task referencing an emulator is detected.",
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
