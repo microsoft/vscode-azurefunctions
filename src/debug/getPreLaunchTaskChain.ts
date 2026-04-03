@@ -3,15 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { getTasks, ITask } from '../vsCodeConfig/tasks';
+import { ITask } from '../vsCodeConfig/tasks';
 
 /**
  * Resolves the full chain of tasks associated with a given `preLaunchTask`.
  * Recursively follows the `dependsOn` references found in the `tasks.json`.
  */
-export function getPreLaunchTaskChain(workspace: vscode.WorkspaceFolder, preLaunchTask: string): string[] {
-    const allTasks: ITask[] = getTasks(workspace);
+export function getPreLaunchTaskChain(allTasks: ITask[], preLaunchTask: string): string[] {
     const allTasksMap = new Map<string, ITask>();
 
     for (const task of allTasks) {

@@ -18,6 +18,7 @@ import { durableUtils } from '../utils/durableUtils';
 import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
+import { getTasks } from '../vsCodeConfig/tasks';
 import { getPreLaunchTaskChain } from './getPreLaunchTaskChain';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
@@ -43,7 +44,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
     // If one of the `preLaunchTasks` already handles starting emulators, assume the user is already on top of automating this part of the setup
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
-    const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(workspace, preLaunchTaskName) : [];
+    const preLaunchTaskChain: string[] = preLaunchTaskName ? getPreLaunchTaskChain(getTasks(workspace), preLaunchTaskName) : [];
     const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));
     context.telemetry.properties.hasEmulatorTask = String(hasEmulatorTask);
 
