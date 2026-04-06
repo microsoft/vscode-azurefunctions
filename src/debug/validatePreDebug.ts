@@ -46,7 +46,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const preLaunchTaskChain: string[] = typeof preLaunchTaskName === 'string' ? getPreLaunchTaskChain(getTasks(workspace), preLaunchTaskName) : [];
     const hasEmulatorTask: boolean = preLaunchTaskChain.some(label => emulatorTaskRegExp.test(label));
-    const forceEmulatorValidation: boolean = !!getWorkspaceSetting<boolean>('forceEmulatorValidation');
+    const forceEmulatorValidation: boolean = !!getWorkspaceSetting<boolean>('forceEmulatorValidation', workspace.uri.fsPath);
     const skipEmulatorValidation: boolean = hasEmulatorTask && !forceEmulatorValidation;
     context.telemetry.properties.hasEmulatorTask = String(hasEmulatorTask);
     context.telemetry.properties.forceEmulatorValidation = String(forceEmulatorValidation);
