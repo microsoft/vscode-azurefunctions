@@ -5,7 +5,7 @@
 
 import { type ResourceManagementClient } from '@azure/arm-resources';
 import { type AzExtClientContext, createAzureClient, type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, parseClientContext, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type IAzureQuickPickItem, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type ExecuteActivityOutput, type IActionContext, type IAzureQuickPickItem, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
 import { type Progress } from "vscode";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
@@ -66,6 +66,14 @@ class SchedulerCreationStep extends AzureWizardExecuteStepWithActivityOutput<ICr
     protected getTreeItemLabel = (context: ICreateSchedulerContext) => localize('createSchedulerLabel', 'Create Durable Task Scheduler "{0}"', context.schedulerName);
     protected getOutputLogSuccess = (context: ICreateSchedulerContext) => localize('createSchedulerSuccess', 'Successfully created Durable Task Scheduler "{0}".', context.schedulerName);
     protected getOutputLogFail = (context: ICreateSchedulerContext) => localize('createSchedulerFail', 'Failed to create Durable Task Scheduler "{0}".', context.schedulerName);
+
+    public createProgressOutput(context: ICreateSchedulerContext): ExecuteActivityOutput {
+        const output = super.createProgressOutput(context);
+        if (output.item) {
+            output.item.description = localize('schedulerProgressDescription', 'This may take a while...');
+        }
+        return output;
+    }
 
     constructor(private readonly schedulerClient: DurableTaskSchedulerClient) {
         super();
