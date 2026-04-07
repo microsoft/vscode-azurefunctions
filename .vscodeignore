@@ -1,5 +1,4 @@
 .azure-pipelines/**
-.claude/**
 .eslintignore
 .eslintrc.js
 .github/**
