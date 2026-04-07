@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type ResourceManagementClient } from '@azure/arm-resources';
 import { type AzExtClientContext, createAzureClient, type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, parseClientContext, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IAzureQuickPickItem, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type IAzureQuickPickItem, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
+import { type Progress } from "vscode";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
 import { defaultDescription } from "../../constants-nls";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { DurableTaskSchedulerSku, type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerClient, DurableTaskSchedulerSku } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { type Progress } from "vscode";
-import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
@@ -23,10 +23,18 @@ interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationW
     schedulerName?: string;
 }
 
+const schedulerNameRegex = /^[a-zA-Z0-9-]{3,64}$/;
+
 class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
     async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
-            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
+            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler'),
+            validateInput: (value: string) => {
+                if (!schedulerNameRegex.test(value)) {
+                    return localize('invalidSchedulerName', 'Name must be 3-64 characters and contain only letters, numbers, and hyphens.');
+                }
+                return undefined;
+            }
         });
     }
 
@@ -52,7 +60,7 @@ class SchedulerSkuStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
 }
 
 class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerContext> {
-    priority: number = 1;
+    priority: number = 110;
 
     constructor(private readonly schedulerClient: DurableTaskSchedulerClient) {
         super();
