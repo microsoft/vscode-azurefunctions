@@ -23,18 +23,10 @@ interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationW
     schedulerName?: string;
 }
 
-const schedulerNameRegex = /^[a-zA-Z0-9-]{3,64}$/;
-
 class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
     async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
             prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler'),
-            validateInput: (value: string) => {
-                if (!schedulerNameRegex.test(value)) {
-                    return localize('invalidSchedulerName', 'Name must be 3-64 characters and contain only letters, numbers, and hyphens.');
-                }
-                return undefined;
-            }
         });
     }
 
