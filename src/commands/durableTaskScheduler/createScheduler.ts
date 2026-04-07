@@ -26,7 +26,7 @@ interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationW
 class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
     async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
-            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler'),
+            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
         });
     }
 
