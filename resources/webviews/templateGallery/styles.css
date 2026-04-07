@@ -179,8 +179,8 @@ body {
 
 /* Language filter chips — idle state shows a colored left border as a hint */
 #language-filters .filter-chip[data-value="python"]     { border-left: 3px solid #3776AB; }
-#language-filters .filter-chip[data-value="javascript"] { border-left: 3px solid #F7DF1E; }
-#language-filters .filter-chip[data-value="typescript"] { border-left: 3px solid #166534; }
+#language-filters .filter-chip[data-value="javascript"] { border-left: 3px solid #166534; }
+#language-filters .filter-chip[data-value="typescript"] { border-left: 3px solid #F7DF1E; }
 #language-filters .filter-chip[data-value="java"]       { border-left: 3px solid #ED8B00; }
 #language-filters .filter-chip[data-value="dotnet"]     { border-left: 3px solid #512BD4; }
 #language-filters .filter-chip[data-value="powershell"] { border-left: 3px solid #012456; }
@@ -188,8 +188,8 @@ body {
 
 /* Active state fills with the language color */
 #language-filters .filter-chip.active[data-value="python"]     { background-color: #3776AB; color: white; border-color: #3776AB; }
-#language-filters .filter-chip.active[data-value="javascript"] { background-color: #F7DF1E; color: #222;  border-color: #F7DF1E; }
-#language-filters .filter-chip.active[data-value="typescript"] { background-color: #166534; color: white; border-color: #166534; }
+#language-filters .filter-chip.active[data-value="javascript"] { background-color: #166534; color: white; border-color: #166534; }
+#language-filters .filter-chip.active[data-value="typescript"] { background-color: #F7DF1E; color: #222;  border-color: #F7DF1E; }
 #language-filters .filter-chip.active[data-value="java"]       { background-color: #ED8B00; color: white; border-color: #ED8B00; }
 #language-filters .filter-chip.active[data-value="dotnet"]     { background-color: #512BD4; color: white; border-color: #512BD4; }
 #language-filters .filter-chip.active[data-value="powershell"] { background-color: #012456; color: white; border-color: #012456; }
@@ -259,8 +259,8 @@ body {
 }
 
 .language-badge.python     { background-color: #3776AB; color: white; }
-.language-badge.javascript { background-color: #F7DF1E; color: #222; }
-.language-badge.typescript { background-color: #166534; color: white; }
+.language-badge.javascript { background-color: #166534; color: white; }
+.language-badge.typescript { background-color: #F7DF1E; color: #222; }
 .language-badge.java       { background-color: #ED8B00; color: white; }
 .language-badge.dotnet     { background-color: #512BD4; color: white; }
 .language-badge.powershell { background-color: #012456; color: white; }
@@ -299,10 +299,27 @@ body {
     font-size: 11px;
     border-radius: 4px;
     background-color: var(--vscode-textBlockQuote-background);
-    color: var(--vscode-textBlockQuote-border);
+    color: var(--vscode-descriptionForeground);
 }
 
-.popular-badge,
+/* Featured card — accent border + corner star */
+.template-card.featured {
+    position: relative;
+    border-left: 3px solid var(--vscode-button-background);
+}
+
+.template-card.featured::after {
+    content: '\ea6a'; /* codicon star-full */
+    font-family: 'codicon';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 16px;
+    color: #FFC107;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
 .new-badge {
     display: flex;
     align-items: center;
@@ -310,11 +327,6 @@ body {
     padding: 3px 8px;
     font-size: 11px;
     border-radius: 4px;
-}
-
-.popular-badge {
-    background-color: rgba(255, 193, 7, 0.15);
-    color: #FFC107;
 }
 
 .new-badge {

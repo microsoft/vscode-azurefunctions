@@ -24,8 +24,19 @@ const venvName = '.venv';
  *   3. Install / refresh dependencies from requirements.txt.
  *   4. Launch `func start` in an integrated terminal with the venv activated.
  *
+ * Node (JS/TS) flow:
+ *   1. Detect project root from the active file or workspace.
+ *   2. Run `npm install` if package.json exists.
+ *   3. Run `npm run build` if a `build` script is defined in package.json.
+ *   4. Launch `func start` in an integrated terminal.
+ *
+ * .NET flow:
+ *   1. Detect project root from the active file or workspace.
+ *   2. Run `dotnet build`.
+ *   3. Launch `func start` in an integrated terminal.
+ *
  * Other runtimes:
- *   Opens a terminal and runs `func start` directly (no venv setup required).
+ *   Opens a terminal and runs `func start` directly (no setup required).
  */
 export async function runFunctionApp(_context: IActionContext, resourceUri?: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.runFunctionApp', async (ctx: IActionContext) => {
@@ -42,6 +53,10 @@ export async function runFunctionApp(_context: IActionContext, resourceUri?: vsc
 
         if (runtime === 'python') {
             await runPythonFunctionApp(ctx, projectRoot);
+        } else if (runtime === 'node') {
+            await runNodeFunctionApp(ctx, projectRoot);
+        } else if (runtime === 'dotnet' || runtime === 'dotnet-isolated') {
+            await runDotnetFunctionApp(ctx, projectRoot);
         } else {
             await runGenericFunctionApp(projectRoot);
         }
@@ -109,6 +124,94 @@ async function runPythonFunctionApp(context: IActionContext, projectRoot: string
 }
 
 // ---------------------------------------------------------------------------
+// Node (JavaScript / TypeScript) path
+// ---------------------------------------------------------------------------
+
+async function runNodeFunctionApp(context: IActionContext, projectRoot: string): Promise<void> {
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: localize('settingUpFunctionApp', 'Azure Functions'),
+            cancellable: false,
+        },
+        async (progress) => {
+            const packageJsonPath = path.join(projectRoot, 'package.json');
+
+            if (await AzExtFsExtra.pathExists(packageJsonPath)) {
+                // ── Step 1: npm install ──────────────────────────────────────
+                progress.report({ message: localize('npmInstall', 'Running npm install...') });
+                ext.outputChannel.appendLog(localize('runningNpmInstall', 'Running npm install...'));
+
+                try {
+                    await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', 'install');
+                } catch {
+                    void vscode.window.showWarningMessage(
+                        localize('npmInstallWarning',
+                            'npm install encountered errors. Check the Azure Functions output channel for details.')
+                    );
+                }
+
+                // ── Step 2: npm run build (if script exists) ─────────────────
+                const hasBuildScript = await packageJsonHasScript(packageJsonPath, 'build');
+                if (hasBuildScript) {
+                    progress.report({ message: localize('npmBuild', 'Running npm run build...') });
+                    ext.outputChannel.appendLog(localize('runningNpmBuild', 'Running npm run build...'));
+
+                    try {
+                        await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', 'run', 'build');
+                    } catch {
+                        void vscode.window.showWarningMessage(
+                            localize('npmBuildWarning',
+                                'npm run build encountered errors. Check the Azure Functions output channel for details.')
+                        );
+                    }
+                }
+            }
+
+            progress.report({ message: localize('startingFuncHost', 'Starting Azure Functions host...') });
+        }
+    );
+
+    // ── Step 3: func start ──────────────────────────────────────────────────
+    context.telemetry.properties.startCommand = 'func start (node)';
+    openFuncTerminal(projectRoot);
+}
+
+// ---------------------------------------------------------------------------
+// .NET path
+// ---------------------------------------------------------------------------
+
+async function runDotnetFunctionApp(context: IActionContext, projectRoot: string): Promise<void> {
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: localize('settingUpFunctionApp', 'Azure Functions'),
+            cancellable: false,
+        },
+        async (progress) => {
+            // ── Step 1: dotnet build ─────────────────────────────────────────
+            progress.report({ message: localize('dotnetBuild', 'Running dotnet build...') });
+            ext.outputChannel.appendLog(localize('runningDotnetBuild', 'Running dotnet build...'));
+
+            try {
+                await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'dotnet', 'build');
+            } catch {
+                void vscode.window.showWarningMessage(
+                    localize('dotnetBuildWarning',
+                        'dotnet build encountered errors. Check the Azure Functions output channel for details.')
+                );
+            }
+
+            progress.report({ message: localize('startingFuncHost', 'Starting Azure Functions host...') });
+        }
+    );
+
+    // ── Step 2: func start ──────────────────────────────────────────────────
+    context.telemetry.properties.startCommand = 'func start (dotnet)';
+    openFuncTerminal(projectRoot);
+}
+
+// ---------------------------------------------------------------------------
 // Non-Python / generic path
 // ---------------------------------------------------------------------------
 
@@ -122,12 +225,18 @@ async function runGenericFunctionApp(projectRoot: string): Promise<void> {
 
 /**
  * Resolve project root with the same priority order as other commands:
- *   1. Explicit resourceUri argument
- *   2. Active editor's workspace folder
+ *   1. Explicit resourceUri argument — walk up from the file's directory
+ *   2. Active editor's workspace folder — walk up from the file's directory
  *   3. First workspace folder
+ *
+ * In each case we walk upward from the starting directory until we find a
+ * `host.json` file, stopping at the workspace folder boundary.  This
+ * handles projects where the open file is inside a subdirectory (e.g.
+ * `src/index.ts` in a TypeScript Functions project).
  */
 async function resolveProjectRoot(resourceUri?: vscode.Uri): Promise<string | undefined> {
-    let candidate: string | undefined;
+    let startDir: string | undefined;
+    let ceiling: string | undefined;
 
     // Only use resourceUri if it points to an actual file on disk — non-file schemes
     // (e.g. walkThrough://, untitled://) cannot be resolved as filesystem paths.
@@ -135,43 +244,91 @@ async function resolveProjectRoot(resourceUri?: vscode.Uri): Promise<string | un
         const stat = await AzExtFsExtra.pathExists(resourceUri.fsPath)
             ? await vscode.workspace.fs.stat(resourceUri)
             : undefined;
-        candidate = stat?.type === vscode.FileType.Directory
+        startDir = stat?.type === vscode.FileType.Directory
             ? resourceUri.fsPath
             : path.dirname(resourceUri.fsPath);
+        const ws = vscode.workspace.getWorkspaceFolder(resourceUri);
+        ceiling = ws?.uri.fsPath;
     } else if (vscode.window.activeTextEditor) {
-        const ws = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
-        candidate = ws?.uri.fsPath;
+        const doc = vscode.window.activeTextEditor.document;
+        const ws = vscode.workspace.getWorkspaceFolder(doc.uri);
+        startDir = doc.uri.scheme === 'file' ? path.dirname(doc.uri.fsPath) : ws?.uri.fsPath;
+        ceiling = ws?.uri.fsPath;
     } else {
-        candidate = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        startDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        ceiling = startDir;
     }
 
-    if (!candidate) {
+    if (!startDir) {
         return undefined;
     }
 
-    // Confirm this looks like a Functions project
-    if (await AzExtFsExtra.pathExists(path.join(candidate, 'host.json'))) {
-        return candidate;
-    }
+    return findHostJson(startDir, ceiling);
+}
 
+/**
+ * Walk upward from `startDir` looking for a directory that contains
+ * `host.json`.  Stops at `ceiling` (inclusive) to avoid escaping the
+ * workspace.  If `ceiling` is undefined, only checks `startDir` itself.
+ */
+async function findHostJson(startDir: string, ceiling?: string): Promise<string | undefined> {
+    let dir = startDir;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        if (await AzExtFsExtra.pathExists(path.join(dir, 'host.json'))) {
+            return dir;
+        }
+
+        // Stop if we've reached the ceiling or the filesystem root
+        if (ceiling && path.normalize(dir).toLowerCase() === path.normalize(ceiling).toLowerCase()) {
+            break;
+        }
+
+        const parent = path.dirname(dir);
+        if (parent === dir) {
+            break; // filesystem root
+        }
+        dir = parent;
+    }
     return undefined;
 }
 
 /**
- * Read FUNCTIONS_WORKER_RUNTIME from local.settings.json.
+ * Detect the Functions runtime for the project.
+ *
+ * 1. Check FUNCTIONS_WORKER_RUNTIME in local.settings.json (authoritative).
+ * 2. Fallback: infer from well-known project files (package.json → node,
+ *    requirements.txt → python) so the correct pre-start steps still run
+ *    even when local.settings.json is missing or incomplete.
  */
 async function detectRuntime(projectRoot: string): Promise<string | undefined> {
+    // ── Primary: local.settings.json ────────────────────────────────────
     const settingsPath = path.join(projectRoot, 'local.settings.json');
-    if (!await AzExtFsExtra.pathExists(settingsPath)) {
-        return undefined;
+    if (await AzExtFsExtra.pathExists(settingsPath)) {
+        try {
+            const raw = await AzExtFsExtra.readFile(settingsPath);
+            const settings = JSON.parse(raw) as { Values?: Record<string, string> };
+            const runtime = settings.Values?.FUNCTIONS_WORKER_RUNTIME?.toLowerCase();
+            if (runtime) {
+                return runtime;
+            }
+        } catch {
+            // fall through to heuristic detection
+        }
     }
-    try {
-        const raw = await AzExtFsExtra.readFile(settingsPath);
-        const settings = JSON.parse(raw) as { Values?: Record<string, string> };
-        return settings.Values?.FUNCTIONS_WORKER_RUNTIME?.toLowerCase();
-    } catch {
-        return undefined;
+
+    // ── Fallback: detect from project files ──────────────────────────────
+    if (await AzExtFsExtra.pathExists(path.join(projectRoot, 'package.json'))) {
+        return 'node';
     }
+    if (await AzExtFsExtra.pathExists(path.join(projectRoot, requirementsFileName))) {
+        return 'python';
+    }
+    if (await hasDotnetProjectFile(projectRoot)) {
+        return 'dotnet';
+    }
+
+    return undefined;
 }
 
 /**
@@ -192,6 +349,31 @@ async function findPythonAlias(): Promise<string | undefined> {
         }
     }
     return undefined;
+}
+
+/**
+ * Check whether a package.json contains a given npm script.
+ */
+async function packageJsonHasScript(packageJsonPath: string, scriptName: string): Promise<boolean> {
+    try {
+        const raw = await AzExtFsExtra.readFile(packageJsonPath);
+        const pkg = JSON.parse(raw) as { scripts?: Record<string, string> };
+        return !!pkg.scripts?.[scriptName];
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Check whether the project root contains a .csproj or .fsproj file.
+ */
+async function hasDotnetProjectFile(projectRoot: string): Promise<boolean> {
+    try {
+        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(projectRoot));
+        return entries.some(([name]) => name.endsWith('.csproj') || name.endsWith('.fsproj'));
+    } catch {
+        return false;
+    }
 }
 
 /**

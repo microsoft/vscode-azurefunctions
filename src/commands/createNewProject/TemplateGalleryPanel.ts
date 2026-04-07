@@ -821,12 +821,12 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                     <div class="filter-chips" id="language-filters" role="radiogroup" aria-label="Filter by language">
                         <button class="filter-chip active" data-value="all" role="radio" aria-checked="true">All</button>
                         <button class="filter-chip" data-value="python" role="radio" aria-checked="false">Python</button>
-                        <button class="filter-chip" data-value="javascript" role="radio" aria-checked="false">JavaScript</button>
-                        <button class="filter-chip" data-value="typescript" role="radio" aria-checked="false">TypeScript</button>
-                        <button class="filter-chip" data-value="java" role="radio" aria-checked="false">Java</button>
                         <button class="filter-chip" data-value="dotnet" role="radio" aria-checked="false">.NET</button>
-                        <button class="filter-chip" data-value="powershell" role="radio" aria-checked="false">PowerShell</button>
+                        <button class="filter-chip" data-value="typescript" role="radio" aria-checked="false">TypeScript</button>
+                        <button class="filter-chip" data-value="javascript" role="radio" aria-checked="false">JavaScript</button>
+                        <button class="filter-chip" data-value="java" role="radio" aria-checked="false">Java</button>
                         <button class="filter-chip" data-value="go" role="radio" aria-checked="false">Go</button>
+                        <button class="filter-chip" data-value="powershell" role="radio" aria-checked="false">PowerShell</button>
                     </div>
                 </div>
 

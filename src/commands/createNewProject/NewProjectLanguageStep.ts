@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { type QuickPickOptions } from 'vscode';
+import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { type IProjectWizardContext } from './IProjectWizardContext';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
@@ -20,7 +22,6 @@ import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProje
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
-import { StartingPointStep } from './StartingPointStep';
 import { addBallerinaCreateProjectSteps } from './ballerinaSteps/addBallerinaCreateProjectSteps';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
@@ -28,6 +29,10 @@ import { MCPDownloadSnippetsExecuteStep } from './mcpServerSteps/MCPDownloadSnip
 import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnippetsPromptStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
+import { TemplateGalleryPanel } from './TemplateGalleryPanel';
+
+// Sentinel value used to detect when the user picks "Browse Template Gallery…"
+const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -64,8 +69,25 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
+        // Add a separator and a "Browse Template Gallery…" option at the bottom
+        languagePicks.push(
+            { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
+            {
+                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery...')}`,
+                data: { language: templateGalleryLanguage },
+                suppressPersistence: true,
+            },
+        );
+
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
+
+        if (result.language === templateGalleryLanguage) {
+            TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+            context.telemetry.properties.flow = 'templateGalleryFromWizard';
+            throw new UserCancelledError('templateGallery');
+        }
+
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
     }
@@ -138,11 +160,13 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
-        // Add StartingPointStep which handles both template and scratch paths
-        // For template path: shows template selection and clones project
-        // For scratch path: shows existing function trigger selection (FunctionListStep)
-        // Note: Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        promptSteps.push(new StartingPointStep(this._templateId, this._functionSettings));
+        // All languages except Java support creating a function after creating a project
+        // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
+        promptSteps.push(new FunctionListStep({
+            isProjectWizard: true,
+            templateId: this._templateId,
+            functionSettings: this._functionSettings,
+        }));
 
         return wizardOptions;
     }

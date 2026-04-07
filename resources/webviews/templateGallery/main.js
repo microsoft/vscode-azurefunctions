@@ -413,11 +413,13 @@
 
         // Special badges
         let badgesHtml = categoriesHtml;
-        if (template.isPopular) {
-            badgesHtml += '<span class="popular-badge"><span class="codicon codicon-star-full"></span>Popular</span>';
-        }
         if (template.isNew) {
             badgesHtml += '<span class="new-badge"><span class="codicon codicon-sparkle"></span>New</span>';
+        }
+
+        // Featured cards get accent border + corner star
+        if (template.isPopular) {
+            card.classList.add('featured');
         }
 
         card.innerHTML = `
