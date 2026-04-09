@@ -28,6 +28,7 @@ class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext>
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
             prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
         });
+        wizardContext.relatedNameTask = Promise.resolve(wizardContext.schedulerName);
     }
 
     shouldPrompt(wizardContext: ICreateSchedulerContext): boolean {
