@@ -6,7 +6,7 @@
 import {type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { localize } from "../../localize";
-import { type MessageItem } from "vscode";
+import { commands, type MessageItem } from "vscode";
 import { type DurableTaskSchedulerResourceModel } from "../../tree/durableTaskScheduler/DurableTaskSchedulerResourceModel";
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { withCancellation } from "../../utils/cancellation";
@@ -55,6 +55,7 @@ export function deleteSchedulerCommandFactory(
         }
         finally {
             dataBranchProvider.refresh();
+            await commands.executeCommand('azureResourceGroups.refresh');
         }
     };
 }
