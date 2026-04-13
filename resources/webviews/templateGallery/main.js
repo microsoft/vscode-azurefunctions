@@ -352,11 +352,13 @@
             );
         }
 
-        // Sort: Popular first, then by priority, then alphabetically
+        // Sort: Highlighted first, then by priority (lower = higher), then alphabetically
         results.sort((a, b) => {
-            if (a.isPopular && !b.isPopular) return -1;
-            if (!a.isPopular && b.isPopular) return 1;
-            if (a.priority !== b.priority) return (a.priority || 999) - (b.priority || 999);
+            if (a.isHighlighted && !b.isHighlighted) return -1;
+            if (!a.isHighlighted && b.isHighlighted) return 1;
+            const aPrio = a.priority ?? 999;
+            const bPrio = b.priority ?? 999;
+            if (aPrio !== bPrio) return aPrio - bPrio;
             return a.displayName.localeCompare(b.displayName);
         });
 
@@ -418,7 +420,7 @@
         }
 
         // Featured cards get accent border + corner star
-        if (template.isPopular) {
+        if (template.isHighlighted) {
             card.classList.add('featured');
         }
 

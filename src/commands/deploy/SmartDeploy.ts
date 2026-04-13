@@ -67,12 +67,20 @@ function detectAzdProject(projectRoot: string): AzdStatus {
         // Check for host: function (handles both quoted and unquoted YAML values)
         const hasFunctionService = /host\s*:\s*["']?function["']?/i.test(yamlContent);
         const hasInfra = detectInfraFolder(projectRoot);
-        return {
-            tier: 'azd-functions',
-            hasFunctionService,
-            hasInfra,
-            hasAzureYaml: true,
-        };
+
+        // Only use AZD-specific deploy flow when azure.yaml actually contains a Functions service;
+        // non-Functions AZD projects fall through to the traditional deploy path.
+        if (hasFunctionService) {
+            return {
+                tier: 'azd-functions',
+                hasFunctionService,
+                hasInfra,
+                hasAzureYaml: true,
+            };
+        }
+
+        // azure.yaml exists but no Functions service — treat like a plain project
+        return { tier: 'plain', hasFunctionService: false, hasInfra, hasAzureYaml: true };
     }
 
     // No azure.yaml — check for Bicep/Terraform infra files (AZD-compatible but not yet initialised)

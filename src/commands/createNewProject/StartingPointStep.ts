@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { QuickPickItemKind } from 'vscode';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -52,13 +53,16 @@ export class StartingPointStep extends AzureWizardPromptStep<IProjectWizardConte
             picks.reverse();
         }
 
-        // Add informational item
-        picks.push({
-            label: `$(info) ${localize('templateInfoLine', 'Templates include working code, tests, and Bicep deployment files')}`,
-            data: 'template', // default but won't be selected since it's suppressed
-            suppressPersistence: true,
-            onPicked: () => { /* do nothing - info only */ }
-        });
+        // Add separator and informational (non-selectable) hint
+        picks.push(
+            { label: '', data: 'template' as StartingPointChoice, kind: QuickPickItemKind.Separator },
+            {
+                label: `$(info) ${localize('templateInfoLine', 'Templates include working code, tests, and Bicep deployment files')}`,
+                data: 'template' as StartingPointChoice,
+                suppressPersistence: true,
+                kind: QuickPickItemKind.Separator,
+            },
+        );
 
         const placeHolder = localize('selectStartingPoint', 'How would you like to start your project?');
         const result = await context.ui.showQuickPick(picks, {

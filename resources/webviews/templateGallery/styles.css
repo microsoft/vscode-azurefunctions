@@ -21,12 +21,6 @@ body {
     margin: 0;
 }
 
-/* Codicon font */
-@font-face {
-    font-family: 'codicon';
-    src: url('${codiconsUri}') format('truetype');
-}
-
 .codicon {
     font-family: 'codicon';
     font-size: 16px;

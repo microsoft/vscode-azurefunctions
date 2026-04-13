@@ -67,7 +67,7 @@ export interface IProjectTemplate {
     isNew?: boolean;
 
     /** Show "Popular" badge */
-    isPopular?: boolean;
+    isHighlighted?: boolean;
 
     /** Whether this template is bundled with the extension for offline use */
     offlineBundle?: boolean;

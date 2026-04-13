@@ -157,7 +157,7 @@ export class TemplateListStep extends AzureWizardPromptStep<IProjectWizardContex
         if (template.isNew) {
             label += ` $(sparkle)`;
         }
-        if (template.isPopular) {
+        if (template.isHighlighted) {
             label += ` $(star-full)`;
         }
 

@@ -354,7 +354,11 @@ export class TemplateGalleryPanel {
                     }
 
                     await this._sendProgress('Initializing git repository...');
-                    await cpUtils.executeCommand(undefined, projectPath, 'git init');
+                    try {
+                        await cpUtils.executeCommand(undefined, projectPath, 'git init');
+                    } catch {
+                        // git init is optional — ignore if git is not installed
+                    }
 
                 } catch (downloadError) {
                     try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
@@ -390,7 +394,8 @@ export class TemplateGalleryPanel {
                 }
 
                 // Auto-validate the new project with Copilot (fire-and-forget)
-                void vscode.commands.executeCommand('azureFunctions.validateFunctionApp', vscode.Uri.file(projectPath));
+                // TODO: Re-enable when validateFunctionApp is ready
+                // void vscode.commands.executeCommand('azureFunctions.validateFunctionApp', vscode.Uri.file(projectPath));
 
             } catch (error) {
                 context.telemetry.properties.result = 'Failed';
@@ -590,18 +595,28 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
 
             try {
                 await this._sendProgress('Creating project files...');
-                await AzExtFsExtra.ensureDir(location);
+
+                // Validate target folder is empty; create a unique subfolder if not
+                let targetDir = location;
+                if (await AzExtFsExtra.pathExists(targetDir)) {
+                    const existing = await fs.promises.readdir(targetDir);
+                    if (existing.length > 0) {
+                        const folderName = `azure-functions-project-${Date.now()}`;
+                        targetDir = path.join(location, folderName);
+                    }
+                }
+                await AzExtFsExtra.ensureDir(targetDir);
 
                 for (const file of files) {
                     const safePath = file.path.replace(/^[/\\]/, '');
-                    const filePath = path.join(location, safePath);
+                    const filePath = path.join(targetDir, safePath);
                     await AzExtFsExtra.ensureDir(path.dirname(filePath));
                     await fs.promises.writeFile(filePath, file.content, 'utf8');
                 }
 
                 await this._sendProgress('Initializing git repository...');
                 try {
-                    await cpUtils.executeCommand(undefined, location, 'git init');
+                    await cpUtils.executeCommand(undefined, targetDir, 'git init');
                 } catch {
                     // git init is optional — ignore if git is not installed
                 }
@@ -617,14 +632,14 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                 );
 
                 if (openChoice === localize('openInNewWindow', 'Open in New Window')) {
-                    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(location), true);
+                    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDir), true);
                 } else if (openChoice === localize('openInCurrentWindow', 'Open in Current Window')) {
-                    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(location), false);
+                    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDir), false);
                 } else if (openChoice === localize('addToWorkspace', 'Add to Workspace')) {
                     vscode.workspace.updateWorkspaceFolders(
                         vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
                         null,
-                        { uri: vscode.Uri.file(location) }
+                        { uri: vscode.Uri.file(targetDir) }
                     );
                 }
             } catch (error) {

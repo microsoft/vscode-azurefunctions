@@ -112,7 +112,6 @@ export class ProjectTemplateProvider {
 
         // Try to fetch from remote
         try {
-            ext.outputChannel.appendLog('DEBUG: About to fetch from remote - v2');
             const manifest = await this.fetchManifestFromRemote(context);
             await this.cacheManifest(manifest);
             context.telemetry.properties.manifestSource = 'remote';
@@ -173,7 +172,7 @@ export class ProjectTemplateProvider {
      * Fetch manifest from remote URL(s)
      */
     private async fetchManifestFromRemote(context: IActionContext): Promise<ITemplateManifest> {
-        const primaryUrl = ProjectTemplateProvider.DEFAULT_MANIFEST_URL;
+        const primaryUrl = getWorkspaceSetting<string>('projectTemplates.manifestUrl') || ProjectTemplateProvider.DEFAULT_MANIFEST_URL;
         const additionalUrls = getWorkspaceSetting<string[]>('projectTemplates.additionalManifestUrls') || [];
 
         ext.outputChannel.appendLog(localize('fetchingFromUrl', 'Fetching manifest from: {0}', primaryUrl));
@@ -210,8 +209,6 @@ export class ProjectTemplateProvider {
      * Fetch manifest from a specific URL using native fetch
      */
     private async fetchManifestFromUrl(_context: IActionContext, url: string): Promise<ITemplateManifest> {
-        ext.outputChannel.appendLog(`Fetching from: ${url.substring(0, 80)}...`);
-
         const timeoutMs = (getWorkspaceSetting<number>('requestTimeout') || 15) * 1000;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -228,19 +225,11 @@ export class ProjectTemplateProvider {
 
             clearTimeout(timeoutId);
 
-            ext.outputChannel.appendLog(`Response status: ${response.status}`);
-
             if (!response.ok) {
                 throw new Error(localize('httpError', 'HTTP error {0}', response.status.toString()));
             }
 
             const text = await response.text();
-            ext.outputChannel.appendLog(`Response length: ${text.length}`);
-
-            // Log first 500 chars if not JSON
-            if (!text.trim().startsWith('{')) {
-                ext.outputChannel.appendLog(`Unexpected response (first 500 chars): ${text.substring(0, 500)}`);
-            }
 
             const manifest = JSON.parse(text) as ITemplateManifest;
 
