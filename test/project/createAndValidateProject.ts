@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type TestActionContext, type TestInput } from '@microsoft/vscode-azext-dev';
+import { TestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-// eslint-disable-next-line no-restricted-imports
-import { createNewProjectInternal } from '../../src/commands/createNewProject/createNewProject';
 import { hiddenStacksSetting, ProjectLanguage } from '../../src/constants';
 import { getRandomHexString } from '../../src/utils/fs';
 import type * as api from '../../src/vscode-azurefunctions.api';
 import { testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
+import { getCachedTestApi } from '../utils/testApiAccess';
 import { validateProject, type IValidateProjectOptions } from './validateProject';
 
 export interface ICreateProjectTestOptions extends IValidateProjectOptions {
@@ -42,7 +41,8 @@ export async function createAndValidateProject(context: TestActionContext, optio
 
     await runWithFuncSetting(hiddenStacksSetting, true, async () => {
         await context.ui.runWithInputs(inputs, async () => {
-            await createNewProjectInternal(context, {
+            const testApi = getCachedTestApi();
+            await testApi.commands.createNewProjectInternal(context, {
                 language: options.isHiddenLanguage ? <api.ProjectLanguage>language : undefined,
                 version: options.version,
                 suppressOpenFolder: true

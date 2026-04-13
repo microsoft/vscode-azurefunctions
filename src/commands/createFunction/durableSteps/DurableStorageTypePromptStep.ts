@@ -5,7 +5,7 @@
 
 import { AzureWizardPromptStep, openUrl, type IAzureQuickPickItem, type IWizardOptions } from "@microsoft/vscode-azext-utils";
 import { DurableBackend } from "../../../constants";
-import { defaultDescription, previewDescription } from "../../../constants-nls";
+import { defaultDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
 import { type IFunctionWizardContext } from "../IFunctionWizardContext";
 import { DurableProjectConfigureStep } from "./DurableProjectConfigureStep";
@@ -17,7 +17,7 @@ export class DurableStorageTypeListStep<T extends IFunctionWizardContext> extend
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackend | undefined>[] = [
             { label: 'Azure Storage', description: defaultDescription, data: DurableBackend.Storage },
-            { label: 'Durable Task Scheduler', description: previewDescription, data: DurableBackend.DTS },
+            { label: 'Durable Task Scheduler', data: DurableBackend.DTS },
             { label: 'MSSQL', data: DurableBackend.SQL },
             { label: durableStorageInfo, data: undefined }
         ];

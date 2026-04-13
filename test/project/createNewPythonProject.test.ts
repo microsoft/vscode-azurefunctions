@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion } from '../../src/FuncVersion';
+import { cpUtils } from '../../src/utils/cpUtils';
 import { getRandomHexString } from '../../src/utils/fs';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -26,7 +26,12 @@ suite('Create New Python Project', () => {
         }
         this.timeout(2 * 60 * 1000);
 
-        const alias: string = process.platform === 'win32' ? 'py' : 'python';
+        const alias: string | undefined = await findPythonAlias();
+        if (!alias) {
+            console.log('No Python installation found, skipping enter venv test');
+            this.skip();
+            return;
+        }
         await runWithTestActionContext('createProject', async context => {
             await createAndValidateProject(context, { ...getPythonValidateOptions('.venv', FuncVersion.v4, PythonModelVersion.v2), inputs: [/enter/i, alias] });
         });
@@ -66,4 +71,17 @@ async function createTestVenv(projectPath: string, venvName: string): Promise<vo
     } else {
         await AzExtFsExtra.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
     }
+}
+
+async function findPythonAlias(): Promise<string | undefined> {
+    const aliases = process.platform === 'win32' ? ['py', 'python', 'python3'] : ['python3', 'python'];
+    for (const alias of aliases) {
+        try {
+            await cpUtils.executeCommand(undefined, undefined, alias, ['--version']);
+            return alias;
+        } catch {
+            // try next alias
+        }
+    }
+    return undefined;
 }

@@ -23,7 +23,7 @@ interface DurableTaskSchedulerCreateRequest {
         readonly ipAllowlist: string[];
         readonly sku: {
             readonly name: string;
-            readonly capacity: number;
+            readonly capacity?: number;
         };
     };
     readonly tags: unknown;
@@ -65,8 +65,13 @@ export interface DurableTaskSchedulerCreateResponse {
     status: DurableTaskStatus;
 }
 
+export enum DurableTaskSchedulerSku {
+    Consumption = 'Consumption',
+    Dedicated = 'Dedicated',
+}
+
 export interface DurableTaskSchedulerClient {
-    createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerCreateResponse>;
+    createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string, sku?: DurableTaskSchedulerSku): Promise<DurableTaskSchedulerCreateResponse>;
     createTaskHub(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string, taskHubName: string): Promise<DurableTaskHubResource>;
 
     deleteScheduler(subscription: AzureSubscription, resourceGroupName: string, schedulerName: string): Promise<DurableTaskStatus>;
@@ -81,7 +86,7 @@ export interface DurableTaskSchedulerClient {
 }
 
 export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClient {
-    async createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string): Promise<DurableTaskSchedulerCreateResponse> {
+    async createScheduler(subscription: AzureSubscription, resourceGroupName: string, location: string, schedulerName: string, sku: DurableTaskSchedulerSku = DurableTaskSchedulerSku.Consumption): Promise<DurableTaskSchedulerCreateResponse> {
         const taskHubsUrl = HttpDurableTaskSchedulerClient.getBaseUrl(subscription, resourceGroupName, schedulerName);
 
         const request: DurableTaskSchedulerCreateRequest = {
@@ -89,8 +94,8 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
             properties: {
                 ipAllowlist: ['0.0.0.0/0'],
                 sku: {
-                    name: 'Dedicated',
-                    capacity: 1
+                    name: sku,
+                    ...(sku === DurableTaskSchedulerSku.Dedicated ? { capacity: 1 } : {})
                 }
             },
             tags: {
@@ -182,7 +187,7 @@ export class HttpDurableTaskSchedulerClient implements DurableTaskSchedulerClien
 
     private static getBaseUrl(subscription: AzureSubscription, resourceGroupName?: string, schedulerName?: string, relativeUrl?: string | undefined) {
         const provider = 'Microsoft.DurableTask';
-        const apiVersion = '2024-10-01-preview';
+        const apiVersion = '2025-11-01';
 
         let url = `${subscription.environment.resourceManagerEndpointUrl}subscriptions/${subscription.subscriptionId}`;
 

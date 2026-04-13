@@ -90,6 +90,17 @@
                 ]
             }
         },
+        "views": {
+            "debug": [
+                {
+                    "id": "azureFunctions.funcHostDebugView",
+                    "name": "%azureFunctions.funcHostDebugView.title%",
+                    "when": "!virtualWorkspace",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure-functions.svg"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "azureFunctions.addBinding",
@@ -481,6 +492,34 @@
                 "category": "Azure Functions",
                 "icon": "$(run-all)",
                 "enablement": "!virtualWorkspace"
+                "command": "azureFunctions.funcHostDebug.refresh",
+                "title": "%azureFunctions.funcHostDebug.refresh%",
+                "category": "Azure Functions",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                "title": "%azureFunctions.funcHostDebug.showRecentLogs%",
+                "category": "Azure Functions",
+                "icon": "$(output)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                "title": "%azureFunctions.funcHostDebug.copyRecentLogs%",
+                "category": "Azure Functions",
+                "icon": "$(copy)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.askCopilot",
+                "title": "%azureFunctions.funcHostDebug.askCopilot%",
+                "category": "Azure Functions",
+                "icon": "$(sparkle)"
+            },
+            {
+                "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                "title": "%azureFunctions.funcHostDebug.clearStoppedSessions%",
+                "category": "Azure Functions",
+                "icon": "$(trash)"
             }
         ],
         "submenus": [
@@ -525,9 +564,54 @@
                     "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.refresh",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.clearStoppedSessions",
+                    "when": "view == azureFunctions.funcHostDebugView",
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostError",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
+                    "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.stoppedHostTask",
+                    "group": "1@1"
+                },
                 {
                     "command": "azureFunctions.createFunction",
                     "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
@@ -850,7 +934,7 @@
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i && config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true",
+                    "when": "view =~ /(azureResourceGroups|azureFocusView)/ && viewItem =~ /DurableTaskScheduler/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
                 },
                 {
@@ -973,8 +1057,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFunctions.durableTaskScheduler.createScheduler",
-                    "when": "config.azureFunctions.durableTaskScheduler.enablePreviewFeatures == true"
+                    "command": "azureFunctions.durableTaskScheduler.createScheduler"
                 },
                 {
                     "command": "azureFunctions.durableTaskScheduler.createTaskHub",
@@ -998,6 +1081,22 @@
                 },
                 {
                     "command": "azureFunctions.unassignManagedIdentity",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.showRecentLogs",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.copyRecentLogs",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.funcHostDebug.askCopilot",
                     "when": "never"
                 }
             ],
@@ -1044,10 +1143,6 @@
             {
                 "fileMatch": "host.json",
                 "url": "https://json.schemastore.org/host.json"
-            },
-            {
-                "fileMatch": "proxies.json",
-                "url": "https://json.schemastore.org/proxies.json"
             }
         ],
         "taskDefinitions": [
@@ -1059,6 +1154,12 @@
                 "properties": {
                     "command": {
                         "type": "string"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1126,11 +1227,6 @@
             {
                 "title": "Durable Task Scheduler",
                 "properties": {
-                    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "%azureFunctions.durableTaskScheduler.enablePreviewFeatures%"
-                    },
                     "azureFunctions.durableTaskScheduler.emulatorRegistry": {
                         "type": "string",
                         "description": "%azureFunctions.durableTaskScheduler.emulatorRegistry%",
@@ -1152,6 +1248,7 @@
                 "title": "Azure Functions",
                 "properties": {
                     "azureFunctions.templateFilter": {
+                        "deprecationMessage": "This setting is no longer used to filter templates, but is being left to explain what the filter enumerations mean.",
                         "scope": "resource",
                         "type": "string",
                         "default": "Verified",
@@ -1557,8 +1654,7 @@
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
-        "@microsoft/vscode-azext-dev": "^2.1.2",
-        "@microsoft/vscode-azext-eng": "^1.0.0-alpha.10",
+        "@microsoft/vscode-azext-eng": "^1.0.0-alpha.16",
         "@types/fs-extra": "^8.1.0",
         "@types/node": "^22.0.0",
         "@types/ps-tree": "^1.1.0",
@@ -1576,7 +1672,7 @@
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",
-        "@azure/arm-appservice": "^15.0.0",
+        "@azure/arm-appservice": "^18.0.0",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.1.0",
         "@azure/arm-resourcegraph": "^5.0.0-beta.3",
@@ -1587,13 +1683,14 @@
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^4.0.1",
+        "@microsoft/vscode-azext-azureappservice": "^4.2.4",
         "@microsoft/vscode-azext-azureappsettings": "^1.0.0",
         "@microsoft/vscode-azext-azureutils": "^4.0.1",
-        "@microsoft/vscode-azext-utils": "^4.0.3",
+        "@microsoft/vscode-azext-utils": "^4.0.5",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
         "@microsoft/vscode-container-client": "^0.3.0",
         "@vscode/codicons": "^0.0.44",
+        "@microsoft/vscode-processutils": "^0.2.1",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",

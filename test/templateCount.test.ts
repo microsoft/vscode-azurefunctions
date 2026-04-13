@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { ProjectLanguage, TemplateFilter } from '../src/constants';
 import { TemplateSource } from '../src/extensionVariables';
 import { FuncVersion } from '../src/FuncVersion';
-import { type CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
 import { type FunctionTemplateBase } from '../src/templates/IFunctionTemplate';
-import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, shouldSkipVersion } from './global.test';
+import { getTestWorkspaceFolder, longRunningTestsEnabled, shouldSkipVersion } from './global.test';
 import { javaUtils } from './utils/javaUtils';
+import { getCachedTestApi, getTestApi } from './utils/testApiAccess';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
@@ -21,6 +21,8 @@ interface TestCase {
     language: ProjectLanguage;
     version: FuncVersion;
     expectedCount: number;
+    /** If provided, used as expected count when source is Backup (some templates like McpToolTrigger are not in Backup) */
+    backupExpectedCount?: number;
     projectTemplateKey?: string;
 }
 
@@ -31,9 +33,9 @@ function addSuite(source: TemplateSource | undefined): void {
             { language: ProjectLanguage.JavaScript, version: FuncVersion.v4, expectedCount: 18 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v1, expectedCount: 12 },
             { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 15, projectTemplateKey: 'net6.0' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net6.0-isolated' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net7.0-isolated' },
-            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 13, projectTemplateKey: 'net8.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 14, backupExpectedCount: 13, projectTemplateKey: 'net6.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 14, backupExpectedCount: 13, projectTemplateKey: 'net7.0-isolated' },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v4, expectedCount: 14, backupExpectedCount: 13, projectTemplateKey: 'net8.0-isolated' },
             { language: ProjectLanguage.Python, version: FuncVersion.v4, expectedCount: 15 },
             { language: ProjectLanguage.TypeScript, version: FuncVersion.v4, expectedCount: 18 },
             { language: ProjectLanguage.PowerShell, version: FuncVersion.v4, expectedCount: 16 },
@@ -42,10 +44,11 @@ function addSuite(source: TemplateSource | undefined): void {
 
         let testWorkspacePath: string;
         suiteSetup(async () => {
+            await getTestApi();
             testWorkspacePath = getTestWorkspaceFolder();
         });
 
-        for (const { language, version, expectedCount, projectTemplateKey } of cases) {
+        for (const { language, version, expectedCount, backupExpectedCount, projectTemplateKey } of cases) {
             let testName: string = `${language} ${version}`;
             if (projectTemplateKey) {
                 testName += ` ${projectTemplateKey}`;
@@ -60,10 +63,15 @@ function addSuite(source: TemplateSource | undefined): void {
                 }
 
                 await runWithTestActionContext('getFunctionTemplates', async context => {
-                    await runForTemplateSource(context, source, async (provider: CentralTemplateProvider) => {
-                        const templates: FunctionTemplateBase[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey);
-                        assert.equal(templates.length, expectedCount);
-                    });
+                    const testApi = getCachedTestApi();
+                    const allTemplates: FunctionTemplateBase[] = await testApi.commands.getFunctionTemplates(
+                        context, testWorkspacePath, language, undefined, version, TemplateFilter.Verified, projectTemplateKey, source
+                    );
+                    // getFunctionTemplates now returns all templates with templateFilter set as a category.
+                    // Filter to Verified here to validate both the total return and correct classification.
+                    const templates = allTemplates.filter(t => t.templateFilter === TemplateFilter.Verified);
+                    const expected = source === TemplateSource.Backup && backupExpectedCount !== undefined ? backupExpectedCount : expectedCount;
+                    assert.equal(templates.length, expected);
                 });
             });
         }
