@@ -7,7 +7,7 @@ This release brings DTS consumption plan support, a new Function Host Debugger V
 
 ### Added
 * [[4951](https://github.com/microsoft/vscode-azurefunctions/pull/4951)] Support **DTS consumption plan** and remove preview flag
-* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI output in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
+* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI errors in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
 * [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support **domain name label scopes**
 
 ### Changed
@@ -21,9 +21,7 @@ This release brings DTS consumption plan support, a new Function Host Debugger V
 * [[4954](https://github.com/microsoft/vscode-azurefunctions/pull/4954)] Update aka.ms link for Remote Debugging
 
 ### Fixed
-* [[4971](https://github.com/microsoft/vscode-azurefunctions/pull/4971)] Fix **DTS** resource group default name and auto-refresh after deletion
 * [[4963](https://github.com/microsoft/vscode-azurefunctions/pull/4963)] Fix and improve scheduler creation with **consumption SKU**
-* [[4956](https://github.com/microsoft/vscode-azurefunctions/pull/4956)] Fix containerized **.NET** project creation failing with exit code 73
 * [[4929](https://github.com/microsoft/vscode-azurefunctions/pull/4929)] Fix fallback to storage suffix endpoint when not available
 * [[4915](https://github.com/microsoft/vscode-azurefunctions/pull/4915)] Fix not being able to get **.NET** latest templates
 * [[4914](https://github.com/microsoft/vscode-azurefunctions/pull/4914)] Fix no response when executing **Create New Project** command
