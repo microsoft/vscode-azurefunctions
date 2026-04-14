@@ -68,8 +68,6 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 await installFuncCoreTools(innerContext, packageManagers, version);
                 const funcCoreToolsPath: string | undefined = await getFuncCoreToolsPath();
                 // Verify code signing by OS
-                // - macOS: codesign - v < path >
-                // - Windows: PowerShell Get - AuthenticodeSignature<path>
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
                 await openUrl(getInstallUrl());
@@ -100,13 +98,13 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     return installed;
 }
 
-export async function getFuncCoreToolsPath(): Promise<string | undefined> {
+export async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | undefined> {
     switch (process.platform) {
         case 'darwin':
         case 'linux':
-            return await cpUtils.executeCommand(ext.outputChannel, undefined, 'which', composeArgs(withArg('func'))());
+            return await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'which', composeArgs(withArg('func'))());
         case 'win32':
-            return await cpUtils.executeCommand(ext.outputChannel, undefined, 'where.exe', composeArgs(withArg('func'))());
+            return await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'where.exe', composeArgs(withArg('func'))());
         default:
             return undefined;
     }
