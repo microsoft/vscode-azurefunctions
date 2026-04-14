@@ -7,7 +7,7 @@ This release brings DTS consumption plan support, a new Function Host Debugger V
 
 ### Added
 * [[4951](https://github.com/microsoft/vscode-azurefunctions/pull/4951)] Support **DTS consumption plan** and remove preview flag
-* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI output (errors and issues) in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
+* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI output in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
 * [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support **domain name label scopes**
 
 ### Changed
