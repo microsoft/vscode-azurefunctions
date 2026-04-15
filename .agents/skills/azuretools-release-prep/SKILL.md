@@ -101,6 +101,7 @@ Activate this skill when the user wants to:
 | 3 | Stage, commit, and push the release branch | [pr-creation.md](references/pr-creation.md) |
 | 4 | Create draft PR and print the URL | [pr-creation.md](references/pr-creation.md) |
 | 5 | Create draft GitHub Release (body = changelog entry) and print the URL | [pr-creation.md](references/pr-creation.md) |
+| 6 | Create draft alpha version bump branch, run `npm version prerelease --preid=alpha`, push, and open a second draft PR targeting the release branch | [pr-creation.md](references/pr-creation.md) |
 
 ---
 
