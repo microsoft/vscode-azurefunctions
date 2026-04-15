@@ -19,7 +19,6 @@ metadata:
 
 Activate this skill when the user wants to:
 - Prepare a release for any `ms-azuretools` VS Code extension
-- Bump the package version for a release
 - Build or update the CHANGELOG for a new release
 - Create a release prep branch
 
