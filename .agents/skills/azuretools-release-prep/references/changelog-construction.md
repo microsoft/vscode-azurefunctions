@@ -19,7 +19,27 @@ The remaining `SKIP` items (CI changes, release prep, npm audit fix) each appear
 
 ---
 
-## Step 2: Present the Interactive Selection List
+## Step 2: Filter Fixes Irrelevant to the Last Stable Release
+
+Before presenting the list, review every commit classified as `FIXED` and ask: **did this bug exist in the last stable release?**
+
+A fix belongs in the changelog only if the bug it addresses was present in the previously-shipped stable version. If the bug was introduced after the last stable tag — meaning it was introduced and resolved entirely within this development cycle — it has no relevance to users of that release and should be reclassified to `SKIP`.
+
+**Signals that a fix is NOT relevant to the last stable release:**
+- The commit message explicitly references another commit or PR from this cycle as the source of the bug (e.g. `"follow-up to #X"`, `"fix regression from #X"`, `"introduced by #X"`) — confirm `#X` is in the current commit range
+- The commit message contains language like `"fix regression introduced by"`, `"follow-up fix for the new"`, or `"fix issue with recently added"` and the described feature clearly landed in this cycle
+- The thing being fixed is a feature or behavior that was `ADDED` in this same commit range and has no prior stable-release equivalent
+
+**When in doubt, keep the fix.** Only reclassify to `SKIP` when there is clear evidence the bug never existed in a stable release.
+
+Reclassified commits appear in the selection list as:
+```
+⚠️  N.  [#NNNN] <subject>  →  SKIP (fix for a bug introduced in this release)
+```
+
+---
+
+## Step 3: Present the Interactive Selection List
 
 Show every commit as a numbered, pre-selected list. All items start checked (✅).
 Items the agent recommends skipping are marked ⚠️ but remain checked — the user decides.
@@ -43,7 +63,7 @@ Use `ask_user` with `allow_freeform: true` and no choices (free text input).
 
 ---
 
-## Step 3: Apply Deselections and Confirm
+## Step 4: Apply Deselections and Confirm
 
 Parse the user's response:
 - Empty / blank → keep all current selections
@@ -53,7 +73,7 @@ Re-render the updated list showing ✅ / ❌ for every item, then use `ask_user`
 - `"Looks good — generate the changelog (Recommended)"`
 - `"I want to change more entries"`
 
-If further changes are needed, loop back to Step 2 with the current selection state.
+If further changes are needed, loop back to Step 3 with the current selection state.
 
 ---
 
