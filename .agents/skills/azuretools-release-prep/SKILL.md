@@ -20,7 +20,7 @@ metadata:
 Activate this skill when the user wants to:
 - Prepare a release for any `ms-azuretools` VS Code extension
 - Build or update the CHANGELOG for a new release
-- Create a release prep branch
+- Create a release prep branch for any `ms-azuretools` VS Code extension
 
 ---
 
