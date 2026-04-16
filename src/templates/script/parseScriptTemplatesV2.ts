@@ -121,9 +121,10 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
         }
         const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
         const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
-        // python and node.js use 2 different IDs for Mcp Triggers... because of course they do
+        // MCP trigger variants use multiple IDs across templates/providers.
         const isMcpTrigger = !!templateV2.id?.toLowerCase().includes('mcptooltrigger') ||
-            templateV2.id?.toLowerCase().includes('mcptrigger');
+            templateV2.id?.toLowerCase().includes('mcptrigger') ||
+            templateV2.id?.toLowerCase().includes('mcpresourcetrigger');
 
         templates.push(Object.assign(templateV2, {
             wizards: parsedJobs,

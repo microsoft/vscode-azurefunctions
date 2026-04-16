@@ -39,6 +39,7 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
             'EventGridBlobTrigger',
             'SqlTrigger',
             'McpToolTrigger',
+            'McpResourceTrigger',
             'MCPTrigger'
         ]);
 
