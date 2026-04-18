@@ -67,7 +67,18 @@ export async function validateCodeSignature(cliPath: string): Promise<boolean> {
     }
 }
 
-const microsoftSubject = 'Microsoft Corporation';
+export const microsoftSubject = 'Microsoft Corporation';
+
+export function isValidDarwinSignature(codesignResult: { code: number }, dvvResult: { cmdOutputIncludingStderr: string }): boolean {
+    if (codesignResult.code !== 0) {
+        return false;
+    }
+    return dvvResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
+}
+
+export function isValidWin32Signature(psResult: { code: number; cmdOutput: string }): boolean {
+    return psResult.code === 0 && psResult.cmdOutput.includes(`O=${microsoftSubject}`);
+}
 
 async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v', cliPath))());
@@ -78,11 +89,11 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     // Check that the signing authority is Microsoft
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
     // codesign -dvv writes to stderr
-    return signingResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
+    return isValidDarwinSignature(codeSignResult, signingResult);
 }
 
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
     const psCommand = `$sig = Get-AuthenticodeSignature '${cliPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-Command', psCommand))());
-    return signingResult.code === 0 && signingResult.cmdOutput.includes(`O=${microsoftSubject}`);
+    return isValidWin32Signature(signingResult);
 }
