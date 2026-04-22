@@ -23,6 +23,9 @@ export class StringPromptStep extends BindingSettingStepBase {
 
      
     public async getDefaultValue(_wizardContext: IBindingWizardContext): Promise<string | undefined> {
+        // Avoid returning the literal string "undefined" (e.g. from `String(undefined)`) when the
+        // template doesn't declare a default value — otherwise it would pre-fill the input box
+        // and end up being submitted verbatim as the setting's value.
         if (this._setting === undefined || this._setting.defaultValue === undefined || this._setting.defaultValue === null) {
             return undefined;
         }
