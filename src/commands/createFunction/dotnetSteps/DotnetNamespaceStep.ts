@@ -6,6 +6,8 @@
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import XRegExp from 'xregexp';
 import { localize } from "../../../localize";
+import { type FunctionTemplateBase, type IFunctionTemplate } from '../../../templates/IFunctionTemplate';
+import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
 import { type IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWizardContext> {
@@ -19,7 +21,18 @@ export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWi
     }
 
     public shouldPrompt(context: IDotnetFunctionWizardContext): boolean {
-        return !context.namespace;
+        if (context.namespace) {
+            return false;
+        }
+
+        // Skip the namespace prompt for templates that don't declare a `namespace` parameter.
+        // The value would be ignored (or cause CLI errors) if passed to `dotnet new`.
+        const template: FunctionTemplateBase | undefined = context.functionTemplate;
+        if (template && template.templateSchemaVersion === TemplateSchemaVersion.v1 && (template as IFunctionTemplate).supportsNamespace === false) {
+            return false;
+        }
+
+        return true;
     }
 }
 

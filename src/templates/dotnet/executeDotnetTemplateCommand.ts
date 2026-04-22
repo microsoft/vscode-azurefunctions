@@ -100,7 +100,11 @@ export async function executeDotnetTemplateCreate(
         const createArgs = composeArgs(
             withArg('new', shortName),
             ...Object.entries(templateArgs)
-                .filter(([, value]) => value !== undefined && value !== '')
+                // Filter out any arg whose value is nullish or an empty/stringified-nullish value.
+                // Without this, values like `null` or the string "undefined" (e.g. `String(undefined)`)
+                // would flow through to the CLI and produce errors like `'--FunctionsHttpPort'
+                // cannot parse argument 'undefined'`.
+                .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'undefined' && value !== 'null')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
         )();
 
