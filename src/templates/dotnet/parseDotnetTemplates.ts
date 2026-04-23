@@ -66,9 +66,13 @@ function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
 
 function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     const userPromptedSettings: IBindingSetting[] = [];
+    let supportsNamespace = false;
     for (const rawSetting of rawTemplate.Parameters) {
         const setting: IBindingSetting = parseDotnetSetting(<IRawSetting>rawSetting);
         // Exclude some of the default parameters like 'name' and 'namespace' that apply for every function and are handled separately
+        if (/^namespace$/i.test(setting.name)) {
+            supportsNamespace = true;
+        }
         if (!/^(name|namespace|type|language)$/i.test(setting.name)) {
             userPromptedSettings.push(setting);
         }
@@ -84,6 +88,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         defaultFunctionName: rawTemplate.DefaultName,
         language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
+        supportsNamespace,
         categories: [TemplateCategory.Core], // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
         isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false,
         templateSchemaVersion: TemplateSchemaVersion.v1,

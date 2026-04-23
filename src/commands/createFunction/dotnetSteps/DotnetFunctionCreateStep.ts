@@ -34,12 +34,18 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         // Build template args as a record
         const templateArgs: Record<string, string> = {
             name: functionName,
-            namespace: nonNullProp(context, 'namespace'),
         };
+
+        // Only pass --namespace if the template actually declares a `namespace` parameter.
+        // Some newer .NET templates (e.g. the .NET 10 Azure Functions template) do not, and passing
+        // it would produce `'--namespace' is not a valid option` errors from the dotnet CLI.
+        if (template.supportsNamespace && context.namespace) {
+            templateArgs.namespace = context.namespace;
+        }
 
         for (const setting of template.userPromptedSettings) {
             const value = getBindingSetting(context, setting);
-            if (value !== undefined) {
+            if (value !== undefined && value !== null) {
                 templateArgs[setting.name] = String(value);
             }
         }

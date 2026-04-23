@@ -25,6 +25,10 @@ export interface IFunctionTemplate extends FunctionTemplateBase {
 
     // a defined triggerType means that the template is part of Node V4 programming model
     triggerType?: string;
+
+    // True if this template declares a `namespace` parameter (applies to most .NET templates, but
+    // some newer templates — e.g. the .NET 10 Azure Functions template — do not).
+    supportsNamespace?: boolean;
 }
 
 /**
