@@ -23,7 +23,10 @@ export class StringPromptStep extends BindingSettingStepBase {
 
      
     public async getDefaultValue(_wizardContext: IBindingWizardContext): Promise<string | undefined> {
-        return this._setting === undefined ? undefined : String(this._setting.defaultValue);
+        if (this._setting === undefined || this._setting.defaultValue === undefined || this._setting.defaultValue === null) {
+            return undefined;
+        }
+        return String(this._setting.defaultValue);
     }
 
      
