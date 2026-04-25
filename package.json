@@ -1373,6 +1373,11 @@
                         "description": "%azureFunctions.validateFuncCoreTools%",
                         "default": true
                     },
+                    "azureFunctions.forceEmulatorValidation": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.forceEmulatorValidation%",
+                        "default": false
+                    },
                     "azureFunctions.requestTimeout": {
                         "type": "number",
                         "description": "%azureFunctions.requestTimeout%",
