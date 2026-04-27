@@ -83,6 +83,8 @@ import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
+import { smartDeploy } from './deploy/SmartDeploy';
+import { runFunctionApp } from './runFunctionApp/RunFunctionApp';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(
@@ -188,6 +190,9 @@ export function registerCommands(
     });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addLocalMIConnections', addLocalMIConnections);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addRemoteMIConnections', addRemoteMIConnections);
+    registerCommand('azureFunctions.smartDeploy', smartDeploy);
+    registerCommand('azureFunctions.runFunctionApp', runFunctionApp);
+
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);

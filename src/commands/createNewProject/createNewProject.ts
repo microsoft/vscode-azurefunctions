@@ -20,6 +20,7 @@ import { NewProjectLanguageStep } from './NewProjectLanguageStep';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
+import { TemplateGalleryPanel } from './TemplateGalleryPanel';
 
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
@@ -32,19 +33,31 @@ export async function createNewProjectFromCommand(
     openFolder: boolean = true,
     templateId?: string,
     functionName?: string,
-    functionSettings?: { [key: string]: string | undefined }): Promise<void> {
+    functionSettings?: { [key: string]: string | undefined },
+    options?: { startFromScratch?: boolean }): Promise<void> {
 
-    await createNewProjectInternal(context, {
-        // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
-        folderPath: typeof folderPath === 'string' ? folderPath : undefined,
-        templateId,
-        functionName,
-        functionSettings,
-        suppressOpenFolder: !openFolder,
-        // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
-        language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
-        version: <api.ProjectVersion>version
-    });
+    const galleryEnabled = getWorkspaceSetting<boolean>('enableTemplateGallery') ?? false;
+    context.telemetry.properties.templateGalleryEnabled = String(galleryEnabled);
+
+    // If startFromScratch is explicitly requested, or the template gallery
+    // preview is not opted-in, use the classic wizard flow.
+    if (options?.startFromScratch || templateId || !galleryEnabled) {
+        await createNewProjectInternal(context, {
+            // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
+            folderPath: typeof folderPath === 'string' ? folderPath : undefined,
+            templateId,
+            functionName,
+            functionSettings,
+            suppressOpenFolder: !openFolder,
+            // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
+            language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
+            version: <api.ProjectVersion>version
+        });
+    } else {
+        // Template gallery preview is opted-in — show the new webview experience
+        context.telemetry.properties.flow = 'templateGallery';
+        TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+    }
 }
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {

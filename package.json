@@ -480,6 +480,18 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.smartDeploy",
+                "title": "%azureFunctions.smartDeploy%",
+                "category": "Azure Functions",
+                "icon": "$(cloud-upload)",
+                "enablement": "!virtualWorkspace"
+            },
+            {
+                "command": "azureFunctions.runFunctionApp",
+                "title": "%azureFunctions.runFunctionApp%",
+                "category": "Azure Functions",
+                "icon": "$(run-all)",
+                "enablement": "!virtualWorkspace"
                 "command": "azureFunctions.funcHostDebug.refresh",
                 "title": "%azureFunctions.funcHostDebug.refresh%",
                 "category": "Azure Functions",
@@ -537,6 +549,14 @@
                 {
                     "command": "azureFunctions.deployProject",
                     "group": "2_deploy@1"
+                },
+                {
+                    "command": "azureFunctions.smartDeploy",
+                    "group": "2_deploy@2"
+                },
+                {
+                    "command": "azureFunctions.runFunctionApp",
+                    "group": "2_deploy@3"
                 }
             ],
             "view/title": [
@@ -611,6 +631,26 @@
                     "command": "azureFunctions.deployProject",
                     "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
                     "group": "1@2"
+                },
+                {
+                    "command": "azureFunctions.smartDeploy",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.smartDeploy",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "1@2b"
+                },
+                {
+                    "command": "azureFunctions.runFunctionApp",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.runFunctionApp",
+                    "when": "view == azureWorkspace && viewItem =~ /azFuncLocalProject/i",
+                    "group": "1@1b"
                 },
                 {
                     "command": "azureFunctions.createFunctionApp",
@@ -945,6 +985,16 @@
             ],
             "explorer/context": [
                 {
+                    "command": "azureFunctions.runFunctionApp",
+                    "when": "explorerResourceIsFolder == true",
+                    "group": "zzz_azurefunctions@1"
+                },
+                {
+                    "command": "azureFunctions.smartDeploy",
+                    "when": "explorerResourceIsFolder == true",
+                    "group": "zzz_azurefunctions@2"
+                },
+                {
                     "command": "azureFunctions.addBinding",
                     "when": "resourceFilename==function.json",
                     "group": "zzz_binding@1"
@@ -1057,7 +1107,24 @@
                     "group": "zzz_binding@1"
                 }
             ],
+            "editor/title/run": [
+                {
+                    "command": "azureFunctions.runFunctionApp",
+                    "when": "resourceExtname == '.py' && !isInDiffEditor",
+                    "group": "navigation@1"
+                }
+            ],
             "editor/title": [
+                {
+                    "command": "azureFunctions.runFunctionApp",
+                    "when": "editorIsOpen",
+                    "group": "navigation@0"
+                },
+                {
+                    "command": "azureFunctions.smartDeploy",
+                    "when": "editorIsOpen",
+                    "group": "navigation@1"
+                },
                 {
                     "command": "azureFunctions.eventGrid.sendMockRequest",
                     "arguments": [
@@ -1487,6 +1554,39 @@
                             "%azureFunctions.mcpProjectType.McpExtensionServer%",
                             "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
                         ]
+                    },
+                    "azureFunctions.projectTemplates.manifestUrl": {
+                        "type": "string",
+                        "default": "https://cdn.functions.azure.com/public/templates-manifest/manifest.json",
+                        "description": "%azureFunctions.projectTemplates.manifestUrl%"
+                    },
+                    "azureFunctions.projectTemplates.additionalManifestUrls": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [],
+                        "description": "%azureFunctions.projectTemplates.additionalManifestUrls%"
+                    },
+                    "azureFunctions.projectTemplates.cacheExpirationHours": {
+                        "type": "number",
+                        "default": 24,
+                        "description": "%azureFunctions.projectTemplates.cacheExpirationHours%"
+                    },
+                    "azureFunctions.projectTemplates.preferTemplateFlow": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "%azureFunctions.projectTemplates.preferTemplateFlow%"
+                    },
+                    "azureFunctions.projectTemplates.showBicepPrompt": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "%azureFunctions.projectTemplates.showBicepPrompt%"
+                    },
+                    "azureFunctions.enableTemplateGallery": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "%azureFunctions.enableTemplateGallery%"
                     }
                 }
             }
@@ -1589,6 +1689,7 @@
         "@microsoft/vscode-azext-utils": "^4.0.5",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
         "@microsoft/vscode-container-client": "^0.3.0",
+        "@vscode/codicons": "^0.0.44",
         "@microsoft/vscode-processutils": "^0.2.1",
         "cross-fetch": "^4.0.0",
         "escape-string-regexp": "^4.0.0",

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource}; img-src ${cspSource} https:;">
+    <title>Template Gallery</title>
+    <link rel="stylesheet" href="${stylesUri}">
+</head>
+<body>
+    <div id="app">
+        <!-- Gallery View -->
+        <div id="gallery-view" class="view active">
+            <header class="gallery-header">
+                <div class="header-content">
+                    <h1>Create a new Azure Functions project</h1>
+                    <p class="subtitle">Browse templates to get started quickly with production-ready code</p>
+                </div>
+            </header>
+
+            <div class="search-container">
+                <span class="search-icon codicon codicon-search"></span>
+                <input
+                    type="text"
+                    id="search-input"
+                    class="search-input"
+                    placeholder="Search templates..."
+                    aria-label="Search templates"
+                >
+                <button id="clear-search" class="clear-search hidden" aria-label="Clear search">
+                    <span class="codicon codicon-close"></span>
+                </button>
+            </div>
+
+            <div class="filters-container">
+                <div class="filter-group">
+                    <label class="filter-label">Language:</label>
+                    <div class="filter-chips" id="language-filters" role="radiogroup" aria-label="Filter by language">
+                        <button class="filter-chip active" data-value="all" role="radio" aria-checked="true">All</button>
+                        <button class="filter-chip" data-value="python" role="radio" aria-checked="false">Python</button>
+                        <button class="filter-chip" data-value="dotnet" role="radio" aria-checked="false">.NET</button>
+                        <button class="filter-chip" data-value="typescript" role="radio" aria-checked="false">TypeScript</button>
+                        <button class="filter-chip" data-value="javascript" role="radio" aria-checked="false">JavaScript</button>
+                        <button class="filter-chip" data-value="java" role="radio" aria-checked="false">Java</button>
+                        <button class="filter-chip" data-value="go" role="radio" aria-checked="false">Go</button>
+                        <button class="filter-chip" data-value="powershell" role="radio" aria-checked="false">PowerShell</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Use Case:</label>
+                    <div class="filter-chips" id="usecase-filters" role="group" aria-label="Filter by use case (select multiple)">
+                        <button class="filter-chip active" data-value="all" role="checkbox" aria-checked="true">All</button>
+                        <button class="filter-chip" data-value="web-apis" role="checkbox" aria-checked="false">Web APIs</button>
+                        <button class="filter-chip" data-value="event-processing" role="checkbox" aria-checked="false">Event Processing</button>
+                        <button class="filter-chip" data-value="scheduled-tasks" role="checkbox" aria-checked="false">Scheduled Tasks</button>
+                        <button class="filter-chip" data-value="ai-ml" role="checkbox" aria-checked="false">AI & ML</button>
+                        <button class="filter-chip" data-value="integration" role="checkbox" aria-checked="false">Integration</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-bar">
+                <span id="results-count">Showing 0 templates</span>
+            </div>
+
+            <div id="templates-grid" class="templates-grid" role="list" aria-label="Templates">
+                <!-- Template cards will be inserted here -->
+            </div>
+
+            <div id="empty-state" class="empty-state hidden">
+                <span class="codicon codicon-inbox empty-icon"></span>
+                <h2>No templates found</h2>
+                <p>Try adjusting your filters or search</p>
+                <button id="clear-filters" class="secondary-button">Clear all filters</button>
+            </div>
+
+            <div id="loading-state" class="loading-state">
+                <span class="codicon codicon-loading codicon-modifier-spin"></span>
+                <p>Loading templates...</p>
+            </div>
+
+            <div id="error-state" class="error-state hidden">
+                <span class="codicon codicon-warning error-icon"></span>
+                <h2>Unable to load templates</h2>
+                <p>Check your internet connection and try again</p>
+                <div class="error-actions">
+                    <button id="retry-button" class="primary-button">Retry</button>
+                    <button id="use-cached-button" class="secondary-button">Use Cached</button>
+                </div>
+            </div>
+
+            <footer class="gallery-footer">
+                <button id="start-scratch" class="text-button">
+                    <span class="codicon codicon-new-file"></span>
+                    Start from scratch instead
+                </button>
+                <button id="refresh-templates" class="text-button">
+                    <span class="codicon codicon-refresh"></span>
+                    Refresh templates
+                </button>
+            </footer>
+        </div>
+
+        <!-- Configuration View -->
+        <div id="config-view" class="view">
+            <header class="config-header">
+                <button id="back-button" class="back-button" aria-label="Back to gallery">
+                    <span class="codicon codicon-arrow-left"></span>
+                    Back
+                </button>
+                <h1>Configure your project</h1>
+            </header>
+
+            <div class="selected-template-card" id="selected-template">
+                <!-- Selected template info will be inserted here -->
+            </div>
+
+            <form id="config-form" class="config-form">
+                <div class="form-group">
+                    <label for="language-select">Language</label>
+                    <select id="language-select" class="form-select" required>
+                        <!-- Options will be inserted dynamically -->
+                    </select>
+                    <span class="form-hint" id="language-hint"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="location-input">Project Location</label>
+                    <div class="location-input-group">
+                        <input type="text" id="location-input" class="form-input" required readonly>
+                        <button type="button" id="browse-button" class="secondary-button">Browse...</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="project-name">Project Name</label>
+                    <input type="text" id="project-name" class="form-input" placeholder="my-functions-project" required pattern="[a-zA-Z0-9_-]+">
+                    <span class="form-hint" id="project-path-hint"></span>
+                </div>
+
+                <div class="whats-included">
+                    <h3>What's included:</h3>
+                    <ul id="included-list" class="included-list">
+                        <!-- Items will be inserted dynamically from template.whatsIncluded -->
+                    </ul>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="back-to-gallery" class="secondary-button">Back to Gallery</button>
+                    <button type="submit" id="create-project" class="primary-button">Create Project</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Creating View -->
+        <div id="creating-view" class="view">
+            <div class="creating-content">
+                <span class="codicon codicon-loading codicon-modifier-spin creating-spinner"></span>
+                <h2 id="creating-message">Creating project...</h2>
+                <p id="creating-detail">Cloning template repository</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="${scriptUri}"></script>
+</body>
+</html>

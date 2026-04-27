@@ -60,6 +60,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
+    ext.diagnosticCollection = vscode.languages.createDiagnosticCollection('Azure Functions');
+    context.subscriptions.push(ext.diagnosticCollection);
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);

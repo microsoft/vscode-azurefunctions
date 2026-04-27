@@ -13,7 +13,8 @@ import { ext } from '../extensionVariables';
 import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { verifyExtensionsConfig } from '../utils/verifyExtensionBundle';
-import { getWorkspaceSetting, updateGlobalSetting } from './settings';
+import { getWorkspaceSetting, updateGlobalSetting, updateWorkspaceSetting } from './settings';
+import { detectProjectLanguageModel } from '../commands/initProjectForVSCode/detectProjectLanguage';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
 
@@ -30,9 +31,15 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                 context.telemetry.suppressIfSuccessful = false;
 
                 const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                const languageModel = getWorkspaceSetting<number>(projectLanguageModelSetting, projectPath);
+                let languageModel = getWorkspaceSetting<number>(projectLanguageModelSetting, projectPath);
                 const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                 if (language !== undefined && version !== undefined) {
+                    if (languageModel === undefined) {
+                        languageModel = await detectProjectLanguageModel(language, projectPath);
+                        if (languageModel !== undefined) {
+                            await updateWorkspaceSetting(projectLanguageModelSetting, languageModel, projectPath);
+                        }
+                    }
                     // Don't wait
                     void callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';

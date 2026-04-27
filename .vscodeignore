@@ -14,6 +14,7 @@ dist/test/**
 docs/**
 gulp*
 node_modules/**
+!node_modules/@vscode/codicons/**
 out/**
 resources/readme/**
 src/**

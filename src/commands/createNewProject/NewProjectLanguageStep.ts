@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { type QuickPickOptions } from 'vscode';
+import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
@@ -29,6 +30,10 @@ import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnipp
 import { MCPOpenFileStep } from './mcpServerSteps/MCPOpenFileStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
+import { TemplateGalleryPanel } from './TemplateGalleryPanel';
+
+// Sentinel value used to detect when the user picks "Browse Template Gallery…"
+const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -65,8 +70,25 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
+        // Add a separator and a "Browse Template Gallery…" option at the bottom
+        languagePicks.push(
+            { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
+            {
+                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery...')}`,
+                data: { language: templateGalleryLanguage },
+                suppressPersistence: true,
+            },
+        );
+
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
+
+        if (result.language === templateGalleryLanguage) {
+            TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+            context.telemetry.properties.flow = 'templateGalleryFromWizard';
+            throw new UserCancelledError('templateGallery');
+        }
+
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
     }

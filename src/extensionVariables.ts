@@ -5,7 +5,7 @@
 
 import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
-import { type ExtensionContext } from 'vscode';
+import { type DiagnosticCollection, type ExtensionContext } from 'vscode';
 import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
@@ -60,6 +60,7 @@ export namespace ext {
     export let rgApi: AzureHostExtensionApi;
     export let rgApiV2: AzureResourcesExtensionApi;
     export let eventGridProvider: EventGridCodeLensProvider;
+    export let diagnosticCollection: DiagnosticCollection;
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap = new Map<string, FunctionTreeItemBase | IFunction>();
     export let isExecutingFunction: boolean | undefined;
