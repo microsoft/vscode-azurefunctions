@@ -46,12 +46,15 @@ export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardCon
 
     async getPicks(context: IJavaProjectWizardContext): Promise<IAzureQuickPickItem<string>[]> {
         const detectedVersion: number | undefined = await getJavaVersion();
+        if (!detectedVersion || detectedVersion < 8) {
+            throw new Error(localize('javaVersionRequired', 'JDK 8 or higher is required to create a Java project. Please install a JDK and ensure JAVA_HOME is set or java is available on PATH.'));
+        }
         const result: IAzureQuickPickItem<string>[] = [];
         for (const version of versionInfo) {
             if (await hasMinFuncCliVersion(context, version.miniFunc, context.version)) {
                 const pick: IAzureQuickPickItem<string> = { ...version };
-                if (detectedVersion !== undefined && Number(version.data) === detectedVersion) {
-                    pick.description = localize('detected', '(Detected)');
+                if (Number(version.data) === detectedVersion) {
+                    pick.description = localize('javaVersionDetected', '(Detected)');
                 }
                 result.push(pick);
             }
