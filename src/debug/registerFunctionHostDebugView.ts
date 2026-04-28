@@ -6,7 +6,7 @@
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { getRecentLogsPlainText } from '../funcCoreTools/funcHostErrorUtils';
-import { clearStoppedSessions, onRunningFuncTasksChanged, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { clearStoppedSessions, onRunningFuncTasksChanged, resolveAndNormalizeCwd, runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { stripAnsiControlCharacters } from '../utils/ansiUtils';
 import { FuncHostDebugViewProvider, HostErrorNode, HostTaskNode, StoppedHostNode } from './FunctionHostDebugView';
@@ -40,7 +40,7 @@ function getNodeContext(args: unknown): { scopeLabel: string; portNumber: string
             errorOutput: stripAnsiControlCharacters(args.message).trim() || args.message,
         };
     } else if (isHostTaskNode(args)) {
-        const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+        const task = runningFuncTaskMap.get(args.workspaceFolder, resolveAndNormalizeCwd(args.workspaceFolder, args.cwd));
         return {
             scopeLabel: getScopeLabel(args.workspaceFolder),
             portNumber: args.portNumber,
@@ -109,7 +109,7 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
     registerCommand('azureFunctions.funcHostDebug.copyRecentLogs', async (actionContext: IActionContext, args: unknown) => {
         actionContext.telemetry.properties.source = 'funcHostDebugView';
         if (isHostTaskNode(args)) {
-            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+            const task = runningFuncTaskMap.get(args.workspaceFolder, resolveAndNormalizeCwd(args.workspaceFolder, args.cwd));
             const text = getRecentLogsPlainText(task);
             await vscode.env.clipboard.writeText(text);
         } else if (isStoppedHostNode(args)) {
@@ -122,7 +122,7 @@ export function registerFunctionHostDebugView(context: vscode.ExtensionContext):
         actionContext.telemetry.properties.source = 'funcHostDebugView';
         let text: string | undefined;
         if (isHostTaskNode(args)) {
-            const task = runningFuncTaskMap.get(args.workspaceFolder, args.cwd);
+            const task = runningFuncTaskMap.get(args.workspaceFolder, resolveAndNormalizeCwd(args.workspaceFolder, args.cwd));
             text = getRecentLogsPlainText(task);
         } else if (isStoppedHostNode(args)) {
             text = getRecentLogsPlainText(args.stoppedTask);

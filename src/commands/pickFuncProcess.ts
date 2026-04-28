@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, resolveAndNormalizeCwd, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -134,10 +134,11 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder, buildPath?: string): Promise<void> {
     await stopFuncTaskIfRunning(workspaceFolder, buildPath);
 
+    const normalizedBuildPath = resolveAndNormalizeCwd(workspaceFolder, buildPath);
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
-        if (!runningFuncTaskMap.has(workspaceFolder)) {
+        if (!runningFuncTaskMap.has(workspaceFolder, normalizedBuildPath)) {
             return;
         }
         await delay(1000);
@@ -178,7 +179,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                 throw taskError;
             }
 
-            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
+            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, resolveAndNormalizeCwd(workspaceFolder, buildPath));
             if (taskInfo) {
                 for (const scheme of ['http', 'https']) {
                     const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
