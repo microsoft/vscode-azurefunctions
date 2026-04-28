@@ -45,11 +45,15 @@ export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardCon
     }
 
     async getPicks(context: IJavaProjectWizardContext): Promise<IAzureQuickPickItem<string>[]> {
-        const javaVersion: number = await getJavaVersion();
+        const detectedVersion: number | undefined = await getJavaVersion();
         const result: IAzureQuickPickItem<string>[] = [];
         for (const version of versionInfo) {
-            if (await hasMinFuncCliVersion(context, version.miniFunc, context.version) && javaVersion >= Number(version.data)) {
-                result.push(version);
+            if (await hasMinFuncCliVersion(context, version.miniFunc, context.version)) {
+                const pick: IAzureQuickPickItem<string> = { ...version };
+                if (detectedVersion !== undefined && Number(version.data) === detectedVersion) {
+                    pick.description = localize('detected', '(Detected)');
+                }
+                result.push(pick);
             }
         }
         return result;
