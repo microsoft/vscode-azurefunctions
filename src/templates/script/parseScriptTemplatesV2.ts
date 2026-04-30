@@ -122,7 +122,8 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
         const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
         const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
         // MCP trigger variants use multiple IDs across templates/providers.
-        const isMcpTrigger = !!templateV2.id?.toLowerCase().includes('mcptooltrigger') ||
+        const isMcpTrigger = !!templateV2.id?.toLowerCase().includes('mcpprompttrigger') ||
+            templateV2.id?.toLowerCase().includes('mcptooltrigger') ||
             templateV2.id?.toLowerCase().includes('mcptrigger') ||
             templateV2.id?.toLowerCase().includes('mcpresourcetrigger');
 

@@ -85,10 +85,10 @@ export class ParsedFunctionJson {
 
     public get isMcpTrigger(): boolean {
         if (this.template?.triggerType) {
-            return /^mcptooltrigger/i.test(this.template.triggerType) || /^mcptrigger/i.test(this.template.triggerType) || /^mcpresourcetrigger/i.test(this.template.triggerType);
+            return /^mcpprompttrigger/i.test(this.template.triggerType) || /^mcptooltrigger/i.test(this.template.triggerType) || /^mcptrigger/i.test(this.template.triggerType) || /^mcpresourcetrigger/i.test(this.template.triggerType);
         }
         if (this.triggerBinding && this.triggerBinding.type) {
-            return /^mcptooltrigger/i.test(this.triggerBinding.type) || /^mcptrigger/i.test(this.triggerBinding.type) || /^mcpresourcetrigger/i.test(this.triggerBinding.type);
+            return /^mcpprompttrigger/i.test(this.triggerBinding.type) || /^mcptooltrigger/i.test(this.triggerBinding.type) || /^mcptrigger/i.test(this.triggerBinding.type) || /^mcpresourcetrigger/i.test(this.triggerBinding.type);
         }
 
         return false;
