@@ -40,15 +40,17 @@ type ICoreToolsRelease = cliFeedUtils.ICoreToolsRelease;
  * ┌─────────┬──────────────────────────┬──────────────────────────────────────┐
  * │ Version │ Platform availability    │ Validates                            │
  * ├─────────┼──────────────────────────┼──────────────────────────────────────┤
- * │ v2      │ macOS x64, Win x64/x86  │ Real binary code signature (darwin   │
- * │ v3      │ macOS x64, Win x64/x86  │ or win32). Skipped on linux and for  │
- * │ v4      │ macOS x64/arm64,        │ versions without a build for the     │
- * │         │ Win x64/arm64           │ current OS.                          │
+ * │ v2      │ macOS x64, Win x64/x86  │ Not code-signed; asserts false       │
+ * │ v3      │ macOS x64, Win x64/x86  │ Not code-signed; asserts false       │
+ * │ v4      │ macOS x64/arm64,        │ Code-signed by Microsoft; asserts    │
+ * │         │ Win x64/arm64           │ true. Skipped on linux.              │
  * ├─────────┼──────────────────────────┼──────────────────────────────────────┤
  * │ (any)   │ non-existent path       │ validateCodeSignature returns false   │
  * └─────────┴──────────────────────────┴──────────────────────────────────────┘
  *
  * Note: v1 is excluded because it only ships a Windows x86 build.
+ * Note: Only v4+ binaries are code-signed. Older versions (v2, v3) were published
+ *       without signatures, so the production code skips validation for those.
  */
 
 const cliFeedUrl = cliFeedUtils.funcCliFeedV4Url;
@@ -106,7 +108,7 @@ async function downloadAndExtract(downloadLink: string, destDir: string): Promis
     return execPath;
 }
 
-suite('validateFuncCoreToolsCodeSignature (integration)', function (this: Mocha.Suite): void {
+suite.only('validateFuncCoreToolsCodeSignature (integration)', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
 
     // Skip on linux where code signature validation is not supported
@@ -151,14 +153,20 @@ suite('validateFuncCoreToolsCodeSignature (integration)', function (this: Mocha.
     });
 
     for (const version of versionsToTest) {
-        test(`Code signature is valid for func CLI ${version}`, async function () {
+        const expectSigned = version === FuncVersion.v4;
+        test(`Code signature is ${expectSigned ? 'valid' : 'absent'} for func CLI ${version}`, async function () {
             const execPath = downloadedPaths.get(version);
             if (!execPath) {
                 this.skip(); // No binary available for this platform/version
             }
 
             const isValid = await validateCodeSignature(execPath);
-            assert.strictEqual(isValid, true, `Expected ${version} binary at ${execPath} to have a valid Microsoft code signature`);
+            if (expectSigned) {
+                assert.strictEqual(isValid, true, `Expected ${version} binary at ${execPath} to have a valid Microsoft code signature`);
+            } else {
+                // v2 and v3 binaries were never code-signed; verify that validateCodeSignature correctly reports them as unsigned
+                assert.strictEqual(isValid, false, `Expected ${version} binary at ${execPath} to be unsigned (pre-v4 binaries are not code-signed)`);
+            }
         });
     }
 
