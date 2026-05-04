@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type IActionContext, type IAzureQuickPickItem, type IAzureQuickPickOptions, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
-import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
+import { JavaBuildTool, ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase, type IFunctionTemplate } from '../../templates/IFunctionTemplate';
@@ -14,7 +14,7 @@ import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
-import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
@@ -39,7 +39,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templateProvider = ext.templateProvider.get(context);
-            const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
+            const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, context.projectTemplateKey);
             const foundTemplate: FunctionTemplateBase | undefined = templates.find((t: FunctionTemplateBase) => {
                 if (this._options.templateId) {
                     const actualId: string = t.id.toLowerCase();
@@ -83,10 +83,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {
-        /* v2 schema doesn't have a template filter setting */
-        let templateFilter: TemplateFilter = context.templateSchemaVersion === TemplateSchemaVersion.v2 ? TemplateFilter.All :
-            getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
-
         const templateProvider = ext.templateProvider.get(context);
         while (!context.functionTemplate) {
             let placeHolder: string = this._isProjectWizard ?
@@ -97,17 +93,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 placeHolder += localize('templateSource', ' (Template source: "{0}")', templateProvider.templateSource);
             }
 
-            const result: FunctionTemplateBase | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
+            const result: FunctionTemplateBase | TemplatePromptResult =
+                (await context.ui.showQuickPick(this.getPicks(context),
+                    { placeHolder, enableGrouping: true })).data;
+
             if (result === 'skipForNow') {
                 context.telemetry.properties.templateId = 'skipForNow';
                 break;
-            } else if (result === 'changeFilter') {
-                templateFilter = await promptForTemplateFilter(context);
-                // can only update setting if it's open in a workspace
-                if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
-                    await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
-                }
-                context.telemetry.properties.changedFilter = 'true';
             } else if (result === 'openAPI') {
                 context.generateFromOpenAPI = true;
                 break;
@@ -117,8 +109,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else {
                 context.functionTemplate = result;
             }
-
-            context.telemetry.properties.templateFilter = templateFilter;
         }
     }
 
@@ -128,26 +118,18 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             context.language !== ProjectLanguage.SelfHostedMCPServer;
     }
 
-    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[]> {
+    private async getPicks(context: IFunctionWizardContext): Promise<IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
 
-        const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
+        const templates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<FunctionTemplateBase | TemplatePromptResult>[] = templates
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
-            .sort((a, b) => sortTemplates(a, b, templateFilter))
-            .map(t => { return { label: t.name, data: t }; });
-
-        if (this._isProjectWizard) {
-            picks.unshift({
-                label: localize('skipForNow', '$(clock) Skip for now'),
-                data: 'skipForNow',
-                suppressPersistence: true
-            });
-        }
+            .sort((a, b) => sortTemplates(a, b))
+            .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
 
         if (templates.length === 0) {
             picks.push({
@@ -164,16 +146,17 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
                 data: 'openAPI',
-                suppressPersistence: true
+                suppressPersistence: true,
+                group: 'All'
             });
         }
-        if (context.templateSchemaVersion !== TemplateSchemaVersion.v2) {
-            // don't offer template filter for v2 schema
+
+        if (this._isProjectWizard) {
             picks.push({
-                label: localize('selectFilter', '$(gear) Change template filter'),
-                description: localize('currentFilter', 'Current: {0}', templateFilter),
-                data: 'changeFilter',
-                suppressPersistence: true
+                label: localize('skipForNow', '$(clock) Skip for now'),
+                data: 'skipForNow',
+                suppressPersistence: true,
+                group: ' '
             });
         }
 
@@ -181,7 +164,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             picks.push({
                 label: localize('reloadTemplates', '$(sync) Reload templates'),
                 data: 'reloadTemplates',
-                suppressPersistence: true
+                suppressPersistence: true,
+                group: ' '
             });
         }
 
@@ -195,18 +179,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI' | 'reloadTemplates';
-
-async function promptForTemplateFilter(context: IActionContext): Promise<TemplateFilter> {
-    const picks: IAzureQuickPickItem<TemplateFilter>[] = [
-        { label: TemplateFilter.Verified, description: localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)'), data: TemplateFilter.Verified },
-        { label: TemplateFilter.Core, data: TemplateFilter.Core },
-        { label: TemplateFilter.All, data: TemplateFilter.All }
-    ];
-
-    const options: IAzureQuickPickOptions = { suppressPersistence: true, placeHolder: localize('selectFilter', 'Select a template filter') };
-    return (await context.ui.showQuickPick(picks, options)).data;
-}
+type TemplatePromptResult = 'skipForNow' | 'openAPI' | 'reloadTemplates';
 
 // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup
@@ -225,24 +198,27 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
 }
 
 /**
- * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
- * Otherwise sort alphabetically
+ * Sorts templates by priority, placing HttpTrigger and TimerTrigger templates first since they're the most popular,
+ * and using the template name to help determine the relative order of the remaining templates.
  */
-function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase, templateFilter: TemplateFilter): number {
-    if (templateFilter === TemplateFilter.Verified) {
-        function getPriority(id: string): number {
-            if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger
-                return 1;
-            } else if (/\bhttptrigger/i.test(id)) { // Http trigger with any extra pizazz
-                return 2;
-            } else if (/\btimertrigger\b/i.test(id)) {
-                return 3;
-            } else {
-                return 4;
-            }
+function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number {
+    function getPriority(id: string): number {
+        if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger
+            return 1;
+        } else if (/\bhttptrigger/i.test(id)) { // Http trigger with any extra pizazz
+            return 2;
+        } else if (/\btimertrigger\b/i.test(id)) {
+            return 3;
+        } else {
+            return 4;
         }
-        return getPriority(a.id) - getPriority(b.id);
     }
 
+    const priorityDiff = getPriority(a.id) - getPriority(b.id);
+    if (priorityDiff !== 0) {
+        return priorityDiff;
+    }
+
+    // If priorities are the same, sort alphabetically by name
     return a.name.localeCompare(b.name);
 }

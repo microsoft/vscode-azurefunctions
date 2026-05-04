@@ -104,10 +104,11 @@ export class FuncTaskProvider implements TaskProvider {
 
     private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
         const funcCliPath = await getFuncCliPath(context, folder);
-        let commandLine: string = `${funcCliPath} ${command}`;
-        if (language === ProjectLanguage.Python) {
-            commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
-        }
+        const definitionArgs = (definition?.args || []) as string[];
+
+        // Split command into sub-command parts (e.g., "host start" → ["host", "start"])
+        const commandParts = command.split(/\s+/);
+        const allArgs = [...commandParts, ...definitionArgs];
 
         let problemMatcher: string | undefined;
         let options: ShellExecutionOptions | undefined;
@@ -132,8 +133,20 @@ export class FuncTaskProvider implements TaskProvider {
             };
         }
 
+        let execution: ShellExecution;
+        if (language === ProjectLanguage.Python) {
+            // Python requires chaining venv activation with the func command via shell operators (&&, ;),
+            // so we must use the string-based ShellExecution form
+            let commandLine = `${funcCliPath} ${[...commandParts, ...definitionArgs].join(' ')}`;
+            commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
+            execution = new ShellExecution(commandLine, options);
+        } else {
+            // Use the arg-list form so VS Code handles proper quoting/escaping
+            execution = new ShellExecution(funcCliPath, allArgs, options);
+        }
+
         definition = definition || { type: func, command };
-        return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
+        return new Task(definition, folder, command, func, execution, problemMatcher);
     }
 
     private async getHostStartOptions(folder: WorkspaceFolder, language: string | undefined): Promise<ShellExecutionOptions | undefined> {

@@ -121,7 +121,10 @@ export async function executeFunctionWithInput(context: IActionContext, function
             const errorType = parseError(error).errorType;
             if (!client && errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;
-                throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
+                throw new Error(
+                    localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'),
+                    { cause: error }
+                );
             } else if (errorType === '400') {
                 const response = await fetch(triggerRequest.url, {
                     method: 'POST',

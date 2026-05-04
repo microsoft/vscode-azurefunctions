@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as os from "os";
 import { env, type MessageItem } from 'vscode';
 import { funcVersionSetting, type PackageManager } from '../constants';
@@ -98,7 +99,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 export async function funcToolsInstalled(context: IActionContext, workspacePath: string | undefined): Promise<boolean> {
     try {
         const funcCliPath = await getFuncCliPath(context, workspacePath);
-        await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, '--version');
+        await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, composeArgs(withArg('--version'))());
         return true;
     } catch (_error) {
         return false;

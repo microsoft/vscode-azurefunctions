@@ -136,7 +136,6 @@
     "azureFunctions.durableTaskScheduler.openTaskHubDashboard": "Open in Dashboard",
     "azureFunctions.durableTaskScheduler.startEmulator": "Start Durable Task Emulator",
     "azureFunctions.durableTaskScheduler.stopEmulator": "Stop Emulator",
-    "azureFunctions.durableTaskScheduler.enablePreviewFeatures": "Enable Durable Task Scheduler preview features",
     "azureFunctions.durableTaskScheduler.emulatorRegistry": "The registry of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorImage": "The name of the Durable Task Scheduler emulator image.",
     "azureFunctions.durableTaskScheduler.emulatorTag": "The tag of the Durable Task Scheduler emulator image.",
@@ -153,4 +152,10 @@
     "azureFunctions.projectTemplates.cacheExpirationHours": "Template manifest cache expiration time in hours.",
     "azureFunctions.projectTemplates.preferTemplateFlow": "Pre-select 'Start from template' in the project creation wizard.",
     "azureFunctions.projectTemplates.showBicepPrompt": "Prompt to deploy infrastructure when templates include Bicep files."
+    "azureFunctions.funcHostDebugView.title": "Functions Host Exceptions Debugger",
+    "azureFunctions.funcHostDebug.refresh": "Refresh",
+    "azureFunctions.funcHostDebug.showRecentLogs": "Show Recent Host Logs",
+    "azureFunctions.funcHostDebug.copyRecentLogs": "Copy Recent Host Logs",
+    "azureFunctions.funcHostDebug.askCopilot": "Ask Copilot",
+    "azureFunctions.funcHostDebug.clearStoppedSessions": "Clear Stopped Sessions"
 }

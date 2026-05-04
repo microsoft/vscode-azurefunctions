@@ -165,7 +165,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     private async parseTemplates(context: IActionContext, projKey: string): Promise<ITemplates> {
-        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey, undefined, 'list'));
+        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey));
         return parseDotnetTemplates(this._rawTemplates, this.version);
     }
 

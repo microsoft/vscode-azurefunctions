@@ -57,7 +57,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-             
+
             await extract(downloadFilePath, { dir: projectFilePath });
             await requestUtils.downloadFile(
                 context,
@@ -74,7 +74,10 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
     } catch (err) {
-        throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
+        throw new Error(
+            localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message),
+            { cause: err }
+        );
     } finally {
         await AzExtFsExtra.deleteResource(
             toBeDeletedFolderPathUri.fsPath,

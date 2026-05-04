@@ -16,13 +16,10 @@
         "skipLibCheck": true, // needed to ignore vscode-jsonrpc package
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
-        "baseUrl": "./",
-        "paths": {
-            "*": [
-                "node_modules/@types/*",
-                "*"
-            ]
-        }
+        "types": [
+            "mocha",
+            "node"
+        ]
     },
     "exclude": [
         "**/node_modules",

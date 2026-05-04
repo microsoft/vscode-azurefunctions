@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { Uri } from 'vscode';
 import { getGitApi } from '../getExtensionApi';
 import { cpUtils } from './cpUtils';
@@ -11,7 +12,7 @@ export namespace gitUtils {
     const gitCommand: string = 'git';
     export async function isGitInstalled(workingDirectory: string): Promise<boolean> {
         try {
-            await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, '--version');
+            await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, composeArgs(withArg('--version'))());
             return true;
         } catch (_error) {
             return false;
@@ -25,7 +26,7 @@ export namespace gitUtils {
 
     export async function isInsideRepo(workingDirectory: string): Promise<boolean> {
         try {
-            await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, 'rev-parse', '--git-dir');
+            await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, composeArgs(withArg('rev-parse', '--git-dir'))());
             return true;
         } catch (_error) {
             return false;

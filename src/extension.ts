@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables, type IActionContext, type apiUtils } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
@@ -16,8 +16,15 @@ import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
+import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
-import { startFuncProcessFromApi } from './commands/pickFuncProcess';
+import { createFunctionInternal } from './commands/createFunction/createFunction';
+import { createFunctionApp, createFunctionAppAdvanced } from './commands/createFunctionApp/createFunctionApp';
+import { createNewProjectInternal } from './commands/createNewProject/createNewProject';
+import { deleteFunctionApp } from './commands/deleteFunctionApp';
+import { deployProductionSlot } from './commands/deploy/deploy';
+import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
+import { disposeFuncTaskReadyEmitter, startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
@@ -26,13 +33,15 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
+import { registerFunctionHostDebugView } from './debug/registerFunctionHostDebugView';
 import { handleUri } from './downloadAzureProject/handleUri';
-import { ext } from './extensionVariables';
-import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
+import { ext, TemplateSource } from './extensionVariables';
+import { disposeFuncHostTaskEmitters, registerFuncHostTaskEvents, terminalEventReader } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import type { TestApi } from './testApi';
 import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -48,8 +57,6 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
-    console.log('**********************************************');
-    console.log('Activating Azure Functions extension...');
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
@@ -97,6 +104,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         });
 
         registerFuncHostTaskEvents();
+        registerFunctionHostDebugView(context);
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
         const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();
@@ -139,26 +147,86 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             new DurableTaskSchedulerWorkspaceDataBranchProvider(emulatorClient));
     });
 
-    console.log('Activated Azure Functions extension...');
-    console.log('**********************************************');
+    const apis: (AzureFunctionsExtensionApi | TestApi)[] = [
+        <AzureFunctionsExtensionApi>{
+            revealTreeItem,
+            createFunction: createFunctionFromApi,
+            downloadAppSettings: downloadAppSettingsFromApi,
+            uploadAppSettings: uploadAppSettingsFromApi,
+            listLocalProjects: listLocalProjects,
+            listLocalFunctions: listLocalFunctions,
+            isFuncCoreToolsInstalled: async (message: string) => {
+                return await callWithTelemetryAndErrorHandling('azureFunctions.api.isFuncCoreToolsInstalled', async (context: IActionContext) => {
+                    return await validateFuncCoreToolsInstalled(context, message, undefined);
+                });
+            },
+            startFuncProcess: startFuncProcessFromApi,
+            apiVersion: '1.10.0'
+        }
+    ];
 
-    return createApiProvider([<AzureFunctionsExtensionApi>{
-        revealTreeItem,
-        createFunction: createFunctionFromApi,
-        downloadAppSettings: downloadAppSettingsFromApi,
-        uploadAppSettings: uploadAppSettingsFromApi,
-        listLocalProjects: listLocalProjects,
-        listLocalFunctions: listLocalFunctions,
-        isFuncCoreToolsInstalled: async (message: string) => {
-            return await callWithTelemetryAndErrorHandling('azureFunctions.api.isFuncCoreToolsInstalled', async (context: IActionContext) => {
-                return await validateFuncCoreToolsInstalled(context, message, undefined);
-            });
-        },
-        startFuncProcess: startFuncProcessFromApi,
-        apiVersion: '1.10.0'
-    }]);
+    // Add test API when running tests
+    // This allows tests to access and override internal extension state without changing the public API.
+    if (process.env.VSCODE_RUNNING_TESTS) {
+        // Cache of template providers keyed by source, for use across test runs
+        const testTemplateProviders = new Map<string, CentralTemplateProvider>();
+
+        apis.push(<TestApi>{
+            apiVersion: '99.0.0',
+            extensionVariables: {
+                getOutputChannel: () => ext.outputChannel,
+                getContext: () => ext.context,
+                getRgApi: () => ext.rgApi,
+                getIgnoreBundle: () => ext.ignoreBundle
+            },
+            testing: {
+                setIgnoreBundle: (ignoreBundle) => {
+                    ext.ignoreBundle = ignoreBundle;
+                },
+                registerOnActionStartHandler,
+            },
+            commands: {
+                createFunctionApp,
+                createFunctionAppAdvanced,
+                deleteFunctionApp,
+                deployProductionSlot,
+                copyFunctionUrl,
+                createNewProjectInternal,
+                createFunctionInternal,
+                initProjectForVSCode,
+                registerTemplateSource: (context, source) => {
+                    let cached = testTemplateProviders.get(source);
+                    if (!cached) {
+                        cached = new CentralTemplateProvider(source as TemplateSource);
+                        testTemplateProviders.set(source, cached);
+                    }
+                    ext.templateProvider.registerActionVariable(cached, context);
+                },
+                getFunctionTemplates: async (context, projectPath, language, languageModel, version, _templateFilter, projectTemplateKey, source) => {
+                    let provider: CentralTemplateProvider;
+                    if (source) {
+                        let cached = testTemplateProviders.get(source);
+                        if (!cached) {
+                            cached = new CentralTemplateProvider(source as TemplateSource);
+                            testTemplateProviders.set(source, cached);
+                        }
+                        provider = cached;
+                        ext.templateProvider.registerActionVariable(provider, context);
+                    } else {
+                        provider = ext.templateProvider.get(context);
+                    }
+                    return provider.getFunctionTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
+                }
+            }
+        });
+    }
+
+    return createApiProvider(apis);
 }
 
 export async function deactivateInternal(): Promise<void> {
     await emulatorClient.disposeAsync();
+    terminalEventReader?.dispose();
+    disposeFuncHostTaskEmitters();
+    disposeFuncTaskReadyEmitter();
 }

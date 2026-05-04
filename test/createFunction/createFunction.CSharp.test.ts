@@ -174,8 +174,13 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'AzureWebJobsStorage', // Use existing app setting
                 'TABLE'
             ]
-        },
-    ];
+        },        {
+            functionName: 'McpToolTrigger',
+            inputs: [
+                'TestCompany.TestFunction'
+            ],
+            skip: !isIsolated || source === TemplateSource.Backup,
+        },    ];
 
     const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
     let title: string = tester.suiteName + ` ${targetFramework}`;

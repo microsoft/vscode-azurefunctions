@@ -3,21 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type ResourceManagementClient } from '@azure/arm-resources';
 import { type AzExtClientContext, createAzureClient, type ILocationWizardContext, type IResourceGroupWizardContext, LocationListStep, parseClientContext, ResourceGroupCreateStep, ResourceGroupListStep, VerifyProvidersStep } from "@microsoft/vscode-azext-azureutils";
-import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type IActionContext, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, AzureWizardPromptStep, createSubscriptionContext, type ExecuteActivityContext, type ExecuteActivityOutput, type IActionContext, type IAzureQuickPickItem, type ISubscriptionActionContext, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { type AzureSubscription } from "@microsoft/vscode-azureresources-api";
+import { type Progress } from "vscode";
 import { DurableTaskProvider, DurableTaskSchedulersResourceType } from "../../constants";
+import { defaultDescription } from "../../constants-nls";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
+import { type DurableTaskSchedulerClient, DurableTaskSchedulerSku } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
-import { workspace, type Progress } from "vscode";
-import { type ResourceManagementClient } from '@azure/arm-resources';
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
+    schedulerSku?: DurableTaskSchedulerSku;
     schedulerName?: string;
 }
 
@@ -26,6 +28,7 @@ class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext>
         wizardContext.schedulerName = await wizardContext.ui.showInputBox({
             prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
         });
+        wizardContext.relatedNameTask = Promise.resolve(wizardContext.schedulerName);
     }
 
     shouldPrompt(wizardContext: ICreateSchedulerContext): boolean {
@@ -33,21 +36,52 @@ class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext>
     }
 }
 
-class SchedulerCreationStep extends AzureWizardExecuteStep<ICreateSchedulerContext> {
-    priority: number = 1;
+class SchedulerSkuStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
+    async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
+        const picks: IAzureQuickPickItem<DurableTaskSchedulerSku>[] = [
+            { label: localize('dtsSkuConsumption', 'Consumption'), description: defaultDescription, data: DurableTaskSchedulerSku.Consumption },
+            { label: localize('dtsSkuDedicated', 'Dedicated'), data: DurableTaskSchedulerSku.Dedicated },
+        ];
+        wizardContext.schedulerSku = (await wizardContext.ui.showQuickPick(picks, {
+            placeHolder: localize('schedulerSkuPrompt', 'Select a plan for the scheduler'),
+        })).data;
+    }
+
+    shouldPrompt(wizardContext: ICreateSchedulerContext): boolean {
+        return !wizardContext.schedulerSku;
+    }
+}
+
+class SchedulerCreationStep extends AzureWizardExecuteStepWithActivityOutput<ICreateSchedulerContext> {
+    priority: number = 110;
+    readonly stepName: string = 'schedulerCreationStep';
+
+    protected getTreeItemLabel = (context: ICreateSchedulerContext) => localize('createSchedulerLabel', 'Create Durable Task Scheduler "{0}"', context.schedulerName);
+    protected getOutputLogSuccess = (context: ICreateSchedulerContext) => localize('createSchedulerSuccess', 'Successfully created Durable Task Scheduler "{0}".', context.schedulerName);
+    protected getOutputLogFail = (context: ICreateSchedulerContext) => localize('createSchedulerFail', 'Failed to create Durable Task Scheduler "{0}".', context.schedulerName);
+
+    public createProgressOutput(context: ICreateSchedulerContext): ExecuteActivityOutput {
+        const output = super.createProgressOutput(context);
+        if (output.item) {
+            output.item.description = localize('schedulerProgressDescription', 'This may take a while...');
+        }
+        return output;
+    }
 
     constructor(private readonly schedulerClient: DurableTaskSchedulerClient) {
         super();
     }
 
-    async execute(wizardContext: ICreateSchedulerContext, _: Progress<{ message?: string; increment?: number; }>): Promise<void> {
-        const location = await LocationListStep.getLocation(wizardContext);
+    async execute(wizardContext: ICreateSchedulerContext, progress: Progress<{ message?: string; increment?: number; }>): Promise<void> {
+        progress.report({ message: localize('creatingScheduler', 'Creating Durable Task Scheduler...') });
 
+        const location = await LocationListStep.getLocation(wizardContext);
         const response = await this.schedulerClient.createScheduler(
             wizardContext.subscription as AzureSubscription,
             wizardContext.resourceGroup?.name as string,
             location.name,
-            wizardContext.schedulerName as string
+            wizardContext.schedulerName as string,
+            wizardContext.schedulerSku
         );
 
         const status = await withCancellation(token => response.status.waitForCompletion(token), 1000 * 60 * 30);
@@ -72,12 +106,6 @@ export async function createResourcesClient(context: AzExtClientContext): Promis
     }
 }
 
-export function isDtsPreviewFeaturesEnabled(): boolean {
-    const configuration = workspace.getConfiguration('azureFunctions');
-
-    return configuration.get<boolean>('durableTaskScheduler.enablePreviewFeatures') === true;
-}
-
 export async function isDtsProviderRegistered(context: AzExtClientContext): Promise<boolean> {
     const resourcesClient = await createResourcesClient(context);
 
@@ -96,12 +124,8 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
 
             ...actionContext,
             ...createSubscriptionContext(subscription),
-            ...await createActivityContext()
+            ...await createActivityContext({ withChildren: true }),
         };
-
-        if (!isDtsPreviewFeaturesEnabled()) {
-            throw new Error(localize('dtsPreviewFeaturesNotEnabled', 'Durable Task Scheduler preview features have not been enabled in settings.'));
-        }
 
         if (!await isDtsProviderRegistered(wizardContext)) {
             await actionContext.ui.showWarningMessage(
@@ -115,6 +139,7 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
 
         const promptSteps: AzureWizardPromptStep<ICreateSchedulerContext>[] = [
             new SchedulerNamingStep(),
+            new SchedulerSkuStep(),
             new ResourceGroupListStep()
         ];
 

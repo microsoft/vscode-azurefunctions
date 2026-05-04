@@ -5,20 +5,18 @@
 
 import { AzExtFsExtra, nonNullProp, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { RelativePattern, workspace, type MessageItem, type Uri, type WorkspaceFolder } from 'vscode';
+import { RelativePattern, workspace, type MessageItem, type Uri } from 'vscode';
 import { browseItem, dockerfileGlobPattern } from '../../../constants';
 import { getAzureContainerAppsApi } from '../../../getExtensionApi';
 import { localize } from '../../../localize';
 import { type ICreateFunctionAppContext } from '../../../tree/SubscriptionTreeItem';
-import { getRootWorkspaceFolder } from '../../../utils/workspace';
 import { tryGetFunctionProjectRoot } from '../../createNewProject/verifyIsProject';
 
 export async function detectDockerfile(context: ICreateFunctionAppContext): Promise<string | undefined> {
-    if (!workspace.workspaceFolders?.length) {
+    if (!context.workspaceFolder) {
         return undefined;
     }
 
-    context.workspaceFolder ??= await getRootWorkspaceFolder() as WorkspaceFolder;
     context.rootPath ??= await tryGetFunctionProjectRoot(context, context.workspaceFolder, 'prompt') ?? context.workspaceFolder.uri.fsPath;
 
     const pattern: RelativePattern = new RelativePattern(context.rootPath, `**/${dockerfileGlobPattern}`);

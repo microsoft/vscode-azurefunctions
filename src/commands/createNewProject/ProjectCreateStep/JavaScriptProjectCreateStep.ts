@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { functionSubpathSetting, packageJsonFileName } from '../../../constants';
@@ -49,7 +50,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
     private async _installDependencies(projectPath: string): Promise<void> {
         try {
-            await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', 'install');
+            await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
         } catch {
             ext.outputChannel.appendLog(localize('npmInstallFailure', 'WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.'));
         }

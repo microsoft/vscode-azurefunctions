@@ -21,15 +21,48 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
 
+export function disposeFuncTaskReadyEmitter(): void {
+    funcTaskReadyEmitter.dispose();
+}
+
+/**
+ * Result returned from starting a function host process via the API.
+ */
+export interface IStartFuncProcessResult {
+    /**
+     * The process ID of the started function host.
+     */
+    processId: string;
+    /**
+     * Whether the function host was successfully started.
+     */
+    success: boolean;
+    /**
+     * Error message if the function host failed to start.
+     */
+    error: string;
+    /**
+     * An async iterable stream of terminal output from the function host task.
+     * This stream provides real-time access to the output of the `func host start` command,
+     * allowing consumers to monitor host status, capture logs, and detect errors.
+     *
+     * The stream will be undefined if the host failed to start or if output streaming is not available.
+     * Consumers should iterate over the stream asynchronously to read output lines as they are produced.
+     * The stream remains active for the lifetime of the function host process.
+     */
+    stream: AsyncIterable<string> | undefined;
+}
+
 export async function startFuncProcessFromApi(
     buildPath: string,
     args: string[],
     env: { [key: string]: string }
-): Promise<{ processId: string; success: boolean; error: string }> {
-    const result = {
+): Promise<IStartFuncProcessResult> {
+    const result: IStartFuncProcessResult = {
         processId: '',
         success: false,
-        error: ''
+        error: '',
+        stream: undefined
     };
 
     let funcHostStartCmd: string = 'func host start';
@@ -66,6 +99,7 @@ export async function startFuncProcessFromApi(
             const taskInfo = await startFuncTask(context, workspaceFolder, buildPath, funcTask);
             result.processId = await pickChildProcess(taskInfo);
             result.success = true;
+            result.stream = taskInfo.stream;
         } catch (err) {
             const pError = parseError(err);
             result.error = pError.message;

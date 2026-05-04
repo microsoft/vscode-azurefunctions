@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { JavaBuildTool, javaBuildTool, pomXmlFileName } from '../../constants';
 import { localize } from '../../localize';
@@ -50,7 +51,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         this.validateGradleProject();
         await mavenUtils.validateMavenInstalled(context);
         const projectPath: string = this.getProjectPath();
-        const commandResult: string = await mavenUtils.executeMvnCommand(context.telemetry.properties, undefined, projectPath, 'azure-functions:list');
+        const commandResult: string = await mavenUtils.executeMvnCommand(context.telemetry.properties, undefined, projectPath, composeArgs(withArg('azure-functions:list'))());
         const regExp: RegExp = />> templates begin <<([\S\s]+)^.+INFO.+ >> templates end <<$[\S\s]+>> bindings begin <<([\S\s]+)^.+INFO.+ >> bindings end <<$[\S\s]+>> resources begin <<([\S\s]+)^.+INFO.+ >> resources end <<$/gm;
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {

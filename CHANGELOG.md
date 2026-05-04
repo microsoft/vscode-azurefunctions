@@ -1,5 +1,25 @@
 # Change Log
 
+## 1.21.0 - 2026-04-03
+
+### Added
+* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add a **Function Host Debug** view in the Run and Debug panel that lists running Function Host tasks, displays recent error output, and send errors to Copilot or provides commands to view logs
+* [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support for domain name label scopes
+
+### Changed
+* [[4826](https://github.com/microsoft/vscode-azurefunctions/pull/4826)] Group templates by filter rather than filtering them out
+* [[4892](https://github.com/microsoft/vscode-azurefunctions/pull/4892)] Use StorageV2 for storage account creation
+* [[4902](https://github.com/microsoft/vscode-azurefunctions/pull/4902)] Auto-open `mcp.json` after Self-Hosted MCP Server project creation
+
+### Fixed
+* [[4880](https://github.com/microsoft/vscode-azurefunctions/pull/4880)] Fix refresh error on collapsed function app nodes
+* [[4901](https://github.com/microsoft/vscode-azurefunctions/pull/4901)] Respect Java remote debugging setting precedence when both debug modes are enabled
+* [[4914](https://github.com/microsoft/vscode-azurefunctions/pull/4914)] Fix no response when executing "Create New Project" command
+* [[4915](https://github.com/microsoft/vscode-azurefunctions/pull/4915)] Fix not being able to get .NET latest templates
+* [[4923](https://github.com/microsoft/vscode-azurefunctions/pull/4923)] Performance improvements
+* [[4929](https://github.com/microsoft/vscode-azurefunctions/pull/4929)] Don't call for `storageConnectionString` if it's not needed
+* [[4944](https://github.com/microsoft/vscode-azurefunctions/pull/4944)] Remove `proxies.json` from JSON schema contribution
+
 ## 1.20.3 - 2025-12-16
 
 ### Added
