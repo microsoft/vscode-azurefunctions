@@ -835,27 +835,20 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                     <label class="filter-label">Language:</label>
                     <div class="filter-chips" id="language-filters" role="radiogroup" aria-label="Filter by language">
                         <button class="filter-chip active" data-value="all" role="radio" aria-checked="true">All</button>
-                        <button class="filter-chip" data-value="python" role="radio" aria-checked="false">Python</button>
-                        <button class="filter-chip" data-value="dotnet" role="radio" aria-checked="false">.NET</button>
-                        <button class="filter-chip" data-value="typescript" role="radio" aria-checked="false">TypeScript</button>
-                        <button class="filter-chip" data-value="javascript" role="radio" aria-checked="false">JavaScript</button>
-                        <button class="filter-chip" data-value="java" role="radio" aria-checked="false">Java</button>
-                        <button class="filter-chip" data-value="go" role="radio" aria-checked="false">Go</button>
-                        <button class="filter-chip" data-value="powershell" role="radio" aria-checked="false">PowerShell</button>
                     </div>
                 </div>
 
                 <div class="filter-group">
                     <label class="filter-label">Use Case:</label>
-                    <div class="filter-chips" id="usecase-filters" role="group" aria-label="Filter by use case (select multiple)">
+                    <div class="filter-chips" id="usecase-filters" role="group" aria-label="Filter by use case">
                         <button class="filter-chip active" data-value="all" role="checkbox" aria-checked="true">All</button>
-                        <button class="filter-chip" data-value="starter" role="checkbox" aria-checked="false">Starter</button>
-                        <button class="filter-chip" data-value="web-apis" role="checkbox" aria-checked="false">Web APIs</button>
-                        <button class="filter-chip" data-value="event-processing" role="checkbox" aria-checked="false">Event Processing</button>
-                        <button class="filter-chip" data-value="scheduling" role="checkbox" aria-checked="false">Scheduling</button>
-                        <button class="filter-chip" data-value="ai-ml" role="checkbox" aria-checked="false">AI & ML</button>
-                        <button class="filter-chip" data-value="data-processing" role="checkbox" aria-checked="false">Data Processing</button>
-                        <button class="filter-chip" data-value="workflows" role="checkbox" aria-checked="false">Orchestrations</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Resource:</label>
+                    <div class="filter-chips" id="resource-filters" role="group" aria-label="Filter by resource">
+                        <button class="filter-chip active" data-value="all" role="radio" aria-checked="true">All</button>
                     </div>
                 </div>
             </div>
@@ -864,7 +857,16 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                 <span id="results-count">Showing 0 templates</span>
             </div>
 
-            <div id="templates-grid" class="templates-grid" role="list" aria-label="Templates">
+            <div id="promoted-section" class="template-section hidden">
+                <h2 class="section-heading">Featured Templates</h2>
+                <div id="promoted-grid" class="templates-grid" role="list" aria-label="Promoted Templates">
+                </div>
+            </div>
+
+            <div id="community-section" class="template-section hidden">
+                <h2 id="community-heading" class="section-heading">All Templates</h2>
+                <div id="templates-grid" class="templates-grid" role="list" aria-label="Templates">
+                </div>
             </div>
 
             <div id="empty-state" class="empty-state hidden">
@@ -1101,7 +1103,7 @@ Return ONLY a valid JSON object with absolutely no other text, explanations, or 
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" id="back-to-gallery" class="secondary-button">Back to Gallery</button>
+                            <button type="button" id="back-to-gallery" class="secondary-button"><span class="codicon codicon-arrow-left"></span> Back to Gallery</button>
                             <button type="submit" id="create-project" class="primary-button">Create Project</button>
                         </div>
                     </form>

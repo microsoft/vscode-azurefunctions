@@ -63,6 +63,9 @@ export interface IProjectTemplate {
     /** Sort order within category (lower = higher priority) */
     priority?: number;
 
+    /** Azure resource type (e.g., 'http', 'timer', 'cosmos', 'eventhub') */
+    resource?: string;
+
     /** Show "New" badge */
     isNew?: boolean;
 

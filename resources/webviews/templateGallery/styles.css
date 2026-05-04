@@ -40,8 +40,6 @@ body {
 .view {
     display: none;
     padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
 }
 
 .view.active {
@@ -175,7 +173,7 @@ body {
 #language-filters .filter-chip[data-value="python"]     { border-left: 3px solid #3776AB; }
 #language-filters .filter-chip[data-value="javascript"] { border-left: 3px solid #166534; }
 #language-filters .filter-chip[data-value="typescript"] { border-left: 3px solid #F7DF1E; }
-#language-filters .filter-chip[data-value="java"]       { border-left: 3px solid #ED8B00; }
+#language-filters .filter-chip[data-value="java"]       { border-left: 3px solid #B07219; }
 #language-filters .filter-chip[data-value="dotnet"]     { border-left: 3px solid #512BD4; }
 #language-filters .filter-chip[data-value="powershell"] { border-left: 3px solid #012456; }
 #language-filters .filter-chip[data-value="go"]         { border-left: 3px solid #00ADD8; }
@@ -184,7 +182,7 @@ body {
 #language-filters .filter-chip.active[data-value="python"]     { background-color: #3776AB; color: white; border-color: #3776AB; }
 #language-filters .filter-chip.active[data-value="javascript"] { background-color: #166534; color: white; border-color: #166534; }
 #language-filters .filter-chip.active[data-value="typescript"] { background-color: #F7DF1E; color: #222;  border-color: #F7DF1E; }
-#language-filters .filter-chip.active[data-value="java"]       { background-color: #ED8B00; color: white; border-color: #ED8B00; }
+#language-filters .filter-chip.active[data-value="java"]       { background-color: #B07219; color: white; border-color: #B07219; }
 #language-filters .filter-chip.active[data-value="dotnet"]     { background-color: #512BD4; color: white; border-color: #512BD4; }
 #language-filters .filter-chip.active[data-value="powershell"] { background-color: #012456; color: white; border-color: #012456; }
 #language-filters .filter-chip.active[data-value="go"]         { background-color: #00ADD8; color: white; border-color: #00ADD8; }
@@ -196,7 +194,7 @@ body {
     align-items: center;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--vscode-widget-border);
+    border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
 }
 
 #results-count {
@@ -204,10 +202,22 @@ body {
     font-size: 13px;
 }
 
+/* Template Sections */
+.template-section {
+    margin-bottom: 8px;
+}
+
+.section-heading {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0 0 12px 0;
+}
+
 /* Templates Grid */
 .templates-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -215,7 +225,7 @@ body {
 /* Template Card */
 .template-card {
     background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-widget-border);
+    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
     border-radius: 8px;
     padding: 16px;
     cursor: pointer;
@@ -255,7 +265,7 @@ body {
 .language-badge.python     { background-color: #3776AB; color: white; }
 .language-badge.javascript { background-color: #166534; color: white; }
 .language-badge.typescript { background-color: #F7DF1E; color: #222; }
-.language-badge.java       { background-color: #ED8B00; color: white; }
+.language-badge.java       { background-color: #B07219; color: white; }
 .language-badge.dotnet     { background-color: #512BD4; color: white; }
 .language-badge.powershell { background-color: #012456; color: white; }
 .language-badge.go         { background-color: #00ADD8; color: white; }
@@ -296,22 +306,10 @@ body {
     color: var(--vscode-descriptionForeground);
 }
 
-/* Featured card — accent border + corner star */
+/* Featured card — accent border */
 .template-card.featured {
     position: relative;
     border-left: 3px solid var(--vscode-button-background);
-}
-
-.template-card.featured::after {
-    content: '\ea6a'; /* codicon star-full */
-    font-family: 'codicon';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 16px;
-    color: #FFC107;
-    opacity: 0.85;
-    pointer-events: none;
 }
 
 .new-badge {
@@ -572,21 +570,22 @@ body {
 }
 
 .back-button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: none;
-    border: none;
-    color: var(--vscode-textLink-foreground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border: 1px solid var(--vscode-button-secondaryBorder, var(--vscode-widget-border));
+    color: var(--vscode-button-secondaryForeground);
     cursor: pointer;
     font-size: 14px;
     font-family: inherit;
-    padding: 6px 10px;
+    padding: 6px 14px 6px 10px;
     border-radius: 4px;
+    font-weight: 500;
 }
 
 .back-button:hover {
-    background-color: var(--vscode-toolbar-hoverBackground);
+    background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
 .config-header h1 {
@@ -596,7 +595,7 @@ body {
 
 .selected-template-card {
     background-color: var(--vscode-textBlockQuote-background);
-    border: 1px solid var(--vscode-widget-border);
+    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
@@ -932,7 +931,7 @@ body {
    ───────────────────────────────────────────────────────── */
 .ai-output {
     margin-top: 24px;
-    border: 1px solid var(--vscode-widget-border);
+    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
     border-radius: 8px;
     overflow: hidden;
     max-width: 800px;
@@ -1101,7 +1100,7 @@ body {
     overflow-y: auto;
     padding: 8px;
     background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-widget-border);
+    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
     border-radius: 4px;
 }
 

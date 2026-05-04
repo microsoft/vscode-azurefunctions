@@ -73,7 +73,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         languagePicks.push(
             { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
             {
-                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery...')}`,
+                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery (Preview)...')}`,
                 data: { language: templateGalleryLanguage },
                 suppressPersistence: true,
             },

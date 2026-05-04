@@ -11,7 +11,8 @@
         selectedTemplate: null,
         filters: {
             language: 'all',
-            useCases: [], // Changed to array for multi-select (empty = all)
+            useCase: 'all',
+            resource: 'all',
             search: ''
         },
         projectLocation: '',
@@ -53,6 +54,27 @@
         'other': 'Other'
     };
 
+    // Resource display names
+    const resourceDisplayNames = {
+        'http': 'HTTP',
+        'timer': 'Timer',
+        'cosmos': 'Cosmos DB',
+        'eventhub': 'Event Hub',
+        'servicebus': 'Service Bus',
+        'storage': 'Storage',
+        'durable': 'Durable Functions',
+        'mcp': 'MCP',
+        'agentframework': 'Agent Framework',
+        'arm': 'ARM',
+        'bicep': 'Bicep',
+        'terraform': 'Terraform',
+        'signalr': 'SignalR',
+        'eventgrid': 'Event Grid',
+        'sql': 'SQL',
+        'rabbitmq': 'RabbitMQ',
+        'kafka': 'Kafka'
+    };
+
     // Language display names
     const languageDisplayNames = {
         'JavaScript': 'JavaScript',
@@ -78,7 +100,12 @@
         clearSearch: document.getElementById('clear-search'),
         languageFilters: document.getElementById('language-filters'),
         usecaseFilters: document.getElementById('usecase-filters'),
+        resourceFilters: document.getElementById('resource-filters'),
         resultsCount: document.getElementById('results-count'),
+        promotedSection: document.getElementById('promoted-section'),
+        promotedGrid: document.getElementById('promoted-grid'),
+        communitySection: document.getElementById('community-section'),
+        communityHeading: document.getElementById('community-heading'),
         templatesGrid: document.getElementById('templates-grid'),
         emptyState: document.getElementById('empty-state'),
         loadingState: document.getElementById('loading-state'),
@@ -155,6 +182,7 @@
         // Filters
         elements.languageFilters?.addEventListener('click', handleLanguageFilter);
         elements.usecaseFilters?.addEventListener('click', handleUseCaseFilter);
+        elements.resourceFilters?.addEventListener('click', handleResourceFilter);
 
         // Gallery actions
         elements.clearFilters?.addEventListener('click', clearAllFilters);
@@ -215,6 +243,9 @@
                 state.templates = message.templates;
                 state.isLoading = false;
                 state.error = null;
+
+                // Build dynamic filter chips from template data
+                buildDynamicFilters(state.templates);
 
                 // Handle default location if provided and not already set
                 if (message.defaultLocation && !state.projectLocation) {
@@ -320,6 +351,97 @@
         vscode.postMessage({ type: 'getTemplates' });
     }
 
+    // Preferred language display order (languages found in templates but not listed here appear at the end alphabetically)
+    const languageOrder = ['python', 'dotnet', 'typescript', 'javascript', 'java', 'go', 'powershell'];
+
+    // Build dynamic filter chips from template data
+    function buildDynamicFilters(templates) {
+        // --- Language chips ---
+        const langSet = new Set();
+        templates.forEach(t => {
+            (t.languages || []).forEach(lang => {
+                const filterVal = languageFilterMap[lang];
+                if (filterVal) langSet.add(filterVal);
+            });
+        });
+        const sortedLangs = [...langSet].sort((a, b) => {
+            const ai = languageOrder.indexOf(a);
+            const bi = languageOrder.indexOf(b);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+        // Reverse map: filter value → display name
+        const langDisplayMap = {};
+        for (const [key, val] of Object.entries(languageFilterMap)) {
+            if (!langDisplayMap[val]) langDisplayMap[val] = languageDisplayNames[key] || key;
+        }
+        if (elements.languageFilters) {
+            // Keep the "All" chip, add dynamic ones
+            const allChip = elements.languageFilters.querySelector('[data-value="all"]');
+            elements.languageFilters.innerHTML = '';
+            if (allChip) elements.languageFilters.appendChild(allChip);
+            sortedLangs.forEach(val => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-chip';
+                btn.dataset.value = val;
+                btn.setAttribute('role', 'radio');
+                btn.setAttribute('aria-checked', 'false');
+                btn.textContent = langDisplayMap[val] || val;
+                elements.languageFilters.appendChild(btn);
+            });
+        }
+
+        // --- Use case chips ---
+        const caseSet = new Set();
+        templates.forEach(t => {
+            const cats = t.categories || (t.category ? [t.category] : []);
+            cats.forEach(c => caseSet.add(c));
+        });
+        const sortedCases = [...caseSet].sort((a, b) => {
+            const aName = categoryDisplayNames[a] || a;
+            const bName = categoryDisplayNames[b] || b;
+            return aName.localeCompare(bName);
+        });
+        if (elements.usecaseFilters) {
+            const allChip = elements.usecaseFilters.querySelector('[data-value="all"]');
+            elements.usecaseFilters.innerHTML = '';
+            if (allChip) elements.usecaseFilters.appendChild(allChip);
+            sortedCases.forEach(val => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-chip';
+                btn.dataset.value = val;
+                btn.setAttribute('role', 'checkbox');
+                btn.setAttribute('aria-checked', 'false');
+                btn.textContent = categoryDisplayNames[val] || val;
+                elements.usecaseFilters.appendChild(btn);
+            });
+        }
+
+        // --- Resource chips ---
+        const resSet = new Set();
+        templates.forEach(t => {
+            if (t.resource) resSet.add(t.resource);
+        });
+        const sortedResources = [...resSet].sort((a, b) => {
+            const aName = resourceDisplayNames[a] || a;
+            const bName = resourceDisplayNames[b] || b;
+            return aName.localeCompare(bName);
+        });
+        if (elements.resourceFilters) {
+            const allChip = elements.resourceFilters.querySelector('[data-value="all"]');
+            elements.resourceFilters.innerHTML = '';
+            if (allChip) elements.resourceFilters.appendChild(allChip);
+            sortedResources.forEach(val => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-chip';
+                btn.dataset.value = val;
+                btn.setAttribute('role', 'radio');
+                btn.setAttribute('aria-checked', 'false');
+                btn.textContent = resourceDisplayNames[val] || val.charAt(0).toUpperCase() + val.slice(1);
+                elements.resourceFilters.appendChild(btn);
+            });
+        }
+    }
+
     // Filter logic
     function applyFilters() {
         let results = [...state.templates];
@@ -333,13 +455,18 @@
             );
         }
 
-        // Use case filter (multi-select: show templates matching ANY selected use case)
+        // Use case filter (single-select)
         // Support both "categories" (array) and legacy "category" (string)
-        if (state.filters.useCases.length > 0) {
+        if (state.filters.useCase !== 'all') {
             results = results.filter(t => {
                 const cats = t.categories || (t.category ? [t.category] : []);
-                return cats.some(c => state.filters.useCases.includes(c));
+                return cats.includes(state.filters.useCase);
             });
+        }
+
+        // Resource filter
+        if (state.filters.resource !== 'all') {
+            results = results.filter(t => t.resource === state.filters.resource);
         }
 
         // Search
@@ -369,21 +496,45 @@
     // Render templates grid
     function renderTemplates() {
         const grid = elements.templatesGrid;
+        const promotedGrid = elements.promotedGrid;
         if (!grid) return;
 
         grid.innerHTML = '';
+        if (promotedGrid) promotedGrid.innerHTML = '';
 
         if (state.filteredTemplates.length === 0) {
             elements.emptyState?.classList.remove('hidden');
-            grid.style.display = 'none';
+            elements.promotedSection?.classList.add('hidden');
+            elements.communitySection?.classList.add('hidden');
         } else {
             elements.emptyState?.classList.add('hidden');
-            grid.style.display = 'grid';
 
-            state.filteredTemplates.forEach(template => {
-                const card = createTemplateCard(template);
-                grid.appendChild(card);
-            });
+            const promoted = state.filteredTemplates.filter(t => t.isHighlighted);
+            const rest = state.filteredTemplates.filter(t => !t.isHighlighted);
+
+            // Promoted section
+            if (promoted.length > 0 && promotedGrid) {
+                elements.promotedSection?.classList.remove('hidden');
+                promoted.forEach(template => {
+                    promotedGrid.appendChild(createTemplateCard(template));
+                });
+            } else {
+                elements.promotedSection?.classList.add('hidden');
+            }
+
+            // Community / all section
+            if (rest.length > 0) {
+                elements.communitySection?.classList.remove('hidden');
+                // Adjust heading when no promoted templates are shown
+                if (elements.communityHeading) {
+                    elements.communityHeading.textContent = promoted.length > 0 ? 'Explore More Templates' : 'All Templates';
+                }
+                rest.forEach(template => {
+                    grid.appendChild(createTemplateCard(template));
+                });
+            } else {
+                elements.communitySection?.classList.add('hidden');
+            }
         }
 
         elements.resultsCount.textContent = `Showing ${state.filteredTemplates.length} template${state.filteredTemplates.length !== 1 ? 's' : ''}`;
@@ -596,12 +747,14 @@
         if (state.isLoading) {
             elements.loadingState?.classList.remove('hidden');
             elements.errorState?.classList.add('hidden');
-            elements.templatesGrid.style.display = 'none';
+            elements.promotedSection?.classList.add('hidden');
+            elements.communitySection?.classList.add('hidden');
             elements.emptyState?.classList.add('hidden');
         } else if (state.error) {
             elements.loadingState?.classList.add('hidden');
             elements.errorState?.classList.remove('hidden');
-            elements.templatesGrid.style.display = 'none';
+            elements.promotedSection?.classList.add('hidden');
+            elements.communitySection?.classList.add('hidden');
             elements.emptyState?.classList.add('hidden');
         } else {
             elements.loadingState?.classList.add('hidden');
@@ -645,43 +798,35 @@
 
         const value = chip.dataset.value;
 
-        // Handle "All" button - clears all selections
-        if (value === 'all') {
-            state.filters.useCases = [];
-            elements.usecaseFilters?.querySelectorAll('.filter-chip').forEach(c => {
-                const isAll = c.dataset.value === 'all';
-                c.classList.toggle('active', isAll);
-                c.setAttribute('aria-checked', isAll ? 'true' : 'false');
-            });
-        } else {
-            // Toggle the clicked filter
-            const index = state.filters.useCases.indexOf(value);
-            if (index > -1) {
-                // Remove if already selected
-                state.filters.useCases.splice(index, 1);
-                chip.classList.remove('active');
-                chip.setAttribute('aria-checked', 'false');
-            } else {
-                // Add to selection
-                state.filters.useCases.push(value);
-                chip.classList.add('active');
-                chip.setAttribute('aria-checked', 'true');
-            }
+        // Single-select: deselect all, then activate the clicked chip
+        state.filters.useCase = value;
+        elements.usecaseFilters?.querySelectorAll('.filter-chip').forEach(c => {
+            const isActive = c.dataset.value === value;
+            c.classList.toggle('active', isActive);
+            c.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        });
 
-            // Update "All" button state
-            const allChip = elements.usecaseFilters?.querySelector('[data-value="all"]');
-            if (allChip) {
-                const noneSelected = state.filters.useCases.length === 0;
-                allChip.classList.toggle('active', noneSelected);
-                allChip.setAttribute('aria-checked', noneSelected ? 'true' : 'false');
-            }
-        }
+        applyFilters();
+    }
+
+    function handleResourceFilter(e) {
+        const chip = e.target.closest('.filter-chip');
+        if (!chip) return;
+
+        const value = chip.dataset.value;
+
+        state.filters.resource = value;
+        elements.resourceFilters?.querySelectorAll('.filter-chip').forEach(c => {
+            const isActive = c.dataset.value === value;
+            c.classList.toggle('active', isActive);
+            c.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        });
 
         applyFilters();
     }
 
     function clearAllFilters() {
-        state.filters = { language: 'all', useCases: [], search: '' };
+        state.filters = { language: 'all', useCase: 'all', resource: 'all', search: '' };
         elements.searchInput.value = '';
         elements.clearSearch?.classList.add('hidden');
 
