@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { FuncVersion } from '../../../FuncVersion';
-import { gitignoreFileName, hostFileName, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { type IHostJsonV1, type IHostJsonV2 } from '../../../funcConfig/host';
 import { type ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
@@ -25,7 +25,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected localSettingsJson: ILocalSettingsJson = {
         IsEncrypted: false,
         Values: {
-            AzureWebJobsStorage: localStorageEmulatorConnectionString
+            AzureWebJobsStorage: ''
         }
     };
 
