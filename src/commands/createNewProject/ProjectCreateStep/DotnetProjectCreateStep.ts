@@ -57,8 +57,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
             templateArgs.Framework = context.workerRuntime.targetFramework;
         }
 
-        // User has already confirmed overwrite via confirmOverwriteExisting; pass --force so
-        // dotnet new doesn't exit with code 73 when scaffolding files already exist.
+        // Create the project from the .NET template first so files are written into a clean directory
         await executeDotnetTemplateCreate(context, version, projTemplateKey, context.projectPath, identity, templateArgs);
 
         // For containerized projects, generate the Dockerfile by running func init --docker in an

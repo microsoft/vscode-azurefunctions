@@ -31,7 +31,6 @@ interface TemplateJson {
     author?: string;
     classifications?: string[];
     groupIdentity?: string;
-    tags?: Record<string, string>;
     symbols?: Record<string, TemplateJsonSymbol>;
 }
 
