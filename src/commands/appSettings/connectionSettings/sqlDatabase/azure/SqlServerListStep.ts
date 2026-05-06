@@ -31,7 +31,7 @@ export class SqlServerListStep<T extends ISqlDatabaseAzureConnectionWizardContex
 
         if (context.sqlServer && !context.resourceGroup) {
             const rgName: string = getResourceGroupFromId(nonNullProp(context.sqlServer, 'id'));
-            context.resourceGroup = { name: rgName };
+            context.resourceGroup = { name: rgName, location: nonNullProp(context.sqlServer, 'location') };
         }
     }
 
