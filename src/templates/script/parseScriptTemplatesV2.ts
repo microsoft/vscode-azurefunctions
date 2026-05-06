@@ -6,6 +6,7 @@
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import { type ActionType, type ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
+import { isMcpTriggerType } from '../../utils/mcpUtils';
 import { type ResourceType } from '../IBindingTemplate';
 import { type FunctionV2Template } from '../IFunctionTemplate';
 import { TemplateSchemaVersion } from '../TemplateProviderBase';
@@ -119,12 +120,10 @@ export function parseScriptTemplates(rawTemplates: RawTemplateV2[], rawBindings:
             }
             parsedJobs.push(Object.assign(job, { parsedInputs, parsedActions }));
         }
-        const isHttpTrigger = !!templateV2.id?.toLowerCase().includes('httptrigger-');
-        const isTimerTrigger = !!templateV2.id?.toLowerCase().includes('timertrigger-');
-        // MCP trigger variants use multiple IDs across templates/providers.
-        const isMcpTrigger = !!templateV2.id?.toLowerCase().includes('mcptooltrigger') ||
-            templateV2.id?.toLowerCase().includes('mcptrigger') ||
-            templateV2.id?.toLowerCase().includes('mcpresourcetrigger');
+        const templateId = templateV2.id?.toLowerCase() ?? '';
+        const isHttpTrigger = templateId.includes('httptrigger-');
+        const isTimerTrigger = templateId.includes('timertrigger-');
+        const isMcpTrigger = isMcpTriggerType(templateId);
 
         templates.push(Object.assign(templateV2, {
             wizards: parsedJobs,
