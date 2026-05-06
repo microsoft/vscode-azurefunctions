@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Server, type SqlManagementClient } from '@azure/arm-sql';
-import { LocationListStep, uiUtils, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, ResourceGroupListStep, getResourceGroupFromId, uiUtils, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ConfirmPreviousInputStep, nonNullProp, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { localSettingsDescription } from '../../../../../constants-nls';
 import { localize } from '../../../../../localize';
@@ -28,6 +28,11 @@ export class SqlServerListStep<T extends ISqlDatabaseAzureConnectionWizardContex
         if (context.sqlServer?.name) {
             context.valuesToMask.push(context.sqlServer.name);
         }
+
+        if (context.sqlServer && !context.resourceGroup) {
+            const rgName: string = getResourceGroupFromId(nonNullProp(context.sqlServer, 'id'));
+            context.resourceGroup = { name: rgName };
+        }
     }
 
     public shouldPrompt(context: T): boolean {
@@ -39,7 +44,7 @@ export class SqlServerListStep<T extends ISqlDatabaseAzureConnectionWizardContex
         const executeSteps: AzureWizardExecuteStep<T>[] = [];
 
         if (!context.sqlServer) {
-            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new ConfirmPreviousInputStep('newSqlAdminPassword', { isPassword: true }));
+            promptSteps.push(new ResourceGroupListStep(), new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new ConfirmPreviousInputStep('newSqlAdminPassword', { isPassword: true }));
             executeSteps.push(new SqlServerCreateStep());
             LocationListStep.addStep(context, promptSteps as AzureWizardPromptStep<ILocationWizardContext>[]);
         }
