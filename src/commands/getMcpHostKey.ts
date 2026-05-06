@@ -12,8 +12,32 @@ import { McpProjectType } from '../constants';
 import { SubscriptionListStep } from './SubscriptionListStep';
 
 export async function getMcpHostKey(context: IActionContext & { subscription?: AzureSubscription },
-    args: { resourceId: string, projectType: McpProjectType }): Promise<string> {
-    const parsedId: ParsedAzureResourceId = parseAzureResourceId(args.resourceId);
+    args?: { resourceId?: string, projectType?: McpProjectType }): Promise<string> {
+    const resourceId: string = args?.resourceId ?? await context.ui.showInputBox({
+        prompt: l10n.t('Enter the resource ID of the Function App'),
+        placeHolder: l10n.t('/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Web/sites/{functionAppName}'),
+        validateInput: (value: string) => {
+            if (!value) {
+                return l10n.t('Resource ID cannot be empty.');
+            }
+            try {
+                parseAzureResourceId(value);
+            } catch {
+                return l10n.t('Invalid resource ID format. Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Web/sites/{functionAppName}');
+            }
+            return undefined;
+        }
+    });
+
+    const projectType: McpProjectType = args?.projectType ?? (await context.ui.showQuickPick(
+        [
+            { label: l10n.t('MCP Extension Server'), data: McpProjectType.McpExtensionServer },
+            { label: l10n.t('Self-Hosted MCP Server'), data: McpProjectType.SelfHostedMcpServer }
+        ],
+        { placeHolder: l10n.t('Select the MCP project type') }
+    )).data;
+
+    const parsedId: ParsedAzureResourceId = parseAzureResourceId(resourceId);
     const wizard = new AzureWizard<IActionContext & Partial<IAppServiceWizardContext>>(context, {
         promptSteps: [new SubscriptionListStep(parsedId.subscriptionId)],
         // this should never happen, but just in case
@@ -29,13 +53,13 @@ export async function getMcpHostKey(context: IActionContext & { subscription?: A
     const client = await createWebSiteClient([context, subContext]);
     const keys = await client.webApps.listHostKeys(parsedId.resourceGroup, parsedId.resourceName);
 
-    if (args.projectType === McpProjectType.McpExtensionServer && keys.systemKeys?.['mcp_extension']) {
+    if (projectType === McpProjectType.McpExtensionServer && keys.systemKeys?.['mcp_extension']) {
         return keys.systemKeys['mcp_extension'];
     }
 
-    if (args.projectType === McpProjectType.SelfHostedMcpServer && keys.functionKeys?.['default']) {
+    if (projectType === McpProjectType.SelfHostedMcpServer && keys.functionKeys?.['default']) {
         return keys.functionKeys['default'];
     }
 
-    throw new Error(l10n.t('No appropriate host key found for MCP project type "{0}".', args.projectType));
+    throw new Error(l10n.t('No appropriate host key found for MCP project type "{0}".', projectType));
 }
