@@ -39,7 +39,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         // Only pass --namespace if the template actually declares a `namespace` parameter.
         // Some newer .NET templates (e.g. the .NET 10 Azure Functions template) do not, and passing
         // it would produce `'--namespace' is not a valid option` errors from the dotnet CLI.
-        if (template.supportsNamespace && context.namespace) {
+        if (template.supportsNamespace !== false && context.namespace) {
             templateArgs.namespace = context.namespace;
         }
 
