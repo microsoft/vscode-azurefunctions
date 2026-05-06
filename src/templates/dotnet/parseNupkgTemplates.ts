@@ -31,6 +31,7 @@ interface TemplateJson {
     author?: string;
     classifications?: string[];
     groupIdentity?: string;
+    tags?: Record<string, string>;
     symbols?: Record<string, TemplateJsonSymbol>;
 }
 
@@ -54,6 +55,8 @@ export interface RawTemplate {
     Author: string;
     Classifications: string[];
     GroupIdentity: string;
+    // From template.json's `tags.type` (e.g. "project" or "item"); empty string when absent.
+    Type: string;
     Parameters: RawParameter[];
 }
 
@@ -131,6 +134,7 @@ function convertToRawTemplate(templateJson: TemplateJson): RawTemplate {
         Author: templateJson.author ?? '',
         Classifications: templateJson.classifications ?? [],
         GroupIdentity: templateJson.groupIdentity ?? '',
+        Type: templateJson.tags?.type ?? '',
         Parameters: parameters,
     };
 }
