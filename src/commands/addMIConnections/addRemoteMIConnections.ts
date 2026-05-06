@@ -28,7 +28,7 @@ export async function addRemoteMIConnections(context: AddMIConnectionsContext, n
             connections.push({ name: node.id, value: node.value });
             node = node.parent;
         } else {
-            context.functionapp = node?.parent as SlotTreeItem
+            context.functionapp = node?.parent as SlotTreeItem;
         }
         await node.runWithTemporaryDescription(context, localize('adding', 'Adding...'), async () => {
             await addRemoteMIConnectionsInternal(context, connections);
@@ -58,9 +58,9 @@ export async function addRemoteMIConnectionsInternal(context: AddMIConnectionsCo
     }
 
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
-    executeSteps.push(new SettingsAddBaseStep(), new RemoteSettingsAddStep(), new RoleAssignmentExecuteStep(() => wizardContext.roles))
+    executeSteps.push(new SettingsAddBaseStep(), new RemoteSettingsAddStep(), new RoleAssignmentExecuteStep(() => wizardContext.roles));
 
-    const wizard: AzureWizard<AddMIConnectionsContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<AddMIConnectionsContext>(wizardContext, {
         title,
         promptSteps,
         executeSteps

@@ -80,12 +80,15 @@ async function addStorageConnectionsAndRoles(context: AddMIConnectionsContext, c
             ...getClientIdAndCredentialPropertiesForRemote(context, webJobsStorage ? 'AzureWebJobsStorage' : storageAccountName)
         );
         if (context.functionapp) {
-            const scope = await getScopeHelper(context, storageAccountName, 'Microsoft.Storage/storageAccounts')
+            const scope = await getScopeHelper(context, storageAccountName, 'Microsoft.Storage/storageAccounts');
             addRole(context, scope, CommonRoleDefinitions.storageBlobDataOwner);
             addRole(context, scope, CommonRoleDefinitions.storageQueueDataContributor);
         }
     } catch (e) {
-        throw new Error(localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value));
+        throw new Error(
+            localize('invalidStorageConnectionString', 'Unexpected storage connection string format: {0}', connection.value),
+            { cause: e },
+        );
     }
 
 }
@@ -107,7 +110,10 @@ async function addDocumentConnectionsAndRoles(context: AddMIConnectionsContext, 
             ...getClientIdAndCredentialPropertiesForRemote(context, cosmosDbAccountName)
         );
     } catch (e) {
-        throw new Error(localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value));
+        throw new Error(
+            localize('invalidDocumentConnectionString', 'Unexpected DocumentDB connection string format: {0}', connection.value),
+            { cause: e }
+        );
     }
 }
 
@@ -130,7 +136,7 @@ async function addEventHubServiceBusConnectionsAndRoles(context: AddMIConnection
             let scope = '';
             try {
                 scope = await getScopeHelper(context, namespace, 'Microsoft.EventHub/Namespaces');
-            } catch (e) {
+            } catch (_e) {
                 scope = await getScopeHelper(context, namespace, 'Microsoft.ServiceBus/Namespaces');
             }
 
@@ -143,7 +149,10 @@ async function addEventHubServiceBusConnectionsAndRoles(context: AddMIConnection
             }
         }
     } catch (e) {
-        throw new Error(localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value));
+        throw new Error(
+            localize('invalidEventHubConnectionString', 'Unexpected EventHub connection string format: {0}', connection.value),
+            { cause: e }
+        );
     }
 }
 

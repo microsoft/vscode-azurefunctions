@@ -22,7 +22,7 @@ class TaskHubNamingStep extends AzureWizardPromptStep<ICreateTaskHubContext> {
     async prompt(wizardContext: ICreateTaskHubContext): Promise<void> {
         wizardContext.taskHubName = await wizardContext.ui.showInputBox({
             prompt: localize('taskHubNamingStepPrompt', 'Enter a name for the new task hub')
-        })
+        });
     }
 
     shouldPrompt(wizardContext: ICreateTaskHubContext): boolean {
@@ -84,5 +84,5 @@ export function createTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         finally {
             scheduler.refresh();
         }
-    }
+    };
 }

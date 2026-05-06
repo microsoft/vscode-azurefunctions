@@ -54,7 +54,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
-        return !!context.dockerfilePath
+        return !!context.dockerfilePath;
     }
 
     private async getNewSite(context: IFunctionAppWizardContext): Promise<Site> {
@@ -93,7 +93,7 @@ export class ContainerizedFunctionAppCreateStep extends AzureWizardExecuteStepWi
                     }
                 ]
             }
-        }
+        };
     }
 }
 

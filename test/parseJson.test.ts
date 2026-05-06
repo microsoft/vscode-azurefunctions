@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { getLineAndColumnFromOffset, parseJson } from '../extension.bundle';
+import { getLineAndColumnFromOffset, parseJson } from '../src/utils/parseJson';
 
 suite('parseJson', () => {
     test('Valid json', () => {

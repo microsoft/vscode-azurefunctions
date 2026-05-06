@@ -37,7 +37,7 @@ export async function validateNetheriteConnectionPreDebug(context: IActionContex
         suggestedNamespaceLocalSettings: parseEventHubsNamespaceName(eventHubsConnection),
     });
 
-    const wizard: AzureWizard<INetheriteConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<INetheriteConnectionWizardContext>(wizardContext, {
         title: localize('prepareNetheriteDebug', 'Prepare Netherite debug configuration'),
         promptSteps: [new EventHubsConnectionListStep(availableDebugConnectionTypes)],
         showLoadingPrompt: true,

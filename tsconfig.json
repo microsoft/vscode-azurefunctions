@@ -1,10 +1,11 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es2018",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "target": "es2022",
         "outDir": "out",
         "lib": [
-            "es6"
+            "es2022"
         ],
         "sourceMap": true,
         "rootDir": ".",
@@ -12,18 +13,18 @@
         "noImplicitThis": true,
         "noImplicitReturns": true,
         "strictNullChecks": true,
+        "skipLibCheck": true, // needed to ignore vscode-jsonrpc package
         "noUnusedParameters": true,
-        "baseUrl": "./",
-        "paths": {
-            "*": [
-                "node_modules/@types/*",
-                "*"
-            ]
-        }
+        "allowSyntheticDefaultImports": true,
+        "types": [
+            "mocha",
+            "node"
+        ]
     },
     "exclude": [
-        "node_modules",
+        "**/node_modules",
         ".vscode-test",
-        "gulpfile.ts"
+        "**/dist",
+        "**/out"
     ]
 }

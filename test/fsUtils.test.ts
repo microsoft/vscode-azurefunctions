@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as path from 'path';
-import { isPathEqual, isSubpath } from '../extension.bundle';
+import { isPathEqual, isSubpath } from '../src/utils/fs';
 
 suite('fsUtils', () => {
     test('isPathEqual, posix, true', () => {

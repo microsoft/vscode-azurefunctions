@@ -18,7 +18,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
     public readonly contextValue: string = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
-    public readonly parent: SlotTreeItem;
+    declare public readonly parent: SlotTreeItem;
     public suppressMaskLabel: boolean = true;
 
     private _nextLink: string | undefined;

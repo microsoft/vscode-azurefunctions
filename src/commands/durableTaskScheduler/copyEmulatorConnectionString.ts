@@ -27,7 +27,7 @@ export function copyEmulatorConnectionStringCommandFactory() {
             const noTaskHubItem: QuickPickItem = {
                 detail: localize('noTaskHubDetail', 'Do not connect to a specific task hub.'),
                 label: localize('noTaskHubLabel', 'None')
-            }
+            };
 
             const taskHubItems: QuickPickItem[] =
                 taskHubs.map(taskHub => ({ label: taskHub }));
@@ -55,5 +55,5 @@ export function copyEmulatorConnectionStringCommandFactory() {
 
         ext.outputChannel.show();
         ext.outputChannel.appendLog(localize('schedulerConnectionStringCopiedMessage', 'Connection string copied to clipboard: {0}', connectionString));
-    }
+    };
 }

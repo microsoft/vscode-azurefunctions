@@ -3,14 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, nonNullValueAndProp, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, DialogResponses, nonNullValueAndProp, randomUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg, withNamedArg } from '@microsoft/vscode-processutils';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ConnectionKey, ProjectLanguage, gitignoreFileName, hostFileName, localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from "../../../localize";
-import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCreate, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
@@ -34,14 +37,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
 
         const workerRuntime = nonNullProp(context, 'workerRuntime');
-        // For containerized function apps we need to call func init before intialization as we want the .csproj file to be overwritten with the correct version
-        // currentely the version created by func init is behind the template version
-        if (context.containerizedProject) {
-            const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
-            // targetFramework is only supported for dotnet-isolated projects
-            const targetFramework = runtime === 'dotnet' ? '' : "--target-framework " + nonNullValueAndProp(context.workerRuntime, 'targetFramework');
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, "func", "init", "--worker-runtime", runtime, targetFramework, "--docker");
-        } else {
+        if (!context.containerizedProject) {
             await this.confirmOverwriteExisting(context, projName);
         }
 
@@ -52,11 +48,48 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         }
         const functionsVersion: string = 'v' + majorVersion;
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
-        const args = ['--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion];
-        // defaults to net6.0 if there is no targetFramework
-        args.push('--arg:Framework', cpUtils.wrapArgInQuotes(context.workerRuntime?.targetFramework));
 
-        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
+        const templateArgs: Record<string, string> = {
+            name: projectName,
+            AzureFunctionsVersion: functionsVersion,
+        };
+        if (context.workerRuntime?.targetFramework) {
+            templateArgs.Framework = context.workerRuntime.targetFramework;
+        }
+
+        // Create the project from the .NET template first so files are written into a clean directory
+        await executeDotnetTemplateCreate(context, version, projTemplateKey, context.projectPath, identity, templateArgs);
+
+        // For containerized projects, generate the Dockerfile by running func init --docker in an
+        // isolated temp directory, then copy only the Dockerfile into the project. This avoids
+        // func init's internal dotnet new conflicting with files already created by the template.
+        if (context.containerizedProject) {
+            const runtime = context.workerRuntime?.capabilities.includes('isolated') ? 'dotnet-isolated' : 'dotnet';
+            const tempDir = path.join(os.tmpdir(), `azfunc-docker-${randomUtils.getRandomHexString()}`);
+            try {
+                await fs.promises.mkdir(tempDir, { recursive: true });
+                const args = composeArgs(
+                    withArg('init'),
+                    withNamedArg('--worker-runtime', runtime),
+                    withNamedArg('--target-framework', runtime === 'dotnet' ? undefined : nonNullValueAndProp(context.workerRuntime, 'targetFramework')),
+                    withArg('--docker'),
+                )();
+                await cpUtils.executeCommand(ext.outputChannel, tempDir, "func", args);
+
+                // Copy only the Dockerfile (and .dockerignore if present) into the project
+                for (const file of ['Dockerfile', '.dockerignore']) {
+                    const src = path.join(tempDir, file);
+                    const dest = path.join(context.projectPath, file);
+                    try {
+                        await fs.promises.copyFile(src, dest);
+                    } catch {
+                        // .dockerignore may not exist, that's fine
+                    }
+                }
+            } finally {
+                await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
+            }
+        }
 
         await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, '', MismatchBehavior.Overwrite);
     }

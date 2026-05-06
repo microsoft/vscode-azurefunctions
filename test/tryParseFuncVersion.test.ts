@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { FuncVersion, tryParseFuncVersion } from '../extension.bundle';
+import { FuncVersion, tryParseFuncVersion } from '../src/FuncVersion';
 
 suite('tryParseFuncVersion', () => {
     const specificOne: string = '1.0.0';

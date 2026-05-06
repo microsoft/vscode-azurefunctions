@@ -22,16 +22,8 @@ export class PostFuncDebugExecuteStep<T extends IActionContext & ExecuteActivity
         const errorLogs: string[] = [];
         // eslint-disable-next-line no-control-regex
         const redAnsiRegex = /\x1b\[(?:[0-9;]*31m|[0-9;]*91m|38;5;(9|1)m)/;
-        const functionErrors = [
-            /No job functions found/i,
-            /Worker was unable to load entry point/i,
-            /SyntaxError:/i,
-            /Cannot find module/i,
-            /Failed to start Worker Channel/i,
-            /Serialization and deserialization.*not supported/i
-        ];
         for (const log of this.logs) {
-            if (redAnsiRegex.test(log) || functionErrors.some(err => err.test(log))) {
+            if (redAnsiRegex.test(log)) {
                 errorLogs.push(log);
             }
         }

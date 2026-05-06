@@ -40,7 +40,7 @@ export class StorageTypePromptStep extends AzureWizardPromptStep<IFunctionWizard
 
         if (!context.useStorageEmulator) {
             promptSteps.push(new StorageAccountListStep(
-                { kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
+                { kind: StorageAccountKind.StorageV2, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
                 { kind: [StorageAccountKind.BlobStorage], learnMoreLink: 'https://aka.ms/T5o0nf' }
             ));
         }

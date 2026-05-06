@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, DialogResponses, type IActionContext, type IAzExtOutputChannel, type TelemetryProperties } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg, withNamedArg, type CommandLineArgs } from '@microsoft/vscode-processutils';
 import * as vscode from 'vscode';
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
@@ -14,7 +15,7 @@ export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
     export async function validateMavenInstalled(context: IActionContext): Promise<void> {
         try {
-            await cpUtils.executeCommand(undefined, undefined, mvnCommand, '--version');
+            await cpUtils.executeCommand(undefined, undefined, mvnCommand, composeArgs(withArg('--version'))());
         } catch (error) {
             const message: string = localize('mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
 
@@ -28,7 +29,7 @@ export namespace mavenUtils {
                 context.errorHandling.suppressDisplay = true;
             }
 
-            throw new Error(message);
+            throw new Error(message, { cause: error });
         }
     }
 
@@ -38,10 +39,7 @@ export namespace mavenUtils {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
                 if (result && !err) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     if (result['project'] && result['project']['properties']) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         resolve(result['project']['properties']['functionAppName'] as string | undefined);
                         return;
                     }
@@ -51,8 +49,8 @@ export namespace mavenUtils {
         });
     }
 
-    export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
-        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
+    export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, args: CommandLineArgs): Promise<string> {
+        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, args);
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
             const linesWithErrors: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(mvnErrorRegexp);
@@ -72,13 +70,13 @@ export namespace mavenUtils {
             }
         } else {
             if (outputChannel) {
-                outputChannel.appendLine(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', mvnCommand, result.formattedArgs));
+                outputChannel.appendLine(localize('finishedRunningCommand', 'Finished running command: "{0}".', result.formattedCommandLine));
             }
         }
         return result.cmdOutput;
     }
 
-    export function formatMavenArg(key: string, value: string | number | boolean): string {
-        return `-${key}=${cpUtils.wrapArgInQuotes(value)}`;
+    export function formatMavenArg(key: string, value: string | number | boolean): CommandLineArgs {
+        return withNamedArg(`-D${key}`, String(value), { assignValue: true })();
     }
 }

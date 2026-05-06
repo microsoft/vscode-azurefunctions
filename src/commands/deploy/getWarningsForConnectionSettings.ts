@@ -25,7 +25,7 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
         let localSettings: ILocalSettingsJson;
         try {
             localSettings = localSettingsPath ? await AzExtFsExtra.readJSON(localSettingsPath) : { Values: {} };
-        } catch (err) {
+        } catch (_err) {
             // if we can't read the local settings, just assume it's empty
             localSettings = { Values: {} };
         }
@@ -46,9 +46,9 @@ export async function getWarningsForConnectionSettings(context: IActionContext,
         if (localConnectionSettings.some(setting => setting.type === 'ConnectionString') || remoteConnectionSettings.some(setting => setting.type === 'ConnectionString')) {
             // if they have connection strings, warn them about insecure connections but don't try to convert them
             return localize('connectionStringWarning',
-                'Your app may be using connection strings for authentication. This may expose sensitive credentials and lead to security vulnerabilities. Consider using managed identities to enhance security.')
+                'Your app may be using connection strings for authentication. This may expose sensitive credentials and lead to security vulnerabilities. Consider using managed identities to enhance security.');
         }
-    } catch (err) {
+    } catch (_err) {
         // if we can't read local or remote settings, don't warn them about anything
     }
 

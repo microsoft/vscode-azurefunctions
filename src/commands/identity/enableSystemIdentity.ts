@@ -38,5 +38,5 @@ export async function enableSystemIdentity(context: IActionContext, node?: Syste
         await wizard.execute();
     });
 
-    void slotTreeItem.refresh(context)
+    void slotTreeItem.refresh(context);
 }

@@ -49,7 +49,7 @@ export class FunctionSubWizard {
                     break;
                 default:
                     if (isNodeV4Plus(context)) {
-                        promptSteps.push(new NodeV4FunctionNameStep())
+                        promptSteps.push(new NodeV4FunctionNameStep());
                     } else if (context.templateSchemaVersion === TemplateSchemaVersion.v1) {
                         promptSteps.push(new ScriptFunctionNameStep());
                     }

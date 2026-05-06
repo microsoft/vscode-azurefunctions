@@ -26,7 +26,7 @@ export class DeployWorkspaceProjectStep extends AzureWizardExecuteStepWithActivi
     public getTreeItemLabel(context: IFunctionAppWizardContext): string {
         return context.deployWorkspaceResult ?
             localize('deployWorkspaceProjectLabel', 'Create container resources for "{0}"', context.deployWorkspaceResult.imageName) :
-            localize('deployWorkspaceProjectLabel', 'Create container resources; this may take a few minutes...'); '';
+            localize('deployWorkspaceProjectLabel', 'Create container resources; this may take a few minutes...');
     }
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
@@ -44,10 +44,10 @@ export class DeployWorkspaceProjectStep extends AzureWizardExecuteStepWithActivi
             suppressContainerAppCreation: true,
             ignoreExistingDeploySettings: true,
             shouldSaveDeploySettings: false
-        })
+        });
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
-        return !!context.dockerfilePath
+        return !!context.dockerfilePath;
     }
 }

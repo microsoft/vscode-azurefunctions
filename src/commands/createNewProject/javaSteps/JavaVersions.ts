@@ -2,23 +2,20 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import { localize } from '../../../localize';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { cpUtils } from "../../../utils/cpUtils";
 
 import * as path from 'path';
 
-export async function getJavaVersion(): Promise<number> {
+export async function getJavaVersion(): Promise<number | undefined> {
     const javaHome: string | undefined = process.env['JAVA_HOME'];
     let javaVersion = javaHome ? await checkVersionInReleaseFile(javaHome) : undefined;
     if (!javaVersion) {
         javaVersion = await checkVersionByCLI(javaHome ? path.join(javaHome, 'bin', 'java') : 'java');
     }
-    if (!javaVersion) {
-        const message: string = localize('javaNotFound', 'Failed to get Java version. Please ensure that Java is installed and JAVA_HOME environment variable is set.');
-        throw new Error(message);
-    }
-    return javaVersion;
+    return javaVersion || undefined;
 }
 
 async function checkVersionInReleaseFile(javaHome: string): Promise<number | undefined> {
@@ -35,7 +32,7 @@ async function checkVersionInReleaseFile(javaHome: string): Promise<number | und
         const regexp = /^JAVA_VERSION="(.*)"/gm;
         const match = regexp.exec(content.toString());
         return match ? flattenMajorVersion(match[1]) : undefined;
-    } catch (error) {
+    } catch (_error) {
         // ignore
         return undefined;
     }
@@ -45,7 +42,7 @@ async function checkVersionByCLI(javaExec: string): Promise<number | undefined> 
     if (!javaExec) {
         return undefined;
     }
-    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined, undefined, javaExec, '-version');
+    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined, undefined, javaExec, composeArgs(withArg('-version'))());
     const output: string = result.cmdOutputIncludingStderr;
     const regexp = /version "(.*)"/g;
     const match = regexp.exec(output);

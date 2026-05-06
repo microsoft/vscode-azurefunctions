@@ -44,7 +44,7 @@ export namespace dotnetUtils {
     export async function getProjFiles(context: IActionContext, projectLanguage: ProjectLanguage, projectPath: string): Promise<ProjectFile[]> {
         return await telemetryUtils.runWithDurationTelemetry(context, 'getNetProjFiles', async () => {
             const pattern = projectLanguage === ProjectLanguage.FSharp ? '*.fsproj' : '*.csproj';
-            const uris = await findFiles(projectPath, pattern)
+            const uris = await findFiles(projectPath, pattern);
             return uris.map(uri => path.basename(uri.fsPath)).filter(f => f.toLowerCase() !== 'extensions.csproj').map(f => new ProjectFile(f, projectPath));
         });
     }

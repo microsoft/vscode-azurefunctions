@@ -45,7 +45,7 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
         try {
             const templateVersion: string | undefined = await javaUtils.getLatestArtifactVersionFromMetaData(context, metaDataUrl);
             return templateVersion ? templateVersion : backupGradlePluginVersion;
-        } catch (error) {
+        } catch (_error) {
             return backupGradlePluginVersion;
         }
     }

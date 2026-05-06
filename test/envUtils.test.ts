@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { envUtils } from '../extension.bundle';
+import { envUtils } from '../src/utils/envUtils';
 
 suite('envUtils', () => {
     test('isEnvironmentVariableSet', () => {

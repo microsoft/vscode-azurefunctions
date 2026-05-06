@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { HttpAuthLevel, ParsedFunctionJson } from '../extension.bundle';
+import { HttpAuthLevel, ParsedFunctionJson } from '../src/funcConfig/function';
 
 suite('ParsedFunctionJson', () => {
     test('null', () => {

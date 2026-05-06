@@ -21,5 +21,5 @@ export function copySchedulerEndpointCommandFactory() {
 
         ext.outputChannel.show();
         ext.outputChannel.appendLog(localize('schedulerEndpointCopiedMessage', 'Endpoint copied to clipboard: {0}', endpointUrl.toString()));
-    }
+    };
 }

@@ -76,7 +76,7 @@ export namespace bundleFeedUtils {
             bindings: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
             userPrompts: `${functionsCdn}${templateVersion}/StaticContent/v2/bindings/userPrompts.json`,
             resources: `${functionsCdn}${templateVersion}/StaticContent/v2/resources/Resources.{locale}.json`,
-        }
+        };
     }
 
     export function isBundleTemplate(template: FunctionTemplateBase | IBindingTemplate): boolean {

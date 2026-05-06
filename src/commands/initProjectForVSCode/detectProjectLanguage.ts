@@ -58,7 +58,7 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
 }
 
 async function isJavaProject(projectPath: string): Promise<boolean> {
-    return await isMavenProject(projectPath) || await isGradleProject(projectPath)
+    return await isMavenProject(projectPath) || await isGradleProject(projectPath);
 }
 
 export async function isMavenProject(projectPath: string): Promise<boolean> {

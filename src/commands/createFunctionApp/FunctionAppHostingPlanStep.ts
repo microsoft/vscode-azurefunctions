@@ -89,6 +89,6 @@ async function getFlexLocations(context: IAppServiceWizardContext): Promise<stri
 
     const client = await createGenericClient(context, context);
     const result = await client.sendRequest(createPipelineRequest(options)) as AzExtPipelineResponse;
-    const locations = ((result.parsedBody as { value: Location[] }).value.map(loc => loc.name) as string[])
+    const locations = ((result.parsedBody as { value: Location[] }).value.map(loc => loc.name) as string[]);
     return locations;
 }

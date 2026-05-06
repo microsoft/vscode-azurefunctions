@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IAppServiceWizardContext } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizard, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ProgressLocation, l10n, window } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -18,7 +17,7 @@ import { type IFuncDeployContext } from "./deploy";
 
 export async function getOrCreateFunctionApp(context: IFuncDeployContext & Partial<IFunctionAppWizardContext>): Promise<SlotTreeItem> {
     let node: SlotTreeItem | undefined;
-    const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(context, {
+    const wizard = new AzureWizard<IFuncDeployContext & Partial<IFunctionAppWizardContext>>(context, {
         promptSteps: [new SubscriptionListStep(), new FunctionAppListStep()],
         title: l10n.t('Select Function App')
     });
@@ -28,15 +27,15 @@ export async function getOrCreateFunctionApp(context: IFuncDeployContext & Parti
     if (context.site) {
         await window.withProgress({ location: ProgressLocation.Notification, cancellable: false, title: localize('deploySetUp', 'Loading deployment configurations...') },
             async () => {
-                node = await ext.rgApi.tree.findTreeItem(nonNullValueAndProp(context.site, 'id'), context)
+                node = await ext.rgApi.tree.findTreeItem(nonNullValueAndProp(context.site, 'id'), context);
             });
     } else {
-        node = undefined
+        node = undefined;
     }
 
     // if there was no node, then the user is creating a new function app
     if (!node) {
-        context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'))
+        context.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(context, 'newSiteName'));
         context.disableSharedKeyAccess = context.useManagedIdentity && context.useFlexConsumptionPlan;
         await wizard.execute();
 

@@ -4,6 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandAttributes } from '../commands/CommandAttributes';
@@ -15,14 +18,51 @@ import { localize } from '../localize';
 import { createActivityContext } from '../utils/activityUtils';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { addErrorLinesFromChunk } from './funcHostErrorUtils';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
     processId: number;
     portNumber: string;
+    startTime: Date;
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
     logs: string[];
+    /**
+     * A small set of recent error lines detected in the host output.
+     * Used by the Function Host Debug view to surface errors under the host node.
+     */
+    errorLogs?: string[];
+    /**
+     * Tracks whether we've already surfaced the "first error" UX for this host session (e.g. opening the Debug view).
+     * This avoids repeatedly stealing focus / opening the view for every subsequent error.
+     */
+    hasReportedLiveErrors?: boolean;
+    /**
+     * AbortController used to signal when the stream iteration should stop.
+     * This prevents the async iteration loop from hanging indefinitely when the task ends.
+     */
+    streamAbortController?: AbortController;
+    /**
+     * File path where the .NET isolated worker process ID is written when using --dotnet-isolated-debug.
+     * This avoids reading the stream directly (which can conflict) and instead uses a file-based approach.
+     */
+    workerPidFile?: string;
+}
+
+export interface IStoppedFuncTask {
+    portNumber: string;
+    startTime: Date;
+    stopTime: Date;
+    workspaceFolder: vscode.WorkspaceFolder | vscode.TaskScope;
+    cwd?: string;
+    logs: string[];
+    errorLogs: string[];
+}
+
+export interface IRunningFuncTaskWithScope {
+    scope: vscode.WorkspaceFolder | vscode.TaskScope;
+    task: IRunningFuncTask;
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -31,7 +71,7 @@ interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
 
 namespace DotnetDebugDebugConfiguration {
     export function is(debugConfiguration: vscode.DebugConfiguration): debugConfiguration is DotnetDebugDebugConfiguration {
-        return debugConfiguration.type === 'coreclr' && 'launchServiceData' in debugConfiguration
+        return debugConfiguration.type === 'coreclr' && 'launchServiceData' in debugConfiguration;
     }
 }
 
@@ -40,7 +80,7 @@ class RunningFunctionTaskMap {
 
     public set(key: vscode.WorkspaceFolder | vscode.TaskScope, value: IRunningFuncTask): void {
         const values = this._map.get(key) || [];
-        values.push(value)
+        values.push(value);
         this._map.set(key, values);
     }
 
@@ -49,9 +89,22 @@ class RunningFunctionTaskMap {
         return values.find(t => {
             const taskExecution = t.taskExecution.task.execution as vscode.ShellExecution;
             // the cwd will include ${workspaceFolder} from our tasks.json so we need to replace it with the actual path
-            const taskDirectory = taskExecution.options?.cwd?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-            buildPath = buildPath?.replace('${workspaceFolder}', (t.taskExecution.task?.scope as vscode.WorkspaceFolder).uri?.path)
-            return taskDirectory && buildPath && normalizePath(taskDirectory) === normalizePath(buildPath);
+            const workspacePath = typeof t.taskExecution.task?.scope === 'object'
+                ? (t.taskExecution.task.scope as vscode.WorkspaceFolder).uri?.path
+                : undefined;
+            const taskDirectory = workspacePath
+                ? taskExecution.options?.cwd?.replace('${workspaceFolder}', workspacePath)
+                : taskExecution.options?.cwd;
+            const resolvedBuildPath = workspacePath
+                ? buildPath?.replace('${workspaceFolder}', workspacePath)
+                : buildPath;
+
+            // When neither cwd is set, both tasks use the default working directory — treat as a match
+            if (!taskDirectory && !resolvedBuildPath) {
+                return true;
+            }
+
+            return taskDirectory && resolvedBuildPath && normalizePath(taskDirectory) === normalizePath(resolvedBuildPath);
         });
     }
 
@@ -64,7 +117,7 @@ class RunningFunctionTaskMap {
     }
 
     public delete(key: vscode.WorkspaceFolder | vscode.TaskScope, buildPath?: string): void {
-        const value = this.get(key, buildPath)
+        const value = this.get(key, buildPath);
         const values = this._map.get(key) || [];
 
         if (value) {
@@ -81,16 +134,68 @@ class RunningFunctionTaskMap {
 
 export const runningFuncTaskMap: RunningFunctionTaskMap = new RunningFunctionTaskMap();
 
+/**
+ * Sessions that have stopped but are preserved in the tree view so users can
+ * review errors that occurred before the host exited.  Newest first.
+ */
+export const stoppedFuncTasks: IStoppedFuncTask[] = [];
+
+export function clearStoppedSessions(): void {
+    stoppedFuncTasks.length = 0;
+    runningFuncTasksChangedEmitter.fire();
+}
+
 const funcTaskStartedEmitter = new vscode.EventEmitter<{ scope: vscode.WorkspaceFolder | vscode.TaskScope, execution?: vscode.ShellExecution }>();
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
+
+const runningFuncTasksChangedEmitter = new vscode.EventEmitter<void>();
+export const onRunningFuncTasksChanged = runningFuncTasksChangedEmitter.event;
+
+export function disposeFuncHostTaskEmitters(): void {
+    funcTaskStartedEmitter.dispose();
+    runningFuncTasksChangedEmitter.dispose();
+}
 
 export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFolder>();
 const defaultFuncPort: string = '7071';
 
 const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
+const dotnetIsolatedDebugFlag: string = '--dotnet-isolated-debug';
+
+function hasDotnetIsolatedDebugFlag(task: vscode.Task): boolean {
+    const execution = task.execution as vscode.ShellExecution | undefined;
+    if (!execution) {
+        return false;
+    }
+    if (execution.commandLine) {
+        return execution.commandLine.includes(dotnetIsolatedDebugFlag);
+    }
+    if (execution.args) {
+        return execution.args.some(a => (typeof a === 'string' ? a : a.value) === dotnetIsolatedDebugFlag);
+    }
+    return false;
+}
+
 export function isFuncHostTask(task: vscode.Task): boolean {
-    const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
-    return funcCommandRegex.test(commandLine || '');
+    const execution = task.execution as vscode.ShellExecution | undefined;
+    if (!execution) {
+        return false;
+    }
+
+    // String-based ShellExecution: `commandLine` contains the full command
+    if (execution.commandLine) {
+        return funcCommandRegex.test(execution.commandLine);
+    }
+
+    // Args-based ShellExecution: `command` + `args` are separate
+    // Reconstruct the command string to test against the regex
+    const command = typeof execution.command === 'string' ? execution.command : execution.command?.value;
+    if (command && execution.args) {
+        const argsStr = execution.args.map(a => typeof a === 'string' ? a : a.value).join(' ');
+        return funcCommandRegex.test(`${command} ${argsStr}`);
+    }
+
+    return false;
 }
 
 export function isFuncShellEvent(event: vscode.TerminalShellExecutionStartEvent): boolean {
@@ -118,16 +223,26 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
             const logs: string[] = [];
+            const workerPidFile = hasDotnetIsolatedDebugFlag(e.execution.task)
+                ? path.join(os.tmpdir(), `azfunc-worker-pid-${e.processId}.json`)
+                : undefined;
             const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
+                startTime: new Date(),
                 stream: latestTerminalShellExecutionEvent?.execution.read(),
-                logs
+                logs,
+                errorLogs: [],
+                hasReportedLiveErrors: false,
+                streamAbortController: new AbortController(),
+                workerPidFile,
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
             funcTaskStartedEmitter.fire({ scope: e.execution.task.scope, execution: e.execution.task.execution as vscode.ShellExecution });
+
+            runningFuncTasksChangedEmitter.fire();
         }
     });
 
@@ -135,8 +250,28 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            const cwd = (e.execution.task.execution as vscode.ShellExecution).options?.cwd;
             const scope = nonNullValue(e.execution.task.scope);
-            const task = runningFuncTaskMap.get(scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            const task = runningFuncTaskMap.get(scope, cwd);
+
+            // Abort the stream iteration to prevent it from hanging indefinitely
+            if (task?.streamAbortController) {
+                task.streamAbortController.abort();
+            }
+
+            // Preserve the session so users can review errors after the host exits.
+            if (task) {
+                stoppedFuncTasks.unshift({
+                    portNumber: task.portNumber,
+                    startTime: task.startTime,
+                    stopTime: new Date(),
+                    workspaceFolder: scope,
+                    cwd,
+                    logs: task.logs.slice(),
+                    errorLogs: (task.errorLogs ?? []).slice(),
+                });
+            }
+
             const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
             wizardContext.activityAttributes = CommandAttributes.Debug;
             wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
@@ -153,18 +288,81 @@ export function registerFuncHostTaskEvents(): void {
                 // swallow errors
                 console.log(error);
             }
-            runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
+            runningFuncTaskMap.delete(scope, cwd);
+
+            runningFuncTasksChangedEmitter.fire();
         }
     });
 
-    onFuncTaskStarted(async ({ scope, execution }) => {
+    registerEvent('azureFunctions.onFuncTaskStarted', onFuncTaskStarted, async (
+        context: IActionContext,
+        event: { scope: vscode.WorkspaceFolder | vscode.TaskScope; execution?: vscode.ShellExecution }
+    ) => {
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
+
+        const { scope, execution } = event;
+
         const task = runningFuncTaskMap.get(scope, execution?.options?.cwd);
         if (!task) {
             return;
         }
 
-        for await (const chunk of task.stream ?? []) {
-            task.logs.push(chunk);
+        const maxLogEntries = 1000;
+        const workerStartupName = 'dotnet-worker-startup';
+
+        try {
+            for await (const chunk of task.stream ?? []) {
+                // Check if the stream iteration should be aborted
+                if (task.streamAbortController?.signal.aborted) {
+                    break;
+                }
+
+                task.logs.push(chunk);
+                if (task.logs.length > maxLogEntries) {
+                    task.logs.splice(0, task.logs.length - maxLogEntries);
+                }
+
+                // If this task is using the dotnet isolated debug flag, write the worker PID to a file
+                // so that pickFuncProcess.ts can read it without consuming the stream again.
+                if (task.workerPidFile && chunk.includes(workerStartupName)) {
+                    try {
+                        let obj: unknown;
+                        try { obj = JSON.parse(chunk); } catch { /* not full JSON, try regex */ }
+                        if (
+                            typeof obj === 'object' && obj !== null &&
+                            (obj as Record<string, unknown>)['name'] === workerStartupName &&
+                            typeof (obj as Record<string, unknown>)['workerProcessId'] === 'number'
+                        ) {
+                            fs.writeFileSync(task.workerPidFile, JSON.stringify({ workerProcessId: (obj as Record<string, unknown>)['workerProcessId'] }));
+                        } else {
+                            // fallback: regex match for workerProcessId
+                            const match = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
+                            if (match) {
+                                fs.writeFileSync(task.workerPidFile, JSON.stringify({ workerProcessId: Number(match[1]) }));
+                            }
+                        }
+                    } catch {
+                        // ignore file write errors
+                    }
+                }
+
+                // Split chunk into log entries by timestamp, check each for red
+                // ANSI, and deduplicate against existing errors.
+                const errorArr = task.errorLogs ?? (task.errorLogs = []);
+                if (addErrorLinesFromChunk(errorArr, chunk)) {
+                    runningFuncTasksChangedEmitter.fire();
+                }
+            }
+        } catch (error) {
+            // If the stream encounters an error or is aborted, gracefully exit the loop
+            // This prevents the event handler from hanging indefinitely
+            if (task.streamAbortController?.signal.aborted) {
+                // Expected when the task ends - no need to log
+                return;
+            }
+            // Log unexpected errors but don't throw to avoid crashing the extension
+            console.error('Error reading func host task stream:', error);
         }
     });
 
@@ -174,23 +372,22 @@ export function registerFuncHostTaskEvents(): void {
 
         // Used to stop the task started with pickFuncProcess.ts startFuncProcessFromApi.
         if (DotnetDebugDebugConfiguration.is(debugSession.configuration) && debugSession.configuration.launchServiceData.buildPath) {
-            const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath)
+            const buildPathUri: vscode.Uri = vscode.Uri.file(debugSession.configuration.launchServiceData.buildPath);
 
-            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath)
+            const workspaceFolder = buildPathToWorkspaceFolderMap.get(debugSession.configuration.launchServiceData.buildPath);
             if (workspaceFolder === undefined) {
                 throw new Error(localize('noWorkspaceFolderForBuildPath', 'No workspace folder found for path "{0}".', buildPathUri.fsPath));
             }
 
             await stopFuncTaskIfRunning(workspaceFolder, buildPathUri.fsPath, false, false);
 
-            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath)
+            buildPathToWorkspaceFolderMap.delete(debugSession.configuration.launchServiceData.buildPath);
         }
 
         // NOTE: Only stop the func task if this is the root debug session (aka does not have a parentSession) to fix https://github.com/microsoft/vscode-azurefunctions/issues/2925
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && !debugSession.parentSession && debugSession.workspaceFolder) {
             // TODO: Find the exact function task from the debug session, but for now just stop all tasks in the workspace folder
             await stopFuncTaskIfRunning(debugSession.workspaceFolder, undefined, true, false);
-
         }
     });
 }
@@ -206,7 +403,7 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
 
     if (runningFuncTask !== undefined && runningFuncTask.length > 0) {
         for (const runningFuncTaskItem of runningFuncTask) {
-            if (!runningFuncTaskItem) break;
+            if (!runningFuncTaskItem) { break; }
             if (terminate) {
                 runningFuncTaskItem.taskExecution.terminate();
             } else {
@@ -223,6 +420,8 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
     if (killAll) {
         runningFuncTaskMap.delete(workspaceFolder);
     }
+
+    runningFuncTasksChangedEmitter.fire();
 }
 
 /**
@@ -240,7 +439,7 @@ async function killFuncProcessByPortOrPid(runningFuncTask: IRunningFuncTask, wor
         }
 
         throw new Error(`Could not find func process for port ${runningFuncTask.portNumber}`);
-    } catch (error) {
+    } catch (_error) {
         // don't look for the port and just terminate the whole process
         await stopFuncTaskIfRunning(workspaceFolder, undefined, true, true);
     }
@@ -292,7 +491,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
 
         if (process.platform === 'win32') {
             // Windows: Use netstat to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', '-ano');
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'netstat', composeArgs(withArg('-ano'))());
             if (result.code === 0) {
                 const lines = result.cmdOutput.split('\n');
                 for (const line of lines) {
@@ -310,8 +509,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
                     undefined,
                     undefined,
                     'powershell',
-                    '-Command',
-                    `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`
+                    composeArgs(withArg('-Command', `Get-NetTCPConnection -LocalPort ${portNumber} -State Listen | Select-Object -ExpandProperty OwningProcess`))()
                 );
                 if (psResult.code === 0 && psResult.cmdOutput.trim()) {
                     const pid = parseInt(psResult.cmdOutput.trim(), 10);
@@ -324,7 +522,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
             }
         } else {
             // Linux/Mac: Use lsof to find the process using the port
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', '-ti', `:${portNumber}`);
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'lsof', composeArgs(withArg('-ti', `:${portNumber}`))());
             if (result.code === 0 && result.cmdOutput.trim()) {
                 const pid = parseInt(result.cmdOutput.trim(), 10);
                 if (!isNaN(pid)) {
@@ -332,7 +530,7 @@ async function findPidByPort(port: string | number): Promise<number | undefined>
                 }
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // ignore error
     }
 

@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type StorageAccount, type StorageAccountListKeysResult, type StorageManagementClient } from "@azure/arm-storage";
-import { getResourceGroupFromId, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
+import { createStorageClient, getResourceGroupFromId, type IStorageAccountWizardContext } from "@microsoft/vscode-azext-azureutils";
 import { nonNullProp, nonNullValue, randomUtils } from "@microsoft/vscode-azext-utils";
 import { localStorageEmulatorConnectionString } from "../../../../constants";
-import { createStorageClient } from "../../../../utils/azureClients";
 
 export interface IResourceResult {
     name: string;
@@ -19,7 +18,7 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
         return {
             name: randomUtils.getRandomHexString(6),
             connectionString: localStorageEmulatorConnectionString
-        }
+        };
     }
 
     const client: StorageManagementClient = await createStorageClient(context);

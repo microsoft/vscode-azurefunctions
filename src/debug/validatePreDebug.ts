@@ -38,6 +38,9 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     let shouldContinue: boolean;
     context.telemetry.properties.debugType = debugConfig.type;
 
+    const validateEmulators: boolean = !!getWorkspaceSetting<boolean>('validateEmulators', workspace.uri.fsPath);
+    context.telemetry.properties.validateEmulators = String(validateEmulators);
+
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
@@ -62,28 +65,30 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
-                switch (durableStorageType) {
-                    case DurableBackend.DTS:
-                        context.telemetry.properties.lastValidateStep = 'dtsConnection';
-                        await validateDTSConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Netherite:
-                        context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                        await validateNetheriteConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.SQL:
-                        context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await validateSQLConnectionPreDebug(context, context.projectPath);
-                        break;
-                    case DurableBackend.Storage:
-                    default:
+                if (validateEmulators) {
+                    switch (durableStorageType) {
+                        case DurableBackend.DTS:
+                            context.telemetry.properties.lastValidateStep = 'dtsConnection';
+                            await validateDTSConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.Netherite:
+                            context.telemetry.properties.lastValidateStep = 'netheriteConnection';
+                            await validateNetheriteConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.SQL:
+                            context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
+                            await validateSQLConnectionPreDebug(context, context.projectPath);
+                            break;
+                        case DurableBackend.Storage:
+                        default:
+                    }
+
+                    context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
+                    await validateAzureWebJobsStorage(context, context.projectPath);
+
+                    context.telemetry.properties.lastValidateStep = 'emulatorRunning';
+                    shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
                 }
-
-                context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, context.projectPath);
-
-                context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
             }
         }
     } catch (error) {
@@ -170,7 +175,7 @@ async function validateEmulatorIsRunning(context: IActionContext, projectPath: s
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
-        } catch (error) {
+        } catch (_error) {
             // azurite.azurite Check to see if azurite extension is installed
             const azuriteExtension = vscode.extensions.getExtension('azurite.azurite');
             const installOrRun: vscode.MessageItem = azuriteExtension ? { title: localize('runAzurite', 'Run Emulator') } : { title: localize('installAzurite', 'Install Azurite') };

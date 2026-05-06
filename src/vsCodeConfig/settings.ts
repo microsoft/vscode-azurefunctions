@@ -122,7 +122,7 @@ export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
 
 export function promptToUpdateDotnetRuntime(azureRuntime: string | undefined, localRuntime: string | undefined): boolean {
     return azureRuntime === 'dotnet' && localRuntime === 'dotnet-isolated' ||
-        azureRuntime === 'dotnet-isolated' && localRuntime === 'dotnet'
+        azureRuntime === 'dotnet-isolated' && localRuntime === 'dotnet';
 }
 
 export function getFuncWatchProblemMatcher(language: string | undefined): string {

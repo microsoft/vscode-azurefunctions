@@ -41,7 +41,7 @@ export class DTSConnectionCustomPromptStep<T extends IDTSConnectionWizardContext
             if (!['http:', 'https:'].includes(url.protocol)) {
                 return localize('invalidDTSEndpointProtocol', 'DTS endpoint must use HTTP or HTTPS protocol. Found: {0}', url.protocol);
             }
-        } catch (error) {
+        } catch (_error) {
             return localize('invalidDTSEndpointURL', 'DTS endpoint is not a valid URL: {0}', endpoint);
         }
 
