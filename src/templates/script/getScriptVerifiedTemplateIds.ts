@@ -38,6 +38,7 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
             //TODO: Add unit test for EventGridBlobTrigger
             'EventGridBlobTrigger',
             'SqlTrigger',
+            'McpPromptTrigger',
             'McpToolTrigger',
             'McpResourceTrigger',
             'MCPTrigger'
