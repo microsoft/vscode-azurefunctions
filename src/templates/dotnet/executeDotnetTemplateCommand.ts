@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, withFlagArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
+import { composeArgs, withArg, withNamedArg, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -58,8 +58,7 @@ export async function executeDotnetTemplateCreate(
     projTemplateKey: string,
     workingDirectory: string | undefined,
     identity: string,
-    templateArgs: Record<string, string>
-): Promise<void> {
+    templateArgs: Record<string, string>): Promise<void> {
     const templateDir = getDotnetTemplateDir(context, version, projTemplateKey);
     const itemNupkg = path.join(templateDir, itemNupkgFileName);
     const projectNupkg = path.join(templateDir, projectNupkgFileName);
@@ -102,8 +101,6 @@ export async function executeDotnetTemplateCreate(
             ...Object.entries(templateArgs)
                 .filter(([, value]) => value !== undefined && value !== '')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
-            // Without --force, dotnet new exits with code 73 if any template file already exists.
-            withFlagArg('--force', force),
         )();
 
         await cpUtils.executeCommand(
