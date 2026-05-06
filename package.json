@@ -1048,6 +1048,10 @@
                 {
                     "command": "azureFunctions.funcHostDebug.askCopilot",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.getMcpHostKey",
+                    "when": "never"
                 }
             ],
             "editor/context": [
