@@ -3,16 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CommandAttributes } from '../commands/CommandAttributes';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { PostFuncDebugExecuteStep } from '../commands/debug/PostFuncDebugExecuteStep';
 import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
-import { createActivityContext } from '../utils/activityUtils';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -22,7 +19,6 @@ export interface IRunningFuncTask {
     portNumber: string;
     // stream for reading `func host start`  output
     stream: AsyncIterable<string> | undefined;
-    logs: string[];
 }
 
 interface DotnetDebugDebugConfiguration extends vscode.DebugConfiguration {
@@ -117,13 +113,11 @@ export function registerFuncHostTaskEvents(): void {
 
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
-            const logs: string[] = [];
             const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
                 portNumber,
                 stream: latestTerminalShellExecutionEvent?.execution.read(),
-                logs
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
@@ -135,36 +129,7 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            const scope = nonNullValue(e.execution.task.scope);
-            const task = runningFuncTaskMap.get(scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
-            wizardContext.activityAttributes = CommandAttributes.Debug;
-            wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
-
-            const wizard = new AzureWizard(wizardContext, {
-                title: localize('funcTaskEnded', 'Function host task ended.'),
-
-                promptSteps: [],
-                executeSteps: [new PostFuncDebugExecuteStep(task?.logs ?? [])]
-            });
-            try {
-                await wizard.execute();
-            } catch (error) {
-                // swallow errors
-                console.log(error);
-            }
             runningFuncTaskMap.delete(e.execution.task.scope, (e.execution.task.execution as vscode.ShellExecution).options?.cwd);
-        }
-    });
-
-    onFuncTaskStarted(async ({ scope, execution }) => {
-        const task = runningFuncTaskMap.get(scope, execution?.options?.cwd);
-        if (!task) {
-            return;
-        }
-
-        for await (const chunk of task.stream ?? []) {
-            task.logs.push(chunk);
         }
     });
 

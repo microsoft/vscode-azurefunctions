@@ -7,7 +7,7 @@ import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@micros
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { hostStartTaskName } from '../constants';
+import { dotnetIsolatedDebugFlag, enableJsonOutputFlag, hostStartTaskName } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
@@ -20,9 +20,6 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
 export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
-// flag used by func core tools to indicate to wait for the debugger to attach before starting the worker
-const dotnetIsolatedDebugFlag = '--dotnet-isolated-debug';
-const enableJsonOutput = '--enable-json-output';
 
 export async function startFuncProcessFromApi(
     buildPath: string,
@@ -151,7 +148,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         const funcShellExecution = funcTask.execution as vscode.ShellExecution;
-        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutput);
+        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutputFlag);
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
