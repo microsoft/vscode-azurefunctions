@@ -22,7 +22,7 @@ const dotnetPublishTaskLabel: string = convertToFunctionsTaskLabel('publish');
 export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = dotnetPublishTaskLabel;
     stepName: string = 'DotnetInitVSCodeStep';
-    private _debugSubpath: string;
+    private _debugSubpath!: string;
 
     protected getDebugConfiguration(version: FuncVersion): DebugConfiguration {
         return {

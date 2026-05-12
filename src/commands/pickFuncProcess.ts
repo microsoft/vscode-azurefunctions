@@ -175,14 +175,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         const funcShellExecution = funcTask.execution as vscode.ShellExecution;
-<<<<<<< HEAD
         const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutputFlag);
-=======
-        const allFuncArgs = funcShellExecution.commandLine
-            ?? [funcShellExecution.command, ...(funcShellExecution.args ?? [])]
-                .map(a => (typeof a === 'string' ? a : a?.value ?? '')).join(' ');
-        const debugModeOn = allFuncArgs.includes(dotnetIsolatedDebugFlag) && allFuncArgs.includes(enableJsonOutput);
->>>>>>> 833cb62f4ae225c4afbb3450d40efef906ec1013
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -286,12 +279,12 @@ async function pickChildProcess(taskInfo: IRunningFuncTask): Promise<string> {
 type ActualUnixPS = PS & { COMM?: string };
 
 async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
-    const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
-        psTree(pid, (error: Error | null, result: PS[]) => {
+    const processes: ActualUnixPS[] = await new Promise<ActualUnixPS[]>((resolve, reject): void => {
+        psTree(pid, (error: Error | null, result: readonly PS[]) => {
             if (error) {
                 reject(error);
             } else {
-                resolve(result);
+                resolve([...result] as ActualUnixPS[]);
             }
         });
     });

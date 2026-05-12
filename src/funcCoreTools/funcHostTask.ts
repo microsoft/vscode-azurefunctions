@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -269,22 +269,6 @@ export function registerFuncHostTaskEvents(): void {
                 });
             }
 
-            const wizardContext = Object.assign(context, await createActivityContext({ withChildren: true }));
-            wizardContext.activityAttributes = CommandAttributes.Debug;
-            wizardContext.activityTitle = localize('funcTaskEnded', 'Function host task ended.');
-
-            const wizard = new AzureWizard(wizardContext, {
-                title: localize('funcTaskEnded', 'Function host task ended.'),
-
-                promptSteps: [],
-                executeSteps: [new PostFuncDebugExecuteStep(task?.logs ?? [])]
-            });
-            try {
-                await wizard.execute();
-            } catch (error) {
-                // swallow errors
-                console.log(error);
-            }
             runningFuncTaskMap.delete(scope, cwd);
 
             runningFuncTasksChangedEmitter.fire();
