@@ -13,7 +13,7 @@ export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFlexFunct
         const flexSku = nonNullProp(context, 'newFlexSku');
         const options: IAzureQuickPickOptions = {
             placeHolder: localize('instanceMemory', 'Select an instance memory size'),
-        }
+        };
 
         context.newFlexInstanceMemoryMB = (await context.ui.showQuickPick(this.getPicks(flexSku), options)).data;
     }
@@ -30,7 +30,7 @@ export class InstanceMemoryMBPromptStep extends AzureWizardPromptStep<IFlexFunct
     }
 
     private getPicks(flexSku: Sku): IAzureQuickPickItem<number>[] {
-        const picks = flexSku.instanceMemoryMB.map(im => { return { label: im.size.toString(), data: Number.parseInt(im.size), description: im.isDefault ? 'Default' : undefined } });
+        const picks = flexSku.instanceMemoryMB.map(im => { return { label: im.size.toString(), data: Number.parseInt(im.size), description: im.isDefault ? 'Default' : undefined }; });
         return picks.sort((a, b) => Number(!!b.description) - Number(!!a.description));
     }
 }

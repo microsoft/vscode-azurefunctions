@@ -66,9 +66,13 @@ function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
 
 function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     const userPromptedSettings: IBindingSetting[] = [];
+    let supportsNamespace = false;
     for (const rawSetting of rawTemplate.Parameters) {
         const setting: IBindingSetting = parseDotnetSetting(<IRawSetting>rawSetting);
         // Exclude some of the default parameters like 'name' and 'namespace' that apply for every function and are handled separately
+        if (/^namespace$/i.test(setting.name)) {
+            supportsNamespace = true;
+        }
         if (!/^(name|namespace|type|language)$/i.test(setting.name)) {
             userPromptedSettings.push(setting);
         }
@@ -84,9 +88,11 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         defaultFunctionName: rawTemplate.DefaultName,
         language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
+        supportsNamespace,
         categories: [TemplateCategory.Core], // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
         isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false,
-        templateSchemaVersion: TemplateSchemaVersion.v1
+        templateSchemaVersion: TemplateSchemaVersion.v1,
+        templateFilter: TemplateFilter.All
     };
 }
 
@@ -99,7 +105,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
     for (const rawTemplate of rawTemplates) {
         try {
             functionTemplates.push(parseDotnetTemplate(<IRawTemplate>rawTemplate));
-        } catch (error) {
+        } catch (_error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }
@@ -123,7 +129,7 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
         const templateProvider = ext.templateProvider.get(jsContext);
-        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
+        const jsTemplates: FunctionTemplateBase[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, undefined, version, undefined);
         for (const csharpTemplate of csharpTemplates) {
             assertTemplateIsV1(csharpTemplate);
             csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;

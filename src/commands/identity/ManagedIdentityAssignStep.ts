@@ -57,7 +57,7 @@ export class ManagedIdentityAssignStep extends AzureWizardExecuteStep<ManagedIde
 
 const addUserAssignedType = (type: ManagedServiceIdentityType | undefined): ManagedServiceIdentityType => {
     if (type?.includes('UserAssigned')) {
-        return type
+        return type;
     }
     if (type === 'SystemAssigned') {
         return 'SystemAssigned, UserAssigned';

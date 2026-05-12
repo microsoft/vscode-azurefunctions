@@ -9,7 +9,7 @@ import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { type LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 
 export class LocalFunctionTreeItem extends FunctionTreeItemBase {
-    public readonly parent: LocalFunctionsTreeItem;
+    declare public readonly parent: LocalFunctionsTreeItem;
     public readonly functionJsonPath: string | undefined;
 
     private constructor(parent: LocalFunctionsTreeItem, localFunction: ILocalFunction) {

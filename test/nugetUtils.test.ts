@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { nugetUtils } from '../extension.bundle';
+import { nugetUtils } from '../src/utils/nugetUtils';
 
 suite('nugetUtils.tryGetMaxInRange', () => {
     interface ITestCase {

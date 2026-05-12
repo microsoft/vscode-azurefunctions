@@ -28,8 +28,8 @@ import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectio
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 
 
-const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show hidden values'), data: 'hiddenValues' }
-const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' }
+const showHiddenValuesItem = { label: localize('showHiddenValues', '$(eye) Show hidden values'), data: 'hiddenValues' };
+const hideHiddenValuesItem = { label: localize('hideHiddenValues', '$(eye-closed) Hide hidden values'), data: 'hiddenValues' };
 export class LocalAppSettingListStep extends BindingSettingStepBase {
     private _showHiddenValues: boolean = false;
     public async promptCore(context: IFunctionWizardContext): Promise<BindingSettingValue> {
@@ -53,6 +53,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
             } else {
                 return result;
             }
+        // eslint-disable-next-line no-constant-condition
         } while (true);
     }
 

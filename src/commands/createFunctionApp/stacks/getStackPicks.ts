@@ -76,7 +76,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
                 }
 
                 if (shouldShowEolWarning(minorVersion)) {
-                    description = localize('endOfLife', `$(extensions-warning-message)`)
+                    description = localize('endOfLife', `$(extensions-warning-message)`);
                     hasEndOfLife = true;
                 }
 
@@ -212,7 +212,7 @@ async function getFlexStacks(context: ISubscriptionActionContext & { _stacks?: F
                 });
             }
             flexFunctionAppStacks.push(...stacksArmResponse.value.map(d => d.properties));
-        }
+        };
 
         for (const stack of stacks) {
             await getFlexStack(stack);
@@ -277,7 +277,7 @@ export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<Functio
         const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
         return endOfLife <= sixMonthsFromNow;
     }
-    return false
+    return false;
 }
 
 export interface eolWarningOptions {
@@ -293,8 +293,8 @@ export interface eolWarningOptions {
  * This function checks the end of life date for stack and returns a message if the stack is end of life or will be end of life in 6 months.
  */
 export async function getEolWarningMessages(context: ISubscriptionActionContext, options: eolWarningOptions): Promise<string> {
-    let isEOL = false;
-    let willBeEOL = false;
+    let isEOL: boolean;
+    let willBeEOL: boolean;
     let version: string | undefined;
     let displayInfo: {
         endOfLife: Date | undefined;
@@ -361,7 +361,7 @@ export async function getEolWarningMessages(context: ISubscriptionActionContext,
                 return localize('willBeEolWarning', 'Upgrade to the latest available version as version {0} will reach end-of-life on {1} and will no longer be supported.', displayInfo.displayVersion, displayInfo.endOfLife.toLocaleDateString());
             }
         }
-    } catch (error) {
+    } catch (_error) {
         // do nothing, we don't want to show an error message if we can't get the EOL date
     }
 
@@ -399,16 +399,16 @@ async function getEOLDate(context: ISubscriptionActionContext, options: eolWarni
             filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate :
             filteredStack?.stackSettings.windowsRuntimeSettings?.endOfLifeDate;
         if (endOfLifeDate) {
-            endOfLife = new Date(endOfLifeDate)
+            endOfLife = new Date(endOfLifeDate);
         }
-    } catch (error) {
+    } catch (_error) {
         // No need to handle the error here
     }
 
     return {
         endOfLife,
         displayVersion
-    }
+    };
 
 }
 
@@ -426,14 +426,14 @@ async function getEOLLinuxFxVersion(context: ISubscriptionActionContext, linuxFx
         displayVersion = filteredStack?.displayText ?? localize('unknownVersion', 'Unknown version');
         const endOfLifeDate = filteredStack?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
         if (endOfLifeDate) {
-            endOfLife = new Date(endOfLifeDate)
+            endOfLife = new Date(endOfLifeDate);
         }
-    } catch (error) {
+    } catch (_error) {
         // No need to handle the error here
     }
 
     return {
         endOfLife,
         displayVersion
-    }
+    };
 }

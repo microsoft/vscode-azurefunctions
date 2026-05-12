@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import { CentralTemplateProvider, FuncVersion, ProjectLanguage, supportedLanguages as resourceLanguages, type TemplateProviderBase } from '../extension.bundle';
+import { createTestActionContext } from '@microsoft/vscode-azext-utils';
+import { ProjectLanguage } from '../src/constants';
+import { FuncVersion } from '../src/FuncVersion';
+import { CentralTemplateProvider } from '../src/templates/CentralTemplateProvider';
+import { supportedLanguages as resourceLanguages } from '../src/templates/script/getScriptResourcesLanguage';
+import { TemplateProviderBase } from '../src/templates/TemplateProviderBase';
 import { getTestWorkspaceFolder, updateBackupTemplates } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 

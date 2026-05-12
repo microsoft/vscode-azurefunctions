@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext } from '@microsoft/vscode-azext-dev';
+import { createTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import { FuncVersion, hasMinFuncCliVersion } from '../extension.bundle';
+import { FuncVersion } from '../src/FuncVersion';
+import { hasMinFuncCliVersion } from '../src/funcCoreTools/hasMinFuncCliVersion';
 
 suite('hasMinFuncCliVersion', () => {
     test('Smaller major version', async () => {

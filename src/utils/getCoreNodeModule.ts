@@ -10,16 +10,16 @@ import * as vscode from 'vscode';
  */
 export function getCoreNodeModule<T>(moduleName: string): T | undefined {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+         
         return require(`${vscode.env.appRoot}/node_modules.asar/${moduleName}`);
-    } catch (err) {
+    } catch (_err) {
         // ignore
     }
 
     try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+         
         return require(`${vscode.env.appRoot}/node_modules/${moduleName}`);
-    } catch (err) {
+    } catch (_err) {
         // ignore
     }
     return undefined;

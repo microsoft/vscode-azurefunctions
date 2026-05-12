@@ -6,7 +6,9 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, ProjectLanguage, durableUtils, funcVersionSetting, projectLanguageSetting } from '../../extension.bundle';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../src/constants';
+import { FuncVersion } from '../../src/FuncVersion';
+import { durableUtils } from '../../src/utils/durableUtils';
 import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';

@@ -17,7 +17,7 @@ import { type RemoteFunction } from './RemoteFunction';
 import { type RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
-    public readonly parent: RemoteFunctionsTreeItem;
+    declare public readonly parent: RemoteFunctionsTreeItem;
 
     private constructor(parent: RemoteFunctionsTreeItem, func: RemoteFunction) {
         super(parent, func, false);
@@ -42,7 +42,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         return {
             data: this.rawConfig,
             label: this.function.name,
-        }
+        };
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {

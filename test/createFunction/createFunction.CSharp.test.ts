@@ -5,7 +5,10 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { durableUtils, FuncVersion, ProjectLanguage, type TemplateSource } from '../../extension.bundle';
+import { ProjectLanguage } from '../../src/constants';
+import { TemplateSource } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
+import { durableUtils } from '../../src/utils/durableUtils';
 import { backupLatestTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { FunctionTesterBase, type CreateFunctionTestCase } from './FunctionTesterBase';
@@ -171,8 +174,13 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'AzureWebJobsStorage', // Use existing app setting
                 'TABLE'
             ]
-        },
-    ];
+        },        {
+            functionName: 'McpToolTrigger',
+            inputs: [
+                'TestCompany.TestFunction'
+            ],
+            skip: !isIsolated || source === TemplateSource.Backup,
+        },    ];
 
     const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
     let title: string = tester.suiteName + ` ${targetFramework}`;

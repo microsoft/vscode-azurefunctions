@@ -8,8 +8,7 @@ import * as path from 'path';
 import { type FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
 import { type FunctionTemplateBase } from '../../../templates/IFunctionTemplate';
-import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
-import { cpUtils } from '../../../utils/cpUtils';
+import { executeDotnetTemplateCreate, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { nonNullProp } from '../../../utils/nonNull';
 import { assertTemplateIsV1 } from '../../../utils/templateVersionUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
@@ -31,19 +30,23 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         assertTemplateIsV1(template);
 
         const functionName: string = nonNullProp(context, 'functionName');
-        const args: string[] = [];
-        args.push('--arg:name');
-        args.push(cpUtils.wrapArgInQuotes(functionName));
 
-        args.push('--arg:namespace');
-        args.push(cpUtils.wrapArgInQuotes(nonNullProp(context, 'namespace')));
+        // Build template args as a record
+        const templateArgs: Record<string, string> = {
+            name: functionName,
+        };
+
+        // Only pass --namespace if the template actually declares a `namespace` parameter.
+        // Some newer .NET templates (e.g. the .NET 10 Azure Functions template) do not, and passing
+        // it would produce `'--namespace' is not a valid option` errors from the dotnet CLI.
+        if (template.supportsNamespace !== false && context.namespace) {
+            templateArgs.namespace = context.namespace;
+        }
 
         for (const setting of template.userPromptedSettings) {
             const value = getBindingSetting(context, setting);
-            // NOTE: Explicitly checking against undefined. Empty string is a valid value
-            if (value !== undefined) {
-                args.push(`--arg:${setting.name}`);
-                args.push(cpUtils.wrapArgInQuotes(value));
+            if (value !== undefined && value !== null && value !== 'undefined' && value !== 'null') {
+                templateArgs[setting.name] = String(value);
             }
         }
 
@@ -53,7 +56,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             const templateProvider = ext.templateProvider.get(context);
             projectTemplateKey = await templateProvider.getProjectTemplateKey(context, context.projectPath, nonNullProp(context, 'language'), undefined, context.version, undefined);
         }
-        await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
+        await executeDotnetTemplateCreate(context, version, projectTemplateKey, context.projectPath, template.id, templateArgs);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

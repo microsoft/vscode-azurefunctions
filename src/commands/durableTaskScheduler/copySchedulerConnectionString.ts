@@ -29,7 +29,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             detail: localize('noAuthenticationDetail', 'No credentials will be used.'),
             label: localize('noAuthenticationLabel', 'None'),
             data: SchedulerAuthenticationType.None,
-        }
+        };
 
         const localDevelopment: IAzureQuickPickItem<SchedulerAuthenticationType> = {
             detail: localize('localDevelopmentDetail', 'Use the credentials of the local developer.'),
@@ -41,13 +41,13 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             detail: localize('userAssignedManagedIdentityDetail', 'Use managed identity credentials for a specific client.'),
             label: localize('userAssignedManagedIdentityLabel', 'User-assigned managed identity'),
             data: SchedulerAuthenticationType.UserAssignedIdentity,
-        }
+        };
 
         const systemAssignedManagedIdentity: IAzureQuickPickItem<SchedulerAuthenticationType> = {
             detail: localize('systemAssignedManagedIdentityDetail', 'Use managed identity credentials for a client assigned to a specific Azure resource.'),
             label: localize('systemAssignedManagedIdentityLabel', 'System-assigned managed identity'),
             data: SchedulerAuthenticationType.SystemAssignedIdentity,
-        }
+        };
 
         const authenticationType = (await actionContext.ui.showQuickPick(
             [
@@ -73,7 +73,7 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
             const noTaskHubItem: QuickPickItem = {
                 detail: localize('noTaskHubDetail', 'Do not connect to a specific task hub.'),
                 label: localize('noTaskHubLabel', 'None')
-            }
+            };
 
             const taskHubItems: QuickPickItem[] =
                 taskHubs.map(taskHub => ({ label: taskHub.name }));
@@ -101,13 +101,13 @@ export function copySchedulerConnectionStringCommandFactory(schedulerClient: Dur
 
         ext.outputChannel.show();
         ext.outputChannel.appendLog(localize('schedulerConnectionStringCopiedMessage', 'Connection string copied to clipboard: {0}', connectionString));
-    }
+    };
 }
 
 export const clientIdKey: string = '<ClientID>';
 
 export function getSchedulerConnectionString(endpointUrl: string, authenticationType: SchedulerAuthenticationType): string {
-    let schedulerConnectionString = `Endpoint=${endpointUrl};Authentication=`
+    let schedulerConnectionString = `Endpoint=${endpointUrl};Authentication=`;
 
     if (authenticationType === SchedulerAuthenticationType.None) {
         schedulerConnectionString += 'None';

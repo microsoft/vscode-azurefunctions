@@ -11,7 +11,7 @@ import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class StringPromptStep extends BindingSettingStepBase {
     // not used by v2 schema so enforce  IBindingSetting
-    protected readonly _setting: IBindingSetting;
+    declare protected readonly _setting: IBindingSetting;
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         return await context.ui.showInputBox({
             placeHolder: this._setting.label,
@@ -21,12 +21,18 @@ export class StringPromptStep extends BindingSettingStepBase {
         });
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async getDefaultValue(_wizardContext: IBindingWizardContext): Promise<string | undefined> {
-        return this._setting === undefined ? undefined : String(this._setting.defaultValue);
+        // Avoid returning the literal string "undefined" (e.g. from `String(undefined)`) when the
+        // template doesn't declare a default value — otherwise it would pre-fill the input box
+        // and end up being submitted verbatim as the setting's value.
+        if (this._setting === undefined || this._setting.defaultValue === undefined || this._setting.defaultValue === null) {
+            return undefined;
+        }
+        return String(this._setting.defaultValue);
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async validateInput(_wizardContext: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
         return this._setting.validateSetting(val);
     }

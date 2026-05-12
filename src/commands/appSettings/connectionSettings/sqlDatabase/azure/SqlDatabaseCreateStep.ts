@@ -49,7 +49,7 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseAzureConnectionWizardCo
             );
             ext.outputChannel.appendLog(customErrMessage);
             ext.outputChannel.appendLog(perr.message);
-            throw new Error(customErrMessage);
+            throw new Error(customErrMessage, { cause: e });
         }
     }
 

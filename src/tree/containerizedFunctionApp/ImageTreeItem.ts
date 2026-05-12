@@ -31,7 +31,7 @@ export class ImageTreeItem extends AzExtParentTreeItem {
                 contextValue: localize('name', 'name'),
                 iconPath: new ThemeIcon('dash')
             })
-        ]
+        ];
     }
 
     public hasMoreChildrenImpl(): boolean {

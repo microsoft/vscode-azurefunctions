@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IFunctionTemplate } from "../templates/IFunctionTemplate";
+import { isMcpTriggerType } from "../utils/mcpUtils";
 
 
 export interface IFunctionJson {
@@ -37,17 +38,17 @@ export class ParsedFunctionJson {
     public readonly data: IFunctionJson;
     public readonly template: IFunctionTemplate | undefined;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public constructor(data: any) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         if (typeof data === 'object' && data !== null && (data.triggerType !== undefined)) {
             this.template = <IFunctionTemplate>data;
             this.data = {};
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         else if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
             this.data = <IFunctionJson>data;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         } else {
             this.data = {};
         }
@@ -85,10 +86,10 @@ export class ParsedFunctionJson {
 
     public get isMcpTrigger(): boolean {
         if (this.template?.triggerType) {
-            return /^mcptooltrigger/i.test(this.template.triggerType) || /^mcptrigger/i.test(this.template.triggerType);
+            return isMcpTriggerType(this.template.triggerType);
         }
         if (this.triggerBinding && this.triggerBinding.type) {
-            return /^mcptooltrigger/i.test(this.triggerBinding.type) || /^mcptrigger/i.test(this.triggerBinding.type);
+            return isMcpTriggerType(this.triggerBinding.type);
         }
 
         return false;

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { type Progress } from 'vscode';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
@@ -40,7 +41,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
         void getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
 
         const venvName = nonNullProp(context, 'venvName');
-        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, '-m', 'venv', venvName);
+        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, composeArgs(withArg('-m', 'venv', venvName))());
         await venvUtils.runPipInstallCommandIfPossible(venvName, context.projectPath);
     }
 
@@ -49,7 +50,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
     }
 
     public configureBeforeExecute(context: IPythonVenvWizardContext): void | Promise<void> {
-        if (!context.venvName) {
+        if (!context.venvName && this.shouldExecute(context)) {
             context.venvName = '.venv';
         }
     }

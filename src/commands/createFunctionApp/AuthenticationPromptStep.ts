@@ -21,8 +21,8 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
     }
 
     public shouldPrompt(context: T): boolean {
-        // don't need to prompt if the user has already selected a managed identity
-        return !context.managedIdentity;
+        // don't need to prompt if the user has already chosen an authentication type
+        return context.useManagedIdentity === undefined;
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
@@ -38,7 +38,7 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
             return {
                 promptSteps,
                 executeSteps
-            }
+            };
         }
 
         return undefined;
@@ -54,6 +54,6 @@ export class AuthenticationPromptStep<T extends IFunctionAppWizardContext> exten
                 label: localize('managedIdentity', 'Managed identity'),
                 detail: localize('managedIdentityDetails', 'For best security practice, use managed identity authentication when available.'),
             },
-        ]
+        ];
     }
 }

@@ -63,7 +63,7 @@ export async function getNetheriteConnectionIfNeeded(context: NetheriteConnectio
     LocationListStep.resetLocation(wizardContext);
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
-    const wizard: AzureWizard<INetheriteAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<INetheriteAzureConnectionWizardContext>(wizardContext, {
         title: localize('prepareNetheriteConnection', 'Prepare Netherite deployment connections'),
         promptSteps: [new EventHubsConnectionListStep(availableDeployConnectionTypes)],
         showLoadingPrompt: true,

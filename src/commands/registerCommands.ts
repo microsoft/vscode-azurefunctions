@@ -103,18 +103,18 @@ export function registerCommands(
         'azureFunctions.appSettings.add',
         async (context: ISubscriptionActionContext, node?: AzExtParentTreeItem) => {
             if (node?.parent) {
-                await showEolWarningIfNecessary(context, node?.parent)
+                await showEolWarningIfNecessary(context, node?.parent);
             }
-            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node)
+            await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node);
         });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.decrypt', decryptLocalSettings);
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.appSettings.delete',
         async (context: ISubscriptionActionContext, node?: AzExtTreeItem) => {
             if (node?.parent?.parent) {
-                await showEolWarningIfNecessary(context, node?.parent?.parent)
+                await showEolWarningIfNecessary(context, node?.parent?.parent);
             }
-            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node)
+            await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node);
         });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.appSettings.edit', editAppSetting);

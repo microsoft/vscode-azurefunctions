@@ -5,13 +5,15 @@
 
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
 import { longRunningTestsEnabled } from '../global.test';
 
-import { createSubscriptionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { createAzureClient } from '@microsoft/vscode-azext-azureutils';
+import { createSubscriptionContext, createTestActionContext, subscriptionExperience, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
+import { updateGlobalSetting } from '../../src/vsCodeConfig/settings';
+import { getResourceGroupsTestApi } from '../utils/resourceGroupsTestApiAccess';
+import { getTestApi } from '../utils/testApiAccess';
 
 export let testClient: WebSiteManagementClient;
 export let subscriptionContext: ISubscriptionContext;
@@ -22,13 +24,22 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
 
+        // Initialize the Functions test API
+        await getTestApi();
+
+        // Initialize Azure Resources (Resource Groups) test API
+        const rgTestApi = await getResourceGroupsTestApi();
+
         await vscode.commands.executeCommand('azureResourceGroups.logIn');
-        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         const testContext = await createTestActionContext();
-        const subscription: AzureSubscription = await subscriptionExperience(testContext, ext.rgApi.appResourceTree);
+        const subscription: AzureSubscription = await subscriptionExperience(testContext, rgTestApi.compatibility.getAppResourceTree());
         subscriptionContext = createSubscriptionContext(subscription);
         console.log(`NIGHTLY TEST: Using subscription "${subscriptionContext.subscriptionDisplayName}"...`);
         testClient = createAzureClient([testContext, subscriptionContext], WebSiteManagementClient);
+
+        // Disable EOL warnings during nightly tests to prevent date-dependent prompts
+        // from interfering with automated test inputs
+        await updateGlobalSetting('endOfLifeWarning', false);
     }
 });
 
@@ -36,8 +47,8 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
 
+        await updateGlobalSetting('endOfLifeWarning', true);
         await deleteResourceGroups();
-        ext.azureAccountTreeItem.dispose();
     }
 });
 

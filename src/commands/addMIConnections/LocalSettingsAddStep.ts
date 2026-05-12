@@ -41,6 +41,6 @@ export class LocalSettingsAddStep extends AzureWizardExecuteStep<AddMIConnection
         }
     }
     public shouldExecute(context: AddMIConnectionsContext): boolean {
-        return !context.functionapp && !!context.connections
+        return !context.functionapp && !!context.connections;
     }
 }

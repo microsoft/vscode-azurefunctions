@@ -6,101 +6,48 @@
             "name": "Launch Extension",
             "type": "extensionHost",
             "request": "launch",
-            "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",
             ],
-            "preLaunchTask": "${defaultBuildTask}",
+            "preLaunchTask": "Watch: ESBuild",
             "env": {
-                "DEBUGTELEMETRY": "v",
-                "NODE_DEBUG": ""
+                "DEBUGTELEMETRY": "v"
             }
         },
         {
             "name": "Launch Extension + Host",
             "type": "extensionHost",
             "request": "launch",
-            "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azureresourcegroups"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",
             ],
-            "preLaunchTask": "${defaultBuildTask}",
+            "preLaunchTask": "Watch: ESBuild",
             "env": {
-                "DEBUGTELEMETRY": "v",
-                "NODE_DEBUG": ""
-            }
-        },
-        {
-            "name": "Launch Extension (webpack)",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
-            ],
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
-            ],
-            "preLaunchTask": "npm: webpack",
-            "env": {
-                "DEBUGTELEMETRY": "v",
-                "NODE_DEBUG": "",
-                "DEBUG_WEBPACK": "1"
+                "DEBUGTELEMETRY": "v"
             }
         },
         {
             "name": "Launch Tests",
             "type": "extensionHost",
             "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/index",
-                "${workspaceFolder}/test/test.code-workspace"
-            ],
+            "testConfiguration": "${workspaceFolder}/.vscode-test.mjs",
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",
+                "${workspaceFolder}/test/**/*.{ts,mts,cts}", // We are using TSX so out files *are* the source files
             ],
-            "preLaunchTask": "${defaultBuildTask}",
+            "preLaunchTask": "Watch: ESBuild",
             "env": {
-                "MOCHA_grep": "", // RegExp of tests to run (empty for all)
-                "MOCHA_timeout": "0", // Disable time-outs
                 "DEBUGTELEMETRY": "v",
-                "NODE_DEBUG": "",
                 "FUNC_PATH": "func",
                 "AZFUNC_UPDATE_BACKUP_TEMPLATES": "",
                 "AzCode_EnableLongRunningTestsLocal": "",
-            }
-        },
-        {
-            "name": "Launch Tests (webpack)",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/dist/test/index",
-                "${workspaceFolder}/test/test.code-workspace"
-            ],
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
-            ],
-            "preLaunchTask": "npm: webpack",
-            "env": {
-                "MOCHA_grep": "", // RegExp of tests to run (empty for all)
-                "MOCHA_timeout": "0", // Disable time-outs
-                "DEBUGTELEMETRY": "v",
-                "NODE_DEBUG": "",
-                "DEBUG_WEBPACK": "1",
-                "ENABLE_LONG_RUNNING_TESTS": "",
-                "FUNC_PATH": "func"
             }
         }
     ]

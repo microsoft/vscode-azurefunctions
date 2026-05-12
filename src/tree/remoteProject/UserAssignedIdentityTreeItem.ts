@@ -35,7 +35,7 @@ export class UserAssignedIdentityTreeItem extends AzExtParentTreeItem {
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return false
+        return false;
     }
 
     public get id(): string {

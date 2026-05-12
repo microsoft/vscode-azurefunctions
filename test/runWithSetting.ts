@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ext, getGlobalSetting, updateGlobalSetting } from "../extension.bundle";
+import { ext } from "../src/extensionVariables";
+import { getGlobalSetting, updateGlobalSetting } from "../src/vsCodeConfig/settings";
 
 type SettingValue = {} | string | boolean | undefined;
 

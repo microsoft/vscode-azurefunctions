@@ -84,7 +84,7 @@ async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils
             if (inProcessRuntimes.length > 0) {
                 runtimes = runtimes.concat(inProcessRuntimes);
             }
-        } catch (error) {
+        } catch (_error) {
             // ignore this error - it just means there are no in-process runtimes we need to add
         }
     }

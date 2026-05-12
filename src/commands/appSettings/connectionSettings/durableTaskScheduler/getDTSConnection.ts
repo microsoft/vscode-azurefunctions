@@ -66,7 +66,7 @@ export async function getDTSConnectionIfNeeded(context: DTSConnectionContext, ap
     LocationListStep.resetLocation(wizardContext);
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
-    const wizard: AzureWizard<IDTSAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<IDTSAzureConnectionWizardContext>(wizardContext, {
         title: localize('prepareDTSConnection', 'Prepare durable task scheduler connections'),
         promptSteps: [
             new DTSConnectionListStep(availableDeployConnectionTypes),

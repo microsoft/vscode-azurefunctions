@@ -31,7 +31,7 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
         }, // we only need these two properties from the resource group
         ...node.subscription,
         ...(await createActivityContext())
-    }
+    };
     await LocationListStep.setLocation(wizardContext, node.site.location);
 
     const promptSteps: AzureWizardPromptStep<ManagedIdentityAssignContext>[] = [
@@ -42,7 +42,7 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
         new ManagedIdentityAssignStep()
     ];
     const title: string = localize('assignManagedIdentity', 'Assign User Assigned Identity to Function App');
-    const wizard: AzureWizard<ManagedIdentityAssignContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<ManagedIdentityAssignContext>(wizardContext, {
         title,
         promptSteps,
         executeSteps,
@@ -56,6 +56,6 @@ export async function assignManagedIdentity(context: IActionContext, node?: User
         await wizard.execute();
     });
 
-    void node.refresh(context)
+    void node.refresh(context);
     return node;
 }

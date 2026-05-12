@@ -14,7 +14,7 @@ import { type ContainerFunctionItem } from "./ContainerFunctionItem";
 import { type ContainerFunctionsTreeItem } from "./ContainerFunctionsTreeItem";
 
 export class ContainerFunctionTreeItem extends FunctionTreeItemBase {
-    public readonly parent: ContainerFunctionsTreeItem;
+    declare public readonly parent: ContainerFunctionsTreeItem;
 
     public constructor(parent: ContainerFunctionsTreeItem, func: ContainerFunctionItem) {
         super(parent, func);
@@ -31,7 +31,7 @@ export class ContainerFunctionTreeItem extends FunctionTreeItemBase {
         return {
             data: this.rawConfig,
             label: this.function.name,
-        }
+        };
     }
 
     public get contextValue(): string {

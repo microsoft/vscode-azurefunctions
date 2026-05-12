@@ -59,7 +59,8 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
         this._disposables.push(onFuncTaskStarted(async event => this.onFuncTaskChanged(event)));
-        // this._disposables.push(onFuncTaskStarted(async scope => this.onFuncTaskChanged(scope)));
+        // onDotnetFuncTaskReady currently emits a TaskScope directly (for back-compat),
+        // so adapt it to the event-object shape expected by onFuncTaskChanged.
         this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged({ scope })));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
@@ -89,7 +90,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         return false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._localFunctionsTreeItem, this._localSettingsTreeItem];
     }

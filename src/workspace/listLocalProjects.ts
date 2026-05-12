@@ -77,7 +77,7 @@ export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
                         error,
                         projectPath,
                         workspaceFolder
-                    })
+                    });
                 }
             }
         }
@@ -87,7 +87,7 @@ export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
 
     // Result is non-null because we are rethrowing errors above
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return result!
+    return result!;
 }
 
 type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };

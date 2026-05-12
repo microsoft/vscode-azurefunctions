@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaFunctionFilePath, type IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';

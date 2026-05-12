@@ -51,7 +51,7 @@ export async function getSQLConnectionIfNeeded(context: SqlConnectionContext, ap
     LocationListStep.resetLocation(wizardContext);
     await LocationListStep.setAutoSelectLocation(wizardContext, site.location);
 
-    const wizard: AzureWizard<ISqlDatabaseAzureConnectionWizardContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<ISqlDatabaseAzureConnectionWizardContext>(wizardContext, {
         title: localize('prepareSqlDbConnection', 'Prepare SQL database deployment connection'),
         promptSteps: [new SqlConnectionListStep(availableDeployConnectionTypes)],
         showLoadingPrompt: true,

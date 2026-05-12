@@ -135,7 +135,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
         const files: string[] = [getDotnetProjectTemplatePath(context, this.version, projKey), getDotnetItemTemplatePath(context, this.version, projKey)];
         for (const file of files) {
-            await AzExtFsExtra.copy(this.convertToBackupFilePath(projKey, file), file, { overwrite: true })
+            await AzExtFsExtra.copy(this.convertToBackupFilePath(projKey, file), file, { overwrite: true });
         }
         return await this.parseTemplates(context, projKey);
     }
@@ -152,7 +152,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         return path.join(this.getBackupPath(), projKey, path.basename(file));
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     public async cacheTemplates(context: IActionContext): Promise<void> {
         const projKey = await this.getProjKey(context);
         await this.updateCachedValue(projKey, this._rawTemplates);
@@ -165,7 +165,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     private async parseTemplates(context: IActionContext, projKey: string): Promise<ITemplates> {
-        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey, undefined, 'list'));
+        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(context, this.version, projKey));
         return parseDotnetTemplates(this._rawTemplates, this.version);
     }
 

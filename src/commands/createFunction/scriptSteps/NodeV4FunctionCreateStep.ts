@@ -29,8 +29,8 @@ export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
 
             for (const setting of template.userPromptedSettings) {
                 // the setting name keys are lowercased
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                 
+                 
                 contents = contents.replace(new RegExp(`%${setting.name}%`, 'g'), context[setting.name.toLowerCase()] as string);
             }
 
