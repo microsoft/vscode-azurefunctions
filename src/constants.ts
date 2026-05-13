@@ -144,6 +144,7 @@ export const hostStartTaskNameRegExp = new RegExp(hostStartTaskName, 'i');
 // flag used by func core tools to indicate to wait for the debugger to attach before starting the worker
 export const dotnetIsolatedDebugFlag: string = '--dotnet-isolated-debug';
 export const enableJsonOutputFlag: string = '--enable-json-output';
+export const jsonOutputFileFlag: string = '--json-output-file';
 
 export const packCommand: string = 'pack';
 export const buildNativeDeps: string = '--build-native-deps';

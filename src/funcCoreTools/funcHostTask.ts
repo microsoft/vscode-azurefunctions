@@ -5,12 +5,10 @@
 
 import { nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { localSettingsFileName } from '../constants';
+import { jsonOutputFileFlag, localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
@@ -41,10 +39,16 @@ export interface IRunningFuncTask {
      */
     streamAbortController?: AbortController;
     /**
-     * File path where the .NET isolated worker process ID is written when using --dotnet-isolated-debug.
-     * This avoids reading the stream directly (which can conflict) and instead uses a file-based approach.
+     * File path written by func core tools when launched with --json-output-file. Contains the .NET
+     * isolated worker process ID and is read by pickFuncProcess to attach the debugger.
      */
     workerPidFile?: string;
+    /**
+     * Worker process ID parsed from the host's terminal output. Populated by the stream consumer when
+     * `--dotnet-isolated-debug` and `--enable-json-output` are set but `--json-output-file` is not, so
+     * pickFuncProcess can still discover the worker PID without relying on a temp file.
+     */
+    workerProcessId?: number;
 }
 
 export interface IStoppedFuncTask {
@@ -157,20 +161,49 @@ export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFol
 const defaultFuncPort: string = '7071';
 
 const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
-const dotnetIsolatedDebugFlag: string = '--dotnet-isolated-debug';
 
-function hasDotnetIsolatedDebugFlag(task: vscode.Task): boolean {
+/**
+ * Extracts the value passed to `--json-output-file` from a func host task's execution.
+ * Returns undefined if the flag is not present. Supports both `--json-output-file <path>`
+ * (separate args) and `--json-output-file=<path>` (combined) forms, as well as both
+ * args-based and commandLine-based ShellExecution.
+ */
+function getJsonOutputFilePathFromTask(task: vscode.Task): string | undefined {
     const execution = task.execution as vscode.ShellExecution | undefined;
     if (!execution) {
-        return false;
+        return undefined;
     }
+
     if (execution.commandLine) {
-        return execution.commandLine.includes(dotnetIsolatedDebugFlag);
+        return parseJsonOutputFileFromString(execution.commandLine);
     }
+
     if (execution.args) {
-        return execution.args.some(a => (typeof a === 'string' ? a : a.value) === dotnetIsolatedDebugFlag);
+        const args = execution.args.map(a => (typeof a === 'string' ? a : a.value));
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            if (arg === jsonOutputFileFlag && i + 1 < args.length) {
+                return stripQuotes(args[i + 1]);
+            }
+            if (arg.startsWith(`${jsonOutputFileFlag}=`)) {
+                return stripQuotes(arg.substring(jsonOutputFileFlag.length + 1));
+            }
+        }
     }
-    return false;
+    return undefined;
+}
+
+function parseJsonOutputFileFromString(commandLine: string): string | undefined {
+    // matches --json-output-file=<value>, --json-output-file <value>, with optional single/double quotes around <value>
+    const match = commandLine.match(/--json-output-file(?:=|\s+)("[^"]+"|'[^']+'|\S+)/);
+    return match ? stripQuotes(match[1]) : undefined;
+}
+
+function stripQuotes(value: string): string {
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        return value.slice(1, -1);
+    }
+    return value;
 }
 
 export function isFuncHostTask(task: vscode.Task): boolean {
@@ -220,9 +253,7 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
             const logs: string[] = [];
-            const workerPidFile = hasDotnetIsolatedDebugFlag(e.execution.task)
-                ? path.join(os.tmpdir(), `azfunc-worker-pid-${e.processId}.json`)
-                : undefined;
+            const workerPidFile = getJsonOutputFilePathFromTask(e.execution.task);
             const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
@@ -304,27 +335,22 @@ export function registerFuncHostTaskEvents(): void {
                     task.logs.splice(0, task.logs.length - maxLogEntries);
                 }
 
-                // If this task is using the dotnet isolated debug flag, write the worker PID to a file
-                // so that pickFuncProcess.ts can read it without consuming the stream again.
-                if (task.workerPidFile && chunk.includes(workerStartupName)) {
-                    try {
-                        let obj: unknown;
-                        try { obj = JSON.parse(chunk); } catch { /* not full JSON, try regex */ }
-                        if (
-                            typeof obj === 'object' && obj !== null &&
-                            (obj as Record<string, unknown>)['name'] === workerStartupName &&
-                            typeof (obj as Record<string, unknown>)['workerProcessId'] === 'number'
-                        ) {
-                            fs.writeFileSync(task.workerPidFile, JSON.stringify({ workerProcessId: (obj as Record<string, unknown>)['workerProcessId'] }));
-                        } else {
-                            // fallback: regex match for workerProcessId
-                            const match = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
-                            if (match) {
-                                fs.writeFileSync(task.workerPidFile, JSON.stringify({ workerProcessId: Number(match[1]) }));
-                            }
+                // Fallback for dotnet-isolated debug when no --json-output-file is configured: parse the
+                // worker PID directly from the terminal output so pickFuncProcess can still attach.
+                if (!task.workerPidFile && task.workerProcessId === undefined && chunk.includes(workerStartupName)) {
+                    let obj: unknown;
+                    try { obj = JSON.parse(chunk); } catch { /* not full JSON, try regex below */ }
+                    if (
+                        typeof obj === 'object' && obj !== null &&
+                        (obj as Record<string, unknown>)['name'] === workerStartupName &&
+                        typeof (obj as Record<string, unknown>)['workerProcessId'] === 'number'
+                    ) {
+                        task.workerProcessId = (obj as Record<string, unknown>)['workerProcessId'] as number;
+                    } else {
+                        const match = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
+                        if (match) {
+                            task.workerProcessId = Number(match[1]);
                         }
-                    } catch {
-                        // ignore file write errors
                     }
                 }
 

@@ -6,9 +6,11 @@
 import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import psTree, { type PS } from 'ps-tree';
 import * as vscode from 'vscode';
-import { dotnetIsolatedDebugFlag, enableJsonOutputFlag, hostStartTaskName } from '../constants';
+import { dotnetIsolatedDebugFlag, enableJsonOutputFlag, hostStartTaskName, jsonOutputFileFlag } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
@@ -71,6 +73,11 @@ export async function startFuncProcessFromApi(
         funcHostStartCmd += ` ${args.join(' ')}`;
     }
 
+    const jsonOutputFile = shouldInjectJsonOutputFile(funcHostStartCmd) ? generateJsonOutputFilePath() : undefined;
+    if (jsonOutputFile) {
+        funcHostStartCmd += ` ${jsonOutputFileFlag} "${jsonOutputFile}"`;
+    }
+
     await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
         try {
             let workspaceFolder: vscode.WorkspaceFolder | undefined = buildPathToWorkspaceFolderMap.get(buildPath);
@@ -128,7 +135,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 
     const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
     await waitForPrevFuncTaskToStop(result.workspace, buildPath);
-    const taskInfo = await startFuncTask(context, result.workspace, buildPath, funcTask);
+    const taskToExecute = injectJsonOutputFileArgIfNeeded(funcTask);
+    const taskInfo = await startFuncTask(context, result.workspace, buildPath, taskToExecute);
     return await pickChildProcess(taskInfo);
 }
 
@@ -174,8 +182,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-        const funcShellExecution = funcTask.execution as vscode.ShellExecution;
-        const debugModeOn = funcShellExecution.commandLine?.includes(dotnetIsolatedDebugFlag) && funcShellExecution.commandLine?.includes(enableJsonOutputFlag);
+        const dotnetIsolatedDebugMode = isDotnetIsolatedDebugTask(funcTask);
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -184,10 +191,12 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
-                if (debugModeOn) {
-                    // if we are in dotnet isolated debug mode, we need to find the pid from the terminal output
-                    // if there is no pid yet, keep waiting
-                    const newPid = await getWorkerPidFromJsonOutput(taskInfo);
+                if (dotnetIsolatedDebugMode) {
+                    // Prefer the file written by func core tools via --json-output-file; if that flag
+                    // isn't present (e.g., the task was already running before we could inject it),
+                    // fall back to the worker PID parsed from the terminal stream by funcHostTask.
+                    const newPid = (taskInfo.workerPidFile ? await getWorkerPidFromJsonOutput(taskInfo) : undefined)
+                        ?? taskInfo.workerProcessId;
                     if (newPid) {
                         taskInfo.processId = newPid;
                         return taskInfo;
@@ -230,8 +239,8 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 }
 
 async function getWorkerPidFromJsonOutput(taskInfo: IRunningFuncTask): Promise<number | undefined> {
-    // Use file-based approach: the stream reader writes the PID to a temp file to avoid
-    // consuming the stream directly (which can conflict with other readers).
+    // func core tools writes the worker PID JSON to the path passed via --json-output-file before
+    // the worker waits for the debugger to attach. Read that file and parse out workerProcessId.
     if (!taskInfo.workerPidFile) {
         return;
     }
@@ -249,6 +258,87 @@ async function getWorkerPidFromJsonOutput(taskInfo: IRunningFuncTask): Promise<n
         // file not yet written or invalid JSON - keep waiting
     }
     return;
+}
+
+/**
+ * Returns true if `commandOrArgs` contains the flags that indicate the func host is being launched
+ * for dotnet-isolated debugging and is configured to emit JSON output. When both are present, we
+ * inject `--json-output-file <path>` so that func core tools writes the worker PID directly to a
+ * file, allowing pickFuncProcess to attach the debugger before any user code runs.
+ */
+function shouldInjectJsonOutputFile(commandLine: string): boolean {
+    return commandLine.includes(dotnetIsolatedDebugFlag)
+        && commandLine.includes(enableJsonOutputFlag)
+        && !commandLine.includes(jsonOutputFileFlag);
+}
+
+/**
+ * Returns true if the func task is configured for dotnet-isolated debugging with JSON output. When
+ * true, the picker waits for a worker PID (from --json-output-file or parsed from the terminal
+ * stream) instead of polling the host status endpoint.
+ */
+function isDotnetIsolatedDebugTask(funcTask: vscode.Task): boolean {
+    if (!(funcTask.execution instanceof vscode.ShellExecution)) {
+        return false;
+    }
+    const flatArgs = getFlatShellArgs(funcTask.execution);
+    return flatArgs.includes(dotnetIsolatedDebugFlag) && flatArgs.includes(enableJsonOutputFlag);
+}
+
+function generateJsonOutputFilePath(): string {
+    return path.join(os.tmpdir(), `azfunc-worker-pid-${process.pid}-${Date.now()}.json`);
+}
+
+/**
+ * If the user's func task is configured for dotnet-isolated debugging with JSON output but does not
+ * already specify a `--json-output-file`, returns a wrapper task with that flag injected so that
+ * func core tools writes the worker PID directly to a file we control.
+ */
+function injectJsonOutputFileArgIfNeeded(funcTask: vscode.Task): vscode.Task {
+    const exec = funcTask.execution;
+    if (!(exec instanceof vscode.ShellExecution)) {
+        return funcTask;
+    }
+
+    const flatArgs = getFlatShellArgs(exec);
+    const hasDebugFlag = flatArgs.includes(dotnetIsolatedDebugFlag);
+    const hasEnableJsonOutput = flatArgs.includes(enableJsonOutputFlag);
+    const alreadyHasOutputFile = flatArgs.includes(jsonOutputFileFlag) || flatArgs.some(a => a.startsWith(`${jsonOutputFileFlag}=`));
+    if (!hasDebugFlag || !hasEnableJsonOutput || alreadyHasOutputFile) {
+        return funcTask;
+    }
+
+    const jsonOutputFile = generateJsonOutputFilePath();
+    let newExec: vscode.ShellExecution;
+    if (exec.commandLine !== undefined) {
+        newExec = new vscode.ShellExecution(`${exec.commandLine} ${jsonOutputFileFlag} "${jsonOutputFile}"`, exec.options);
+    } else {
+        // When constructed with command + args, both are defined; defensively coalesce to satisfy the API types.
+        newExec = new vscode.ShellExecution(exec.command ?? 'func', [...(exec.args ?? []), jsonOutputFileFlag, jsonOutputFile], exec.options);
+    }
+
+    const wrapped = new vscode.Task(
+        funcTask.definition,
+        funcTask.scope ?? vscode.TaskScope.Workspace,
+        funcTask.name,
+        funcTask.source,
+        newExec,
+        funcTask.problemMatchers,
+    );
+    wrapped.isBackground = funcTask.isBackground;
+    wrapped.presentationOptions = funcTask.presentationOptions;
+    wrapped.group = funcTask.group;
+    wrapped.runOptions = funcTask.runOptions;
+    wrapped.detail = funcTask.detail;
+    return wrapped;
+}
+
+function getFlatShellArgs(exec: vscode.ShellExecution): string[] {
+    if (exec.commandLine !== undefined) {
+        // Best-effort split for detection; quoting/escaping is preserved in the original commandLine when we re-emit.
+        return exec.commandLine.split(/\s+/).filter(Boolean);
+    }
+    return (exec.args ?? []).map(a => (typeof a === 'string' ? a : a.value));
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };
