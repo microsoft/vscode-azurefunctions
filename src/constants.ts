@@ -35,6 +35,7 @@ export enum ProjectLanguage {
     JavaScript = 'JavaScript',
     PowerShell = 'PowerShell',
     Python = 'Python',
+    Go = 'Go',
     TypeScript = 'TypeScript',
     Ballerina = 'Ballerina',
     Custom = 'Custom',

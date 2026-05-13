@@ -12,6 +12,7 @@ import { type IProjectWizardContext } from '../createNewProject/IProjectWizardCo
 import { BallerinaInitVSCodeStep } from './InitVSCodeStep/BallerinaInitVSCodeStep';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
+import { GoInitVSCodeStep } from './InitVSCodeStep/GoInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
 import { MCPServerInitVSCodeStep } from './InitVSCodeStep/MCPServerInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
@@ -31,6 +32,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.CSharpScript, data: { language: ProjectLanguage.CSharpScript } },
             { label: ProjectLanguage.FSharp, data: { language: ProjectLanguage.FSharp } },
             { label: ProjectLanguage.FSharpScript, data: { language: ProjectLanguage.FSharpScript } },
+            { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
@@ -89,6 +91,9 @@ export async function addInitVSCodeSteps(
             break;
         case ProjectLanguage.Ballerina:
             executeSteps.push(new BallerinaInitVSCodeStep());
+            break;
+        case ProjectLanguage.Go:
+            executeSteps.push(new GoInitVSCodeStep());
             break;
         case ProjectLanguage.SelfHostedMCPServer:
             executeSteps.push(new MCPServerInitVSCodeStep());

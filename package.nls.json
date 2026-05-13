@@ -60,6 +60,7 @@
     "azureFunctions.problemMatchers.funcNodeWatch": "Azure Functions Node.js problems (watch mode)",
     "azureFunctions.problemMatchers.funcPowerShellWatch": "Azure Functions PowerShell problems (watch mode)",
     "azureFunctions.problemMatchers.funcPythonWatch": "Azure Functions Python problems (watch mode)",
+    "azureFunctions.problemMatchers.funcGolangWatch": "Azure Functions Go problems (watch mode)",
     "azureFunctions.problemMatchers.funcWatch": "Azure Functions problems (watch mode)",
     "azureFunctions.projectLanguage": "The default language to use when performing operations like \"Create New Function\".",
     "azureFunctions.projectLanguage.preview": "(Preview)",
