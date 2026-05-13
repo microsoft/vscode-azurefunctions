@@ -64,7 +64,8 @@ interface IVerifyFrameworkResult {
 }
 
 // https://docs.microsoft.com/dotnet/standard/frameworks
-const targetFrameworkRegExp: RegExp = /net(standard|coreapp)?[0-9.]+/i;
+// Use negative lookbehind to avoid matching "net" when it's part of a folder name (e.g. "Planet.net8.0")
+const targetFrameworkRegExp: RegExp = /(?<![a-zA-Z0-9.])net(standard|coreapp)?[0-9.]+(?![a-zA-Z0-9])/i;
 
 function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramework: string): IVerifyFrameworkResult | undefined {
     let mismatchTargetFramework: string | undefined;
