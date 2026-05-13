@@ -8,12 +8,13 @@ import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { jsonOutputFileFlag, localSettingsFileName } from '../constants';
+import { localSettingsFileName } from '../constants';
 import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { addErrorLinesFromChunk } from './funcHostErrorUtils';
+import { getJsonOutputFilePathFromTask } from './jsonOutputFile';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
@@ -161,50 +162,6 @@ export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFol
 const defaultFuncPort: string = '7071';
 
 const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
-
-/**
- * Extracts the value passed to `--json-output-file` from a func host task's execution.
- * Returns undefined if the flag is not present. Supports both `--json-output-file <path>`
- * (separate args) and `--json-output-file=<path>` (combined) forms, as well as both
- * args-based and commandLine-based ShellExecution.
- */
-function getJsonOutputFilePathFromTask(task: vscode.Task): string | undefined {
-    const execution = task.execution as vscode.ShellExecution | undefined;
-    if (!execution) {
-        return undefined;
-    }
-
-    if (execution.commandLine) {
-        return parseJsonOutputFileFromString(execution.commandLine);
-    }
-
-    if (execution.args) {
-        const args = execution.args.map(a => (typeof a === 'string' ? a : a.value));
-        for (let i = 0; i < args.length; i++) {
-            const arg = args[i];
-            if (arg === jsonOutputFileFlag && i + 1 < args.length) {
-                return stripQuotes(args[i + 1]);
-            }
-            if (arg.startsWith(`${jsonOutputFileFlag}=`)) {
-                return stripQuotes(arg.substring(jsonOutputFileFlag.length + 1));
-            }
-        }
-    }
-    return undefined;
-}
-
-function parseJsonOutputFileFromString(commandLine: string): string | undefined {
-    // matches --json-output-file=<value>, --json-output-file <value>, with optional single/double quotes around <value>
-    const match = commandLine.match(/--json-output-file(?:=|\s+)("[^"]+"|'[^']+'|\S+)/);
-    return match ? stripQuotes(match[1]) : undefined;
-}
-
-function stripQuotes(value: string): string {
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        return value.slice(1, -1);
-    }
-    return value;
-}
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     const execution = task.execution as vscode.ShellExecution | undefined;
