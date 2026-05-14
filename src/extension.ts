@@ -29,6 +29,7 @@ import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
+import { GoDebugProvider } from './debug/GoDebugProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
@@ -109,6 +110,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const javaDebugProvider: JavaDebugProvider = new JavaDebugProvider();
         const ballerinaDebugProvider: BallerinaDebugProvider = new BallerinaDebugProvider();
         const powershellDebugProvider: PowerShellDebugProvider = new PowerShellDebugProvider();
+        const goDebugProvider: GoDebugProvider = new GoDebugProvider();
 
         // These don't actually overwrite "node", "python", etc. - they just add to it
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', nodeDebugProvider));
@@ -117,6 +119,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('ballerina', ballerinaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('go', goDebugProvider));
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, ballerinaDebugProvider, powershellDebugProvider)));
 
         context.subscriptions.push(vscode.window.registerUriHandler({
