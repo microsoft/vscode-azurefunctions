@@ -1158,6 +1158,11 @@
                 "name": "func-python-watch",
                 "label": "%azureFunctions.problemMatchers.funcPythonWatch%",
                 "base": "$func-watch"
+            },
+            {
+                "name": "func-golang-watch",
+                "label": "%azureFunctions.problemMatchers.funcGolangWatch%",
+                "base": "$func-watch"
             }
         ],
         "configuration": [
@@ -1226,6 +1231,7 @@
                             "PowerShell",
                             "Python",
                             "TypeScript",
+                            "Go",
                             "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
@@ -1239,6 +1245,7 @@
                             "",
                             "",
                             "",
+                            "%azureFunctions.projectLanguage.preview%",
                             "",
                             ""
                         ]
