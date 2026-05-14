@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { workspace, type Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { ext } from '../../../extensionVariables';
 import { getFuncCliPath } from '../../../funcCoreTools/getFuncCliPath';
 import { localize } from '../../../localize';
@@ -16,11 +16,7 @@ export class GoProjectCreateStep extends ProjectCreateStepBase {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('initializingGoProject', 'Initializing Go Functions project...') });
 
-        // Prefer the currently-open workspace's azureFunctions.funcCliPath override.
-        // context.workspacePath is the freshly-picked new-project folder, which isn't part of any open
-        // workspace yet, so passing it to getFuncCliPath only resolves global/user settings.
-        const funcCliPathScope = context.workspaceFolder ?? workspace.workspaceFolders?.[0];
-        const funcCliPath = await getFuncCliPath(context, funcCliPathScope);
+        const funcCliPath = await getFuncCliPath(context, context.workspaceFolder);
         // Core tools accepts "go" as the worker-runtime CLI argument and maps it to the "native" worker runtime internally.
         const args = composeArgs(
             withArg('init'),

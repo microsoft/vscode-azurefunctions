@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
+import { type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -50,7 +50,7 @@ export async function createFunctionFromCommand(
 }
 
 export async function createFunctionInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
-    let workspaceFolder: vscode.WorkspaceFolder | undefined;
+    let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
 
     if (workspacePath === undefined) {
@@ -77,11 +77,11 @@ export async function createFunctionInternal(context: IActionContext, options: a
         // Core tools does not yet support `func new --language Go`, so additional functions must be added by editing
         // the source files directly. Show a modal so the user can't miss it.
         context.telemetry.properties.goCreateFunctionUnsupported = 'true';
-        await vscode.window.showWarningMessage(
-            localize('goCreateFunctionUnsupportedTitle', 'Adding functions to a Go project is not yet supported.'),
+        await context.ui.showWarningMessage(
+            localize('goCreateFunctionUnsupported', 'Adding new functions is currently not supported for Go projects'),
             {
                 modal: true,
-                detail: localize('goCreateFunctionUnsupportedDetail', 'To add another function, edit the source files directly.'),
+                detail: localize('goCreateFunctionUnsupportedDetail', 'To add another function, edit the Go source files directly.'),
             },
         );
         return;

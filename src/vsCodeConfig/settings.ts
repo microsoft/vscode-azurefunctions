@@ -90,6 +90,9 @@ export function getRootFunctionsWorkerRuntime(language: string | undefined): str
         case ProjectLanguage.PowerShell:
             return 'powershell';
         case ProjectLanguage.Go:
+            // Go compiles to a standalone binary, so the Functions host launches the binary directly.
+            // The host and core tools expect FUNCTIONS_WORKER_RUNTIME to be 'native' for Go apps
+            // (this is the value `func init --worker-runtime go` writes to local.settings.json).
             return 'native';
         case ProjectLanguage.Custom:
             return 'custom';
@@ -119,6 +122,7 @@ export async function tryGetFunctionsWorkerRuntimeForProject(context: IActionCon
 }
 
 export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
+    // 'native' is the worker runtime used for Go (see getRootFunctionsWorkerRuntime).
     return !!runtime && ['node', 'dotnet', 'dotnet-isolated', 'java', 'python', 'powershell', 'native', 'custom'].includes(runtime.toLowerCase());
 }
 
