@@ -92,7 +92,7 @@ async function runPythonFunctionApp(context: IActionContext, projectRoot: string
 
                 context.telemetry.properties.pythonAlias = pythonAlias;
                 ext.outputChannel.appendLog(localize('creatingVenvLog', 'Creating virtual environment with {0}...', pythonAlias));
-                await cpUtils.executeCommand(ext.outputChannel, projectRoot, pythonAlias, '-m', 'venv', venvName);
+                await cpUtils.executeCommand(ext.outputChannel, projectRoot, pythonAlias, ['-m', 'venv', venvName]);
             } else {
                 context.telemetry.properties.venvAlreadyExisted = 'true';
             }
@@ -143,7 +143,7 @@ async function runNodeFunctionApp(context: IActionContext, projectRoot: string):
                 ext.outputChannel.appendLog(localize('runningNpmInstall', 'Running npm install...'));
 
                 try {
-                    await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', 'install');
+                    await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', ['install']);
                 } catch {
                     void vscode.window.showWarningMessage(
                         localize('npmInstallWarning',
@@ -158,7 +158,7 @@ async function runNodeFunctionApp(context: IActionContext, projectRoot: string):
                     ext.outputChannel.appendLog(localize('runningNpmBuild', 'Running npm run build...'));
 
                     try {
-                        await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', 'run', 'build');
+                        await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'npm', ['run', 'build']);
                     } catch {
                         void vscode.window.showWarningMessage(
                             localize('npmBuildWarning',
@@ -194,7 +194,7 @@ async function runDotnetFunctionApp(context: IActionContext, projectRoot: string
             ext.outputChannel.appendLog(localize('runningDotnetBuild', 'Running dotnet build...'));
 
             try {
-                await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'dotnet', 'build');
+                await cpUtils.executeCommand(ext.outputChannel, projectRoot, 'dotnet', ['build']);
             } catch {
                 void vscode.window.showWarningMessage(
                     localize('dotnetBuildWarning',
@@ -340,7 +340,7 @@ async function findPythonAlias(): Promise<string | undefined> {
     const candidates = ['python3', 'python', 'py'];
     for (const alias of candidates) {
         try {
-            const result = await cpUtils.tryExecuteCommand(undefined, undefined, alias, '--version');
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, alias, ['--version']);
             if (result.code === 0 && result.cmdOutput.includes('Python 3')) {
                 return alias;
             }

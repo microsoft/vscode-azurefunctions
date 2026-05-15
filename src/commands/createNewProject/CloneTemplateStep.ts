@@ -55,7 +55,7 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
                     // Full clone into temp, then copy to projectPath
                     progress.report({ message: localize('cloningRepository', 'Cloning repository...') });
                     await cpUtils.executeCommand(undefined, undefined,
-                        'git', 'clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir);
+                        'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
 
                     let sourceDir = tempDir;
                     if (template.subdirectory) {
@@ -126,12 +126,12 @@ export class CloneTemplateStep extends AzureWizardExecuteStep<IProjectWizardCont
     private async sparseCheckout(destDir: string, repoUrl: string, branch: string, folderPath: string): Promise<void> {
         // Step 1 — shallow clone with sparse checkout wired up at clone time
         await cpUtils.executeCommand(undefined, undefined,
-            'git', 'clone', '--depth', '1', '--filter=blob:none', '--sparse',
-            '--branch', branch, repoUrl, destDir);
+            'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
+            '--branch', branch, repoUrl, destDir]);
 
         // Step 2 — narrow the cone to the requested folder; blobs are fetched on demand
         await cpUtils.executeCommand(undefined, destDir,
-            'git', 'sparse-checkout', 'set', folderPath);
+            'git', ['sparse-checkout', 'set', folderPath]);
     }
 
     /**

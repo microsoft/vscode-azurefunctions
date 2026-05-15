@@ -30,7 +30,7 @@ import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnipp
 import { MCPOpenFileStep } from './mcpServerSteps/MCPOpenFileStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
-import { TemplateGalleryPanel } from './TemplateGalleryPanel';
+import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
 
 // Sentinel value used to detect when the user picks "Browse Template Gallery…"
 const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
@@ -84,7 +84,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
 
         if (result.language === templateGalleryLanguage) {
-            TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+            FunctionsTemplateGalleryController.createOrShow(ext.context);
             context.telemetry.properties.flow = 'templateGalleryFromWizard';
             throw new UserCancelledError('templateGallery');
         }

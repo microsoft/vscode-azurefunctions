@@ -20,7 +20,7 @@ import { NewProjectLanguageStep } from './NewProjectLanguageStep';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
-import { TemplateGalleryPanel } from './TemplateGalleryPanel';
+import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
 
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
@@ -56,7 +56,7 @@ export async function createNewProjectFromCommand(
     } else {
         // Template gallery preview is opted-in — show the new webview experience
         context.telemetry.properties.flow = 'templateGallery';
-        TemplateGalleryPanel.createOrShow(ext.context.extensionUri);
+        FunctionsTemplateGalleryController.createOrShow(ext.context);
     }
 }
 
