@@ -12,6 +12,8 @@ import { type IHostJsonV2 } from "../funcConfig/host";
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
 import { getWorkspaceSetting, updateWorkspaceSetting } from "../vsCodeConfig/settings";
 
+const mcpTriggerPrefixes = ['mcpprompttrigger', 'mcptooltrigger', 'mcptrigger', 'mcpresourcetrigger'];
+
 export type McpJson = {
     servers?: {
         [key: string]: McpServerDefinition,
@@ -32,6 +34,11 @@ type McpServerDefinition = {
     headers?: {
         [key: string]: string;
     };
+}
+
+export function isMcpTriggerType(value: string | undefined): boolean {
+    const normalizedValue = value?.toLowerCase() ?? '';
+    return mcpTriggerPrefixes.some(prefix => normalizedValue.startsWith(prefix));
 }
 
 export async function isMcpProject(projectPath: string): Promise<boolean> {
