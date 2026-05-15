@@ -29,7 +29,7 @@ import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
-import { GoDebugProvider } from './debug/GoDebugProvider';
+import { GoDebugProvider, registerGoDebugSessionCleanup } from './debug/GoDebugProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
@@ -120,6 +120,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('ballerina', ballerinaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('go', goDebugProvider));
+        context.subscriptions.push(registerGoDebugSessionCleanup());
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, ballerinaDebugProvider, powershellDebugProvider)));
 
         context.subscriptions.push(vscode.window.registerUriHandler({

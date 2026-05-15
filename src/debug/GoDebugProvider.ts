@@ -4,14 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { createConnection } from 'net';
+import psTree, { type PS } from 'ps-tree';
+import * as vscode from 'vscode';
 import { type CancellationToken, type DebugConfiguration, type WorkspaceFolder } from 'vscode';
-import { hostStartTaskName, localhost } from '../constants';
+import { hostStartTaskName, hostStartTaskNameRegExp, localhost } from '../constants';
 import { ext } from '../extensionVariables';
+import { runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { delay } from '../utils/delay';
+import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { validateDelveInstalled } from './validateDelveInstalled';
 
@@ -43,6 +47,50 @@ const dlvListenRetryIntervalMs: number = 500;
 // Brief pause to let a freed port settle after killing a stale dlv.
 const stalePortFreedDelayMs: number = 1_000;
 
+// Tracks the dlv child process we spawned per workspace folder so we can
+// terminate it proactively when the matching debug session ends. Keyed by
+// `WorkspaceFolder.uri.fsPath`. If a second debug session targets the same
+// folder before the first ends, the previous entry is killed and replaced.
+const activeDlvProcesses = new Map<string, ChildProcess>();
+
+/**
+ * Wires the dlv-cleanup-on-session-end behavior. Call once during extension
+ * activation; the returned disposable should be added to context.subscriptions.
+ */
+export function registerGoDebugSessionCleanup(): vscode.Disposable {
+    return vscode.debug.onDidTerminateDebugSession((session) => {
+        if (session.type !== 'go' || !session.workspaceFolder) {
+            return;
+        }
+        killTrackedDlv(session.workspaceFolder.uri.fsPath);
+    });
+}
+
+function killTrackedDlv(folderFsPath: string): void {
+    const dlv = activeDlvProcesses.get(folderFsPath);
+    if (!dlv) {
+        return;
+    }
+    activeDlvProcesses.delete(folderFsPath);
+    if (dlv.pid === undefined) {
+        return;
+    }
+    try {
+        if (process.platform === 'win32') {
+            // Windows has no process groups — just terminate dlv directly.
+            dlv.kill();
+        } else {
+            // dlv was spawned with `detached: true`, which makes it the leader of a
+            // new process group. Signal the whole group (negative pid) so any
+            // descendants dlv may have spawned are cleaned up too.
+            process.kill(-dlv.pid, 'SIGTERM');
+        }
+        ext.outputChannel.appendLog(localize('dlvCleanedUp', 'Cleaned up Delve process (PID {0}) for "{1}".', dlv.pid, folderFsPath));
+    } catch {
+        // Process already gone — fine.
+    }
+}
+
 export class GoDebugProvider extends FuncDebugProviderBase {
     // Delve attaches to the worker process out-of-band. These satisfy the
     // abstract members on FuncDebugProviderBase but are never read because
@@ -55,9 +103,18 @@ export class GoDebugProvider extends FuncDebugProviderBase {
         return '';
     }
 
+    // resolveDebugConfiguration is a hook VS Code calls every time a debug session is about to start
+    // GoDebugProvider overrides FuncDebugProviderBase.resolveDebugConfiguration
     public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, token?: CancellationToken): Promise<DebugConfiguration | undefined> {
         const result = await super.resolveDebugConfiguration(folder, debugConfiguration, token);
         if (!result || result.mode !== 'remote') {
+            return result;
+        }
+
+        // Mirror the gate in FuncDebugProviderBase: only run our Functions-specific
+        // dlv-attach lifecycle when the debug session is actually for a Functions
+        // project (signalled by the `func: host start` preLaunchTask).
+        if (!hostStartTaskNameRegExp.test(debugConfiguration.preLaunchTask as string)) {
             return result;
         }
 
@@ -77,21 +134,31 @@ export class GoDebugProvider extends FuncDebugProviderBase {
         // launches the Go worker concurrently with this. The poller watches
         // for that worker, then spawns `dlv attach` so VS Code's Go extension
         // can connect to dlv's DAP server on `port`.
-        void pollAndAttachDlv(port);
+        void pollAndAttachDlv(port, folder, token);
 
         return result;
     }
 }
 
-async function pollAndAttachDlv(port: number): Promise<void> {
+async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefined, token: CancellationToken | undefined): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.go.attachDlv', async (context: IActionContext) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.properties.dlvPort = String(port);
 
         try {
+            // 1. Free the port if a prior session's dlv is still listening on it.
             await killStaleDlv(port);
+            if (token?.isCancellationRequested) {
+                context.telemetry.properties.dlvAttachResult = 'cancelled';
+                return;
+            }
 
-            const pid = await pollForGoWorkerPid(workerPollTimeoutMs);
+            // 2. Wait for `func host start` to build and launch the Go worker, then capture its PID.
+            const pid = await pollForGoWorkerPid(workerPollTimeoutMs, folder, token);
+            if (token?.isCancellationRequested) {
+                context.telemetry.properties.dlvAttachResult = 'cancelled';
+                return;
+            }
             if (pid === undefined) {
                 context.telemetry.properties.dlvAttachResult = 'workerNotFound';
                 ext.outputChannel.appendLog(localize('dlvWorkerNotFound', 'Could not find Go worker process "{0}" within {1}s. Skipping dlv auto-attach.', goWorkerProcessName, workerPollTimeoutMs / 1_000));
@@ -99,13 +166,17 @@ async function pollAndAttachDlv(port: number): Promise<void> {
             }
             context.telemetry.measurements.dlvWorkerPid = pid;
 
-            // Another dlv may have started in the meantime (very fast restart).
+            // 3. Bail if dlv is already listening on the port. The window between killStaleDlv
+            // (step 1) and our spawn is long, so a parallel poller (rapid restart, second window)
+            // may have already attached. Let VS Code connect to whatever's there rather than
+            // spawning a duplicate that would fail with EADDRINUSE.
             if (await isPortInUse(port)) {
                 context.telemetry.properties.dlvAttachResult = 'portTaken';
                 ext.outputChannel.appendLog(localize('dlvPortTaken', 'Port {0} is already in use; assuming dlv is already attached.', port));
                 return;
             }
 
+            // 4. Spawn dlv, attaching to the worker PID. Detached so it outlives this poller.
             const dlvProcess = spawn('dlv', [
                 'attach', String(pid),
                 '--headless',
@@ -117,11 +188,36 @@ async function pollAndAttachDlv(port: number): Promise<void> {
                 '--accept-multiclient',
             ], {
                 detached: true,
-                stdio: 'ignore',
+                // Pipe stdio so we can surface dlv errors. Without this the spawn
+                // is a black box on failure.
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+
+            // 5. Surface spawn errors and dlv's own output to the Azure Functions output channel.
+            dlvProcess.on('error', (err) => {
+                ext.outputChannel.appendLog(localize('dlvSpawnFailed', 'Failed to spawn Delve: {0}', err.message));
+            });
+            dlvProcess.stdout?.on('data', (chunk: Buffer) => {
+                ext.outputChannel.append(`[dlv] ${chunk.toString()}`);
+            });
+            dlvProcess.stderr?.on('data', (chunk: Buffer) => {
+                ext.outputChannel.append(`[dlv] ${chunk.toString()}`);
             });
             dlvProcess.unref();
 
-            await waitForPort(port, dlvListenTimeoutMs);
+            // 6. Track this dlv for proactive cleanup on session end. If a previous dlv was
+            // tracked for this folder (rapid restart), kill it first so it doesn't become orphaned.
+            if (folder) {
+                killTrackedDlv(folder.uri.fsPath);
+                activeDlvProcesses.set(folder.uri.fsPath, dlvProcess);
+            }
+
+            // 7. Block until dlv is actually listening, so VS Code's Go extension has a port to connect to.
+            await waitForPort(port, dlvListenTimeoutMs, token);
+            if (token?.isCancellationRequested) {
+                context.telemetry.properties.dlvAttachResult = 'cancelled';
+                return;
+            }
             context.telemetry.properties.dlvAttachResult = 'attached';
             ext.outputChannel.appendLog(localize('dlvAttached', 'Delve attached to Go worker (PID {0}) and listening on port {1}.', pid, port));
         } catch (err) {
@@ -173,10 +269,13 @@ async function killStaleDlv(port: number): Promise<void> {
     await delay(stalePortFreedDelayMs);
 }
 
-async function pollForGoWorkerPid(timeoutMs: number): Promise<number | undefined> {
+async function pollForGoWorkerPid(timeoutMs: number, folder: WorkspaceFolder | undefined, token: CancellationToken | undefined): Promise<number | undefined> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-        const pid = await findGoWorkerPid();
+        if (token?.isCancellationRequested) {
+            return undefined;
+        }
+        const pid = await findGoWorkerPid(folder);
         if (pid !== undefined) {
             return pid;
         }
@@ -185,23 +284,58 @@ async function pollForGoWorkerPid(timeoutMs: number): Promise<number | undefined
     return undefined;
 }
 
-async function findGoWorkerPid(): Promise<number | undefined> {
-    if (process.platform === 'win32') {
-        const imageName = `${goWorkerProcessName}.exe`;
-        const result = await cpUtils.tryExecuteCommandLine(undefined, undefined, `tasklist /FI "IMAGENAME eq ${imageName}" /FO CSV /NH`);
-        if (result.code !== 0) {
-            return undefined;
-        }
-        const match = result.cmdOutput.match(new RegExp(`"${imageName.replace('.', '\\.')}","(\\d+)"`));
-        return match ? parseInt(match[1], 10) : undefined;
-    }
-
-    const result = await cpUtils.tryExecuteCommandLine(undefined, undefined, `pgrep -x ${goWorkerProcessName}`);
-    if (result.code !== 0) {
+/**
+ * Resolves the PID of *this* debug session's Go worker by walking the children
+ * of the func host process tracked in `runningFuncTaskMap`. Scoping by parent
+ * avoids attaching to an unrelated `app.exe` that happens to be running on the
+ * machine, and naturally distinguishes between concurrent Functions debug
+ * sessions in different VS Code windows (each window has its own func host).
+ */
+async function findGoWorkerPid(folder: WorkspaceFolder | undefined): Promise<number | undefined> {
+    if (!folder) {
         return undefined;
     }
-    const pid = parseInt(result.cmdOutput.trim().split('\n')[0], 10);
-    return Number.isNaN(pid) ? undefined : pid;
+    // Use getAll instead of get(folder) because get() filters by cwd, which we
+    // don't have at debug-resolve time. getAll returns every task tracked for
+    // this folder; for our use case there's at most one func host per folder.
+    const hostTask = runningFuncTaskMap.getAll(folder).find((t): t is IRunningFuncTask => t !== undefined);
+    if (hostTask === undefined) {
+        return undefined;
+    }
+    const children = await listDescendantProcesses(hostTask.processId);
+    const goWorker = children.find(c => isGoWorkerProcess(c.name));
+    return goWorker?.pid;
+}
+
+interface DescendantProcess {
+    pid: number;
+    name: string | undefined;
+}
+
+async function listDescendantProcesses(rootPid: number): Promise<DescendantProcess[]> {
+    if (process.platform === 'win32') {
+        const tree: IWindowsProcessTree = getWindowsProcessTree();
+        const procs: IProcessInfo[] | undefined = await new Promise((resolve) => {
+            tree.getProcessList(rootPid, resolve, ProcessDataFlag.None);
+        });
+        return (procs ?? []).map(p => ({ pid: p.pid, name: p.name }));
+    }
+
+    // ps-tree typings omit COMM but it's the actual field on some platforms.
+    // See pickFuncProcess.ts for the same workaround.
+    type ActualUnixPS = PS & { COMM?: string };
+    const procs: ActualUnixPS[] = await new Promise((resolve, reject) => {
+        psTree(rootPid, (err: Error | null, result: PS[]) => err ? reject(err) : resolve(result as ActualUnixPS[]));
+    });
+    return procs.map(p => ({ pid: parseInt(p.PID, 10), name: p.COMMAND ?? p.COMM }));
+}
+
+function isGoWorkerProcess(name: string | undefined): boolean {
+    if (!name) {
+        return false;
+    }
+    const lower = name.toLowerCase();
+    return lower === goWorkerProcessName || lower === `${goWorkerProcessName}.exe`;
 }
 
 async function isPortInUse(port: number): Promise<boolean> {
@@ -218,9 +352,12 @@ async function isPortInUse(port: number): Promise<boolean> {
     });
 }
 
-async function waitForPort(port: number, timeoutMs: number): Promise<void> {
+async function waitForPort(port: number, timeoutMs: number, token: CancellationToken | undefined): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
+        if (token?.isCancellationRequested) {
+            return;
+        }
         if (await isPortInUse(port)) {
             return;
         }
