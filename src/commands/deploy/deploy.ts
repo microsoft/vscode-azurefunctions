@@ -6,13 +6,14 @@
 import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, DialogResponses, subscriptionExperience, UserCancelledError, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
 import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
+import { validateGoInstalled } from '../../funcCoreTools/validateGoInstalled';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -41,6 +42,7 @@ import { getWarningsForConnectionSettings } from './getWarningsForConnectionSett
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
+import { applyGoDeployDefaults } from './applyGoDeployDefaults';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -129,6 +131,29 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     if (language === ProjectLanguage.Python && !site.isLinux) {
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
+    }
+
+    if (language === ProjectLanguage.Go) {
+        // func pack produces a linux/amd64 binary, so a zip will deploy successfully to a
+        // Windows app but the worker will fail to start at runtime. Catch this up front.
+        if (!site.isLinux) {
+            context.errorHandling.suppressReportIssue = true;
+            throw new Error(localize('goNotAvailableOnWindows', 'Go projects are not supported on Windows Function Apps. Deploy to a Linux Flex Function App instead.'));
+        }
+
+        // `func pack` builds the Go binary locally using the user's installed Go
+        // toolchain, so Go must be on PATH before any pre-deploy work runs.
+        const message: string = localize('installGoForDeploy', 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.');
+        if (!await validateGoInstalled(context, message, context.workspaceFolder.uri.fsPath)) {
+            context.errorHandling.suppressReportIssue = true;
+            throw new UserCancelledError('validateGoInstalled');
+        }
+
+        // Apply Go-specific deploy defaults before reading `doRemoteBuild` below so the
+        // setting flip (scmDoBuildDuringDeployment=false) is reflected in downstream logic.
+        // Otherwise a user with remote build enabled would have Oryx settings applied to the
+        // app on their first Go deploy, even though Go doesn't use Oryx.
+        await applyGoDeployDefaults(context, context.workspaceFolder);
     }
 
     void showCoreToolsWarning(context, version, site.fullName);

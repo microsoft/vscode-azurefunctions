@@ -77,6 +77,7 @@ export enum JavaBuildTool {
 }
 
 export const ballerinaTomlFileName: string = "Ballerina.toml";
+export const goModFileName: string = 'go.mod';
 export enum BallerinaBackend {
     jvm = 'jvm',
     native = 'native'
