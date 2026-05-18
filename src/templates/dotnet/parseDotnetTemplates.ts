@@ -135,7 +135,7 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
             csharpTemplate.templateSchemaVersion = TemplateSchemaVersion.v1;
 
             const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
-            const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
+            const jsTemplate: FunctionTemplateBase | undefined = jsTemplates.find((t: FunctionTemplateBase) => normalizeScriptId(t.id) === normalizedDotnetId);
 
             if (jsTemplate) {
                 assertTemplateIsV1(jsTemplate);
