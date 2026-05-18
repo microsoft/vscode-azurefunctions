@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { spawn, type ChildProcess } from 'child_process';
 import { createConnection } from 'net';
 import psTree, { type PS } from 'ps-tree';
@@ -60,6 +60,14 @@ const activeDlvProcesses = new Map<string, ChildProcess>();
 export function registerGoDebugSessionCleanup(): vscode.Disposable {
     return vscode.debug.onDidTerminateDebugSession((session) => {
         if (session.type !== 'go' || !session.workspaceFolder) {
+            return;
+        }
+        // Only act on Functions debug sessions. A user may have a non-Functions Go debug
+        // session open in the same folder; the `func: host start` preLaunchTask is the same
+        // discriminator we use in resolveDebugConfiguration to decide whether to spawn dlv,
+        // so checking it here keeps the spawn and cleanup gates symmetric.
+        const preLaunchTask = session.configuration.preLaunchTask as string | undefined;
+        if (!preLaunchTask || !hostStartTaskNameRegExp.test(preLaunchTask)) {
             return;
         }
         killTrackedDlv(session.workspaceFolder.uri.fsPath);
@@ -145,20 +153,22 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
         context.errorHandling.suppressDisplay = true;
         context.telemetry.properties.dlvPort = String(port);
 
+        if (!folder) {
+            // findGoWorkerPid keys off runningFuncTaskMap[folder]; with no folder there is
+            // nothing to look up and the 120s poll would spin without ever finding a worker.
+            context.telemetry.properties.dlvAttachResult = 'noWorkspaceFolder';
+            ext.outputChannel.appendLog(localize('dlvNoFolder', 'No workspace folder for the Go debug session; skipping dlv auto-attach.'));
+            return;
+        }
+
         try {
             // 1. Free the port if a prior session's dlv is still listening on it.
             await killStaleDlv(port);
-            if (token?.isCancellationRequested) {
-                context.telemetry.properties.dlvAttachResult = 'cancelled';
-                return;
-            }
+            throwIfCancelled(token);
 
             // 2. Wait for `func host start` to build and launch the Go worker, then capture its PID.
             const pid = await pollForGoWorkerPid(workerPollTimeoutMs, folder, token);
-            if (token?.isCancellationRequested) {
-                context.telemetry.properties.dlvAttachResult = 'cancelled';
-                return;
-            }
+            throwIfCancelled(token);
             if (pid === undefined) {
                 context.telemetry.properties.dlvAttachResult = 'workerNotFound';
                 ext.outputChannel.appendLog(localize('dlvWorkerNotFound', 'Could not find Go worker process "{0}" within {1}s. Skipping dlv auto-attach.', goWorkerProcessName, workerPollTimeoutMs / 1_000));
@@ -207,20 +217,19 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
 
             // 6. Track this dlv for proactive cleanup on session end. If a previous dlv was
             // tracked for this folder (rapid restart), kill it first so it doesn't become orphaned.
-            if (folder) {
-                killTrackedDlv(folder.uri.fsPath);
-                activeDlvProcesses.set(folder.uri.fsPath, dlvProcess);
-            }
+            killTrackedDlv(folder.uri.fsPath);
+            activeDlvProcesses.set(folder.uri.fsPath, dlvProcess);
 
             // 7. Block until dlv is actually listening, so VS Code's Go extension has a port to connect to.
             await waitForPort(port, dlvListenTimeoutMs, token);
-            if (token?.isCancellationRequested) {
-                context.telemetry.properties.dlvAttachResult = 'cancelled';
-                return;
-            }
+            throwIfCancelled(token);
             context.telemetry.properties.dlvAttachResult = 'attached';
             ext.outputChannel.appendLog(localize('dlvAttached', 'Delve attached to Go worker (PID {0}) and listening on port {1}.', pid, port));
         } catch (err) {
+            if (isUserCancelledError(err)) {
+                // callWithTelemetryAndErrorHandling marks the event as cancelled and stays silent.
+                throw err;
+            }
             context.telemetry.properties.dlvAttachResult = 'failed';
             const message = err instanceof Error ? err.message : String(err);
             ext.outputChannel.appendLog(localize('dlvAttachFailed', 'Failed to auto-attach Delve: {0}', message));
@@ -272,9 +281,7 @@ async function killStaleDlv(port: number): Promise<void> {
 async function pollForGoWorkerPid(timeoutMs: number, folder: WorkspaceFolder | undefined, token: CancellationToken | undefined): Promise<number | undefined> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-        if (token?.isCancellationRequested) {
-            return undefined;
-        }
+        throwIfCancelled(token);
         const pid = await findGoWorkerPid(folder);
         if (pid !== undefined) {
             return pid;
@@ -355,13 +362,17 @@ async function isPortInUse(port: number): Promise<boolean> {
 async function waitForPort(port: number, timeoutMs: number, token: CancellationToken | undefined): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-        if (token?.isCancellationRequested) {
-            return;
-        }
+        throwIfCancelled(token);
         if (await isPortInUse(port)) {
             return;
         }
         await delay(dlvListenRetryIntervalMs);
     }
     throw new Error(localize('dlvListenTimeout', 'Timed out waiting for Delve to start listening on port {0} within {1}s.', port, timeoutMs / 1_000));
+}
+
+function throwIfCancelled(token: CancellationToken | undefined): void {
+    if (token?.isCancellationRequested) {
+        throw new UserCancelledError('go.dlv.attach');
+    }
 }
