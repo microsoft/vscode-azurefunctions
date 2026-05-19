@@ -69,7 +69,7 @@ interface IVerifyFrameworkResult {
 // digits regardless of what precedes them (e.g. "Planet.net8.0", "my_net8.0", or a project folder
 // named "net8.0"). It also avoids the first-match problem: for a path like
 // "net8.0/bin/Release/net6.0/publish", the regex finds "net6.0" in the correct TFM segment.
-const buildOutputPattern: RegExp = /\bbin([/\\])(Debug|Release)\1(net(?:standard|coreapp)?[0-9][0-9.]*)/i;
+const buildOutputPattern: RegExp = /\bbin([/\\])(Debug|Release)\1(net(?:standard|coreapp)?[0-9.]+)/i;
 
 function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramework: string): IVerifyFrameworkResult | undefined {
     let mismatchTargetFramework: string | undefined;
