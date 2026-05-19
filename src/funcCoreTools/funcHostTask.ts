@@ -358,11 +358,11 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
         }
     }
 
-    if (!killAll) {
+    if (killAll) {
+        runningFuncTaskMap.deleteAll(workspaceFolder);
+    } else {
         // Always delete the specific entry we looked up, even when normalizedBuildPath is undefined
         runningFuncTaskMap.deleteOne(workspaceFolder, normalizedBuildPath);
-    } else {
-        runningFuncTaskMap.deleteAll(workspaceFolder);
     }
 
     runningFuncTasksChangedEmitter.fire();
