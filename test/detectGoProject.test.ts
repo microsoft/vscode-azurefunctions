@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { goModFileName } from '../src/constants';
-import { isGoProject } from '../src/commands/initProjectForVSCode/detectProjectLanguage';
+import { detectProjectLanguage, isGoProject } from '../src/commands/initProjectForVSCode/detectProjectLanguage';
+import { goModFileName, localSettingsFileName, ProjectLanguage } from '../src/constants';
 
 suite('detectProjectLanguage — Go', () => {
     let tmpDir: string;
@@ -44,4 +44,16 @@ suite('detectProjectLanguage — Go', () => {
         await AzExtFsExtra.writeFile(path.join(nested, goModFileName), 'module example.com/nested\n');
         assert.strictEqual(await isGoProject(tmpDir), false);
     });
+
+    test('detectProjectLanguage infers Go from FUNCTIONS_WORKER_RUNTIME=native in local.settings.json', async () => {
+        // If a user has a Go local.settings.json but no go.mod yet (stub project / mid-migration),
+        // detectProjectLanguage should still identify the language.
+        await AzExtFsExtra.writeFile(
+            path.join(tmpDir, localSettingsFileName),
+            JSON.stringify({ IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'native' } }),
+        );
+        const context = await createTestActionContext();
+        assert.strictEqual(await detectProjectLanguage(context, tmpDir), ProjectLanguage.Go);
+    });
 });
+
