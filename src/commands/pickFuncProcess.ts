@@ -7,10 +7,11 @@ import { sendRequestWithTimeout, type AzExtRequestPrepareOptions } from '@micros
 import { callWithTelemetryAndErrorHandling, parseError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import psTree, { type PS } from 'ps-tree';
 import * as vscode from 'vscode';
-import { hostStartTaskName } from '../constants';
+import { hostStartTaskName, jsonOutputFileFlag } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, resolveAndNormalizeCwd, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
+import { generateJsonOutputFilePath, getWorkerPidFromJsonOutput, injectJsonOutputFileArgIfNeeded, isDotnetIsolatedDebugTask, shouldInjectJsonOutputFile } from '../funcCoreTools/jsonOutputFile';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -70,6 +71,11 @@ export async function startFuncProcessFromApi(
         funcHostStartCmd += ` ${args.join(' ')}`;
     }
 
+    const jsonOutputFile = shouldInjectJsonOutputFile(funcHostStartCmd) ? generateJsonOutputFilePath() : undefined;
+    if (jsonOutputFile) {
+        funcHostStartCmd += ` ${jsonOutputFileFlag} "${jsonOutputFile}"`;
+    }
+
     await callWithTelemetryAndErrorHandling('azureFunctions.api.startFuncProcess', async (context: IActionContext) => {
         try {
             let workspaceFolder: vscode.WorkspaceFolder | undefined = buildPathToWorkspaceFolderMap.get(buildPath);
@@ -127,7 +133,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 
     const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
     await waitForPrevFuncTaskToStop(result.workspace, buildPath);
-    const taskInfo = await startFuncTask(context, result.workspace, buildPath, funcTask);
+    const taskToExecute = injectJsonOutputFileArgIfNeeded(funcTask);
+    const taskInfo = await startFuncTask(context, result.workspace, buildPath, taskToExecute);
     return await pickChildProcess(taskInfo);
 }
 
@@ -174,6 +181,8 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+        const dotnetIsolatedDebugMode = isDotnetIsolatedDebugTask(funcTask);
+
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
                 throw taskError;
@@ -181,26 +190,39 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, resolveAndNormalizeCwd(workspaceFolder, buildPath));
             if (taskInfo) {
-                for (const scheme of ['http', 'https']) {
-                    const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
-                    if (scheme === 'https') {
-                        statusRequest.rejectUnauthorized = false;
+                if (dotnetIsolatedDebugMode) {
+                    // Prefer the file written by func core tools via --json-output-file; if that flag
+                    // isn't present (e.g., the task was already running before we could inject it),
+                    // fall back to the worker PID parsed from the terminal stream by funcHostTask.
+                    const newPid = await getWorkerPidFromJsonOutput(taskInfo.workerPidFile)
+                        ?? taskInfo.workerProcessId;
+                    if (newPid) {
+                        taskInfo.processId = newPid;
+                        return taskInfo;
                     }
-
-                    try {
-                        // wait for status url to indicate functions host is running
-                        const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                        if (response.parsedBody.state.toLowerCase() === 'running') {
-                            funcTaskReadyEmitter.fire(workspaceFolder);
-                            return taskInfo;
+                } else {
+                    // otherwise, we have to wait for the status url to indicate the host is running
+                    for (const scheme of ['http', 'https']) {
+                        const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
+                        if (scheme === 'https') {
+                            statusRequest.rejectUnauthorized = false;
                         }
-                    } catch (error) {
-                        if (requestUtils.isTimeoutError(error)) {
-                            // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
-                            statusRequestTimeout *= 2;
-                            context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
-                        } else {
-                            // ignore
+
+                        try {
+                            // wait for status url to indicate functions host is running
+                            const response = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
+                            if (response.parsedBody.state.toLowerCase() === 'running') {
+                                funcTaskReadyEmitter.fire(workspaceFolder);
+                                return taskInfo;
+                            }
+                        } catch (error) {
+                            if (requestUtils.isTimeoutError(error)) {
+                                // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                                statusRequestTimeout *= 2;
+                                context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                            } else {
+                                // ignore
+                            }
                         }
                     }
                 }
@@ -243,12 +265,12 @@ async function pickChildProcess(taskInfo: IRunningFuncTask): Promise<string> {
 type ActualUnixPS = PS & { COMM?: string };
 
 async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
-    const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
-        psTree(pid, (error: Error | null, result: PS[]) => {
+    const processes: ActualUnixPS[] = await new Promise<ActualUnixPS[]>((resolve, reject): void => {
+        psTree(pid, (error: Error | null, result: readonly PS[]) => {
             if (error) {
                 reject(error);
             } else {
-                resolve(result);
+                resolve([...result] as ActualUnixPS[]);
             }
         });
     });
