@@ -5,21 +5,10 @@
 
 import { type DebugConfiguration, type TaskDefinition } from 'vscode';
 import { func, hostStartCommand, hostStartTaskName, type ProjectLanguage } from '../../../constants';
+import { goDebugConfig } from '../../../debug/GoDebugProvider';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
-
-// Default Delve DAP port used by GoDebugProvider. Inlined here so PR 1 is self-contained;
-// PR 2 will introduce GoDebugProvider and may re-export this config.
-export const goDebugConfig: DebugConfiguration = {
-    name: 'Attach to Go Functions',
-    type: 'go',
-    request: 'attach',
-    mode: 'remote',
-    port: 2345,
-    host: '127.0.0.1',
-    preLaunchTask: hostStartTaskName,
-};
 
 export class GoInitVSCodeStep extends InitVSCodeStepBase {
     stepName: string = 'GoInitVSCodeStep';

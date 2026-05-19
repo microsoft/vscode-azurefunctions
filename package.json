@@ -1384,6 +1384,11 @@
                         "description": "%azureFunctions.validateFuncCoreTools%",
                         "default": true
                     },
+                    "azureFunctions.validateDelve": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.validateDelve%",
+                        "default": true
+                    },
                     "azureFunctions.validateEmulators": {
                         "type": "boolean",
                         "description": "%azureFunctions.validateEmulators%",
