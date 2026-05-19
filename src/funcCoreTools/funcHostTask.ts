@@ -112,16 +112,22 @@ class RunningFunctionTaskMap {
         return !!this.get(folder, normalizedCwd);
     }
 
-    public delete(folder: vscode.WorkspaceFolder, normalizedCwd?: string): void {
-        if (normalizedCwd !== undefined) {
-            this._map.delete(this.makeKey(folder, normalizedCwd));
-        } else {
-            // Delete all entries for this folder
-            const prefix = this.folderPrefix(folder);
-            for (const key of [...this._map.keys()]) {
-                if (key === prefix || key.startsWith(`${prefix}::`)) {
-                    this._map.delete(key);
-                }
+    /**
+     * Deletes the single entry whose key matches `makeKey(folder, normalizedCwd)`.
+     * Works correctly when `normalizedCwd` is `undefined` (i.e. tasks with no explicit cwd).
+     */
+    public deleteOne(folder: vscode.WorkspaceFolder, normalizedCwd: string | undefined): void {
+        this._map.delete(this.makeKey(folder, normalizedCwd));
+    }
+
+    /**
+     * Deletes every entry that belongs to `folder` (all cwd variants).
+     */
+    public deleteAll(folder: vscode.WorkspaceFolder): void {
+        const prefix = this.folderPrefix(folder);
+        for (const key of [...this._map.keys()]) {
+            if (key === prefix || key.startsWith(`${prefix}::`)) {
+                this._map.delete(key);
             }
         }
     }
@@ -251,7 +257,7 @@ export function registerFuncHostTaskEvents(): void {
                 });
             }
 
-            runningFuncTaskMap.delete(scope, normalizedCwd);
+            runningFuncTaskMap.deleteOne(scope, normalizedCwd);
 
             runningFuncTasksChangedEmitter.fire();
         }
@@ -350,14 +356,13 @@ export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFol
                 await killFuncProcessByPortOrPid(runningFuncTaskItem, workspaceFolder);
             }
         }
-
-        if (normalizedBuildPath) {
-            runningFuncTaskMap.delete(workspaceFolder, normalizedBuildPath);
-        }
     }
 
-    if (killAll) {
-        runningFuncTaskMap.delete(workspaceFolder);
+    if (!killAll) {
+        // Always delete the specific entry we looked up, even when normalizedBuildPath is undefined
+        runningFuncTaskMap.deleteOne(workspaceFolder, normalizedBuildPath);
+    } else {
+        runningFuncTaskMap.deleteAll(workspaceFolder);
     }
 
     runningFuncTasksChangedEmitter.fire();
