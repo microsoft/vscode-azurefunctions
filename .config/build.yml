@@ -39,11 +39,10 @@ extends:
   parameters:
     npmFeed: ${{ variables.npmFeed }}
     additionalSetupSteps:
-      - script: |
-          wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-          chmod +x ./dotnet-install.sh
-          ./dotnet-install.sh --channel 9.0
+      - task: UseDotNet@2
         displayName: Install .NET 9.0
-        name: Install_dotnet
+        inputs:
+          version: 9.0.x
+          includePreviewVersions: true
     ${{ if eq(parameters.enableLongRunningTests, true) }}:
       testARMServiceConnection: ${{ variables.testARMServiceConnection }}
