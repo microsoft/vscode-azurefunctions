@@ -66,14 +66,14 @@ namespace DotnetDebugDebugConfiguration {
 }
 
 /**
- * Resolves a raw cwd string by replacing `${workspaceFolder}` with the actual workspace folder path,
+ * Resolves a raw cwd string by replacing all `${workspaceFolder}` tokens with the actual workspace folder filesystem path,
  * then normalizes the result. Callers should use this before interacting with `runningFuncTaskMap`.
  */
 export function resolveAndNormalizeCwd(folder: vscode.WorkspaceFolder, rawCwd?: string): string | undefined {
     if (!rawCwd) {
         return undefined;
     }
-    const resolved = rawCwd.replace('${workspaceFolder}', folder.uri.path);
+    const resolved = rawCwd.split('${workspaceFolder}').join(folder.uri.fsPath);
     return normalizePath(resolved);
 }
 
