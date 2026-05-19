@@ -64,8 +64,12 @@ interface IVerifyFrameworkResult {
 }
 
 // https://docs.microsoft.com/dotnet/standard/frameworks
-// Use negative lookbehind to avoid matching "net" when it's part of a folder name (e.g. "Planet.net8.0")
-const targetFrameworkRegExp: RegExp = /(?<![a-zA-Z0-9.])net(standard|coreapp)?[0-9.]+(?![a-zA-Z0-9])/i;
+// Match the TFM segment specifically in the .NET build output path: bin/(Debug|Release)/<TFM>
+// Targeting this known structure avoids false positives from folder names that contain "net" followed by
+// digits regardless of what precedes them (e.g. "Planet.net8.0", "my_net8.0", or a project folder
+// named "net8.0"). It also avoids the first-match problem: for a path like
+// "net8.0/bin/Release/net6.0/publish", the regex finds "net6.0" in the correct TFM segment.
+const buildOutputPattern: RegExp = /\bbin([/\\])(Debug|Release)\1(net(?:standard|coreapp)?[0-9][0-9.]*)/i;
 
 function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramework: string): IVerifyFrameworkResult | undefined {
     let mismatchTargetFramework: string | undefined;
@@ -73,11 +77,14 @@ function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramewor
     const tasks: ITask[] = getTasks(folder);
     for (const task of tasks) {
         if (task.options && task.options.cwd) {
-            const matches: RegExpMatchArray | null = task.options.cwd.match(targetFrameworkRegExp);
-            const targetFramework: string | null = matches && matches[0];
+            const match: RegExpExecArray | null = buildOutputPattern.exec(task.options.cwd);
+            const targetFramework: string | null = match ? match[3] : null;
             if (targetFramework && targetFramework.toLowerCase() !== projTargetFramework.toLowerCase()) {
                 mismatchTargetFramework = targetFramework;
-                task.options.cwd = task.options.cwd.replace(targetFramework, projTargetFramework);
+                task.options.cwd = task.options.cwd.replace(
+                    buildOutputPattern,
+                    (_m, sep, buildType) => `bin${sep}${buildType}${sep}${projTargetFramework}`
+                );
             }
         }
     }
@@ -97,10 +104,13 @@ function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramewor
 function verifySettingsFramework(workspacePath: string, projTargetFramework: string): IVerifyFrameworkResult | undefined {
     let deploySubPath: string | undefined = getWorkspaceSetting(deploySubpathSetting, workspacePath);
     if (deploySubPath) {
-        const matches: RegExpMatchArray | null = deploySubPath.match(targetFrameworkRegExp);
-        const targetFramework: string | null = matches && matches[0];
+        const match: RegExpExecArray | null = buildOutputPattern.exec(deploySubPath);
+        const targetFramework: string | null = match ? match[3] : null;
         if (targetFramework && targetFramework.toLowerCase() !== projTargetFramework.toLowerCase()) {
-            deploySubPath = deploySubPath.replace(targetFramework, projTargetFramework);
+            deploySubPath = deploySubPath.replace(
+                buildOutputPattern,
+                (_m, sep, buildType) => `bin${sep}${buildType}${sep}${projTargetFramework}`
+            );
             return {
                 mismatchTargetFramework: targetFramework,
                 update: async (): Promise<void> => {
