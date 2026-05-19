@@ -207,6 +207,11 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
             dlvProcess.on('error', (err) => {
                 ext.outputChannel.appendLog(localize('dlvSpawnFailed', 'Failed to spawn Delve: {0}', err.message));
             });
+            dlvProcess.on('exit', () => {
+                // remove dead entries from the tracking map so killTrackedDlv
+                // doesn't log spurious "Cleaned up" lines later.
+                activeDlvProcesses.delete(folder.uri.fsPath);
+            });
             dlvProcess.stdout?.on('data', (chunk: Buffer) => {
                 ext.outputChannel.append(`[dlv] ${chunk.toString()}`);
             });
@@ -226,6 +231,9 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
             context.telemetry.properties.dlvAttachResult = 'attached';
             ext.outputChannel.appendLog(localize('dlvAttached', 'Delve attached to Go worker (PID {0}) and listening on port {1}.', pid, port));
         } catch (err) {
+            // Clean up any dlv we already spawned before failing - killTrackedDlv is idempotent.
+            killTrackedDlv(folder.uri.fsPath);
+
             if (isUserCancelledError(err)) {
                 // callWithTelemetryAndErrorHandling marks the event as cancelled and stays silent.
                 throw err;
