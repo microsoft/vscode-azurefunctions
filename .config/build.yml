@@ -43,6 +43,5 @@ extends:
         displayName: Install .NET 9.0
         inputs:
           version: 9.0.x
-          includePreviewVersions: true
     ${{ if eq(parameters.enableLongRunningTests, true) }}:
       testARMServiceConnection: ${{ variables.testARMServiceConnection }}
