@@ -1,38 +1,18 @@
-# Configure CLI package managers (npm, NuGet, pip) to use the Azure Artifacts feed mirror.
+# Configure CLI package managers (NuGet, pip) to use the Azure Artifacts feed mirror.
+# npm is handled by the shared template's npmFeed parameter.
 # Requires the pipeline variable `feedBaseUrl` to be set.
 
 steps:
   - pwsh: |
       $feedBase = "$(feedBaseUrl)"
 
-      # npm: point user-level registry at the feed
-      npm config set registry "${feedBase}/npm/registry/"
-
       # NuGet: write user-level config with <clear/> to block machine-level sources
       $nugetConfigDir = if ($IsWindows) { "$env:APPDATA/NuGet" } else { "$HOME/.nuget/NuGet" }
       New-Item -ItemType Directory -Path $nugetConfigDir -Force | Out-Null
-      $nugetConfig = @"
-      <?xml version="1.0" encoding="utf-8"?>
-      <configuration>
-        <packageSources>
-          <clear />
-          <add key="AzureArtifacts" value="${feedBase}/nuget/v3/index.json" />
-        </packageSources>
-      </configuration>
-      "@
+      $nugetConfig = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n<configuration>`n  <packageSources>`n    <clear />`n    <add key=`"AzureArtifacts`" value=`"${feedBase}/nuget/v3/index.json`" />`n  </packageSources>`n</configuration>"
       $nugetConfig | Set-Content -Path (Join-Path $nugetConfigDir "NuGet.Config")
 
       # Verify configuration
-      Write-Host "--- npm config ---"
-      npm config get registry
-      Write-Host "--- project .npmrc ---"
-      if (Test-Path "$(working_directory)/.npmrc") {
-        Get-Content "$(working_directory)/.npmrc"
-      } else {
-        Write-Host "(none)"
-      }
-      Write-Host "--- user .npmrc ---"
-      Get-Content "$HOME/.npmrc" -ErrorAction SilentlyContinue
       Write-Host "--- NuGet sources ---"
       dotnet nuget list source
 
@@ -43,12 +23,6 @@ steps:
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
-  - task: npmAuthenticate@0
-    displayName: "📦 Authenticate npm feeds"
-    condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
-    inputs:
-      workingFile: $(HOME)/.npmrc
 
   - task: NuGetAuthenticate@1
     displayName: "📦 Authenticate NuGet feeds"
