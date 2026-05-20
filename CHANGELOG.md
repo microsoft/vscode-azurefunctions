@@ -63,7 +63,7 @@ This release brings DTS consumption plan support, a new Function Host Debugger V
 ## 1.20.1 - 2025-11-19
 
 ### Fixed
-* [[4832]](https://github.com/microsoft/vscode-azurefunctions/pull/4832) Fix `pickFuncProcess` not finding the `func host start` task if there were additional flags on the command
+* [[4832](https://github.com/microsoft/vscode-azurefunctions/pull/4832)] Fix `pickFuncProcess` matching so the `func host start` task is found even when additional flags are present
 
 ## 1.20.0 - 2025-11-17
 
