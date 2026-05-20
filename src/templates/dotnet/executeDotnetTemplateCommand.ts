@@ -13,6 +13,7 @@ import { type FuncVersion } from '../../FuncVersion';
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
+import { getExtensionStoragePath } from '../../utils/storagePathUtils';
 import { findShortNameByIdentity, parseTemplatesFromNupkg } from './parseNupkgTemplates';
 
 const itemNupkgFileName = 'item.nupkg';
@@ -133,7 +134,7 @@ export function getDotnetProjectTemplatePath(context: IActionContext, version: F
 
 export function getDotnetTemplateDir(context: IActionContext, version: FuncVersion, projTemplateKey: string): string {
     const templateProvider = ext.templateProvider.get(context);
-    return path.join(ext.context.globalStoragePath, templateProvider.templateSource || '', version, projTemplateKey);
+    return path.join(getExtensionStoragePath(), templateProvider.templateSource || '', version, projTemplateKey);
 }
 
 export async function validateDotnetInstalled(context: IActionContext): Promise<void> {
