@@ -45,3 +45,4 @@ extends:
           version: 9.0.x
     ${{ if eq(parameters.enableLongRunningTests, true) }}:
       testARMServiceConnection: ${{ variables.testARMServiceConnection }}
+      feedBaseUrl: ${{ variables.feedBaseUrl }}

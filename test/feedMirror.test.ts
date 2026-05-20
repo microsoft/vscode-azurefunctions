@@ -31,32 +31,6 @@ suite('feedMirror', () => {
         }
     });
 
-    suite('isEnabled', () => {
-        test('returns false when env vars are not set', () => {
-            delete process.env.FEED_BASE_URL;
-            delete process.env.FEED_TOKEN;
-            assert.strictEqual(feedMirror.isEnabled(), false);
-        });
-
-        test('returns false when only FEED_BASE_URL is set', () => {
-            process.env.FEED_BASE_URL = testFeedBaseUrl;
-            delete process.env.FEED_TOKEN;
-            assert.strictEqual(feedMirror.isEnabled(), false);
-        });
-
-        test('returns false when only FEED_TOKEN is set', () => {
-            delete process.env.FEED_BASE_URL;
-            process.env.FEED_TOKEN = testFeedToken;
-            assert.strictEqual(feedMirror.isEnabled(), false);
-        });
-
-        test('returns true when both env vars are set', () => {
-            process.env.FEED_BASE_URL = testFeedBaseUrl;
-            process.env.FEED_TOKEN = testFeedToken;
-            assert.strictEqual(feedMirror.isEnabled(), true);
-        });
-    });
-
     suite('resolveUrl - disabled', () => {
         setup(() => {
             delete process.env.FEED_BASE_URL;

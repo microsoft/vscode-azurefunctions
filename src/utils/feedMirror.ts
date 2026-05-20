@@ -11,44 +11,12 @@
 
 export namespace feedMirror {
     /**
-     * URL prefixes and patterns that should be rewritten to the feed mirror.
-     * NOTE: We do NOT rewrite cdn.functions.azure.com, aka.ms/funcCliFeedV4,
-     * aka.ms/azFuncBundleVersions, or aka.ms/funcStaticProperties.
-     */
-
-    function getFeedBaseUrl(): string | undefined {
-        return process.env.FEED_BASE_URL;
-    }
-
-    function getFeedToken(): string | undefined {
-        return process.env.FEED_TOKEN;
-    }
-
-    /**
-     * Returns true if the feed mirror environment variables are configured.
-     */
-    export function isEnabled(): boolean {
-        return !!getFeedBaseUrl() && !!getFeedToken();
-    }
-
-    /**
-     * Parses a URL and returns the hostname, or undefined if parsing fails.
-     */
-    function tryGetHostname(url: string): string | undefined {
-        try {
-            return new URL(url).hostname;
-        } catch {
-            return undefined;
-        }
-    }
-
-    /**
      * Rewrites a known external URL to the internal feed mirror URL.
      * If the feed mirror is not enabled or the URL is not recognized, returns the original URL.
      */
     export function resolveUrl(url: string): string {
-        const feedBaseUrl = getFeedBaseUrl();
-        if (!feedBaseUrl || !getFeedToken()) {
+        const feedBaseUrl = process.env.FEED_BASE_URL;
+        if (!feedBaseUrl || !process.env.FEED_TOKEN) {
             return url;
         }
 
@@ -57,8 +25,10 @@ export namespace feedMirror {
             return `${feedBaseUrl}/npm/registry/azure-functions-core-tools`;
         }
 
-        const hostname = tryGetHostname(url);
-        if (!hostname) {
+        let hostname: string;
+        try {
+            hostname = new URL(url).hostname;
+        } catch {
             return url;
         }
 
@@ -96,7 +66,7 @@ export namespace feedMirror {
      * Call this after resolveUrl and only if the URL was changed.
      */
     export function getAuthHeaders(): Record<string, string> {
-        const token = getFeedToken();
+        const token = process.env.FEED_TOKEN;
         if (token) {
             return { Authorization: `Bearer ${token}` };
         }
