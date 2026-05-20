@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ServiceClient } from "@azure/core-client";
-import { createPipelineRequest } from "@azure/core-rest-pipeline";
+import { createHttpHeaders, createPipelineRequest } from "@azure/core-rest-pipeline";
 import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
@@ -13,6 +13,7 @@ import { URLSearchParams } from "url";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
+import { feedMirror } from './feedMirror';
 import { nonNullProp, nonNullValue } from "./nonNull";
 
 export namespace requestUtils {
@@ -28,6 +29,18 @@ export namespace requestUtils {
      */
     export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions): Promise<AzExtPipelineResponse> {
         const timeout = getRequestTimeoutMS();
+
+        const originalUrl = options.url;
+        const resolvedUrl = feedMirror.resolveUrl(originalUrl);
+        if (resolvedUrl !== originalUrl) {
+            const mergedHeaders = createHttpHeaders(feedMirror.getAuthHeaders());
+            if (options.headers) {
+                for (const [name, value] of options.headers) {
+                    mergedHeaders.set(name, value);
+                }
+            }
+            options = { ...options, url: resolvedUrl, headers: mergedHeaders };
+        }
 
         try {
             return await sendRequestWithTimeout(context, options, timeout, undefined);
@@ -49,7 +62,26 @@ export namespace requestUtils {
 
     export async function downloadFile(context: IActionContext, requestOptionsOrUrl: string | AzExtRequestPrepareOptions, filePath: string): Promise<void> {
         await AzExtFsExtra.ensureDir(path.dirname(filePath));
-        const request = createPipelineRequest(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
+
+        let url: string;
+        let existingHeaders: Record<string, string> = {};
+        if (typeof requestOptionsOrUrl === 'string') {
+            url = requestOptionsOrUrl;
+        } else {
+            url = requestOptionsOrUrl.url;
+            if (requestOptionsOrUrl.headers) {
+                existingHeaders = requestOptionsOrUrl.headers.toJSON();
+            }
+        }
+
+        const resolvedUrl = feedMirror.resolveUrl(url);
+        if (resolvedUrl !== url) {
+            url = resolvedUrl;
+            existingHeaders = { ...existingHeaders, ...feedMirror.getAuthHeaders() };
+        }
+
+        const pipelineHeaders = createHttpHeaders(existingHeaders);
+        const request = createPipelineRequest({ method: 'GET', url, headers: pipelineHeaders });
         request.streamResponseStatusCodes = new Set([Number.POSITIVE_INFINITY]);
         const client: ServiceClient = await createGenericClient(context, undefined);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
