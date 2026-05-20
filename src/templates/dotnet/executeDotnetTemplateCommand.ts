@@ -128,6 +128,8 @@ export async function executeDotnetTemplateCreate(
     // Find the shortName for the given template identity
     const shortName = await findShortNameByIdentity(nupkgPaths, identity);
 
+    // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state
+    // This is how the JSON CLI tool operated
     const { tempCliHome, shouldCleanup } = createIsolatedCliHome(templateDir);
     const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: tempCliHome };
 
@@ -137,11 +139,11 @@ export async function executeDotnetTemplateCreate(
         // Build dotnet new args: dotnet new <shortName> --<param> <value> ...
         const createArgs = composeArgs(
             withArg('new', shortName),
-            // Filter out any arg whose value is nullish or an empty/stringified-nullish value.
-            // Without this, values like `null` or the string "undefined" (e.g. `String(undefined)`)
-            // would flow through to the CLI and produce errors like `'--FunctionsHttpPort'
-            // cannot parse argument 'undefined'`.
             ...Object.entries(templateArgs)
+                // Filter out any arg whose value is nullish or an empty/stringified-nullish value.
+                // Without this, values like `null` or the string "undefined" (e.g. `String(undefined)`)
+                // would flow through to the CLI and produce errors like `'--FunctionsHttpPort'
+                // cannot parse argument 'undefined'`.
                 .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'undefined' && value !== 'null')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
         )();
