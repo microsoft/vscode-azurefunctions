@@ -7,11 +7,11 @@ import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils
 import extract from 'extract-zip';
 import * as path from 'path';
 import { FuncVersion } from '../../FuncVersion';
-import { ext } from '../../extensionVariables';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { getRandomHexString } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
+import { getExtensionStoragePath } from '../../utils/storagePathUtils';
 import { type IBindingTemplate } from '../IBindingTemplate';
 import { type IFunctionTemplate } from '../IFunctionTemplate';
 import { type ITemplates } from '../ITemplates';
@@ -53,7 +53,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(context, latestTemplateVersion);
 
-        const templatesPath: string = path.join(ext.context.globalStoragePath, 'script', getRandomHexString());
+        const templatesPath: string = path.join(getExtensionStoragePath(), 'script', getRandomHexString());
         try {
             const filePath: string = path.join(templatesPath, 'templates.zip');
             await requestUtils.downloadFile(context, templateRelease.templates, filePath);
