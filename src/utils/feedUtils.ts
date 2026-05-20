@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { createHttpHeaders } from '@azure/core-rest-pipeline';
-import { feedMirror } from './feedMirror';
 import { nonNullProp } from './nonNull';
 import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
@@ -24,15 +22,12 @@ export namespace feedUtils {
      * 2. Sets timeout for getting the feed to 15 seconds since we would rather default to the "backup" logic than wait a long time
      */
     export async function getJsonFeed<T extends {}>(context: IActionContext, url: string): Promise<T> {
-        const resolvedUrl = feedMirror.resolveUrl(url);
-        const cacheKey = resolvedUrl;
-        let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(cacheKey);
+        let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const headers = resolvedUrl !== url ? createHttpHeaders(feedMirror.getAuthHeaders()) : undefined;
-            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: resolvedUrl, headers });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
             // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
             cachedFeed = { data: parseJson(nonNullProp(response, 'bodyAsText')), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
-            cachedFeeds.set(cacheKey, cachedFeed);
+            cachedFeeds.set(url, cachedFeed);
         }
 
         return <T>cachedFeed.data;
