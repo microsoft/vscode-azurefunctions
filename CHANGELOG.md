@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.21.1 - 2026-05-20
+
+### Changed
+* Bump Azure Functions extension version to `1.21.1`.
+
 ## 1.21.0 - 2026-04-14
 
 ### Overview
