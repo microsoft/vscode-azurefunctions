@@ -142,10 +142,17 @@ export async function executeDotnetTemplateCreate(
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
         )();
 
-        await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', createArgs, env);
+        await cpUtils.executeCommand(
+            undefined,
+            workingDirectory,
+            'dotnet',
+            createArgs,
+            env
+        );
     } finally {
+        // Clean up isolated home directory
         if (shouldCleanup) {
-            await fs.promises.rm(cliHome, { recursive: true, force: true }).catch(() => { /* best-effort */ });
+            await fs.promises.rm(cliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
         }
     }
 }
