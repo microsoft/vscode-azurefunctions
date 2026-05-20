@@ -24,7 +24,7 @@ steps:
     displayName: "📦 Authenticate npm feeds"
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
     inputs:
-      workingFile: $(USERPROFILE)/.npmrc
+      workingFile: $(HOME)/.npmrc
 
   - task: NuGetAuthenticate@1
     displayName: "📦 Authenticate NuGet feeds"
