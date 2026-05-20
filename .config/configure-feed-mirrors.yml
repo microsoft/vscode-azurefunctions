@@ -8,9 +8,25 @@ steps:
       # npm: point user-level registry at the feed
       npm config set registry "${feedBase}/npm/registry/"
 
-      # NuGet: replace default source with feed; credential provider handles auth
-      dotnet nuget remove source nuget.org 2>$null
-      dotnet nuget add source "${feedBase}/nuget/v3/index.json" --name AzureArtifacts
+      # NuGet: write user-level config with <clear/> to block machine-level sources
+      $nugetConfigDir = if ($IsWindows) { "$env:APPDATA/NuGet" } else { "$HOME/.nuget/NuGet" }
+      New-Item -ItemType Directory -Path $nugetConfigDir -Force | Out-Null
+      $nugetConfig = @"
+      <?xml version="1.0" encoding="utf-8"?>
+      <configuration>
+        <packageSources>
+          <clear />
+          <add key="AzureArtifacts" value="${feedBase}/nuget/v3/index.json" />
+        </packageSources>
+      </configuration>
+      "@
+      $nugetConfig | Set-Content -Path (Join-Path $nugetConfigDir "NuGet.Config")
+
+      # Verify configuration
+      Write-Host "--- npm config ---"
+      npm config get registry
+      Write-Host "--- NuGet sources ---"
+      dotnet nuget list source
 
       # pip: set index URL with embedded basic auth
       $pipUrl = $feedBase -replace 'https://', "https://build:$($env:SYSTEM_ACCESSTOKEN)@"

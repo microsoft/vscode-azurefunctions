@@ -27,7 +27,7 @@ resources:
     - repository: azExtTemplates
       type: github
       name: microsoft/vscode-azuretools
-      ref: azext-pt/v1
+      ref: bmw/testFeed # TODO: revert
       endpoint: GitHub-AzureTools # The service connection to use when accessing this repository
 
 variables:
