@@ -1,0 +1,31 @@
+# Configure CLI package managers (npm, NuGet, pip) to use the Azure Artifacts feed mirror.
+# Requires the pipeline variable `feedBaseUrl` to be set.
+
+steps:
+  - pwsh: |
+      $feedBase = "$(feedBaseUrl)"
+
+      # npm: point user-level registry at the feed
+      npm config set registry "${feedBase}/npm/registry/"
+
+      # NuGet: replace default source with feed; credential provider handles auth
+      dotnet nuget remove source nuget.org 2>$null
+      dotnet nuget add source "${feedBase}/nuget/v3/index.json" --name AzureArtifacts
+
+      # pip: set index URL with embedded basic auth
+      $pipUrl = $feedBase -replace 'https://', "https://build:$($env:SYSTEM_ACCESSTOKEN)@"
+      Write-Host "##vso[task.setvariable variable=PIP_INDEX_URL]${pipUrl}/pypi/simple/"
+    displayName: "📦 Configure package manager feed mirrors"
+    condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  - task: npmAuthenticate@0
+    displayName: "📦 Authenticate npm feeds"
+    condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
+    inputs:
+      workingFile: $(USERPROFILE)/.npmrc
+
+  - task: NuGetAuthenticate@1
+    displayName: "📦 Authenticate NuGet feeds"
+    condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))

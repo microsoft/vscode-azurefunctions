@@ -33,6 +33,8 @@ resources:
 variables:
   # Pick up shared AZCode variables
   - template: azdo-pipelines/azcode.variables.yml@azExtTemplates
+  - name: feedBaseUrl
+    value: https://devdiv.pkgs.visualstudio.com/DevDiv/_packaging/azcode
 
 extends:
   template: azdo-pipelines/1es-mb-main.yml@azExtTemplates # Use the main build template
@@ -43,6 +45,6 @@ extends:
         displayName: Install .NET 9.0
         inputs:
           version: 9.0.x
+      - template: configure-feed-mirrors.yml
     ${{ if eq(parameters.enableLongRunningTests, true) }}:
       testARMServiceConnection: ${{ variables.testARMServiceConnection }}
-      feedBaseUrl: ${{ variables.feedBaseUrl }}
