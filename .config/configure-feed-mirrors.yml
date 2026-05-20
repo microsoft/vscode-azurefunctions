@@ -25,6 +25,14 @@ steps:
       # Verify configuration
       Write-Host "--- npm config ---"
       npm config get registry
+      Write-Host "--- project .npmrc ---"
+      if (Test-Path "$(working_directory)/.npmrc") {
+        Get-Content "$(working_directory)/.npmrc"
+      } else {
+        Write-Host "(none)"
+      }
+      Write-Host "--- user .npmrc ---"
+      Get-Content "$HOME/.npmrc" -ErrorAction SilentlyContinue
       Write-Host "--- NuGet sources ---"
       dotnet nuget list source
 
