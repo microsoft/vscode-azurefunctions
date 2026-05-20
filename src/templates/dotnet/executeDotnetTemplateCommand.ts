@@ -81,11 +81,12 @@ export async function executeDotnetTemplateCreate(
     // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state
     // This is how the JSON CLI tool operated
     const tempCliHome = path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
-    const prevDotnetCliHome = process.env.DOTNET_CLI_HOME;
+
+    // Pass DOTNET_CLI_HOME per-process instead of mutating process.env to avoid
+    // race conditions when multiple template creates run in parallel (e.g. tests)
+    const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: tempCliHome };
 
     try {
-        process.env.DOTNET_CLI_HOME = tempCliHome;
-
         // Install template packages
         for (const nupkgPath of nupkgPaths) {
             await cpUtils.executeCommand(
@@ -93,6 +94,7 @@ export async function executeDotnetTemplateCreate(
                 undefined,
                 'dotnet',
                 composeArgs(withArg('new', 'install'), withQuotedArg(nupkgPath))(),
+                env,
             );
         }
 
@@ -113,15 +115,9 @@ export async function executeDotnetTemplateCreate(
             workingDirectory,
             'dotnet',
             createArgs,
+            env,
         );
     } finally {
-        // Restore DOTNET_CLI_HOME
-        if (prevDotnetCliHome !== undefined) {
-            process.env.DOTNET_CLI_HOME = prevDotnetCliHome;
-        } else {
-            delete process.env.DOTNET_CLI_HOME;
-        }
-
         // Clean up isolated home directory
         await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
     }
