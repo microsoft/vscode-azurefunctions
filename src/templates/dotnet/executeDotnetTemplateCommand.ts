@@ -30,15 +30,15 @@ const templateInstallPromises = new Map<string, Promise<void>>();
  * During tests, returns a deterministic directory keyed by templateDir so parallel tests
  * with the same template set share a warm cache. In production, returns a unique temp directory.
  */
-function createIsolatedCliHome(templateDir: string): { cliHome: string; shouldCleanup: boolean } {
+function createIsolatedCliHome(templateDir: string): { tempCliHome: string; shouldCleanup: boolean } {
     if (process.env.VSCODE_RUNNING_TESTS) {
         return {
-            cliHome: path.join(os.tmpdir(), `azfunc-test-dotnet-${templateDir}`.replace(/[^a-z0-9-]/gi, '_')),
+            tempCliHome: path.join(os.tmpdir(), `azfunc-test-dotnet-${templateDir}`.replace(/[^a-z0-9-]/gi, '_')),
             shouldCleanup: false,
         };
     }
     return {
-        cliHome: path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`),
+        tempCliHome: path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`),
         shouldCleanup: true,
     };
 }
@@ -128,15 +128,19 @@ export async function executeDotnetTemplateCreate(
     // Find the shortName for the given template identity
     const shortName = await findShortNameByIdentity(nupkgPaths, identity);
 
-    const { cliHome, shouldCleanup } = createIsolatedCliHome(templateDir);
-    const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: cliHome };
+    const { tempCliHome, shouldCleanup } = createIsolatedCliHome(templateDir);
+    const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: tempCliHome };
 
     try {
-        await installTemplatePackages(nupkgPaths, env, cliHome);
+        await installTemplatePackages(nupkgPaths, env, tempCliHome);
 
         // Build dotnet new args: dotnet new <shortName> --<param> <value> ...
         const createArgs = composeArgs(
             withArg('new', shortName),
+            // Filter out any arg whose value is nullish or an empty/stringified-nullish value.
+            // Without this, values like `null` or the string "undefined" (e.g. `String(undefined)`)
+            // would flow through to the CLI and produce errors like `'--FunctionsHttpPort'
+            // cannot parse argument 'undefined'`.
             ...Object.entries(templateArgs)
                 .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'undefined' && value !== 'null')
                 .map(([key, value]) => withNamedArg(`--${key}`, value, { shouldQuote: true })),
@@ -152,7 +156,7 @@ export async function executeDotnetTemplateCreate(
     } finally {
         // Clean up isolated home directory
         if (shouldCleanup) {
-            await fs.promises.rm(cliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
+            await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
         }
     }
 }
