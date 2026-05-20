@@ -10,8 +10,8 @@ import { Stream } from 'stream';
 import { localize } from '../localize';
 
 export namespace cpUtils {
-    export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs): Promise<string> {
-        const result: ICommandResult = await tryExecuteCommand(outputChannel, workingDirectory, command, args);
+    export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv): Promise<string> {
+        const result: ICommandResult = await tryExecuteCommand(outputChannel, workingDirectory, command, args, env);
         if (result.code !== 0) {
             // We want to make sure the full error message is displayed to the user, not just the error code.
             // If outputChannel is defined, then we simply call 'outputChannel.show()' and throw a generic error telling the user to check the output window
@@ -51,8 +51,8 @@ export namespace cpUtils {
         return result.cmdOutput;
     }
 
-    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs): Promise<ICommandResult> {
-        return tryExecuteCommandCore(outputChannel, workingDirectory, command, args, false);
+    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv): Promise<ICommandResult> {
+        return tryExecuteCommandCore(outputChannel, workingDirectory, command, args, false, env);
     }
 
     /**
@@ -63,7 +63,7 @@ export namespace cpUtils {
         return tryExecuteCommandCore(outputChannel, workingDirectory, commandLine, [], true);
     }
 
-    async function tryExecuteCommandCore(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, allowUnsafeExecutablePath: boolean): Promise<ICommandResult> {
+    async function tryExecuteCommandCore(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, allowUnsafeExecutablePath: boolean, env?: NodeJS.ProcessEnv): Promise<ICommandResult> {
         const stdoutFinal = new AccumulatorStream();
         const stdoutAndErrFinal = new AccumulatorStream();
 
@@ -92,6 +92,7 @@ export namespace cpUtils {
 
         const options: StreamSpawnOptions = {
             cwd: workingDirectory || os.tmpdir(),
+            env,
             shellProvider: Shell.getShellOrDefault(),
             stdOutPipe: stdoutIntermediate,
             stdErrPipe: stderrIntermediate,
