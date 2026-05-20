@@ -79,21 +79,26 @@ export async function executeDotnetTemplateCreate(
     const shortName = await findShortNameByIdentity(nupkgPaths, identity);
 
     // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state.
-    // During tests, skip the isolation to avoid the cold-start overhead of a fresh template engine cache.
+    // During tests, use a deterministic directory keyed by version+projTemplateKey so that:
+    //   - Tests with the same template set share a warm cache (fast after first install)
+    //   - Different template sets get separate directories (no conflicting short names)
     const isTestRun = !!process.env.VSCODE_RUNNING_TESTS;
-    const tempCliHome = isTestRun ? undefined : path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
-    const env: NodeJS.ProcessEnv | undefined = tempCliHome ? { ...process.env, DOTNET_CLI_HOME: tempCliHome } : undefined;
+    const tempCliHome = isTestRun
+        ? path.join(os.tmpdir(), `azfunc-test-dotnet-${version}-${projTemplateKey}`.replace(/[^a-z0-9-]/gi, '_'))
+        : path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
+    const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: tempCliHome };
 
     try {
-        // Install template packages
+        // Install template packages.
+        // During tests, use tryExecuteCommand to ignore "already installed" errors (exit code 106)
+        // when multiple parallel tests share the same deterministic DOTNET_CLI_HOME.
         for (const nupkgPath of nupkgPaths) {
-            await cpUtils.executeCommand(
-                undefined,
-                undefined,
-                'dotnet',
-                composeArgs(withArg('new', 'install'), withQuotedArg(nupkgPath))(),
-                env,
-            );
+            const installArgs = composeArgs(withArg('new', 'install'), withQuotedArg(nupkgPath))();
+            if (isTestRun) {
+                await cpUtils.tryExecuteCommand(undefined, undefined, 'dotnet', installArgs, env);
+            } else {
+                await cpUtils.executeCommand(undefined, undefined, 'dotnet', installArgs, env);
+            }
         }
 
         // Build dotnet new args: dotnet new <shortName> --<param> <value> ...
@@ -116,8 +121,8 @@ export async function executeDotnetTemplateCreate(
             env,
         );
     } finally {
-        if (tempCliHome) {
-            // Clean up isolated home directory (only if we created one)
+        if (!isTestRun) {
+            // Clean up isolated home directory (skip during tests to preserve shared cache)
             await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
         }
     }
