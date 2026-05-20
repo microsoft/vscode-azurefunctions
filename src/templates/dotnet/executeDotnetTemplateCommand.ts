@@ -78,13 +78,11 @@ export async function executeDotnetTemplateCreate(
     // Find the shortName for the given template identity
     const shortName = await findShortNameByIdentity(nupkgPaths, identity);
 
-    // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state
-    // This is how the JSON CLI tool operated
-    const tempCliHome = path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
-
-    // Pass DOTNET_CLI_HOME per-process instead of mutating process.env to avoid
-    // race conditions when multiple template creates run in parallel (e.g. tests)
-    const env: NodeJS.ProcessEnv = { ...process.env, DOTNET_CLI_HOME: tempCliHome };
+    // Use an isolated DOTNET_CLI_HOME so template installation doesn't affect the user's global state.
+    // During tests, skip the isolation to avoid the cold-start overhead of a fresh template engine cache.
+    const isTestRun = !!process.env.VSCODE_RUNNING_TESTS;
+    const tempCliHome = isTestRun ? undefined : path.join(os.tmpdir(), `azfunc-dotnet-home-${randomUtils.getRandomHexString()}`);
+    const env: NodeJS.ProcessEnv | undefined = tempCliHome ? { ...process.env, DOTNET_CLI_HOME: tempCliHome } : undefined;
 
     try {
         // Install template packages
@@ -118,8 +116,10 @@ export async function executeDotnetTemplateCreate(
             env,
         );
     } finally {
-        // Clean up isolated home directory
-        await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
+        if (tempCliHome) {
+            // Clean up isolated home directory (only if we created one)
+            await fs.promises.rm(tempCliHome, { recursive: true, force: true }).catch(() => { /* best-effort cleanup */ });
+        }
     }
 }
 
