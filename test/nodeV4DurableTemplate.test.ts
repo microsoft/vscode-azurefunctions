@@ -48,6 +48,10 @@ suite('Node v4 durable orchestrator template', () => {
                     !templateContent.includes('startNew(request.params.orchestratorName'),
                     `Expected ${language} durable starter to avoid route param orchestrator placeholder`
                 );
+                assert.ok(
+                    !templateContent.includes('{orchestratorName}'),
+                    `Expected ${language} durable starter route to avoid unresolved orchestrator placeholder`
+                );
             });
         });
     }
