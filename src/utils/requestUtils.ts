@@ -33,11 +33,15 @@ export namespace requestUtils {
         const originalUrl = options.url;
         const resolvedUrl = feedMirror.resolveUrl(originalUrl);
         if (resolvedUrl !== originalUrl) {
-            const mergedHeaders = createHttpHeaders(feedMirror.getAuthHeaders());
+            const mergedHeaders = createHttpHeaders();
             if (options.headers) {
                 for (const [name, value] of options.headers) {
                     mergedHeaders.set(name, value);
                 }
+            }
+            // Feed mirror auth headers take precedence over any existing Authorization
+            for (const [name, value] of Object.entries(feedMirror.getAuthHeaders())) {
+                mergedHeaders.set(name, value);
             }
             options = { ...options, url: resolvedUrl, headers: mergedHeaders };
         }

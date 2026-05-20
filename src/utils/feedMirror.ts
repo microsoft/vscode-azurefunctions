@@ -32,6 +32,17 @@ export namespace feedMirror {
     }
 
     /**
+     * Parses a URL and returns the hostname, or undefined if parsing fails.
+     */
+    function tryGetHostname(url: string): string | undefined {
+        try {
+            return new URL(url).hostname;
+        } catch {
+            return undefined;
+        }
+    }
+
+    /**
      * Rewrites a known external URL to the internal feed mirror URL.
      * If the feed mirror is not enabled or the URL is not recognized, returns the original URL.
      */
@@ -41,15 +52,25 @@ export namespace feedMirror {
             return url;
         }
 
-        // NPM registry: aka.ms/AA2qmnu or registry.npmjs.org
-        if (url === 'https://aka.ms/AA2qmnu' || url.includes('registry.npmjs.org')) {
+        // NPM registry: exact aka.ms/AA2qmnu URL or registry.npmjs.org hostname
+        if (url === 'https://aka.ms/AA2qmnu') {
             return `${feedBaseUrl}/npm/registry/azure-functions-core-tools`;
         }
 
-        // NuGet .nupkg downloads: functionscdn.azureedge.net or azureedge.net
-        if (url.includes('functionscdn.azureedge.net') || (url.includes('azureedge.net') && url.includes('.nupkg'))) {
+        const hostname = tryGetHostname(url);
+        if (!hostname) {
+            return url;
+        }
+
+        if (hostname === 'registry.npmjs.org') {
+            return `${feedBaseUrl}/npm/registry/azure-functions-core-tools`;
+        }
+
+        // NuGet .nupkg downloads: functionscdn.azureedge.net hostname or other azureedge.net subdomains with .nupkg
+        if (hostname === 'functionscdn.azureedge.net' || (hostname.endsWith('.azureedge.net') && url.endsWith('.nupkg'))) {
             // Extract the package name and version from the URL to construct the NuGet flat container path
-            const nupkgMatch = url.match(/\/([^/]+)\.(\d+\.\d+\.\d+[^/]*)\.nupkg/i);
+            // Supports versions like 4.0.5862, 1.0.0-beta, 1.0.0.1, 1.0.0-preview.1
+            const nupkgMatch = url.match(/\/([^/]+?)\.(\d+\.\d+\.\d+(?:\.\d+)?(?:-[^/]*)?)\.nupkg/i);
             if (nupkgMatch) {
                 const packageId = nupkgMatch[1].toLowerCase();
                 const version = nupkgMatch[2].toLowerCase();
@@ -58,8 +79,12 @@ export namespace feedMirror {
             return `${feedBaseUrl}/nuget/v3/flat2/`;
         }
 
-        // PowerShell Gallery: aka.ms/PwshPackageInfo or powershellgallery.com
-        if (url.includes('aka.ms/PwshPackageInfo') || url.includes('powershellgallery.com')) {
+        // PowerShell Gallery: exact aka.ms/PwshPackageInfo path or powershellgallery.com hostname
+        if (hostname === 'aka.ms' && url.includes('aka.ms/PwshPackageInfo')) {
+            return `${feedBaseUrl}/powershell/`;
+        }
+
+        if (hostname === 'www.powershellgallery.com' || hostname === 'powershellgallery.com') {
             return `${feedBaseUrl}/powershell/`;
         }
 
