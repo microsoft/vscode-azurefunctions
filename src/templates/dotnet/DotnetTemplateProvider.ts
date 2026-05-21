@@ -39,19 +39,28 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
             return url;
         }
 
-        const mirrorBaseUrl = process.env.NUGET_MIRROR_V2_URL;
-        if (!mirrorBaseUrl) {
+        const feedBaseUrl = process.env.NUGET_MIRROR_FEED_URL;
+        if (!feedBaseUrl) {
             return url;
         }
 
-        // Rewrite https://www.nuget.org/api/v2/package/{id}/{version} → mirror
+        // Rewrite https://www.nuget.org/api/v2/package/{id}/{version} → AzDO v3 flat container
         const nugetV2Prefix = 'https://www.nuget.org/api/v2/package/';
         if (!url.startsWith(nugetV2Prefix)) {
             return url;
         }
 
-        const packagePath = url.substring(nugetV2Prefix.length); // e.g. "Microsoft.Azure.WebJobs.ItemTemplates/1.0.3.10324"
-        const mirrorUrl = `${mirrorBaseUrl.replace(/\/+$/, '')}/package/${packagePath}`;
+        // Parse "{PackageId}/{Version}" from the original URL
+        const packagePath = url.substring(nugetV2Prefix.length);
+        const slashIdx = packagePath.indexOf('/');
+        if (slashIdx === -1) {
+            return url;
+        }
+        const packageId = packagePath.substring(0, slashIdx).toLowerCase();
+        const version = packagePath.substring(slashIdx + 1);
+
+        // AzDO NuGet v3 flat container: {feed}/nuget/v3/flat2/{lowerId}/{version}/{lowerId}.{version}.nupkg
+        const mirrorUrl = `${feedBaseUrl.replace(/\/+$/, '')}/nuget/v3/flat2/${packageId}/${version}/${packageId}.${version}.nupkg`;
 
         // Read credentials from VSS_NUGET_EXTERNAL_FEED_ENDPOINTS (set by NuGetAuthenticate@1)
         const headers: Record<string, string> = {};
@@ -59,12 +68,23 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
             const endpointsJson = process.env.VSS_NUGET_EXTERNAL_FEED_ENDPOINTS;
             if (endpointsJson) {
                 const endpoints = JSON.parse(endpointsJson) as { endpointCredentials: { endpoint: string; password: string }[] };
-                const cred = endpoints.endpointCredentials?.find(c => mirrorBaseUrl.startsWith(c.endpoint) || c.endpoint.startsWith(mirrorBaseUrl));
+                // Match on the feed base URL (before /nuget/ or /npm/) since the endpoint
+                // credential uses the v3 index path
+                const feedBase = (u: string): string => u.replace(/\/(nuget|npm)\/.*$/, '');
+                const cred = endpoints.endpointCredentials?.find(c => feedBaseUrl.replace(/\/+$/, '') === feedBase(c.endpoint));
                 if (cred?.password) {
                     headers['Authorization'] = `Basic ${Buffer.from(`VssSessionToken:${cred.password}`).toString('base64')}`;
                 }
+                // Diagnostic logging for CI
+                console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl}`);
+                console.log(`[feed-mirror] Feed base: ${feedBaseUrl}`);
+                console.log(`[feed-mirror] Endpoint entries: ${endpoints.endpointCredentials?.map(c => feedBase(c.endpoint)).join(', ') ?? '(none)'}`);
+                console.log(`[feed-mirror] Auth matched: ${!!cred?.password}`);
+            } else {
+                console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (no VSS_NUGET_EXTERNAL_FEED_ENDPOINTS)`);
             }
-        } catch {
+        } catch (err) {
+            console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (credential parse error: ${err})`);
             // Fall through without auth — the download may still succeed if the feed allows anonymous
         }
 

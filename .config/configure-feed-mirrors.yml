@@ -31,8 +31,8 @@ steps:
       $pipUrl = $feedBase -replace 'https://', "https://build:$($env:SYSTEM_ACCESSTOKEN)@"
       Write-Host "##vso[task.setvariable variable=PIP_INDEX_URL]${pipUrl}/pypi/simple/"
 
-      # NuGet mirror for extension-level HTTP downloads (DotnetTemplateProvider)
-      Write-Host "##vso[task.setvariable variable=NUGET_MIRROR_V2_URL]${feedBase}/nuget/v2"
+      # Feed base URL for extension-level HTTP downloads (NuGet packages + PowerShell Gallery queries)
+      Write-Host "##vso[task.setvariable variable=NUGET_MIRROR_FEED_URL]${feedBase}"
     displayName: "📦 Configure package manager feed mirrors"
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
     env:
