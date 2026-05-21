@@ -33,8 +33,6 @@ resources:
 variables:
   # Pick up shared AZCode variables
   - template: azdo-pipelines/azcode.variables.yml@azExtTemplates
-  - name: feedBaseUrl
-    value: https://devdiv.pkgs.visualstudio.com/DevDiv/_packaging/azcode
 
 extends:
   template: azdo-pipelines/1es-mb-main.yml@azExtTemplates # Use the main build template
