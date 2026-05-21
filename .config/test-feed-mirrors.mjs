@@ -5,11 +5,8 @@
  * to get fast feedback on feed connectivity and auth.
  *
  * Required env vars:
- *   NUGET_MIRROR_FEED_URL  – e.g. https://.../azcode/nuget/v3/flat2
- *   NUGET_MIRROR_PAT       – Bearer token (System.AccessToken)
- *
- * Optional env vars:
- *   PSGALLERY_MIRROR_FEED_URL – e.g. https://.../azcode/nuget/v2
+ *   FEED_BASE_URL – e.g. https://devdiv.pkgs.visualstudio.com/DevDiv/_packaging/azcode
+ *   FEED_PAT      – Bearer token (System.AccessToken)
  */
 
 import { execSync } from 'node:child_process';
@@ -19,9 +16,10 @@ import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
 
-const FEED_URL = process.env.NUGET_MIRROR_FEED_URL;
-const PAT = process.env.NUGET_MIRROR_PAT;
-const PSGALLERY_URL = process.env.PSGALLERY_MIRROR_FEED_URL;
+const FEED_BASE = process.env.FEED_BASE_URL?.replace(/\/+$/, '');
+const PAT = process.env.FEED_PAT;
+const FEED_URL = FEED_BASE ? `${FEED_BASE}/nuget/v3/flat2` : undefined;
+const PSGALLERY_URL = FEED_BASE ? `${FEED_BASE}/nuget/v2` : undefined;
 
 let failures = 0;
 
@@ -215,7 +213,7 @@ async function testNupkgParsing(label, nupkgPath) {
 
 async function testPSGalleryQuery() {
     section('PowerShell Gallery – FindPackagesById (Az)');
-    if (!PSGALLERY_URL) { info('PSGALLERY_MIRROR_FEED_URL not set, skipping'); return; }
+    if (!PSGALLERY_URL) { info('FEED_BASE_URL not set, skipping PSGallery'); return; }
 
     const url = `${PSGALLERY_URL.replace(/\/+$/, '')}/FindPackagesById()?id='Az'`;
     info(`URL: ${url}`);
@@ -265,13 +263,14 @@ async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
     console.log('║         Feed Mirror Diagnostic                         ║');
     console.log('╚══════════════════════════════════════════════════════════╝');
-    info(`NUGET_MIRROR_FEED_URL:    ${FEED_URL || '(not set)'}`);
-    info(`NUGET_MIRROR_PAT:         ${PAT ? '(set)' : '(not set)'}`);
-    info(`PSGALLERY_MIRROR_FEED_URL: ${PSGALLERY_URL || '(not set)'}`);
+    info(`FEED_BASE_URL:    ${FEED_BASE || '(not set)'}`);
+    info(`FEED_PAT:         ${PAT ? '(set)' : '(not set)'}`);
+    info(`  → NuGet v3:     ${FEED_URL || '(n/a)'}`);
+    info(`  → PSGallery v2: ${PSGALLERY_URL || '(n/a)'}`);
     info(`PIP_INDEX_URL:            ${process.env.PIP_INDEX_URL ? '(set)' : '(not set)'}`);
 
-    if (!FEED_URL) {
-        info('No NUGET_MIRROR_FEED_URL set — nothing to test.');
+    if (!FEED_BASE) {
+        info('No FEED_BASE_URL set — nothing to test.');
         return;
     }
 

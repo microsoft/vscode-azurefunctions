@@ -123,30 +123,32 @@ export namespace requestUtils {
      * Returns a pipeline policy that rewrites external package URLs to an AzDO feed mirror
      * and manages auth (Bearer for the mirror host, stripped on cross-origin redirect).
      *
-     * Supports:
-     * - NuGet v2 package downloads (NUGET_MIRROR_FEED_URL + NUGET_MIRROR_PAT)
-     * - PowerShell Gallery OData queries (PSGALLERY_MIRROR_FEED_URL)
+     * Env vars:
+     * - FEED_BASE_URL – e.g. https://devdiv.pkgs.visualstudio.com/DevDiv/_packaging/azcode
+     * - FEED_PAT      – Bearer token (System.AccessToken)
+     *
+     * Internally assembles:
+     * - NuGet v3 flat container: {base}/nuget/v3/flat2/{id}/{ver}/{id}.{ver}.nupkg
+     * - PSGallery v2 OData:      {base}/nuget/v2/FindPackagesById()?id='{name}'
      *
      * TODO: Move this to `@microsoft/vscode-azext-azureutils` once validated.
      */
     function getFeedMirrorPolicy(): PipelinePolicy | undefined {
-        const nugetMirrorUrl = process.env.NUGET_MIRROR_FEED_URL;
-        const nugetPat = process.env.NUGET_MIRROR_PAT;
-        const psgalleryMirrorUrl = process.env.PSGALLERY_MIRROR_FEED_URL;
+        const feedBaseUrl = process.env.FEED_BASE_URL?.replace(/\/+$/, '');
+        const feedPat = process.env.FEED_PAT;
 
-        // Need at least one mirror configured
-        if (!nugetMirrorUrl && !psgalleryMirrorUrl) {
+        if (!feedBaseUrl || !feedPat) {
             return undefined;
         }
 
-        let nugetMirrorHost: string | undefined;
-        if (nugetMirrorUrl && nugetPat) {
-            try {
-                nugetMirrorHost = new URL(nugetMirrorUrl).host;
-            } catch { /* invalid URL */ }
+        let feedHost: string;
+        try {
+            feedHost = new URL(feedBaseUrl).host;
+        } catch {
+            return undefined;
         }
 
-        const nugetV2Prefix = 'https://www.nuget.org/api/v2/package/';
+        const nugetV2Re = /^https:\/\/www\.nuget\.org\/api\/v2\/package\/([^/]+)\/(.+?)\/?$/;
         // aka.ms/PwshPackageInfo resolves to powershellgallery.com; match both
         const psgalleryPrefixes = ['https://aka.ms/PwshPackageInfo', 'https://www.powershellgallery.com/api/v2/FindPackagesById()'];
 
@@ -156,33 +158,28 @@ export namespace requestUtils {
                 let isMirrorRequest = false;
 
                 // NuGet URL rewrite: nuget.org v2 package → mirror v3 flat container
-                if (nugetMirrorUrl && nugetPat && request.url.startsWith(nugetV2Prefix)) {
-                    const rest = request.url.substring(nugetV2Prefix.length);
-                    const slash = rest.indexOf('/');
-                    if (slash !== -1) {
-                        const id = rest.substring(0, slash).toLowerCase();
-                        const version = rest.substring(slash + 1).replace(/\/+$/, '');
-                        const base = nugetMirrorUrl.replace(/\/+$/, '');
-                        request.url = `${base}/${id}/${version}/${id}.${version}.nupkg`;
-                        console.log(`[feed-mirror] NuGet rewrite → ${request.url}`);
-                        isMirrorRequest = true;
-                    }
+                const nugetMatch = request.url.match(nugetV2Re);
+                if (nugetMatch) {
+                    const id = nugetMatch[1].toLowerCase();
+                    const version = nugetMatch[2];
+                    request.url = `${feedBaseUrl}/nuget/v3/flat2/${id}/${version}/${id}.${version}.nupkg`;
+                    console.log(`[feed-mirror] NuGet rewrite → ${request.url}`);
+                    isMirrorRequest = true;
                 }
 
                 // PSGallery URL rewrite: aka.ms/PwshPackageInfo or powershellgallery.com → mirror v2 OData
-                if (psgalleryMirrorUrl && psgalleryPrefixes.some(p => request.url.startsWith(p))) {
+                if (psgalleryPrefixes.some(p => request.url.startsWith(p))) {
                     // Extract the id parameter from the query string
                     const urlObj = new URL(request.url);
                     const id = urlObj.searchParams.get('id') ?? "'Az'";
-                    const base = psgalleryMirrorUrl.replace(/\/+$/, '');
-                    request.url = `${base}/FindPackagesById()?id=${id}`;
+                    request.url = `${feedBaseUrl}/nuget/v2/FindPackagesById()?id=${id}`;
                     console.log(`[feed-mirror] PSGallery rewrite → ${request.url}`);
                     // PSGallery mirror doesn't need auth — OData query works via upstream
                 }
 
-                // Add Bearer auth only for the NuGet mirror host
-                if (isMirrorRequest && nugetMirrorHost && nugetPat) {
-                    request.headers.set('Authorization', `Bearer ${nugetPat}`);
+                // Add Bearer auth only for the feed host
+                if (isMirrorRequest) {
+                    request.headers.set('Authorization', `Bearer ${feedPat}`);
                 }
 
                 let response = await next(request);
@@ -203,8 +200,8 @@ export namespace requestUtils {
                         request.method = 'GET';
                     }
 
-                    // Strip auth when redirected away from the mirror host
-                    if (nugetMirrorHost && new URL(location).host !== nugetMirrorHost) {
+                    // Strip auth when redirected away from the feed host
+                    if (new URL(location).host !== feedHost) {
                         request.headers.delete('Authorization');
                         console.log(`[feed-mirror] Redirect to ${new URL(location).host} — stripped auth`);
                     }

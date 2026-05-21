@@ -37,6 +37,5 @@ steps:
     displayName: "🔍 Test feed mirror connectivity"
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
     env:
-      NUGET_MIRROR_FEED_URL: $(feedBaseUrl)/nuget/v3/flat2
-      NUGET_MIRROR_PAT: $(System.AccessToken)
-      PSGALLERY_MIRROR_FEED_URL: $(feedBaseUrl)/nuget/v2
+      FEED_BASE_URL: $(feedBaseUrl)
+      FEED_PAT: $(System.AccessToken)

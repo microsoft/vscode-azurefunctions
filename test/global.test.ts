@@ -86,10 +86,9 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         const nugetSources = cp.execSync('dotnet nuget list source', { encoding: 'utf8', timeout: 10000 });
         console.log(`[test-diag] HOME=${process.env.HOME}`);
         console.log(`[test-diag] DOTNET_CLI_HOME=${process.env.DOTNET_CLI_HOME}`);
+        console.log(`[test-diag] FEED_BASE_URL=${process.env.FEED_BASE_URL || '(not set)'}`);
+        console.log(`[test-diag] FEED_PAT=${process.env.FEED_PAT ? '(set)' : '(not set)'}`);
         console.log(`[test-diag] PIP_INDEX_URL=${process.env.PIP_INDEX_URL ? '(set)' : '(not set)'}`);
-        console.log(`[test-diag] NUGET_MIRROR_FEED_URL=${process.env.NUGET_MIRROR_FEED_URL || '(not set)'}`);
-        console.log(`[test-diag] PSGALLERY_MIRROR_FEED_URL=${process.env.PSGALLERY_MIRROR_FEED_URL || '(not set)'}`);
-        console.log(`[test-diag] NUGET_MIRROR_PAT=${process.env.NUGET_MIRROR_PAT ? '(set)' : '(not set)'}`);
         console.log(`[test-diag] testFolderPath=${testFolderPath}`);
         console.log(`[test-diag] cwd=${process.cwd()}`);
         console.log(`[test-diag] NuGet sources:\n${nugetSources}`);
