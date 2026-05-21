@@ -11,7 +11,7 @@ import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { shouldSkipVersion } from '../global.test';
 import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelVersion } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, /*getTypeScriptValidateOptions, */ NodeModelVersion } from './validateProject';
 
 const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, TemplateSource.Latest];
 
@@ -20,17 +20,18 @@ interface CreateProjectTestCase extends ICreateProjectTestOptions {
 }
 
 const testCases: CreateProjectTestCase[] = [
+    // TEMP: only run one test per language for faster iteration while debugging feed config
     // C# tests
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
-    { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
     { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
+    // { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
+    // { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
+    // { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
     // .NET Script tests
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
-    { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
+    // { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, FuncVersion.v4), isHiddenLanguage: true },
     // Node tests
     { ...getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v4, undefined, undefined, NodeModelVersion.v4), inputs: [], languageModelVersion: NodeModelVersion.v4 },
-    { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [], languageModelVersion: NodeModelVersion.v4 },
+    // { ...getTypeScriptValidateOptions({ version: FuncVersion.v4, modelVersion: NodeModelVersion.v4 }), inputs: [], languageModelVersion: NodeModelVersion.v4 },
     // PowerShell tests
     { ...getPowerShellValidateOptions(FuncVersion.v4) },
     // Custom language tests

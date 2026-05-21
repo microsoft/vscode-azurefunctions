@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra, IActionContext, parseError, registerOnActionStartHandler, testGlobalSetup, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import * as cp from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -79,6 +80,36 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
+
+    // Diagnostic: log feed config visible from the test process
+    try {
+        const nugetSources = cp.execSync('dotnet nuget list source', { encoding: 'utf8', timeout: 10000 });
+        console.log(`[test-diag] HOME=${process.env.HOME}`);
+        console.log(`[test-diag] DOTNET_CLI_HOME=${process.env.DOTNET_CLI_HOME}`);
+        console.log(`[test-diag] PIP_INDEX_URL=${process.env.PIP_INDEX_URL ? '(set)' : '(not set)'}`);
+        console.log(`[test-diag] testFolderPath=${testFolderPath}`);
+        console.log(`[test-diag] cwd=${process.cwd()}`);
+        console.log(`[test-diag] NuGet sources:\n${nugetSources}`);
+
+        // Check for nuget.config files in the directory walk from testFolderPath
+        const nugetConfigSearch = cp.execSync(`find /tmp -maxdepth 2 -name "nuget.config" -o -name "NuGet.Config" 2>/dev/null || true`, { encoding: 'utf8', timeout: 5000 });
+        console.log(`[test-diag] nuget.config files in /tmp:\n${nugetConfigSearch || '(none)'}`);
+
+        // Check user-level NuGet config exists and content
+        const userConfigPath = path.join(os.homedir(), '.nuget', 'NuGet', 'NuGet.Config');
+        if (require('fs').existsSync(userConfigPath)) {
+            const content = require('fs').readFileSync(userConfigPath, 'utf8');
+            console.log(`[test-diag] User NuGet.Config (${userConfigPath}):\n${content}`);
+        } else {
+            console.log(`[test-diag] User NuGet.Config NOT FOUND at ${userConfigPath}`);
+        }
+
+        // Check npm registry
+        const npmRegistry = cp.execSync('npm config get registry', { encoding: 'utf8', timeout: 5000 }).trim();
+        console.log(`[test-diag] npm registry=${npmRegistry}`);
+    } catch (e) {
+        console.warn(`[test-diag] Failed to gather diagnostics: ${e}`);
+    }
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
