@@ -6,15 +6,26 @@ steps:
   - pwsh: |
       $feedBase = "$(feedBaseUrl)"
 
-      # NuGet: write user-level config with <clear/> to block machine-level sources
-      $nugetConfigDir = if ($IsWindows) { "$env:APPDATA/NuGet" } else { "$HOME/.nuget/NuGet" }
-      New-Item -ItemType Directory -Path $nugetConfigDir -Force | Out-Null
+      # NuGet: write config with <clear/> to block all other sources.
+      # Place in multiple locations so dotnet finds it regardless of CWD:
+      #   - user-level (standard NuGet config path)
+      #   - workspace root (covers dotnet commands run from the repo)
+      #   - /tmp/ (covers dotnet commands run in temp project directories)
       $nugetConfig = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`n<configuration>`n  <packageSources>`n    <clear />`n    <add key=`"AzureArtifacts`" value=`"${feedBase}/nuget/v3/index.json`" />`n  </packageSources>`n</configuration>"
-      $nugetConfig | Set-Content -Path (Join-Path $nugetConfigDir "NuGet.Config")
+      $userConfigDir = if ($IsWindows) { "$env:APPDATA/NuGet" } else { "$HOME/.nuget/NuGet" }
+      New-Item -ItemType Directory -Path $userConfigDir -Force | Out-Null
+      $nugetConfig | Set-Content -Path (Join-Path $userConfigDir "NuGet.Config")
+      $nugetConfig | Set-Content -Path "$(working_directory)/nuget.config"
+      $tempDir = if ($IsWindows) { $env:TEMP } else { "/tmp" }
+      $nugetConfig | Set-Content -Path (Join-Path $tempDir "nuget.config")
 
       # Verify configuration
-      Write-Host "--- NuGet sources ---"
+      Write-Host "--- NuGet sources (from workspace) ---"
       dotnet nuget list source
+      Write-Host "--- NuGet config locations ---"
+      Write-Host "  user-level: $(Join-Path $userConfigDir 'NuGet.Config')"
+      Write-Host "  workspace:  $(working_directory)/nuget.config"
+      Write-Host "  temp:       $(Join-Path $tempDir 'nuget.config')"
 
       # pip: set index URL with embedded basic auth
       $pipUrl = $feedBase -replace 'https://', "https://build:$($env:SYSTEM_ACCESSTOKEN)@"
