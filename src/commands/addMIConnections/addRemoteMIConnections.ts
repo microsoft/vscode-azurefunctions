@@ -72,7 +72,7 @@ export async function addRemoteMIConnectionsInternal(context: AddMIConnectionsCo
     const defaultResourceGroup = getDefaultResourceGroupForIdentityCreation(wizardContext);
     if (defaultResourceGroup) {
         wizardContext.resourceGroup ??= defaultResourceGroup;
-        await LocationListStep.setLocation(wizardContext, defaultResourceGroup.location);
+        await LocationListStep.setAutoSelectLocation(wizardContext, defaultResourceGroup.location);
     }
 
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
