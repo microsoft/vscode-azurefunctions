@@ -170,6 +170,28 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
             requestUtils.downloadFile(context, DotnetTemplateProvider.getNugetDownloadRequest(netRelease.itemTemplates), itemFilePath)
         ]);
 
+        // Diagnostic: verify downloaded files are valid nupkgs (not error responses)
+        if (process.env.VSCODE_RUNNING_TESTS) {
+            const fs = await import('fs');
+            for (const [label, fp] of [['project', projectFilePath], ['item', itemFilePath]] as const) {
+                try {
+                    const stat = fs.statSync(fp);
+                    const head = Buffer.alloc(4);
+                    const fd = fs.openSync(fp, 'r');
+                    fs.readSync(fd, head, 0, 4, 0);
+                    fs.closeSync(fd);
+                    const isZip = head[0] === 0x50 && head[1] === 0x4B;
+                    console.log(`[feed-mirror] Downloaded ${label}: ${fp} (${stat.size} bytes, zip=${isZip})`);
+                    if (!isZip && stat.size < 10000) {
+                        const content = fs.readFileSync(fp, 'utf8');
+                        console.log(`[feed-mirror] ${label} content (not a zip): ${content.substring(0, 500)}`);
+                    }
+                } catch (err) {
+                    console.log(`[feed-mirror] ${label} file check error: ${err}`);
+                }
+            }
+        }
+
         return await this.parseTemplates(context, projKey);
     }
 
