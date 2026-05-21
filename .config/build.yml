@@ -41,6 +41,7 @@ extends:
   parameters:
     signType: none # TEMP: skip signing for faster iteration
     npmFeed: ${{ variables.npmFeed }}
+    feedBaseUrl: ${{ variables.feedBaseUrl }}
     additionalSetupSteps:
       - task: UseDotNet@2
         displayName: Install .NET 9.0

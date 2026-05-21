@@ -59,8 +59,8 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const packageId = packagePath.substring(0, slashIdx).toLowerCase();
         const version = packagePath.substring(slashIdx + 1);
 
-        // AzDO NuGet v3 flat container: {feed}/nuget/v3/flat2/{lowerId}/{version}/{lowerId}.{version}.nupkg
-        const mirrorUrl = `${feedBaseUrl.replace(/\/+$/, '')}/nuget/v3/flat2/${packageId}/${version}/${packageId}.${version}.nupkg`;
+        // NUGET_MIRROR_FEED_URL already points to the v3 flat container base (e.g. .../nuget/v3/flat2)
+        const mirrorUrl = `${feedBaseUrl.replace(/\/+$/, '')}/${packageId}/${version}/${packageId}.${version}.nupkg`;
 
         // Authenticate with the AzDO feed using a Bearer token (set from System.AccessToken in CI)
         const headers: Record<string, string> = {};

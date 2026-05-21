@@ -26,18 +26,8 @@ steps:
       Write-Host "  user-level: $(Join-Path $userConfigDir 'NuGet.Config')"
       Write-Host "  workspace:  $(working_directory)/nuget.config"
       Write-Host "  temp:       $(Join-Path $tempDir 'nuget.config')"
-
-      # pip: set index URL with embedded basic auth
-      $pipUrl = $feedBase -replace 'https://', "https://build:$($env:SYSTEM_ACCESSTOKEN)@"
-      Write-Host "##vso[task.setvariable variable=PIP_INDEX_URL;issecret=true]${pipUrl}/pypi/simple/"
-
-      # Feed base URL for extension-level HTTP downloads (NuGet packages + PowerShell Gallery queries)
-      Write-Host "##vso[task.setvariable variable=NUGET_MIRROR_FEED_URL]${feedBase}"
-      Write-Host "##vso[task.setvariable variable=NUGET_MIRROR_PAT;issecret=true]$($env:SYSTEM_ACCESSTOKEN)"
-    displayName: "📦 Configure package manager feed mirrors"
+    displayName: "📦 Configure NuGet feed mirror"
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
-    env:
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
   - task: NuGetAuthenticate@1
     displayName: "📦 Authenticate NuGet feeds"

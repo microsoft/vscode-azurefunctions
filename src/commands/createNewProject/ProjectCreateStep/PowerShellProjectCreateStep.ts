@@ -71,8 +71,8 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
      * same NuGet V2 OData queries via its upstream source).
      */
     private getAzModuleQueryUrl(): string {
-        if (process.env.VSCODE_RUNNING_TESTS && process.env.NUGET_MIRROR_FEED_URL) {
-            const mirrorUrl = `${process.env.NUGET_MIRROR_FEED_URL.replace(/\/+$/, '')}/nuget/v2/FindPackagesById()?id='${this.azModuleName}'`;
+        if (process.env.VSCODE_RUNNING_TESTS && process.env.PSGALLERY_MIRROR_FEED_URL) {
+            const mirrorUrl = `${process.env.PSGALLERY_MIRROR_FEED_URL.replace(/\/+$/, '')}/FindPackagesById()?id='${this.azModuleName}'`;
             console.log(`[feed-mirror] PowerShell rewrite: ${this.azModuleGalleryUrl} → ${mirrorUrl}`);
             return mirrorUrl;
         }
