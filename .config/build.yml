@@ -42,7 +42,7 @@ extends:
     feedBaseUrl: ${{ variables.feedBaseUrl }}
     additionalSetupSteps:
       - task: UseDotNet@2
-        displayName: Install .NET 9.0
+        displayName: "📦 Install .NET 9.0"
         inputs:
           version: 9.0.x
       - template: configure-feed-mirrors.yml
