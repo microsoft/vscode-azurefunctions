@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createHttpHeaders } from '@azure/core-rest-pipeline';
-import type { AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
@@ -27,51 +25,6 @@ import { parseDotnetTemplates } from './parseDotnetTemplates';
 export class DotnetTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Dotnet;
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
-
-    /**
-     * During CI tests, rewrites a nuget.org package URL to use the configured AzDO feed mirror
-     * and attaches the appropriate auth header. Returns request options suitable for
-     * `requestUtils.downloadFile()`. Outside of tests or when no mirror is configured, returns
-     * the original URL unchanged.
-     */
-    private static getNugetDownloadRequest(url: string): string | AzExtRequestPrepareOptions {
-        if (!process.env.VSCODE_RUNNING_TESTS) {
-            return url;
-        }
-
-        const feedBaseUrl = process.env.NUGET_MIRROR_FEED_URL;
-        if (!feedBaseUrl) {
-            return url;
-        }
-
-        // Rewrite https://www.nuget.org/api/v2/package/{id}/{version} → AzDO v3 flat container
-        const nugetV2Prefix = 'https://www.nuget.org/api/v2/package/';
-        if (!url.startsWith(nugetV2Prefix)) {
-            return url;
-        }
-
-        // Parse "{PackageId}/{Version}" from the original URL
-        const packagePath = url.substring(nugetV2Prefix.length);
-        const slashIdx = packagePath.indexOf('/');
-        if (slashIdx === -1) {
-            return url;
-        }
-        const packageId = packagePath.substring(0, slashIdx).toLowerCase();
-        const version = packagePath.substring(slashIdx + 1);
-
-        // NUGET_MIRROR_FEED_URL already points to the v3 flat container base (e.g. .../nuget/v3/flat2)
-        const mirrorUrl = `${feedBaseUrl.replace(/\/+$/, '')}/${packageId}/${version}/${packageId}.${version}.nupkg`;
-
-        // Authenticate with the AzDO feed using a Bearer token (set from System.AccessToken in CI)
-        const headers: Record<string, string> = {};
-        const pat = process.env.NUGET_MIRROR_PAT;
-        if (pat) {
-            headers['Authorization'] = `Bearer ${pat}`;
-        }
-        console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (auth: ${pat ? 'Bearer' : 'none'})`);
-
-        return { method: 'GET', url: mirrorUrl, headers: createHttpHeaders(headers) };
-    }
 
     public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
         super(version, projectPath, language, projectTemplateKey);
@@ -166,31 +119,9 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
         const netRelease = nonNullValue(await this.getNetRelease(context, projKey, latestTemplateVersion), 'netRelease');
         await Promise.all([
-            requestUtils.downloadFile(context, DotnetTemplateProvider.getNugetDownloadRequest(netRelease.projectTemplates), projectFilePath),
-            requestUtils.downloadFile(context, DotnetTemplateProvider.getNugetDownloadRequest(netRelease.itemTemplates), itemFilePath)
+            requestUtils.downloadFile(context, netRelease.projectTemplates, projectFilePath),
+            requestUtils.downloadFile(context, netRelease.itemTemplates, itemFilePath)
         ]);
-
-        // Diagnostic: verify downloaded files are valid nupkgs (not error responses)
-        if (process.env.VSCODE_RUNNING_TESTS) {
-            const fs = await import('fs');
-            for (const [label, fp] of [['project', projectFilePath], ['item', itemFilePath]] as const) {
-                try {
-                    const stat = fs.statSync(fp);
-                    const head = Buffer.alloc(4);
-                    const fd = fs.openSync(fp, 'r');
-                    fs.readSync(fd, head, 0, 4, 0);
-                    fs.closeSync(fd);
-                    const isZip = head[0] === 0x50 && head[1] === 0x4B;
-                    console.log(`[feed-mirror] Downloaded ${label}: ${fp} (${stat.size} bytes, zip=${isZip})`);
-                    if (!isZip && stat.size < 10000) {
-                        const content = fs.readFileSync(fp, 'utf8');
-                        console.log(`[feed-mirror] ${label} content (not a zip): ${content.substring(0, 500)}`);
-                    }
-                } catch (err) {
-                    console.log(`[feed-mirror] ${label} file check error: ${err}`);
-                }
-            }
-        }
 
         return await this.parseTemplates(context, projKey);
     }

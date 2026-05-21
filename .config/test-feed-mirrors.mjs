@@ -54,10 +54,11 @@ async function download(url, destPath, headers = {}) {
     return new Promise((resolve, reject) => {
         const mod = url.startsWith('https') ? https : http;
         const req = mod.get(url, { headers }, (res) => {
-            // Follow redirects
+            // Follow redirects (strip auth — redirect targets like Azure Blob use SAS tokens)
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                console.log(`  ↪ ${res.statusCode} redirect: ${url} → ${res.headers.location}`);
-                download(res.headers.location, destPath, headers).then(resolve, reject);
+                console.log(`  \u21aa ${res.statusCode} redirect: ${url} \u2192 ${res.headers.location.substring(0, 120)}...`);
+                const { Authorization, authorization, ...safeHeaders } = headers;
+                download(res.headers.location, destPath, safeHeaders).then(resolve, reject);
                 res.resume();
                 return;
             }

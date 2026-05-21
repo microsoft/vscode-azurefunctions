@@ -65,20 +65,6 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     private readonly azModuleName: string = 'Az';
     private readonly azModuleGalleryUrl: string = `https://aka.ms/PwshPackageInfo?id='${this.azModuleName}'`;
 
-    /**
-     * Returns the URL to query for the Az module version. During CI tests, rewrites the
-     * PowerShell Gallery URL to use the configured AzDO feed mirror (which supports the
-     * same NuGet V2 OData queries via its upstream source).
-     */
-    private getAzModuleQueryUrl(): string {
-        if (process.env.VSCODE_RUNNING_TESTS && process.env.PSGALLERY_MIRROR_FEED_URL) {
-            const mirrorUrl = `${process.env.PSGALLERY_MIRROR_FEED_URL.replace(/\/+$/, '')}/FindPackagesById()?id='${this.azModuleName}'`;
-            console.log(`[feed-mirror] PowerShell rewrite: ${this.azModuleGalleryUrl} → ${mirrorUrl}`);
-            return mirrorUrl;
-        }
-        return this.azModuleGalleryUrl;
-    }
-
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         if (await hasMinFuncCliVersion(context, '3.0.2534', context.version)) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -125,7 +111,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         });
 
         try {
-            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: this.getAzModuleQueryUrl() });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: this.azModuleGalleryUrl });
             const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);

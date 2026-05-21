@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ServiceClient } from "@azure/core-client";
-import { createPipelineRequest } from "@azure/core-rest-pipeline";
+import { createPipelineRequest, type PipelinePolicy } from "@azure/core-rest-pipeline";
 import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
@@ -30,6 +30,14 @@ export namespace requestUtils {
         const timeout = getRequestTimeoutMS();
 
         try {
+            const mirrorPolicy = getFeedMirrorPolicy();
+            if (mirrorPolicy) {
+                // Use our own client so we can inject the mirror policy
+                const request = createPipelineRequest({ ...options, timeout });
+                const client: ServiceClient = await createGenericClient(context, undefined);
+                addFeedMirrorPolicy(client, mirrorPolicy);
+                return await client.sendRequest(request);
+            }
             return await sendRequestWithTimeout(context, options, timeout, undefined);
         } catch (error) {
             if (isTimeoutError(error)) {
@@ -52,6 +60,12 @@ export namespace requestUtils {
         const request = createPipelineRequest(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseStatusCodes = new Set([Number.POSITIVE_INFINITY]);
         const client: ServiceClient = await createGenericClient(context, undefined);
+
+        const mirrorPolicy = getFeedMirrorPolicy();
+        if (mirrorPolicy) {
+            addFeedMirrorPolicy(client, mirrorPolicy);
+        }
+
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise<void>((resolve, reject): void => {
@@ -94,5 +108,113 @@ export namespace requestUtils {
      */
     function convertPropertyValue(value: string | null | undefined): string | undefined {
         return value === null ? undefined : value;
+    }
+
+    /**
+     * Adds the feed mirror policy to a ServiceClient, replacing the built-in redirect policy
+     * so the mirror policy can strip Authorization on cross-origin redirects.
+     */
+    function addFeedMirrorPolicy(client: ServiceClient, policy: PipelinePolicy): void {
+        client.pipeline.removePolicy({ name: 'redirectPolicy' });
+        client.pipeline.addPolicy(policy, { phase: 'Serialize' });
+    }
+
+    /**
+     * Returns a pipeline policy that rewrites external package URLs to an AzDO feed mirror
+     * and manages auth (Bearer for the mirror host, stripped on cross-origin redirect).
+     *
+     * Supports:
+     * - NuGet v2 package downloads (NUGET_MIRROR_FEED_URL + NUGET_MIRROR_PAT)
+     * - PowerShell Gallery OData queries (PSGALLERY_MIRROR_FEED_URL)
+     *
+     * TODO: Move this to `@microsoft/vscode-azext-azureutils` once validated.
+     */
+    function getFeedMirrorPolicy(): PipelinePolicy | undefined {
+        const nugetMirrorUrl = process.env.NUGET_MIRROR_FEED_URL;
+        const nugetPat = process.env.NUGET_MIRROR_PAT;
+        const psgalleryMirrorUrl = process.env.PSGALLERY_MIRROR_FEED_URL;
+
+        // Need at least one mirror configured
+        if (!nugetMirrorUrl && !psgalleryMirrorUrl) {
+            return undefined;
+        }
+
+        let nugetMirrorHost: string | undefined;
+        if (nugetMirrorUrl && nugetPat) {
+            try {
+                nugetMirrorHost = new URL(nugetMirrorUrl).host;
+            } catch { /* invalid URL */ }
+        }
+
+        const nugetV2Prefix = 'https://www.nuget.org/api/v2/package/';
+        // aka.ms/PwshPackageInfo resolves to powershellgallery.com; match both
+        const psgalleryPrefixes = ['https://aka.ms/PwshPackageInfo', 'https://www.powershellgallery.com/api/v2/FindPackagesById()'];
+
+        return {
+            name: 'feedMirrorPolicy',
+            async sendRequest(request, next) {
+                let isMirrorRequest = false;
+
+                // NuGet URL rewrite: nuget.org v2 package → mirror v3 flat container
+                if (nugetMirrorUrl && nugetPat && request.url.startsWith(nugetV2Prefix)) {
+                    const rest = request.url.substring(nugetV2Prefix.length);
+                    const slash = rest.indexOf('/');
+                    if (slash !== -1) {
+                        const id = rest.substring(0, slash).toLowerCase();
+                        const version = rest.substring(slash + 1).replace(/\/+$/, '');
+                        const base = nugetMirrorUrl.replace(/\/+$/, '');
+                        request.url = `${base}/${id}/${version}/${id}.${version}.nupkg`;
+                        console.log(`[feed-mirror] NuGet rewrite → ${request.url}`);
+                        isMirrorRequest = true;
+                    }
+                }
+
+                // PSGallery URL rewrite: aka.ms/PwshPackageInfo or powershellgallery.com → mirror v2 OData
+                if (psgalleryMirrorUrl && psgalleryPrefixes.some(p => request.url.startsWith(p))) {
+                    // Extract the id parameter from the query string
+                    const urlObj = new URL(request.url);
+                    const id = urlObj.searchParams.get('id') ?? "'Az'";
+                    const base = psgalleryMirrorUrl.replace(/\/+$/, '');
+                    request.url = `${base}/FindPackagesById()?id=${id}`;
+                    console.log(`[feed-mirror] PSGallery rewrite → ${request.url}`);
+                    // PSGallery mirror doesn't need auth — OData query works via upstream
+                }
+
+                // Add Bearer auth only for the NuGet mirror host
+                if (isMirrorRequest && nugetMirrorHost && nugetPat) {
+                    request.headers.set('Authorization', `Bearer ${nugetPat}`);
+                }
+
+                let response = await next(request);
+
+                // Follow redirects manually, stripping auth on cross-origin.
+                // AzDO returns 303 → blob storage (vsblob.vsassets.io) with a SAS URL.
+                // The SAS URL is self-authenticating; forwarding Bearer causes 403.
+                const redirectCodes = new Set([301, 302, 303, 307, 308]);
+                let redirectCount = 0;
+                while (redirectCodes.has(response.status) && redirectCount < 5) {
+                    const location = response.headers.get('location');
+                    if (!location) {
+                        break;
+                    }
+
+                    request.url = location;
+                    if (response.status === 303) {
+                        request.method = 'GET';
+                    }
+
+                    // Strip auth when redirected away from the mirror host
+                    if (nugetMirrorHost && new URL(location).host !== nugetMirrorHost) {
+                        request.headers.delete('Authorization');
+                        console.log(`[feed-mirror] Redirect to ${new URL(location).host} — stripped auth`);
+                    }
+
+                    response = await next(request);
+                    redirectCount++;
+                }
+
+                return response;
+            }
+        };
     }
 }
