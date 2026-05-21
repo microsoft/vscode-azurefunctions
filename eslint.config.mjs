@@ -8,7 +8,7 @@ import { defineConfig } from 'eslint/config';
 
 export default defineConfig([
     {
-        ignores: ['test/**', 'webpack.config.js', '.eslintrc.js', 'scripts/**', 'test-feed-mirrors.mjs'],
+        ignores: ['test/**', 'webpack.config.js', '.eslintrc.js', 'scripts/**', '.config/**'],
     },
     ...azExtEslintRecommended,
     {
