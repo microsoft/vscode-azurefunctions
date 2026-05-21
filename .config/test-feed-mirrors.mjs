@@ -31,6 +31,13 @@ function get(url, headers = {}) {
     return new Promise((resolve, reject) => {
         const mod = url.startsWith('https') ? https : http;
         const req = mod.get(url, { headers }, (res) => {
+            // Follow redirects
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                console.log(`  ↪ ${res.statusCode} redirect: ${url} → ${res.headers.location}`);
+                res.resume();
+                get(res.headers.location, headers).then(resolve, reject);
+                return;
+            }
             const chunks = [];
             res.on('data', (c) => chunks.push(c));
             res.on('end', () => {
@@ -49,6 +56,7 @@ async function download(url, destPath, headers = {}) {
         const req = mod.get(url, { headers }, (res) => {
             // Follow redirects
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                console.log(`  ↪ ${res.statusCode} redirect: ${url} → ${res.headers.location}`);
                 download(res.headers.location, destPath, headers).then(resolve, reject);
                 res.resume();
                 return;
