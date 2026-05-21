@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { createHttpHeaders } from '@azure/core-rest-pipeline';
+import type { AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
@@ -25,6 +27,49 @@ import { parseDotnetTemplates } from './parseDotnetTemplates';
 export class DotnetTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Dotnet;
     public templateSchemaVersion: TemplateSchemaVersion = TemplateSchemaVersion.v1;
+
+    /**
+     * During CI tests, rewrites a nuget.org package URL to use the configured AzDO feed mirror
+     * and attaches the appropriate auth header. Returns request options suitable for
+     * `requestUtils.downloadFile()`. Outside of tests or when no mirror is configured, returns
+     * the original URL unchanged.
+     */
+    private static getNugetDownloadRequest(url: string): string | AzExtRequestPrepareOptions {
+        if (!process.env.VSCODE_RUNNING_TESTS) {
+            return url;
+        }
+
+        const mirrorBaseUrl = process.env.NUGET_MIRROR_V2_URL;
+        if (!mirrorBaseUrl) {
+            return url;
+        }
+
+        // Rewrite https://www.nuget.org/api/v2/package/{id}/{version} → mirror
+        const nugetV2Prefix = 'https://www.nuget.org/api/v2/package/';
+        if (!url.startsWith(nugetV2Prefix)) {
+            return url;
+        }
+
+        const packagePath = url.substring(nugetV2Prefix.length); // e.g. "Microsoft.Azure.WebJobs.ItemTemplates/1.0.3.10324"
+        const mirrorUrl = `${mirrorBaseUrl.replace(/\/+$/, '')}/package/${packagePath}`;
+
+        // Read credentials from VSS_NUGET_EXTERNAL_FEED_ENDPOINTS (set by NuGetAuthenticate@1)
+        const headers: Record<string, string> = {};
+        try {
+            const endpointsJson = process.env.VSS_NUGET_EXTERNAL_FEED_ENDPOINTS;
+            if (endpointsJson) {
+                const endpoints = JSON.parse(endpointsJson) as { endpointCredentials: { endpoint: string; password: string }[] };
+                const cred = endpoints.endpointCredentials?.find(c => mirrorBaseUrl.startsWith(c.endpoint) || c.endpoint.startsWith(mirrorBaseUrl));
+                if (cred?.password) {
+                    headers['Authorization'] = `Basic ${Buffer.from(`VssSessionToken:${cred.password}`).toString('base64')}`;
+                }
+            }
+        } catch {
+            // Fall through without auth — the download may still succeed if the feed allows anonymous
+        }
+
+        return { method: 'GET', url: mirrorUrl, headers: createHttpHeaders(headers) };
+    }
 
     public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
         super(version, projectPath, language, projectTemplateKey);
@@ -119,8 +164,8 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
         const netRelease = nonNullValue(await this.getNetRelease(context, projKey, latestTemplateVersion), 'netRelease');
         await Promise.all([
-            requestUtils.downloadFile(context, netRelease.projectTemplates, projectFilePath),
-            requestUtils.downloadFile(context, netRelease.itemTemplates, itemFilePath)
+            requestUtils.downloadFile(context, DotnetTemplateProvider.getNugetDownloadRequest(netRelease.projectTemplates), projectFilePath),
+            requestUtils.downloadFile(context, DotnetTemplateProvider.getNugetDownloadRequest(netRelease.itemTemplates), itemFilePath)
         ]);
 
         return await this.parseTemplates(context, projKey);
@@ -152,7 +197,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         return path.join(this.getBackupPath(), projKey, path.basename(file));
     }
 
-     
+
     public async cacheTemplates(context: IActionContext): Promise<void> {
         const projKey = await this.getProjKey(context);
         await this.updateCachedValue(projKey, this._rawTemplates);
