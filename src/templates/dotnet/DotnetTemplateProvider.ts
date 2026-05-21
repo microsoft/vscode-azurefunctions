@@ -62,31 +62,13 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         // AzDO NuGet v3 flat container: {feed}/nuget/v3/flat2/{lowerId}/{version}/{lowerId}.{version}.nupkg
         const mirrorUrl = `${feedBaseUrl.replace(/\/+$/, '')}/nuget/v3/flat2/${packageId}/${version}/${packageId}.${version}.nupkg`;
 
-        // Read credentials from VSS_NUGET_EXTERNAL_FEED_ENDPOINTS (set by NuGetAuthenticate@1)
+        // Authenticate with the AzDO feed using a Bearer token (set from System.AccessToken in CI)
         const headers: Record<string, string> = {};
-        try {
-            const endpointsJson = process.env.VSS_NUGET_EXTERNAL_FEED_ENDPOINTS;
-            if (endpointsJson) {
-                const endpoints = JSON.parse(endpointsJson) as { endpointCredentials: { endpoint: string; password: string }[] };
-                // Match on the feed base URL (before /nuget/ or /npm/) since the endpoint
-                // credential uses the v3 index path
-                const feedBase = (u: string): string => u.replace(/\/(nuget|npm)\/.*$/, '');
-                const cred = endpoints.endpointCredentials?.find(c => feedBaseUrl.replace(/\/+$/, '') === feedBase(c.endpoint));
-                if (cred?.password) {
-                    headers['Authorization'] = `Basic ${Buffer.from(`VssSessionToken:${cred.password}`).toString('base64')}`;
-                }
-                // Diagnostic logging for CI
-                console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl}`);
-                console.log(`[feed-mirror] Feed base: ${feedBaseUrl}`);
-                console.log(`[feed-mirror] Endpoint entries: ${endpoints.endpointCredentials?.map(c => feedBase(c.endpoint)).join(', ') ?? '(none)'}`);
-                console.log(`[feed-mirror] Auth matched: ${!!cred?.password}`);
-            } else {
-                console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (no VSS_NUGET_EXTERNAL_FEED_ENDPOINTS)`);
-            }
-        } catch (err) {
-            console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (credential parse error: ${err})`);
-            // Fall through without auth — the download may still succeed if the feed allows anonymous
+        const pat = process.env.NUGET_MIRROR_PAT;
+        if (pat) {
+            headers['Authorization'] = `Bearer ${pat}`;
         }
+        console.log(`[feed-mirror] Rewrite: ${url} → ${mirrorUrl} (auth: ${pat ? 'Bearer' : 'none'})`);
 
         return { method: 'GET', url: mirrorUrl, headers: createHttpHeaders(headers) };
     }
