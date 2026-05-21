@@ -32,3 +32,11 @@ steps:
   - task: NuGetAuthenticate@1
     displayName: "📦 Authenticate NuGet feeds"
     condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
+
+  - pwsh: node "$(working_directory)/.config/test-feed-mirrors.mjs"
+    displayName: "🔍 Test feed mirror connectivity"
+    condition: and(succeeded(), ne(variables['feedBaseUrl'], ''))
+    env:
+      NUGET_MIRROR_FEED_URL: $(feedBaseUrl)/nuget/v3/flat2
+      NUGET_MIRROR_PAT: $(System.AccessToken)
+      PSGALLERY_MIRROR_FEED_URL: $(feedBaseUrl)/nuget/v2
