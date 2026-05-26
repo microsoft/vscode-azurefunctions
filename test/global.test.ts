@@ -23,7 +23,8 @@ import { getTestApi } from './utils/testApiAccess';
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
 const longRunningLocalTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.AzCode_EnableLongRunningTestsLocal);
-const longRunningRemoteTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.AzCode_UseAzureFederatedCredentials);
+const longRunningRemoteTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.FC_SERVICE_CONNECTION_NAME)
+    || envUtils.isEnvironmentVariableSet(process.env.AzCode_UseAzureFederatedCredentials);
 
 export const longRunningTestsEnabled: boolean = longRunningLocalTestsEnabled || longRunningRemoteTestsEnabled;
 export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
