@@ -32,3 +32,16 @@ export async function hasNodeJsDependency(projectPath: string, depName: string, 
         return false;
     }
 }
+
+export async function tryAddNodeJsDependency(projectPath: string, depName: string, depVersionRange: string, isDevDependency: boolean = false): Promise<void> {
+    try {
+        const packageJsonPath = path.join(projectPath, packageJsonFileName);
+        const packageJson: PackageJson = await AzExtFsExtra.readJSON(packageJsonPath);
+        const dependencyKey = isDevDependency ? 'devDependencies' : 'dependencies';
+        packageJson[dependencyKey] ??= {};
+        packageJson[dependencyKey][depName] ??= depVersionRange;
+        await AzExtFsExtra.writeJSON(packageJsonPath, packageJson);
+    } catch {
+        // Ignore failures and continue with best-effort package installation.
+    }
+}

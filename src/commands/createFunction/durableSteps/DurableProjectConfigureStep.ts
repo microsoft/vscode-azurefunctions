@@ -15,6 +15,7 @@ import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.
 import { localize } from '../../../localize';
 import { cpUtils } from '../../../utils/cpUtils';
 import { durableUtils } from '../../../utils/durableUtils';
+import { tryAddNodeJsDependency } from '../../../utils/nodeJsUtils';
 import { pythonUtils } from '../../../utils/pythonUtils';
 import { venvUtils } from '../../../utils/venvUtils';
 import { tryGetVariableSubstitutedKey } from '../../appSettings/connectionSettings/getVariableSubstitutedKey';
@@ -230,6 +231,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
     private async installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
         try {
             const packageVersion = context.languageModel === 4 ? '3' : '2';
+            await tryAddNodeJsDependency(context.projectPath, durableUtils.nodeDfPackage, `^${packageVersion}.0.0`);
             await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', composeArgs(withArg('install', `${durableUtils.nodeDfPackage}@${packageVersion}`))());
         } catch (error) {
             const pError: IParsedError = parseError(error);
