@@ -5,7 +5,7 @@
 
 import { type ServiceClient } from "@azure/core-client";
 import { createPipelineRequest } from "@azure/core-rest-pipeline";
-import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions, type IGenericClientOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
@@ -16,6 +16,7 @@ import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { nonNullProp, nonNullValue } from "./nonNull";
 
 export namespace requestUtils {
+    const defaultClientOptions: IGenericClientOptions = { redirectOptions: { allowCrossOriginRedirects: true } };
     export const timeoutKey: string = 'requestTimeout';
 
     export function getRequestTimeoutMS(): number {
@@ -30,7 +31,7 @@ export namespace requestUtils {
         const timeout = getRequestTimeoutMS();
 
         try {
-            return await sendRequestWithTimeout(context, options, timeout, undefined);
+            return await sendRequestWithTimeout(context, options, timeout, undefined, defaultClientOptions);
         } catch (error) {
             if (isTimeoutError(error)) {
                 throw new Error(
@@ -51,7 +52,7 @@ export namespace requestUtils {
         await AzExtFsExtra.ensureDir(path.dirname(filePath));
         const request = createPipelineRequest(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseStatusCodes = new Set([Number.POSITIVE_INFINITY]);
-        const client: ServiceClient = await createGenericClient(context, undefined);
+        const client: ServiceClient = await createGenericClient(context, undefined, defaultClientOptions);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise<void>((resolve, reject): void => {
