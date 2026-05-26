@@ -42,7 +42,6 @@ import { getWarningsForConnectionSettings } from './getWarningsForConnectionSett
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
-import { applyGoDeployDefaults } from './applyGoDeployDefaults';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -143,17 +142,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
         // `func pack` builds the Go binary locally using the user's installed Go
         // toolchain, so Go must be on PATH before any pre-deploy work runs.
-        const message: string = localize('installGoForDeploy', 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.');
-        if (!await validateGoInstalled(context, message, context.workspaceFolder.uri.fsPath)) {
+        if (!await validateGoInstalled(context, context.workspaceFolder.uri.fsPath)) {
             context.errorHandling.suppressReportIssue = true;
             throw new UserCancelledError('validateGoInstalled');
         }
-
-        // Apply Go-specific deploy defaults before reading `doRemoteBuild` below so the
-        // setting flip (scmDoBuildDuringDeployment=false) is reflected in downstream logic.
-        // Otherwise a user with remote build enabled would have Oryx settings applied to the
-        // app on their first Go deploy, even though Go doesn't use Oryx.
-        await applyGoDeployDefaults(context, context.workspaceFolder);
     }
 
     void showCoreToolsWarning(context, version, site.fullName);

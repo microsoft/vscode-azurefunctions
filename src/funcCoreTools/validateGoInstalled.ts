@@ -22,7 +22,7 @@ const goInstallUrl: string = 'https://go.dev/dl/';
  *
  * @returns true if Go is installed (or validation is disabled), false otherwise.
  */
-export async function validateGoInstalled(_context: IActionContext, message: string, workspacePath?: string): Promise<boolean> {
+export async function validateGoInstalled(_context: IActionContext, workspacePath?: string): Promise<boolean> {
     let installed: boolean = false;
 
     await callWithTelemetryAndErrorHandling('azureFunctions.validateGoInstalled', async (innerContext: IActionContext) => {
@@ -39,6 +39,7 @@ export async function validateGoInstalled(_context: IActionContext, message: str
             return;
         }
 
+        const message: string = 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.';
         const result: MessageItem = await innerContext.ui.showWarningMessage(message, { modal: true, stepName: 'goNotInstalled' }, DialogResponses.learnMore);
         innerContext.telemetry.properties.dialogResult = result.title;
         if (result === DialogResponses.learnMore) {
