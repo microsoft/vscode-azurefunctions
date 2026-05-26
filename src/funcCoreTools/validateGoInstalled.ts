@@ -7,6 +7,7 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { type MessageItem } from 'vscode';
 import { cpUtils } from '../utils/cpUtils';
+import { localize } from '../localize';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -39,7 +40,7 @@ export async function validateGoInstalled(_context: IActionContext, workspacePat
             return;
         }
 
-        const message: string = 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.';
+        const message: string = localize('installGoForDeploy', 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.');
         const result: MessageItem = await innerContext.ui.showWarningMessage(message, { modal: true, stepName: 'goNotInstalled' }, DialogResponses.learnMore);
         innerContext.telemetry.properties.dialogResult = result.title;
         if (result === DialogResponses.learnMore) {

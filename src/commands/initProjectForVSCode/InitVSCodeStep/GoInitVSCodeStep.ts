@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as path from 'path';
 import { type DebugConfiguration, type TaskDefinition } from 'vscode';
 import { func, hostStartCommand, hostStartTaskName, packTaskName, remoteBuildSetting, type ProjectLanguage } from '../../../constants';
 import { goDebugConfig } from '../../../debug/GoDebugProvider';
@@ -16,7 +17,7 @@ export class GoInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = packTaskName;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
-        const zipFileName: string = context.projectPath.split(/[\\/]/).pop() + '.zip';
+        const zipFileName: string = path.basename(context.projectPath) + '.zip';
         this.setDeploySubpath(context, zipFileName);
         this.settings.push({ key: remoteBuildSetting, value: false });
         await ensureGitIgnoreContents(context.projectPath, [zipFileName]);

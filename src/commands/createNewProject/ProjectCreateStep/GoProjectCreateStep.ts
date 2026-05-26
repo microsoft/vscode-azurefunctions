@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { ext } from '../../../extensionVariables';
+import { validateGoInstalled } from '../../../funcCoreTools/validateGoInstalled';
 import { localize } from '../../../localize';
 import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
@@ -19,11 +20,16 @@ export class GoProjectCreateStep extends ScriptProjectCreateStep {
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('initializingGoProject', 'Initializing Go Functions project...') });
+
+        if (!await validateGoInstalled(context, context.projectPath)) {
+            throw new UserCancelledError('validateGoInstalled');
+        }
+
         await super.executeCore(context, progress);
 
         // local.settings.json was written by super; add the Go preview flag
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.localSettingsJson.Values!['FUNCTIONS_CLI_GO_PREVIEW'] = 'true';
+        this.localSettingsJson.Values!['FUNCTIONS_CLI_NATIVE_LANGUAGE'] = 'true';
         await AzExtFsExtra.writeJSON(path.join(context.projectPath, 'local.settings.json'), this.localSettingsJson);
 
         const moduleName: string = path.basename(context.projectPath);
