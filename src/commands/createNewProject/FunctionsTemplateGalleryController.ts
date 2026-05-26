@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, type IProjectTemplate as ISharedProjectTemplate, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -337,10 +338,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             await AzExtFsExtra.ensureDir(targetDir);
 
             for (const file of files) {
-                const safePath = file.path.replace(/^[/\\]/, '');
-                const filePath = path.resolve(targetDir, safePath);
-                if (!filePath.startsWith(path.resolve(targetDir))) {
-                    continue;
+                const filePath = path.resolve(targetDir, file.path);
+                const rel = path.relative(targetDir, filePath);
+                if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                    actionContext.telemetry.properties.unsafePath = 'true';
+                    throw new Error(localize('refuseUnsafePath', 'Refusing to write file outside project directory: {0}', file.path));
                 }
                 await AzExtFsExtra.ensureDir(path.dirname(filePath));
                 await fs.promises.writeFile(filePath, file.content, 'utf8');
@@ -482,17 +484,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         await fs.promises.writeFile(zipPath, buffer);
 
         try {
-            await cpUtils.executeCommandLine(undefined, undefined, `tar -xf "${zipPath}" -C "${path.dirname(destDir)}"`);
-        } catch {
-            if (process.platform === 'win32') {
-                await cpUtils.executeCommandLine(undefined, undefined,
-                    `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${path.dirname(destDir)}' -Force"`);
-            } else {
-                await cpUtils.executeCommandLine(undefined, undefined, `unzip -q "${zipPath}" -d "${path.dirname(destDir)}"`);
+            await extract(zipPath, { dir: path.dirname(destDir) });
+        } finally {
+            if (await AzExtFsExtra.pathExists(zipPath)) {
+                await AzExtFsExtra.deleteResource(zipPath, { recursive: false });
             }
         }
-
-        await AzExtFsExtra.deleteResource(zipPath, { recursive: false });
 
         const repoName = repositoryUrl.replace(/\.git$/, '').split('/').pop() || 'template';
         const extractedFolder = path.join(path.dirname(destDir), `${repoName}-${branch}`);
