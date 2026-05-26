@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.21.1 - 2026-05-20
+## 1.21.1 - 2026-05-26
 
 ### Added
 * [[4765](https://github.com/microsoft/vscode-azurefunctions/pull/4765)] Support **debug-isolated** flag and stream `func` CLI output during debugging
