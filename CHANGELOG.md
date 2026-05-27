@@ -14,7 +14,7 @@
 
 ### Fixed
 * [[5020](https://github.com/microsoft/vscode-azurefunctions/pull/5020)] Fix missing icons for **role assignment scope** nodes under User Assigned Identities
-* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid `--namespace` CLI arg when creating **C# functions** with templates that lack namespace support (related .NET 10 project creation issues remain open: [[#4988](https://github.com/microsoft/vscode-azurefunctions/issues/4988)], [[#4989](https://github.com/microsoft/vscode-azurefunctions/issues/4989)], [[#5009](https://github.com/microsoft/vscode-azurefunctions/issues/5009)])
+* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid `--namespace` CLI arg when creating **C# functions** with templates that lack namespace support
 * [[4993](https://github.com/microsoft/vscode-azurefunctions/pull/4993)] Fix **SignalR Trigger** C# template showing `"null"` as the default hub name
 
 ## 1.21.0 - 2026-04-14
