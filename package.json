@@ -1389,6 +1389,11 @@
                         "description": "%azureFunctions.validateDelve%",
                         "default": true
                     },
+                    "azureFunctions.validateGo": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.validateGo%",
+                        "default": true
+                    },
                     "azureFunctions.validateEmulators": {
                         "type": "boolean",
                         "description": "%azureFunctions.validateEmulators%",

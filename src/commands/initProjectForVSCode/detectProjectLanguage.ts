@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage, ballerinaTomlFileName, buildGradleFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { ProjectLanguage, ballerinaTomlFileName, buildGradleFileName, goModFileName, localSettingsFileName, packageJsonFileName, pomXmlFileName, previewPythonModel, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { hasNodeJsDependency, tryGetPackageJson } from '../../utils/nodeJsUtils';
@@ -45,6 +45,10 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
 
         if (await isBallerinaProject(projectPath)) {
             detectedLangs.push(ProjectLanguage.Ballerina);
+        }
+
+        if (await isGoProject(projectPath)) {
+            detectedLangs.push(ProjectLanguage.Go);
         }
 
         await detectLanguageFromLocalSettings(context, detectedLangs, projectPath);
@@ -89,6 +93,10 @@ export async function isBallerinaProject(projectPath: string): Promise<boolean> 
     return await AzExtFsExtra.pathExists(path.join(projectPath, ballerinaTomlFileName));
 }
 
+export async function isGoProject(projectPath: string): Promise<boolean> {
+    return await AzExtFsExtra.pathExists(path.join(projectPath, goModFileName));
+}
+
 /**
  * If the user has a "local.settings.json" file, we may be able to infer the langauge from the setting "FUNCTIONS_WORKER_RUNTIME"
  */
@@ -107,6 +115,10 @@ async function detectLanguageFromLocalSettings(context: IActionContext, detected
                 break;
             case 'custom':
                 detectedLangs.push(ProjectLanguage.Custom);
+                break;
+            case 'native':
+                // `native` is currently produced only by Go (see getRootFunctionsWorkerRuntime).
+                detectedLangs.push(ProjectLanguage.Go);
                 break;
             default:
             // setting doesn't exist or it could be multiple different languages (aka "node" could by JavaScript or TypeScript)
