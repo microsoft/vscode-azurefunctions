@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { type DebugConfiguration, type TaskDefinition } from 'vscode';
-import { func, hostStartCommand, hostStartTaskName, packTaskName, remoteBuildSetting, type ProjectLanguage } from '../../../constants';
+import { func, hostStartCommand, hostStartTaskName, packCommand, packTaskName, remoteBuildSetting, type ProjectLanguage } from '../../../constants';
 import { goDebugConfig } from '../../../debug/GoDebugProvider';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -31,6 +31,10 @@ export class GoInitVSCodeStep extends InitVSCodeStepBase {
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
+            },
+            {
+                type: func,
+                command: packCommand,
             },
         ];
     }
