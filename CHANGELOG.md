@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.21.1 - 2026-05-26
+## 1.21.1 - 2026-05-27
 
 ### Added
 * [[4765](https://github.com/microsoft/vscode-azurefunctions/pull/4765)] Support **debug-isolated** flag and stream `func` CLI output during debugging
@@ -14,7 +14,7 @@
 
 ### Fixed
 * [[5020](https://github.com/microsoft/vscode-azurefunctions/pull/5020)] Fix missing icons for **role assignment scope** nodes under User Assigned Identities
-* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid CLI args when creating **C# functions** with templates that lack namespace support
+* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid `--namespace` CLI arg when creating **C# functions** with templates that lack namespace support
 * [[4993](https://github.com/microsoft/vscode-azurefunctions/pull/4993)] Fix **SignalR Trigger** C# template showing `"null"` as the default hub name
 
 ## 1.21.0 - 2026-04-14
