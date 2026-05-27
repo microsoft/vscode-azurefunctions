@@ -34,6 +34,7 @@ export class GoInitVSCodeStep extends InitVSCodeStepBase {
             },
             {
                 type: func,
+                label: packTaskName,
                 command: packCommand,
             },
         ];
