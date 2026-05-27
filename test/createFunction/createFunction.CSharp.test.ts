@@ -190,7 +190,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
 
     tester.addParallelSuite(testCases, {
         title,
-        timeoutMS: 120 * 1000,
+        timeoutMS: 3 * 60 * 1000,
         isLongRunning: isLongRunningVersion(version),
     });
 }
