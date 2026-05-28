@@ -29,7 +29,7 @@ export class GoProjectCreateStep extends ScriptProjectCreateStep {
 
         // local.settings.json was written by super; add the Go preview flag
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.localSettingsJson.Values!['FUNCTIONS_CLI_NATIVE_LANGUAGE'] = 'true';
+        this.localSettingsJson.Values!['FUNCTIONS_CLI_NATIVE_LANGUAGE'] = 'go';
         await AzExtFsExtra.writeJSON(path.join(context.projectPath, 'local.settings.json'), this.localSettingsJson);
 
         const moduleName: string = path.basename(context.projectPath);
