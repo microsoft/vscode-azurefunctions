@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.21.2 - 2026-05-28
+
+### Engineering
+* [[5057](https://github.com/microsoft/vscode-azurefunctions/pull/5057), [5058](https://github.com/microsoft/vscode-azurefunctions/pull/5058)] Bump runtime dependencies (`tmp`, `@microsoft/vscode-azext-utils`, `@microsoft/vscode-azext-azureappservice`)
+
 ## 1.21.1 - 2026-05-27
 
 ### Added
