@@ -8,9 +8,7 @@
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { registerWebviewExtensionVariables } from '@microsoft/vscode-azext-webview';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
@@ -68,10 +66,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
-    registerWebviewExtensionVariables({
-        context,
-        webviewAssetsDir: path.join(context.extensionPath, 'dist', 'webview'),
-    });
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';

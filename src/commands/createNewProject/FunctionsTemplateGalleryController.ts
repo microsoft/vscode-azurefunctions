@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, type IProjectTemplate as ISharedProjectTemplate, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -25,6 +25,7 @@ import { requestUtils } from '../../utils/requestUtils';
  */
 export class FunctionsTemplateGalleryController extends TemplateGalleryController {
     public static currentController: FunctionsTemplateGalleryController | undefined;
+    private static webviewVariablesRegistered = false;
 
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
@@ -45,6 +46,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         if (FunctionsTemplateGalleryController.currentController) {
             FunctionsTemplateGalleryController.currentController.revealToForeground();
             return FunctionsTemplateGalleryController.currentController;
+        }
+
+        if (!FunctionsTemplateGalleryController.webviewVariablesRegistered) {
+            registerWebviewExtensionVariables({
+                context,
+                webviewAssetsDir: path.join(context.extensionPath, 'dist', 'webview'),
+            });
+            FunctionsTemplateGalleryController.webviewVariablesRegistered = true;
         }
 
         const config: TemplateGalleryConfig = {
