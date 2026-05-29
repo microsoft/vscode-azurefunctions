@@ -23,6 +23,7 @@ export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
 export const showBallerinaProjectCreationSetting: string = 'showBallerinaProjectCreation';
 export const mcpProjectTypeSetting: string = 'mcpProjectType';
+export const projectTemplatesCacheExpirationHoursSetting: string = 'projectTemplates.cacheExpirationHours';
 
 export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
 
