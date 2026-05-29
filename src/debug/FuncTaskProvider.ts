@@ -63,6 +63,10 @@ export class FuncTaskProvider implements TaskProvider {
                                 commands.push(`${packCommand} ${buildNativeDeps}`);
                             }
 
+                            if (language === ProjectLanguage.Go) {
+                                commands.push(packCommand);
+                            }
+
                             for (const command of commands) {
                                 result.push(await this.createTask(context, command, folder, projectRoot, language));
                             }

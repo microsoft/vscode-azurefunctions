@@ -36,6 +36,7 @@ export enum ProjectLanguage {
     JavaScript = 'JavaScript',
     PowerShell = 'PowerShell',
     Python = 'Python',
+    Go = 'Go',
     TypeScript = 'TypeScript',
     Ballerina = 'Ballerina',
     Custom = 'Custom',
@@ -77,6 +78,7 @@ export enum JavaBuildTool {
 }
 
 export const ballerinaTomlFileName: string = "Ballerina.toml";
+export const goModFileName: string = 'go.mod';
 export enum BallerinaBackend {
     jvm = 'jvm',
     native = 'native'
