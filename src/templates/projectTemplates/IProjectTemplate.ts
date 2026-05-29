@@ -6,37 +6,40 @@
 import { type ProjectLanguage } from '../../constants';
 
 /**
- * Represents a complete project template that can be cloned and used as a starting point
+ * Subset of the project template manifest schema that this extension reads or
+ * produces. Additional descriptive fields (icon, tags, priority, longDescription,
+ * isNew, isHighlighted, resource, etc.) flow through to the webview unchanged
+ * via the shared `IProjectTemplate` type from `@microsoft/vscode-azext-webview`,
+ * so they are not duplicated here.
  */
 export interface IProjectTemplate {
-    /** Unique identifier for the template */
+    /** Unique identifier for the template (used for telemetry). */
     id: string;
 
-    /** User-visible name */
+    /** User-visible name. */
     displayName: string;
 
-    /** One-line description shown in Quick Pick */
+    /** One-line description. */
     shortDescription: string;
 
-    /** Detailed description (markdown supported) */
-    longDescription?: string;
-
-    /** Categories for grouping templates (a template can belong to multiple) */
+    /** Categories for grouping templates (a template can belong to multiple). */
     categories: TemplateCategory[];
 
-    /** Supported languages for this template */
+    /** Supported languages for this template. */
     languages: ProjectLanguage[];
 
-    /** Supported programming models per language (e.g., { "Python": [2], "TypeScript": [4] }) */
+    /** Supported programming models per language (e.g., { "Python": [2], "TypeScript": [4] }). */
     languageModels?: Record<ProjectLanguage, number[]>;
 
-    /** Git repository URL for cloning */
+    /** Git repository URL for cloning. */
     repositoryUrl: string;
+
+    /** Branch to clone from (default: main). */
+    branch?: string;
 
     /**
      * Folder path within the repository to use as the project root.
-     * When set, a git sparse-checkout is performed so only this folder is downloaded,
-     * making the operation significantly faster for large monorepos.
+     * When set, a git sparse-checkout is performed so only this folder is downloaded.
      * Takes precedence over `subdirectory` when both are present.
      */
     folderPath?: string;
@@ -47,89 +50,24 @@ export interface IProjectTemplate {
      * followed by a directory copy, whereas `folderPath` uses sparse-checkout.
      */
     subdirectory?: string;
-
-    /** Branch to clone from (default: main) */
-    branch?: string;
-
-    /** Required tools and dependencies */
-    prerequisites: IPrerequisite[];
-
-    /** Tags for searching and filtering */
-    tags: string[];
-
-    /** VS Code codicon name (without $() wrapper) */
-    icon?: string;
-
-    /** Sort order within category (lower = higher priority) */
-    priority?: number;
-
-    /** Azure resource type (e.g., 'http', 'timer', 'cosmos', 'eventhub') */
-    resource?: string;
-
-    /** Show "New" badge */
-    isNew?: boolean;
-
-    /** Show "Popular" badge */
-    isHighlighted?: boolean;
-
-    /** Whether this template is bundled with the extension for offline use */
-    offlineBundle?: boolean;
-
-    /** Commands to run after cloning (optional) */
-    postCloneCommands?: string[];
-
-    /** Localized versions of template metadata */
-    localizations?: Record<string, ITemplateLocalization>;
 }
 
 /**
- * Template manifest containing all available project templates
+ * Template manifest containing all available project templates.
  */
 export interface ITemplateManifest {
-    /** Schema version for the manifest format */
+    /** Schema version for the manifest format. */
     version: string;
 
-    /** ISO 8601 timestamp of when the manifest was generated */
+    /** ISO 8601 timestamp of when the manifest was generated. */
     generatedAt: string;
 
-    /** Array of project templates */
+    /** Array of project templates. */
     templates: IProjectTemplate[];
 }
 
 /**
- * Prerequisite tool or dependency required for a template
- */
-export interface IPrerequisite {
-    /** Unique identifier (e.g., 'func-core-tools', 'bicep', 'docker') */
-    id: string;
-
-    /** User-visible name */
-    displayName: string;
-
-    /** Command to run to detect if the tool is installed */
-    detectionCommand: string;
-
-    /** Whether this prerequisite is required (cannot skip if missing) */
-    required: boolean;
-
-    /** URL to documentation for manual installation */
-    installUrl?: string;
-
-    /** Platform-specific installation command */
-    installCommand?: string;
-}
-
-/**
- * Localized template metadata
- */
-export interface ITemplateLocalization {
-    displayName: string;
-    shortDescription: string;
-    longDescription?: string;
-}
-
-/**
- * Categories for organizing templates
+ * Categories for organizing templates. Values match the manifest schema.
  */
 export enum TemplateCategory {
     Starter = 'starter',
@@ -142,16 +80,3 @@ export enum TemplateCategory {
     Other = 'other'
 }
 
-/**
- * Result of prerequisite checking
- */
-export interface IPrerequisiteCheckResult {
-    /** Prerequisites that are missing */
-    missing: IPrerequisite[];
-
-    /** Prerequisites that are installed */
-    installed: IPrerequisite[];
-
-    /** Whether any required prerequisites are missing */
-    hasRequiredMissing: boolean;
-}

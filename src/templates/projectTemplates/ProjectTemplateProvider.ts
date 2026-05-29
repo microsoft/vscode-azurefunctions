@@ -5,9 +5,10 @@
 
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage } from '../../constants';
+import { ProjectLanguage, projectTemplatesCacheExpirationHoursSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { requestUtils } from '../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from './IProjectTemplate';
 
@@ -17,7 +18,7 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
 export class ProjectTemplateProvider {
     private static readonly CACHE_KEY = 'projectTemplatesManifest';
     private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
-    private static readonly DEFAULT_MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
+    private static readonly MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
     /**
@@ -56,10 +57,6 @@ export class ProjectTemplateProvider {
                     : raw.language ? [normalizeLanguage(raw.language as string)]
                         : [];
 
-            // prerequisites: not present in new manifest — default to empty array
-            // so downstream code can safely call .filter() / .length on it.
-            const prerequisites = raw.prerequisites ?? [];
-
             // folderPath: canonical new field — no alias needed
             const folderPath: string | undefined = raw.folderPath;
 
@@ -73,7 +70,6 @@ export class ProjectTemplateProvider {
                 shortDescription,
                 repositoryUrl,
                 languages,
-                prerequisites,
                 ...(folderPath !== undefined ? { folderPath } : {}),
                 ...(subdirectory !== undefined ? { subdirectory } : {}),
             } as IProjectTemplate;
@@ -149,7 +145,7 @@ export class ProjectTemplateProvider {
         }
 
         // Check if cache has expired
-        const expirationHours = getWorkspaceSetting<number>('projectTemplates.cacheExpirationHours') || ProjectTemplateProvider.DEFAULT_CACHE_EXPIRATION_HOURS;
+        const expirationHours = getWorkspaceSetting<number>(projectTemplatesCacheExpirationHoursSetting) || ProjectTemplateProvider.DEFAULT_CACHE_EXPIRATION_HOURS;
         const expirationMs = expirationHours * 60 * 60 * 1000;
         const now = Date.now();
 
@@ -169,83 +165,32 @@ export class ProjectTemplateProvider {
     }
 
     /**
-     * Fetch manifest from remote URL(s)
+     * Fetch manifest from the Microsoft-hosted CDN
      */
     private async fetchManifestFromRemote(context: IActionContext): Promise<ITemplateManifest> {
-        const primaryUrl = getWorkspaceSetting<string>('projectTemplates.manifestUrl') || ProjectTemplateProvider.DEFAULT_MANIFEST_URL;
-        const additionalUrls = getWorkspaceSetting<string[]>('projectTemplates.additionalManifestUrls') || [];
-
-        ext.outputChannel.appendLog(localize('fetchingFromUrl', 'Fetching manifest from: {0}', primaryUrl));
-
-        // Fetch primary manifest
-        const primaryManifest = await this.fetchManifestFromUrl(context, primaryUrl);
-
-        // If there are no additional URLs, return the primary manifest
-        if (additionalUrls.length === 0) {
-            return primaryManifest;
-        }
-
-        // Fetch and merge additional manifests
-        const allTemplates = [...primaryManifest.templates];
-
-        for (const url of additionalUrls) {
-            try {
-                const additionalManifest = await this.fetchManifestFromUrl(context, url);
-                allTemplates.push(...additionalManifest.templates);
-            } catch (error) {
-                // Log error but continue with other manifests
-                ext.outputChannel.appendLog(localize('additionalManifestFailed', 'Could not fetch additional template manifest from {0}: {1}', url, parseError(error).message));
-            }
-        }
-
-        return {
-            version: primaryManifest.version,
-            generatedAt: primaryManifest.generatedAt,
-            templates: allTemplates
-        };
+        ext.outputChannel.appendLog(localize('fetchingFromUrl', 'Fetching manifest from: {0}', ProjectTemplateProvider.MANIFEST_URL));
+        return await this.fetchManifestFromUrl(context, ProjectTemplateProvider.MANIFEST_URL);
     }
 
     /**
-     * Fetch manifest from a specific URL using native fetch
+     * Fetch manifest from a specific URL using the extension's request utilities
      */
-    private async fetchManifestFromUrl(_context: IActionContext, url: string): Promise<ITemplateManifest> {
-        const timeoutMs = (getWorkspaceSetting<number>('requestTimeout') || 15) * 1000;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    private async fetchManifestFromUrl(context: IActionContext, url: string): Promise<ITemplateManifest> {
+        const response = await requestUtils.sendRequestWithExtTimeout(context, { url, method: 'GET' });
 
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'VSCode-AzureFunctions'
-                },
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(localize('httpError', 'HTTP error {0}', response.status.toString()));
-            }
-
-            const text = await response.text();
-
-            const manifest = JSON.parse(text) as ITemplateManifest;
-
-            // Validate manifest structure
-            if (!manifest.version || !manifest.templates || !Array.isArray(manifest.templates)) {
-                throw new Error(localize('invalidManifestFormat', 'Invalid manifest format'));
-            }
-
-            return manifest;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-                throw new Error(localize('requestTimeout', 'Request timed out'));
-            }
-            throw error;
+        if (response.status < 200 || response.status >= 300) {
+            throw new Error(localize('httpError', 'HTTP error {0}', response.status.toString()));
         }
+
+        const text = response.bodyAsText ?? '';
+        const manifest = JSON.parse(text) as ITemplateManifest;
+
+        // Validate manifest structure
+        if (!manifest.version || !manifest.templates || !Array.isArray(manifest.templates)) {
+            throw new Error(localize('invalidManifestFormat', 'Invalid manifest format'));
+        }
+
+        return manifest;
     }
 
     /**
