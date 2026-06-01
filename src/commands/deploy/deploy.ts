@@ -35,6 +35,7 @@ import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlD
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { CreateRemoteMcpServerExecuteStep } from './CreateRemoteMcpServerExecuteStep';
+import { DisableSyncTriggersForMcpExecuteStep } from './DisableSyncTriggersForMcpExecuteStep';
 import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
 import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
@@ -327,7 +328,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 }
                 const deployContext = Object.assign(context, await createActivityContext());
                 deployContext.activityChildren = [];
-                await innerDeploy(site, deployFsPath, deployContext, [new CreateRemoteMcpServerExecuteStep()]);
+                await innerDeploy(site, deployFsPath, deployContext, [new DisableSyncTriggersForMcpExecuteStep(), new CreateRemoteMcpServerExecuteStep()]);
             }
         }
     );
@@ -376,4 +377,3 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
 }
-
