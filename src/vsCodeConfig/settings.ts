@@ -89,6 +89,11 @@ export function getRootFunctionsWorkerRuntime(language: string | undefined): str
             return 'python';
         case ProjectLanguage.PowerShell:
             return 'powershell';
+        case ProjectLanguage.Go:
+            // Go compiles to a standalone binary, so the Functions host launches the binary directly.
+            // The host and core tools expect FUNCTIONS_WORKER_RUNTIME to be 'native' for Go apps
+            // (this is the value `func init --worker-runtime go` writes to local.settings.json).
+            return 'native';
         case ProjectLanguage.Custom:
             return 'custom';
         default:
@@ -117,7 +122,8 @@ export async function tryGetFunctionsWorkerRuntimeForProject(context: IActionCon
 }
 
 export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
-    return !!runtime && ['node', 'dotnet', 'dotnet-isolated', 'java', 'python', 'powershell', 'custom'].includes(runtime.toLowerCase());
+    // 'native' is the worker runtime used for Go (see getRootFunctionsWorkerRuntime).
+    return !!runtime && ['node', 'dotnet', 'dotnet-isolated', 'java', 'python', 'powershell', 'native', 'custom'].includes(runtime.toLowerCase());
 }
 
 export function promptToUpdateDotnetRuntime(azureRuntime: string | undefined, localRuntime: string | undefined): boolean {
@@ -126,6 +132,10 @@ export function promptToUpdateDotnetRuntime(azureRuntime: string | undefined, lo
 }
 
 export function getFuncWatchProblemMatcher(language: string | undefined): string {
+    // Go uses the user-friendly "$func-golang-watch" matcher name even though its worker runtime is "native".
+    if (language === ProjectLanguage.Go) {
+        return '$func-golang-watch';
+    }
     const runtime: string | undefined = getRootFunctionsWorkerRuntime(language);
     return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
 }

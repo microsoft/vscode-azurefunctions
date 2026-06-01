@@ -23,6 +23,7 @@ export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
 export const showBallerinaProjectCreationSetting: string = 'showBallerinaProjectCreation';
 export const mcpProjectTypeSetting: string = 'mcpProjectType';
+export const projectTemplatesCacheExpirationHoursSetting: string = 'projectTemplates.cacheExpirationHours';
 
 export const browseItem: IAzureQuickPickItem<undefined> = { label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined };
 
@@ -35,6 +36,7 @@ export enum ProjectLanguage {
     JavaScript = 'JavaScript',
     PowerShell = 'PowerShell',
     Python = 'Python',
+    Go = 'Go',
     TypeScript = 'TypeScript',
     Ballerina = 'Ballerina',
     Custom = 'Custom',
@@ -76,6 +78,7 @@ export enum JavaBuildTool {
 }
 
 export const ballerinaTomlFileName: string = "Ballerina.toml";
+export const goModFileName: string = 'go.mod';
 export enum BallerinaBackend {
     jvm = 'jvm',
     native = 'native'

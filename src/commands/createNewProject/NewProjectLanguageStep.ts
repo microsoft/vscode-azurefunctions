@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { type QuickPickOptions } from 'vscode';
+import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { TemplateSchemaVersion } from '../../templates/TemplateProviderBase';
 import { nonNullProp } from '../../utils/nonNull';
@@ -16,6 +17,7 @@ import { type IProjectWizardContext } from './IProjectWizardContext';
 import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
+import { GoProjectCreateStep } from './ProjectCreateStep/GoProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
@@ -29,6 +31,10 @@ import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnipp
 import { MCPOpenFileStep } from './mcpServerSteps/MCPOpenFileStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
+import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
+
+// Sentinel value used to detect when the user picks "Browse Template Gallery…"
+const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -49,6 +55,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
+            { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } },
@@ -65,8 +72,25 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
+        // Add a separator and a "Browse Template Gallery…" option at the bottom
+        languagePicks.push(
+            { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
+            {
+                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery (Preview)...')}`,
+                data: { language: templateGalleryLanguage },
+                suppressPersistence: true,
+            },
+        );
+
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
+
+        if (result.language === templateGalleryLanguage) {
+            FunctionsTemplateGalleryController.createOrShow(ext.context);
+            context.telemetry.properties.flow = 'templateGalleryFromWizard';
+            throw new UserCancelledError('templateGallery');
+        }
+
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
     }
@@ -116,6 +140,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());
+                break;
+            case ProjectLanguage.Go:
+                executeSteps.push(new GoProjectCreateStep());
                 break;
             case ProjectLanguage.Java:
                 await addJavaCreateProjectSteps(context, promptSteps, executeSteps);

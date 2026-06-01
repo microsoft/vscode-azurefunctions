@@ -11,7 +11,8 @@ import { localize } from '../localize';
 import { type TemplateSchemaVersion } from '../templates/TemplateProviderBase';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
 import { getTemplateVersionFromLanguageAndModel } from '../utils/templateVersionUtils';
-import { getWorkspaceSetting } from './settings';
+import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
+import { detectProjectLanguageModel } from '../commands/initProjectForVSCode/detectProjectLanguage';
 
 export interface VerifiedInit {
     language: ProjectLanguage,
@@ -36,6 +37,11 @@ export async function verifyInitForVSCode(context: IActionContext, fsPath: strin
         language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
         languageModel = getWorkspaceSetting(projectLanguageModelSetting, fsPath);
         version = nonNullOrEmptyValue(tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath)), funcVersionSetting);
+    } else if (languageModel === undefined) {
+        languageModel = await detectProjectLanguageModel(<ProjectLanguage>language, fsPath);
+        if (languageModel !== undefined) {
+            await updateWorkspaceSetting(projectLanguageModelSetting, languageModel, fsPath);
+        }
     }
 
     const templateSchemaVersion = getTemplateVersionFromLanguageAndModel(<ProjectLanguage>language, languageModel);

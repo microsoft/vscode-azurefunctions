@@ -188,6 +188,7 @@ export function registerCommands(
     });
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addLocalMIConnections', addLocalMIConnections);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.addRemoteMIConnections', addRemoteMIConnections);
+
     ext.eventGridProvider = new EventGridCodeLensProvider();
     ext.context.subscriptions.push(languages.registerCodeLensProvider({ pattern: '**/*.eventgrid.json' }, ext.eventGridProvider));
     registerCommand('azureFunctions.eventGrid.sendMockRequest', sendEventGridRequest);
