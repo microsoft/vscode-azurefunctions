@@ -56,14 +56,14 @@ export namespace dotnetUtils {
                 undefined,
                 path.dirname(projFile.fullPath),
                 'dotnet',
-                ['build', projFile.name, '--getProperty:TargetFramework', '--no-restore']
+                ['msbuild', projFile.name, '-getProperty:TargetFramework']
             );
             const value: string = output.trim();
             if (value) {
                 return value;
             }
         } catch {
-            // Fall back to XML parsing if the dotnet SDK does not support --getProperty
+            // Fall back to XML parsing if the dotnet SDK does not support -getProperty
         }
         return await getPropertyInProjFile(projFile, 'TargetFramework');
     }
