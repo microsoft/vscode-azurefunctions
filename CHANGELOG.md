@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.22.0 - 2026-06-02
+
+### Overview
+This release adds **Go language support** for Azure Functions — including project scaffolding, local debugging, and deployment — and introduces an opt-in **Template Gallery** for the Create New Project experience.
+
+### Added
+* [[5061](https://github.com/microsoft/vscode-azurefunctions/pull/5061)] Add **Go language support** — project scaffolding (`main.go`, `go.mod`), local debugging via Delve, zip-push deployment with `func pack`, and Function App creation including Flex Consumption
+* [[4964](https://github.com/microsoft/vscode-azurefunctions/pull/4964)] Add opt-in **Template Gallery** for Create New Project — a searchable, filterable visual gallery that replaces the default wizard. Enable by setting `azureFunctions.enableTemplateGallery` to `true`
+
 ## 1.21.2 - 2026-05-28
 
 ### Engineering
