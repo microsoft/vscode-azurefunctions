@@ -10,6 +10,7 @@ import { FuncVersion } from '../FuncVersion';
 import { ProjectLanguage } from '../constants';
 import { localize } from "../localize";
 import { type cliFeedUtils } from './cliFeedUtils';
+import { cpUtils } from './cpUtils';
 import { telemetryUtils } from './telemetryUtils';
 import { findFiles } from './workspace';
 
@@ -50,6 +51,20 @@ export namespace dotnetUtils {
     }
 
     export async function getTargetFramework(projFile: ProjectFile): Promise<string> {
+        try {
+            const output: string = await cpUtils.executeCommand(
+                undefined,
+                path.dirname(projFile.fullPath),
+                'dotnet',
+                ['build', projFile.name, '--getProperty:TargetFramework', '--no-restore']
+            );
+            const value: string = output.trim();
+            if (value) {
+                return value;
+            }
+        } catch {
+            // Fall back to XML parsing if the dotnet SDK does not support --getProperty
+        }
         return await getPropertyInProjFile(projFile, 'TargetFramework');
     }
 
