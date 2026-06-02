@@ -18,7 +18,8 @@ suite('NewProjectLanguageStep', () => {
             containerizedProject,
             telemetry: { properties: {} },
             ui: {
-                showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
+                showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[], _options?: unknown) => {
+                    void _options;
                     picksResult = picks;
                     const javascriptPick = picks.find(p => p.label === ProjectLanguage.JavaScript);
                     if (!javascriptPick) {
@@ -36,11 +37,11 @@ suite('NewProjectLanguageStep', () => {
 
     test('shows template gallery quick pick for non-containerized projects', async () => {
         const picks = await getPromptPicks(false);
-        assert.ok(picks.some(p => p.label.includes(browseTemplateGalleryLabel)));
+        assert.ok(picks.some(p => p.data.language === ('TemplateGallery' as ProjectLanguage)), browseTemplateGalleryLabel);
     });
 
     test('does not show template gallery quick pick for containerized projects', async () => {
         const picks = await getPromptPicks(true);
-        assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)));
+        assert.ok(!picks.some(p => p.data.language === ('TemplateGallery' as ProjectLanguage)), browseTemplateGalleryLabel);
     });
 });
