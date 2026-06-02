@@ -30,7 +30,7 @@ export class NodeV4Provider extends TemplateProviderBase {
     }
 
     public async getLatestTemplateVersion(_context: IActionContext): Promise<string> {
-        return '1.0';
+        return await this.getBackupTemplateVersion();
     }
 
     public async getLatestTemplates(_context: IActionContext, _latestTemplateVersion: string): Promise<ITemplates> {
