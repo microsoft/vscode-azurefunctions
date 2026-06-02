@@ -15,6 +15,15 @@ interface TemplateJsonSymbol {
     defaultValue?: string;
     description?: string;
     choices?: TemplateJsonChoice[] | Record<string, string>;
+    // Fields for 'generated' type symbols
+    generator?: string;
+    replaces?: string;
+    parameters?: {
+        sourceVariableName?: string;
+        fallbackVariableName?: string;
+        low?: number;
+        high?: number;
+    };
 }
 
 interface TemplateJsonChoice {
@@ -109,13 +118,30 @@ export async function findShortNameByIdentity(nupkgPaths: string[], identity: st
 function convertToRawTemplate(templateJson: TemplateJson): RawTemplate {
     const parameters: RawParameter[] = [];
 
+    // Build a map of parameter name -> coalesced replaces value from 'coalesce' generators.
+    // When a parameter has no explicit defaultValue, the replaces value from its coalesce
+    // generator serves as a meaningful hint (e.g. FunctionsHttpPort -> "7071").
+    const coalesceReplaces: Record<string, string> = {};
+    if (templateJson.symbols) {
+        for (const [, symbol] of Object.entries(templateJson.symbols)) {
+            if (
+                symbol.type === 'generated' &&
+                symbol.generator === 'coalesce' &&
+                symbol.replaces &&
+                symbol.parameters?.sourceVariableName
+            ) {
+                coalesceReplaces[symbol.parameters.sourceVariableName] = symbol.replaces;
+            }
+        }
+    }
+
     if (templateJson.symbols) {
         for (const [name, symbol] of Object.entries(templateJson.symbols)) {
             if (symbol.type === 'parameter') {
                 parameters.push({
                     Documentation: symbol.description,
                     Name: name,
-                    DefaultValue: symbol.defaultValue,
+                    DefaultValue: symbol.defaultValue ?? coalesceReplaces[name],
                     DataType: symbol.datatype ?? undefined,
                     Choices: convertChoices(symbol.choices),
                 });
