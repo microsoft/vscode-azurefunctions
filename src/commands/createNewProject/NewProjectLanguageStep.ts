@@ -72,21 +72,23 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        // Add a separator and a "Browse Template Gallery…" option at the bottom
-        languagePicks.push(
-            { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
-            {
-                label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery (Preview)...')}`,
-                data: { language: templateGalleryLanguage },
-                suppressPersistence: true,
-            },
-        );
+        if (!context.containerizedProject) {
+            // Add a separator and a "Browse Template Gallery…" option at the bottom
+            languagePicks.push(
+                { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
+                {
+                    label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery (Preview)...')}`,
+                    data: { language: templateGalleryLanguage },
+                    suppressPersistence: true,
+                },
+            );
+        }
 
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
 
         if (result.language === templateGalleryLanguage) {
-            FunctionsTemplateGalleryController.createOrShow(ext.context);
+            FunctionsTemplateGalleryController.createOrShow(ext.context, context.projectPath);
             context.telemetry.properties.flow = 'templateGalleryFromWizard';
             throw new UserCancelledError('templateGallery');
         }
