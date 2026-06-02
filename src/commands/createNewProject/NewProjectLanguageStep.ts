@@ -88,7 +88,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
 
         if (result.language === templateGalleryLanguage) {
-            FunctionsTemplateGalleryController.createOrShow(ext.context);
+            FunctionsTemplateGalleryController.createOrShow(ext.context, context.projectPath);
             context.telemetry.properties.flow = 'templateGalleryFromWizard';
             throw new UserCancelledError('templateGallery');
         }

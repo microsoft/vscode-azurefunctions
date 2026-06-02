@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import extract from 'extract-zip';
 import * as fs from 'fs';
@@ -15,7 +15,13 @@ import { localize } from '../../localize';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../templates/projectTemplates/ProjectTemplateProvider';
 import { cpUtils } from '../../utils/cpUtils';
+import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { projectOpenBehaviorSetting } from '../../constants';
+import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
+import { OpenBehaviorStep } from './OpenBehaviorStep';
+import { OpenFolderStep } from './OpenFolderStep';
 
 /**
  * Azure Functions implementation of the shared TemplateGalleryController.
@@ -29,10 +35,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
+    private readonly initialLocation: string | undefined;
 
-    private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig) {
+    private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, initialLocation?: string) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
+        this.initialLocation = initialLocation;
 
         this.registerDisposable(
             this.onDisposed(() => {
@@ -42,10 +50,19 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         );
     }
 
-    public static createOrShow(context: vscode.ExtensionContext): FunctionsTemplateGalleryController {
-        if (FunctionsTemplateGalleryController.currentController) {
-            FunctionsTemplateGalleryController.currentController.revealToForeground();
-            return FunctionsTemplateGalleryController.currentController;
+    public static createOrShow(context: vscode.ExtensionContext, initialLocation?: string): FunctionsTemplateGalleryController {
+        const existing = FunctionsTemplateGalleryController.currentController;
+        if (existing) {
+            // If the caller supplied a fresh initialLocation (typically from the classic
+            // wizard's folder picker) and it differs from what the existing panel was
+            // created with, the old defaultLocation is stale. Dispose so we recreate
+            // with the new location instead of silently ignoring it.
+            if (initialLocation !== undefined && (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, initialLocation))) {
+                existing.dispose();
+            } else {
+                existing.revealToForeground();
+                return existing;
+            }
         }
 
         if (!FunctionsTemplateGalleryController.webviewVariablesRegistered) {
@@ -63,7 +80,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             supportsAiGeneration: true,
         };
 
-        FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config);
+        FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, initialLocation);
         return FunctionsTemplateGalleryController.currentController;
     }
 
@@ -73,7 +90,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.getTemplates', async (actionContext: IActionContext) => {
             const templates = await this.templateProvider.getTemplates(actionContext);
             let defaultLocation = '';
-            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            if (this.initialLocation) {
+                // Prefer the folder the user already picked in the classic wizard before
+                // switching into the gallery — otherwise we'd fall back to the open
+                // workspace folder, which is almost always the wrong target.
+                defaultLocation = this.initialLocation;
+            } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
                 defaultLocation = vscode.workspace.workspaceFolders[0].uri.fsPath;
             }
             return { templates: templates as unknown as ISharedProjectTemplate[], defaultLocation };
@@ -200,10 +222,50 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 void vscode.window.showInformationMessage(
                     localize('projectCreated', 'Project created successfully at {0}', projectPath),
                 );
+
+                // Match the classic wizard's post-create behavior: prompt the user how to
+                // open the newly created project (Open in current/new window, or Add to
+                // workspace) and then act on it via the shared OpenFolderStep. This keeps
+                // both flows consistent and reuses the same telemetry / activity output.
+                await this.promptAndOpenProject(actionContext, projectPath);
             } finally {
                 try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
             }
         });
+    }
+
+    private async promptAndOpenProject(actionContext: IActionContext, projectPath: string): Promise<void> {
+        // If the freshly-created project is already part of the open workspace,
+        // there's nothing to open.
+        const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
+        if (alreadyOpen) {
+            return;
+        }
+
+        const wizardContext = Object.assign({}, actionContext, {
+            projectPath,
+            workspacePath: projectPath,
+            workspaceFolder: undefined,
+            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
+        }) as Partial<IProjectWizardContext> & IActionContext;
+
+        const wizard = new AzureWizard<IProjectWizardContext>(wizardContext as IProjectWizardContext, {
+            title: localize('openProject', 'Open new project'),
+            promptSteps: [new OpenBehaviorStep()],
+            executeSteps: [new OpenFolderStep()],
+        });
+
+        try {
+            await wizard.prompt();
+            await wizard.execute();
+        } catch (err) {
+            if (err instanceof UserCancelledError) {
+                // User dismissed the open-behavior picker — files are already on disk,
+                // so just leave them in place. No need to surface an error.
+                return;
+            }
+            throw err;
+        }
     }
 
     // ── Optional overrides ──
