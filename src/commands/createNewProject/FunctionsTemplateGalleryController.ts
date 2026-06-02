@@ -57,7 +57,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             // wizard's folder picker) and it differs from what the existing panel was
             // created with, the old defaultLocation is stale. Dispose so we recreate
             // with the new location instead of silently ignoring it.
-            if (initialLocation !== undefined && existing.initialLocation !== initialLocation) {
+            if (initialLocation !== undefined && (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, initialLocation))) {
                 existing.dispose();
             } else {
                 existing.revealToForeground();
