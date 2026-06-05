@@ -36,6 +36,7 @@ export type LocalProjectOptions = {
     languageModel?: number;
     preCompiledProjectPath?: string
     isIsolated?: boolean;
+    isNativeWorker?: boolean;
 }
 
 export type WorkspaceProject = { options: LocalProjectOptions };

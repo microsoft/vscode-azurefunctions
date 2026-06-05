@@ -38,7 +38,7 @@ export async function listLocalFunctions(project: LocalProjectInternal): Promise
         context.errorHandling.suppressDisplay = true;
         const isFunctionalProgrammingModel = isPythonV2Plus(project.options.language, project.options.languageModel) || isNodeV4Plus(project.options);
 
-        if (project.options.isIsolated || isFunctionalProgrammingModel) {
+        if (project.options.isIsolated || project.options.isNativeWorker || isFunctionalProgrammingModel) {
             return { functions: await getFunctionsForHostedProject(context, project), invalidFunctions: [] };
         } else {
             const result: ListLocalFunctionsResult = {
