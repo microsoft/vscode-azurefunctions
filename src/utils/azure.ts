@@ -6,7 +6,6 @@
 import { AppKind, type IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, type AzureWizardExecuteStep, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { isArray } from 'util';
 import { webProvider } from '../constants';
 import { localize } from '../localize';
 import { type ICreateFunctionAppContext, type SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
@@ -18,7 +17,7 @@ export interface IBaseResourceWithName {
 
 export async function promptForResource<T extends IBaseResourceWithName>(context: IActionContext, placeHolder: string, resourcesTask: Promise<T[]>): Promise<T | undefined> {
     const picksTask: Promise<IAzureQuickPickItem<T | undefined>[]> = resourcesTask.then((resources: T[]) => {
-        const picks: IAzureQuickPickItem<T | undefined>[] = !isArray(resources) ? [] : <IAzureQuickPickItem<T>[]>(resources
+        const picks: IAzureQuickPickItem<T | undefined>[] = !Array.isArray(resources) ? [] : <IAzureQuickPickItem<T>[]>(resources
             .map((r: T) => r.name ? { data: r, label: r.name, description: r._description } : undefined)
             .filter((p: IAzureQuickPickItem<T> | undefined) => p));
         picks.push({

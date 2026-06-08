@@ -1,5 +1,36 @@
 # Change Log
 
+## 1.22.0 - 2026-06-02
+
+### Overview
+This release adds **Go language support** for Azure Functions — including project scaffolding, local debugging, and deployment — and introduces an opt-in **Template Gallery** for the Create New Project experience.
+
+### Added
+* [[5061](https://github.com/microsoft/vscode-azurefunctions/pull/5061)] Add **Go language support** — project scaffolding (`main.go`, `go.mod`), local debugging via Delve, zip-push deployment with `func pack`, and Function App creation including Flex Consumption
+* [[4964](https://github.com/microsoft/vscode-azurefunctions/pull/4964)] Add opt-in **Template Gallery** for Create New Project — a searchable, filterable visual gallery that replaces the default wizard. Enable by setting `azureFunctions.enableTemplateGallery` to `true`
+
+## 1.21.2 - 2026-05-28
+
+### Engineering
+* [[5057](https://github.com/microsoft/vscode-azurefunctions/pull/5057), [5058](https://github.com/microsoft/vscode-azurefunctions/pull/5058)] Bump runtime dependencies (`tmp`, `@microsoft/vscode-azext-utils`, `@microsoft/vscode-azext-azureappservice`)
+
+## 1.21.1 - 2026-05-27
+
+### Added
+* [[4765](https://github.com/microsoft/vscode-azurefunctions/pull/4765)] Support **debug-isolated** flag and stream `func` CLI output during debugging
+* [[5002](https://github.com/microsoft/vscode-azurefunctions/pull/5002)] Add **MCP Prompt** template
+* [[4966](https://github.com/microsoft/vscode-azurefunctions/pull/4966)] Add **MCP Resource trigger** templates for JavaScript and TypeScript
+* [[4959](https://github.com/microsoft/vscode-azurefunctions/pull/4959)] Add a setting to bypass **emulator validation**
+
+### Changed
+* [[5008](https://github.com/microsoft/vscode-azurefunctions/pull/5008)] Hide `Get MCP Host Key` from the command palette
+* [[4999](https://github.com/microsoft/vscode-azurefunctions/pull/4999)] Stop filtering the **Java version** picker by locally installed JDKs
+
+### Fixed
+* [[5020](https://github.com/microsoft/vscode-azurefunctions/pull/5020)] Fix missing icons for **role assignment scope** nodes under User Assigned Identities
+* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid `--namespace` CLI arg when creating **C# functions** with templates that lack namespace support
+* [[4993](https://github.com/microsoft/vscode-azurefunctions/pull/4993)] Fix **SignalR Trigger** C# template showing `"null"` as the default hub name
+
 ## 1.21.0 - 2026-04-14
 
 ### Overview

@@ -5,14 +5,14 @@
 
 import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
-import { type ExtensionContext } from 'vscode';
+import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
+import { type DiagnosticCollection, type ExtensionContext } from 'vscode';
 import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
 import { type IFunction } from './workspace/LocalFunction';
-import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 
 /**
  * Used for extensionVariables that can also be set per-action
@@ -60,6 +60,7 @@ export namespace ext {
     export let rgApi: AzureHostExtensionApi;
     export let rgApiV2: AzureResourcesExtensionApi;
     export let eventGridProvider: EventGridCodeLensProvider;
+    export let diagnosticCollection: DiagnosticCollection;
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap = new Map<string, FunctionTreeItemBase | IFunction>();
     export let isExecutingFunction: boolean | undefined;

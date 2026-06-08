@@ -7,7 +7,7 @@ import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCrea
 import { CommonRoleDefinitions, createRoleId, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, RoleAssignmentExecuteStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, type INewStorageAccountDefaults, type Role } from "@microsoft/vscode-azext-azureutils";
 import { type AzureWizardExecuteStep, type AzureWizardPromptStep, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../../FuncVersion";
-import { DurableBackend, funcVersionSetting } from "../../constants";
+import { DurableBackend, funcVersionSetting, ProjectLanguage } from "../../constants";
 import { tryGetLocalFuncVersion } from "../../funcCoreTools/tryGetLocalFuncVersion";
 import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem";
 import { createActivityContext } from "../../utils/activityUtils";
@@ -91,7 +91,12 @@ export async function createCreateFunctionAppComponents(context: ICreateFunction
     if (!wizardContext.advancedCreation) {
         // if the user is deploying to a container app, do not use a flex consumption plan
         wizardContext.useFlexConsumptionPlan = !wizardContext.dockerfilePath;
-        wizardContext.stackFilter = getRootFunctionsWorkerRuntime(wizardContext.language);
+        // Some languages (e.g. Go) use a different worker runtime ('native') than their stacks API value ('go')
+        const stackFilterOverrides: Partial<Record<ProjectLanguage, string>> = {
+            [ProjectLanguage.Go]: 'go',
+        };
+        wizardContext.stackFilter = stackFilterOverrides[wizardContext.language as ProjectLanguage]
+            ?? getRootFunctionsWorkerRuntime(wizardContext.language);
         promptSteps.push(new ConfigureCommonNamesStep());
         executeSteps.push(new ResourceGroupCreateStep());
         executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
