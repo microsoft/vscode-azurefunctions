@@ -1623,7 +1623,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^5.0.2",
         "@microsoft/vscode-azext-azureappsettings": "^1.0.0",
-        "@microsoft/vscode-azext-azureutils": "^4.2.1",
+        "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.1",
         "@microsoft/vscode-azext-webview": "^1.1.0",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
