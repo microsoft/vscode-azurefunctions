@@ -119,8 +119,8 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
         const netRelease = nonNullValue(await this.getNetRelease(context, projKey, latestTemplateVersion), 'netRelease');
         await Promise.all([
-            requestUtils.downloadFile(context, netRelease.projectTemplates, projectFilePath),
-            requestUtils.downloadFile(context, netRelease.itemTemplates, itemFilePath)
+            requestUtils.downloadFile(context, netRelease.projectTemplates, projectFilePath, requestUtils.allowCrossOriginRedirectsOptions),
+            requestUtils.downloadFile(context, netRelease.itemTemplates, itemFilePath, requestUtils.allowCrossOriginRedirectsOptions)
         ]);
 
         return await this.parseTemplates(context, projKey);

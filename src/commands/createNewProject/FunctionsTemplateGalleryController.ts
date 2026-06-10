@@ -430,7 +430,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         const zipPath = `${destDir}.zip`;
 
         try {
-            await requestUtils.downloadFile(context, zipUrl, zipPath);
+            await requestUtils.downloadFile(context, zipUrl, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
         } catch (err) {
             throw new Error(localize('zipDownloadFailed', 'Failed to download template zip: {0}', parseError(err).message), { cause: err });
         }

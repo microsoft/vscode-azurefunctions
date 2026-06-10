@@ -56,7 +56,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         const templatesPath: string = path.join(ext.context.globalStoragePath, 'script', getRandomHexString());
         try {
             const filePath: string = path.join(templatesPath, 'templates.zip');
-            await requestUtils.downloadFile(context, templateRelease.templates, filePath);
+            await requestUtils.downloadFile(context, templateRelease.templates, filePath, requestUtils.allowCrossOriginRedirectsOptions);
 
             await extract(filePath, { dir: templatesPath });
 

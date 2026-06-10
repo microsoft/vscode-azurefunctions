@@ -62,12 +62,14 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             await requestUtils.downloadFile(
                 context,
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
+                vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath,
+                requestUtils.allowCrossOriginRedirectsOptions
             );
             await requestUtils.downloadFile(
                 context,
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
+                vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath,
+                requestUtils.allowCrossOriginRedirectsOptions
             );
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
             await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
