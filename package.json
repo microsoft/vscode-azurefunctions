@@ -1597,7 +1597,7 @@
         "@types/node": "^22.0.0",
         "@types/ps-tree": "^1.1.0",
         "@types/semver": "^5.5.0",
-        "@types/vscode": "^1.106.0",
+        "@types/vscode": "1.106.0",
         "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "4.3.0",
