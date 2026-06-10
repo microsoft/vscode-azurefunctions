@@ -24,7 +24,7 @@ export namespace feedUtils {
     export async function getJsonFeed<T extends {}>(context: IActionContext, url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
+            const response = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url }, requestUtils.allowCrossOriginRedirectsOptions);
             // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
             cachedFeed = { data: parseJson(nonNullProp(response, 'bodyAsText')), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);

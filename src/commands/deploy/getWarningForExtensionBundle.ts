@@ -17,7 +17,7 @@ export async function getWarningForExtensionBundle(context: IFuncDeployContext):
     let hostJson: IHostJsonV2;
     try {
         hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
-        const defaultExtensionBundleVersionResponse = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: 'https://aka.ms/funcStaticProperties' })).bodyAsText;
+        const defaultExtensionBundleVersionResponse = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: 'https://aka.ms/funcStaticProperties' }, requestUtils.allowCrossOriginRedirectsOptions)).bodyAsText;
         if (hostJson.extensionBundle && hostJson.extensionBundle.version && defaultExtensionBundleVersionResponse) {
             const responseJson = JSON.parse(defaultExtensionBundleVersionResponse) as { defaultVersionRange: string };
             const hostRange = normalizeRange(hostJson.extensionBundle.version);
