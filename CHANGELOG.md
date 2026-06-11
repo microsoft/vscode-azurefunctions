@@ -4,6 +4,7 @@
 
 ### Fixed
 * [[5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)] Fix "You are not signed in to an Azure account" error when deploying to a Function App while already signed in, caused by an audience-consent regression ([[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)])
+* [[5104](https://github.com/microsoft/vscode-azurefunctions/pull/5104)] Re-allow deploying Python 3.14 function apps to Flex Consumption plans now that remote build is supported
 * [[5101](https://github.com/microsoft/vscode-azurefunctions/pull/5101)] Add an `isNativeWorker` flag so Go functions appear in the workspace Functions node
 * [[5085](https://github.com/microsoft/vscode-azurefunctions/pull/5085)] Stop using utilities that are unavailable in Node.js 24
 
