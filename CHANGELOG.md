@@ -3,11 +3,11 @@
 ## 1.22.1 - 2026-06-11
 
 ### Fixed
+* [[5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)] Fix "You are not signed in to an Azure account" error when deploying to a Function App while already signed in, caused by an audience-consent regression ([[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)])
 * [[5101](https://github.com/microsoft/vscode-azurefunctions/pull/5101)] Add an `isNativeWorker` flag so Go functions appear in the workspace Functions node
 * [[5085](https://github.com/microsoft/vscode-azurefunctions/pull/5085)] Stop using utilities that are unavailable in Node.js 24
 
 ### Engineering
-* [[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)] Update `@microsoft/vscode-azext-azureappservice` to 5.0.2
 * [[5044](https://github.com/microsoft/vscode-azurefunctions/pull/5044)] Use shared templates and policy to fix CFS issues
 * [[5098](https://github.com/microsoft/vscode-azurefunctions/pull/5098)] Remove the redundant `npmFeed` parameter from the build pipeline
 * [[5097](https://github.com/microsoft/vscode-azurefunctions/pull/5097)] Add `feedBaseUrl` passthrough to 1ES pipeline template parameters
