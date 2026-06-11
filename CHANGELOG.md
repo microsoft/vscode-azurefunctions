@@ -1,5 +1,18 @@
 # Change Log
 
+## 1.22.1 - 2026-06-11
+
+### Fixed
+* [[5101](https://github.com/microsoft/vscode-azurefunctions/pull/5101)] Add an `isNativeWorker` flag so Go functions appear in the workspace Functions node
+* [[5085](https://github.com/microsoft/vscode-azurefunctions/pull/5085)] Stop using utilities that are unavailable in Node.js 24
+
+### Engineering
+* [[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)] Update `@microsoft/vscode-azext-azureappservice` to 5.0.2
+* [[5044](https://github.com/microsoft/vscode-azurefunctions/pull/5044)] Use shared templates and policy to fix CFS issues
+* [[5098](https://github.com/microsoft/vscode-azurefunctions/pull/5098)] Remove the redundant `npmFeed` parameter from the build pipeline
+* [[5097](https://github.com/microsoft/vscode-azurefunctions/pull/5097)] Add `feedBaseUrl` passthrough to 1ES pipeline template parameters
+* [[5093](https://github.com/microsoft/vscode-azurefunctions/pull/5093), [5092](https://github.com/microsoft/vscode-azurefunctions/pull/5092), [5091](https://github.com/microsoft/vscode-azurefunctions/pull/5091), [5090](https://github.com/microsoft/vscode-azurefunctions/pull/5090), [5089](https://github.com/microsoft/vscode-azurefunctions/pull/5089), [5088](https://github.com/microsoft/vscode-azurefunctions/pull/5088), [5087](https://github.com/microsoft/vscode-azurefunctions/pull/5087), [5086](https://github.com/microsoft/vscode-azurefunctions/pull/5086)] Bump dependencies (`brace-expansion`, `picomatch`, `ws`, `lodash`, `fast-uri`, `fast-xml-parser`, `qs`, `simple-git`)
+
 ## 1.22.0 - 2026-06-02
 
 ### Overview
