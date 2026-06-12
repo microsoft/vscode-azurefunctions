@@ -134,7 +134,24 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             actionContext.telemetry.properties.templateId = template.id;
             actionContext.telemetry.properties.language = language;
 
-            const projectPath = location;
+            // An empty/non-absolute `location` (no folder open, none picked) would
+            // resolve against the cwd and write to the drive root (EPERM). Prompt instead.
+            let projectPath = location;
+            if (!projectPath || !path.isAbsolute(projectPath)) {
+                actionContext.telemetry.properties.promptedForLocation = 'true';
+                const selectedFolder = await this.browseFolder();
+                if (!selectedFolder) {
+                    // User dismissed the folder picker — return to the gallery
+                    // silently (no error banner) and record the cancellation.
+                    this.postMessageToWebview({ type: 'projectCreationFailed', error: '' });
+                    throw new UserCancelledError('selectProjectFolder');
+                }
+                projectPath = selectedFolder;
+                // Reflect the chosen folder in the webview's location field so the
+                // UI stays in sync with where the project is actually created.
+                this.postMessageToWebview({ type: 'folderSelected', path: projectPath, source: 'template' });
+            }
+
             const branch = template.branch || 'main';
             const specificFolder = template.folderPath && template.folderPath !== '.' ? template.folderPath : undefined;
             const tempDir = path.join(os.tmpdir(), `azfunc-template-${Date.now()}`);
