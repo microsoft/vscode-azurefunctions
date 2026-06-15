@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, parseError, type IParsedError } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg, withFlagArg } from '@microsoft/vscode-processutils';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from "path";
 import { type Progress } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
@@ -79,15 +79,6 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 break;
             case DurableBackend.DTS:
                 hostJson.extensions.durableTask = this.getDefaultDTSTaskConfig();
-                // Non- .NET projects require a special preview extension bundle to work properly
-                // Todo: Remove once this functionality is out of preview
-                if (context.language !== ProjectLanguage.CSharp && context.language !== ProjectLanguage.FSharp) {
-                    hostJson.extensionBundle = {
-                        id: 'Microsoft.Azure.Functions.ExtensionBundle.Preview',
-                        version: '[4.29.0, 5.0.0)',
-                    };
-                    ext.outputChannel.appendLog(localize('extensionBundlePreview', 'Updated "host.json" extension bundle to preview version to enable new DTS features.'));
-                }
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.DTS, '', MismatchBehavior.Overwrite);
                 await setLocalAppSetting(context, context.projectPath, nonNullValue(tryGetVariableSubstitutedKey(ConnectionKey.DTSHub)), '', MismatchBehavior.Overwrite);
                 break;
@@ -171,7 +162,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
     }
 
     private async installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
-        const packages: { name: string; prerelease?: boolean }[] = [];
+        const packages: { name: string }[] = [];
         const isDotnetIsolated: boolean = /Isolated/i.test(context.functionTemplate?.id ?? '');
 
         switch (context.newDurableStorageType) {
@@ -183,11 +174,10 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 }
                 break;
             case DurableBackend.DTS:
-                // Todo: Remove prerelease flag once this functionality is out of preview
                 if (isDotnetIsolated) {
-                    packages.push({ name: durableUtils.dotnetIsolatedDTSPackage, prerelease: true });
+                    packages.push({ name: durableUtils.dotnetIsolatedDTSPackage });
                 } else {
-                    packages.push({ name: durableUtils.dotnetInProcDTSPackage, prerelease: true });
+                    packages.push({ name: durableUtils.dotnetInProcDTSPackage });
                 }
                 break;
             case DurableBackend.SQL:
@@ -214,7 +204,6 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
             try {
                 const args = composeArgs(
                     withArg('add', 'package', p.name),
-                    withFlagArg('--prerelease', p.prerelease),
                 )();
                 await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', args);
             } catch {
