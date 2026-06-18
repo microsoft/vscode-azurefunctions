@@ -1593,7 +1593,6 @@
         "@azure/arm-resources": "^5.2.0",
         "@microsoft/applicationinsights-common": "^3.4.1",
         "@microsoft/vscode-azext-eng": "1.1.0-alpha.1",
-        "tsx": "*",
         "@types/fs-extra": "^8.1.0",
         "@types/node": "^22.0.0",
         "@types/ps-tree": "^1.1.0",
@@ -1607,7 +1606,8 @@
         "@vscode/vsce": "*",
         "esbuild": "*",
         "esbuild-plugin-copy": "*",
-        "husky": "^7.0.2"
+        "husky": "^7.0.2",
+        "tsx": "*"
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",
