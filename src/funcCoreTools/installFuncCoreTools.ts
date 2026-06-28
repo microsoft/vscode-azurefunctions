@@ -12,6 +12,7 @@ import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, type INpmDistTag } from './getNpmDistTag';
+import { validateFuncCoreToolsCodeSignature } from './validateFuncCoreToolsCodeSignature';
 
 export let lastCoreToolsInstallCommand: string[] = [];
 
@@ -36,4 +37,6 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManagers[0]));
     }
+
+    await validateFuncCoreToolsCodeSignature(context, version);
 }
