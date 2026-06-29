@@ -12,7 +12,7 @@ import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
 import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
 
-// Code signature validation is only enforced for v4+ binaries. Older versions (v1–v3) were
+// Code signature validation is only enforced for v4+ binaries. Older versions were
 // published without code signatures, so we skip validation for those to avoid false warnings.
 const minimumSignedVersion = FuncVersion.v4;
 
@@ -27,7 +27,11 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
             return false;
         }
 
+        ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
         const isValid = await validateCodeSignature(funcCoreToolsPath);
+        ext.outputChannel.appendLog(isValid ?
+            localize('codeSignatureValid', 'Successfully validated code signature for Azure Functions Core Tools.') :
+            localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
         if (!isValid) {
             return await warnAndAskProceed(context);
         }
@@ -90,15 +94,20 @@ export function isValidWin32Signature(psResult: { code: number; cmdOutput: strin
 }
 
 async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
+    // Verify the signature is valid (i.e. the binary has not been tampered with)
     const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v', cliPath))());
     if (codeSignResult.code !== 0) {
         return false;
     }
 
-    // Check that the signing authority is Microsoft
+    // Dump the signing details to verify the signing was done by Microsoft Corporation
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
     // codesign -dvv writes to stderr
-    return isValidDarwinSignature(codeSignResult, signingResult);
+    const isValid = isValidDarwinSignature(codeSignResult, signingResult);
+    if (isValid) {
+        ext.outputChannel.appendLog(localize('verifiedAuthority', 'Verified signing authority "{0}".', microsoftSubject));
+    }
+    return isValid;
 }
 
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
