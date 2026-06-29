@@ -82,6 +82,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
                 return this.skip(); // No binary available for this platform/version
             }
 
+            console.log(`\n--- func CLI ${version} (${binPath}) ---`);
             const isValidSignature = await validateCodeSignature(binPath);
             if (shouldBeSigned) {
                 assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature`);
@@ -93,6 +94,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
     }
 
     test('Returns false for a non-existent binary path', async () => {
+        console.log(`\n--- non-existent binary path ---`);
         const isValid = await validateCodeSignature('/tmp/this-binary-does-not-exist');
         assert.strictEqual(isValid, false);
     });
