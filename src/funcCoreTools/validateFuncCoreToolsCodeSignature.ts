@@ -6,7 +6,7 @@
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { composeArgs, withArg } from "@microsoft/vscode-processutils";
 import { type MessageItem } from "vscode";
-import { FuncVersion } from "../FuncVersion";
+import { FuncVersion, getMajorVersion } from "../FuncVersion";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
@@ -17,16 +17,17 @@ import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
 const minimumSignedVersion = FuncVersion.v4;
 
 export async function validateFuncCoreToolsCodeSignature(context: IActionContext, version: FuncVersion): Promise<boolean> {
-    if (version !== minimumSignedVersion) {
+    if (Number(getMajorVersion(version)) < Number(getMajorVersion(minimumSignedVersion))) {
+        // These versions have no code signature to verify
         return true;
     }
 
     const funcCoreToolsPath: string | undefined = await getFuncCoreToolsPath();
-    if (process.platform === 'darwin' || process.platform === 'win32') {
-        if (!funcCoreToolsPath) {
-            return false;
-        }
+    if (!funcCoreToolsPath) {
+        return false;
+    }
 
+    if (process.platform === 'darwin' || process.platform === 'win32') {
         ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
         const isValid = await validateCodeSignature(funcCoreToolsPath);
         ext.outputChannel.appendLog(isValid ?
@@ -36,6 +37,7 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
             return await warnAndAskProceed(context);
         }
     }
+
     return true;
 }
 
