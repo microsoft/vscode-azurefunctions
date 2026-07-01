@@ -33,7 +33,7 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
         localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
 
     if (!isValid) {
-        return await warnAndAskProceed(context);
+        return await warnAndAskProceed(context, funcCoreToolsPath);
     }
 
     return true;
@@ -107,10 +107,11 @@ function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): s
     return fse.pathExistsSync(resolvedExe) ? resolvedExe : undefined;
 }
 
-async function warnAndAskProceed(context: IActionContext): Promise<boolean> {
+async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: string): Promise<boolean> {
     const message = localize(
         'codeSignatureFailed',
-        'Azure Functions Core Tools failed code signature verification. It may have been tampered with or installed from an untrusted source.'
+        'Azure Functions Core Tools failed code signature verification. It may have been tampered with or installed from an untrusted source. The following binary was inspected: "{0}". If this is not the expected location, verification may be a false positive—see the output log for details.',
+        funcCoreToolsPath
     );
     const continueAnyway: MessageItem = { title: localize('continueAnyway', 'Continue Anyway') };
     const uninstall: MessageItem = { title: localize('uninstall', 'Uninstall (Recommended)') };
