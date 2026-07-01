@@ -1,4 +1,9 @@
 {
+    // Node 24's experimental network inspection (node:internal/inspector/network_http) is buggy and
+    // crashes with "Missing dataLength in event" when the debugger inspects fetch()/HTTP responses.
+    // The func signature nightly test downloads ~1GB via fetch() in suiteSetup, which triggers it.
+    // Disabling the network view stops js-debug from enabling --experimental-network-inspection.
+    "debug.javascript.enableNetworkView": false,
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "explicit",
         "source.organizeImports": "explicit"

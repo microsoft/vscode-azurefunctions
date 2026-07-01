@@ -10,7 +10,7 @@ import * as path from 'path';
 import { npmFuncPackageName } from '../src/constants';
 import { parseFuncCoreToolsPath } from '../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
 
-suite.only('parseFuncCoreToolsPath correctly resolves func CLI path from which/where func lookup output', () => {
+suite('parseFuncCoreToolsPath correctly resolves func CLI path from which/where func lookup output', () => {
     const tempDirs: string[] = [];
 
     suiteTeardown(async () => {

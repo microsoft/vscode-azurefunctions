@@ -25,7 +25,7 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
 
 const versions: FuncVersion[] = Object.values(FuncVersion);
 
-suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
+suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
 
     let coreToolsBinMap: Map<FuncVersion, string> = new Map();
@@ -39,9 +39,13 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
             this.skip();
         }
 
+        const setupStart = Date.now();
+        console.log(`\n[suiteSetup] Downloading Func Core Tools for signature validation (${process.platform}/${process.arch})...`);
+
         const result = await downloadFuncCoreToolsVersions(versions);
         coreToolsBinMap = result.coreToolsBinMap;
         coreToolsDirs = result.coreToolsDirs;
+        console.log(`[suiteSetup] Setup complete in ${((Date.now() - setupStart) / 1000).toFixed(1)}s\n`);
     });
 
     suiteTeardown(async () => {
@@ -56,7 +60,7 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
         test(`Code signature is ${shouldBeSigned ? 'valid' : 'absent'} for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
-                // No download link for this version on the current platform (e.g. v1 outside Windows)
+                // No download link for this version on the current platform
                 return this.skip();
             }
 

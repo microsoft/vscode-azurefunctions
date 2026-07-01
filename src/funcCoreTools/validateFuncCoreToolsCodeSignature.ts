@@ -43,7 +43,7 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
  * Code signing differs by platform:
  * - Windows: func binaries signed across all versions (v1-v4).
  * - macOS: binaries were only codesigned/notarized (Apple Developer ID) starting with v4; earlier
- *   cross-platform builds (v2, v3) seem to be shipped unsigned. (v1 was Windows-only, so it never existed on macOS.)
+ *   cross-platform builds (v2, v3) seem to be shipped unsigned. (v1 was Windows-only)
  * - Other platforms (primarily Linux) we skip due to no well established form of signature validation.
  */
 export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.Platform = process.platform): boolean {
@@ -92,8 +92,8 @@ export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, pla
         }
 
         // Otherwise it could be an auto-generated launcher shim (func, func.cmd, func.ps1) from a global npm
-        // install of azure-functions-core-tools — the shim itself isn't the signed binary, so try to
-        // resolve the real func.exe from the npm global install next to it.
+        // install of azure-functions-core-tools. The shim itself isn't the signed binary, so try to
+        // resolve the real func.exe from the npm global install pattern.
         funcPath = tryResolveWindowsFuncExeFromNpmGlobalInstall(funcPath) ?? funcPath;
     }
 
@@ -148,9 +148,11 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     // Inspect the signing details to verify the signing was done by Microsoft Corporation
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
     const isValid = isValidDarwinSignature(codeSignResult, signingResult);
-    if (isValid) {
-        ext.outputChannel.appendLog(localize('verifiedAuthority', 'Verified signing authority "{0}".', microsoftSubject));
-    }
+
+    ext.outputChannel.appendLog(isValid ?
+        localize('successVerifyAuthority', 'Successfully verified signing authority "{0}".', microsoftSubject) :
+        localize('failedVerifyAuthority', 'Failed to verify signing authority "{0}".', microsoftSubject));
+
     return isValid;
 }
 
