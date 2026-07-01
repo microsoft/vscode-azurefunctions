@@ -86,7 +86,8 @@ export enum PackageManager {
     brew = 'brew'
 }
 
-export const funcPackageName: string = 'azure-functions-core-tools';
+export const npmFuncPackageName: string = 'azure-functions-core-tools';
+export const brewFuncPackageName: string = 'azure-functions-core-tools';
 
 export enum ScmType {
     None = 'None', // default scmType

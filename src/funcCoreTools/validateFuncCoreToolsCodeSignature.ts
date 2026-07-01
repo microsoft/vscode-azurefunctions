@@ -8,8 +8,9 @@ import { composeArgs, withArg } from "@microsoft/vscode-processutils";
 import * as fse from "fs-extra";
 import * as path from "path";
 import { type MessageItem } from "vscode";
-import { FuncVersion, getMajorVersion } from "../FuncVersion";
+import { npmFuncPackageName } from "../constants";
 import { ext } from "../extensionVariables";
+import { FuncVersion, getMajorVersion } from "../FuncVersion";
 import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
 import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
@@ -61,46 +62,53 @@ async function warnAndAskProceed(context: IActionContext): Promise<boolean> {
     return true;
 }
 
-export async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | undefined> {
-    let output: string | undefined;
+async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | undefined> {
+    let funcLookupOutput: string | undefined;
     switch (process.platform) {
         case 'darwin':
         case 'linux':
-            output = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'which', composeArgs(withArg('func'))());
+            funcLookupOutput = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'which', composeArgs(withArg('func'))());
             break;
         case 'win32':
-            output = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'where.exe', composeArgs(withArg('func'))());
+            funcLookupOutput = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'where.exe', composeArgs(withArg('func'))());
             break;
         default:
             return undefined;
     }
 
+    return parseFuncCoreToolsPath(funcLookupOutput, process.platform);
+}
+
+/**
+ * Resolves the func CLI path from the raw output of the path-lookup command (`which` / `where.exe`).
+ */
+export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, platform: NodeJS.Platform): string | undefined {
     // In some cases, multiple lines are returned. Split and trim so the resolved path never contains an embedded newline.
-    const matches = (output ?? '').split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+    const matches = (funcLookupOutput ?? '').split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
     if (matches.length === 0) {
         return undefined;
     }
 
-    if (process.platform === 'win32') {
-        const funcExe = matches.find(match => match.toLowerCase().endsWith('func.exe'));
-        if (funcExe) {
-            return funcExe;
+    let funcPath: string = matches[0];
+    if (platform === 'win32') {
+        // If the first match is already the real executable, use it directly.
+        if (funcPath.toLowerCase().endsWith('func.exe')) {
+            return funcPath;
         }
 
-        // On Windows, a global npm install of azure-functions-core-tools may place several auto-generated
-        // launcher shims (func, func.cmd, func.ps1) in the npm prefix directory and the PATH.
-        // When installed in this way, `where.exe` will find these shims, not the path of the real binary
-        // As a fallback / best attempt, we should check to see if we can find it in the npm global installs.
-        return tryResolveWindowsFuncExeFromNpmGlobalInstall(matches[0]) ?? matches[0];
+        // Otherwise it could be an auto-generated launcher shim (func, func.cmd, func.ps1) from a global npm
+        // install of azure-functions-core-tools — the shim itself isn't the signed binary, so try to
+        // resolve the real func.exe from the npm global install next to it.
+        funcPath = tryResolveWindowsFuncExeFromNpmGlobalInstall(funcPath) ?? funcPath;
     }
 
-    return matches[0];
+    return funcPath;
 }
 
-function tryResolveWindowsFuncExeFromNpmGlobalInstall(shimPath: string): string | undefined {
+function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): string | undefined {
     // No version segment is needed in this path because npm's global node_modules is flat and unversioned.
     // Each package lives in a single folder named after it (only one version can be globally installed at a time).
-    const resolvedExe = path.join(path.dirname(shimPath), 'node_modules', 'azure-functions-core-tools', 'bin', 'func.exe');
+    const resolvedExe = path.join(path.dirname(funcLaunchPath), 'node_modules', npmFuncPackageName, 'bin', 'func.exe');
     return fse.pathExistsSync(resolvedExe) ? resolvedExe : undefined;
 }
 

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { funcPackageName, PackageManager } from '../constants';
+import { npmFuncPackageName, PackageManager } from '../constants';
 import { FuncVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
 import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
@@ -19,7 +19,7 @@ export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<
     // Always check for npm (mac, windows, linux)
     try {
         if (isFuncInstalled) {
-            await cpUtils.executeCommand(undefined, undefined, 'npm', composeArgs(withArg('ls', '-g', funcPackageName))());
+            await cpUtils.executeCommand(undefined, undefined, 'npm', composeArgs(withArg('ls', '-g', npmFuncPackageName))());
         } else {
             await cpUtils.executeCommand(undefined, undefined, 'npm', composeArgs(withArg('--version'))());
         }

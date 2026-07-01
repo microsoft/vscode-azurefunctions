@@ -6,7 +6,7 @@
 import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { type FuncVersion } from '../FuncVersion';
-import { PackageManager, funcPackageName } from '../constants';
+import { PackageManager, npmFuncPackageName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
@@ -34,7 +34,7 @@ export async function uninstallFuncCoreTools(context: IActionContext, packageMan
 
     switch (packageManager) {
         case PackageManager.npm:
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', composeArgs(withArg('uninstall', '-g', funcPackageName))());
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', composeArgs(withArg('uninstall', '-g', npmFuncPackageName))());
             break;
         case PackageManager.brew:
             const version: FuncVersion = nonNullValue(await tryGetLocalFuncVersion(context, undefined), 'localFuncVersion');
