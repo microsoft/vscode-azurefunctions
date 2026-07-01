@@ -15,13 +15,9 @@ import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
 import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
 
-// Code signature validation is only enforced for v4+ binaries. Older versions were
-// published without code signatures, so we skip validation for those to avoid false warnings.
-const minimumSignedVersion = FuncVersion.v4;
-
 export async function validateFuncCoreToolsCodeSignature(context: IActionContext, version: FuncVersion): Promise<boolean> {
-    if (Number(getMajorVersion(version)) < Number(getMajorVersion(minimumSignedVersion))) {
-        // These versions have no code signature to verify
+    if (!isCodeSignatureExpected(version)) {
+        // Nothing to verify for this version/platform combination
         return true;
     }
 
@@ -30,36 +26,34 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
         return false;
     }
 
-    if (process.platform === 'darwin' || process.platform === 'win32') {
-        ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
-        const isValid = await validateCodeSignature(funcCoreToolsPath);
-        ext.outputChannel.appendLog(isValid ?
-            localize('codeSignatureValid', 'Successfully validated code signature for Azure Functions Core Tools.') :
-            localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
-        if (!isValid) {
-            return await warnAndAskProceed(context);
-        }
+    ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
+    const isValid = await validateCodeSignature(funcCoreToolsPath);
+    ext.outputChannel.appendLog(isValid ?
+        localize('codeSignatureValid', 'Successfully validated code signature for Azure Functions Core Tools.') :
+        localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
+    if (!isValid) {
+        return await warnAndAskProceed(context);
     }
 
     return true;
 }
 
-async function warnAndAskProceed(context: IActionContext): Promise<boolean> {
-    const message = localize(
-        'codeSignatureFailed',
-        'Azure Functions Core Tools failed code signature verification. It may have been tampered with or installed from an untrusted source.'
-    );
-    const continueAnyway: MessageItem = { title: localize('continueAnyway', 'Continue Anyway') };
-    const uninstall: MessageItem = { title: localize('uninstall', 'Uninstall (Recommended)') };
-
-    const result = await context.ui.showWarningMessage(message, { modal: true }, continueAnyway, uninstall);
-
-    if (result === uninstall) {
-        await uninstallFuncCoreTools(context);
-        return false;
+/**
+ * Code signing differs by platform:
+ * - Windows: func binaries signed across all versions (v1-v4).
+ * - macOS: binaries were only codesigned/notarized (Apple Developer ID) starting with v4; earlier
+ *   cross-platform builds (v2, v3) seem to be shipped unsigned. (v1 was Windows-only, so it never existed on macOS.)
+ * - Other platforms (primarily Linux) we skip due to no well established form of signature validation.
+ */
+export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.Platform = process.platform): boolean {
+    switch (platform) {
+        case 'win32':
+            return true;
+        case 'darwin':
+            return Number(getMajorVersion(version)) >= Number(getMajorVersion(FuncVersion.v4));
+        default:
+            return false;
     }
-
-    return true;
 }
 
 async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | undefined> {
@@ -83,7 +77,7 @@ async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | un
  * Resolves the func CLI path from the raw output of the path-lookup command (`which` / `where.exe`).
  */
 export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, platform: NodeJS.Platform): string | undefined {
-    // In some cases, multiple lines are returned. Split and trim so the resolved path never contains an embedded newline.
+    // Multiple lines can return. Split and trim so the resolved path never contains an embedded newline.
     const matches = (funcLookupOutput ?? '').split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
     if (matches.length === 0) {
         return undefined;
@@ -107,9 +101,27 @@ export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, pla
 
 function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): string | undefined {
     // No version segment is needed in this path because npm's global node_modules is flat and unversioned.
-    // Each package lives in a single folder named after it (only one version can be globally installed at a time).
+    // Each package lives in a single folder named after it (only one version is globally installed at a time).
     const resolvedExe = path.join(path.dirname(funcLaunchPath), 'node_modules', npmFuncPackageName, 'bin', 'func.exe');
     return fse.pathExistsSync(resolvedExe) ? resolvedExe : undefined;
+}
+
+async function warnAndAskProceed(context: IActionContext): Promise<boolean> {
+    const message = localize(
+        'codeSignatureFailed',
+        'Azure Functions Core Tools failed code signature verification. It may have been tampered with or installed from an untrusted source.'
+    );
+    const continueAnyway: MessageItem = { title: localize('continueAnyway', 'Continue Anyway') };
+    const uninstall: MessageItem = { title: localize('uninstall', 'Uninstall (Recommended)') };
+
+    const result = await context.ui.showWarningMessage(message, { modal: true }, continueAnyway, uninstall);
+
+    if (result === uninstall) {
+        await uninstallFuncCoreTools(context);
+        return false;
+    }
+
+    return true;
 }
 
 export async function validateCodeSignature(cliPath: string): Promise<boolean> {
@@ -125,17 +137,6 @@ export async function validateCodeSignature(cliPath: string): Promise<boolean> {
 
 export const microsoftSubject = 'Microsoft Corporation';
 
-export function isValidDarwinSignature(codesignResult: { code: number }, dvvResult: { cmdOutputIncludingStderr: string }): boolean {
-    if (codesignResult.code !== 0) {
-        return false;
-    }
-    return dvvResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
-}
-
-export function isValidWin32Signature(psResult: { code: number; cmdOutput: string }): boolean {
-    return psResult.code === 0 && psResult.cmdOutput.includes(`O=${microsoftSubject}`);
-}
-
 async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     // Verify the signature is valid (i.e. the binary has not been tampered with)
     const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v', cliPath))());
@@ -143,9 +144,8 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
         return false;
     }
 
-    // Dump the signing details to verify the signing was done by Microsoft Corporation
+    // Inspect the signing details to verify the signing was done by Microsoft Corporation
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
-    // codesign -dvv writes to stderr
     const isValid = isValidDarwinSignature(codeSignResult, signingResult);
     if (isValid) {
         ext.outputChannel.appendLog(localize('verifiedAuthority', 'Verified signing authority "{0}".', microsoftSubject));
@@ -153,8 +153,20 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     return isValid;
 }
 
+export function isValidDarwinSignature(codesignResult: { code: number }, dvvResult: { cmdOutputIncludingStderr: string }): boolean {
+    if (codesignResult.code !== 0) {
+        return false;
+    }
+    // -dvv writes to stderr
+    return dvvResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
+}
+
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
     const psCommand = `$sig = Get-AuthenticodeSignature '${cliPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-Command', psCommand))());
     return isValidWin32Signature(signingResult);
+}
+
+export function isValidWin32Signature(psResult: { code: number; cmdOutput: string }): boolean {
+    return psResult.code === 0 && psResult.cmdOutput.includes(`O=${microsoftSubject}`);
 }

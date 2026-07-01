@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { FuncVersion } from '../../../src/FuncVersion';
-import { validateCodeSignature } from '../../../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
+import { isCodeSignatureExpected, validateCodeSignature } from '../../../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
 import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
 
 /**
@@ -18,12 +18,13 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
  * 2. Pass each version's cliPath into `validateCodeSignature` directly
  *    to test and ensure the code signature validation logic is working as expected.
  *
- * Note: Choosing to just skip v1 here as it's an older non-cross-platform binary.
- * Note: Only v4+ binaries are code-signed. Older versions were published
- *       without signatures, so the production code skips validation for those.
+ * Whether a version is expected to be signed depends on the platform (see `isCodeSignatureExpected`):
+ *   - Windows: all versions (v1-v4) are Authenticode-signed.
+ *   - macOS: only v4+ is codesigned/notarized; v2/v3 shipped unsigned (v1 was Windows-only).
+ * v1 is Windows-only, so on non-Windows platforms it simply has no download link and is skipped.
  */
 
-const versions: FuncVersion[] = Object.values(FuncVersion).filter(v => v !== FuncVersion.v1);
+const versions: FuncVersion[] = Object.values(FuncVersion);
 
 suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
@@ -51,21 +52,21 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     });
 
     for (const version of versions) {
-        const shouldBeSigned = version === FuncVersion.v4;
+        const shouldBeSigned = isCodeSignatureExpected(version);
 
         test(`Code signature is ${shouldBeSigned ? 'valid' : 'absent'} for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
+                // No download link for this version on the current platform (e.g. v1 outside Windows)
                 return this.skip();
             }
 
             console.log(`\n--- func CLI ${version} (${binPath}) ---`);
             const isValidSignature = await validateCodeSignature(binPath);
             if (shouldBeSigned) {
-                assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature`);
+                assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature on ${process.platform}`);
             } else {
-                // v2 and v3 binaries were never code-signed; verify that validateCodeSignature correctly reports them as unsigned
-                assert.strictEqual(isValidSignature, false, `Expected ${version} binary at ${binPath} to be unsigned (pre-v4 binaries are not code-signed)`);
+                assert.strictEqual(isValidSignature, false, `Expected ${version} binary at ${binPath} to be unsigned on ${process.platform}`);
             }
         });
     }
