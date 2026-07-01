@@ -120,11 +120,13 @@ async function extractZip(zipPath: string, destDir: string): Promise<string> {
     console.log(`[downloadFuncCoreToolsVersions] ${path.basename(destDir)}: extracting...`);
     const extractStart = Date.now();
 
-    // Shell out to the OS unzip tool instead of extracting in-process. The in-process
-    // JS unzip (extract-zip/yauzl) deadlocks under the VS Code extension-host debugger.
+    // Shell out to extract instead of unzipping in-process. The in-process JS unzip
+    // (extract-zip/yauzl) deadlocks under the VS Code extension-host debugger.
     if (process.platform === 'win32') {
-        // bsdtar (bundled in Windows 10 1803+) understands zip archives
-        await execFileAsync('tar', ['-xf', zipPath, '-C', destDir]);
+        // bsdtar (tar.exe) fails to create nested subdirectories for these archives on Windows,
+        // so use native .NET zip extraction via PowerShell instead (fast and reliable).
+        const psCommand = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${zipPath}', '${destDir}')`;
+        await execFileAsync('powershell', ['-NoProfile', '-Command', psCommand]);
     } else {
         await execFileAsync('unzip', ['-q', '-o', zipPath, '-d', destDir]);
     }

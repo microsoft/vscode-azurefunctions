@@ -110,7 +110,7 @@ function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): s
 async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: string): Promise<boolean> {
     const message = localize(
         'codeSignatureFailed',
-        'Azure Functions Core Tools failed code signature verification. It may have been tampered with or installed from an untrusted source. The following binary was inspected: "{0}". If this is not the expected location, verification may be a false positive—see the output log for details.',
+        'Azure Functions Core Tools failed code signature verification.\n\n"{0}" was inspected, see the output log for details.',
         funcCoreToolsPath
     );
     const continueAnyway: MessageItem = { title: localize('continueAnyway', 'Continue Anyway') };
