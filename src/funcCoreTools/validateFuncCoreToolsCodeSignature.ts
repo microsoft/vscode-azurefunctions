@@ -26,11 +26,12 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
         return false;
     }
 
-    ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
     const isValid = await validateCodeSignature(funcCoreToolsPath);
+    ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
     ext.outputChannel.appendLog(isValid ?
         localize('codeSignatureValid', 'Successfully validated code signature for Azure Functions Core Tools.') :
         localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
+
     if (!isValid) {
         return await warnAndAskProceed(context);
     }

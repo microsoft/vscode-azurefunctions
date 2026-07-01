@@ -11,8 +11,10 @@ import { type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { nonNullValue } from '../utils/nonNull';
+import { ensureBrewTapTrusted } from './ensureBrewTapTrusted';
 import { getBrewPackageName, tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, type INpmDistTag } from './getNpmDistTag';
+import { validateFuncCoreToolsCodeSignature } from './validateFuncCoreToolsCodeSignature';
 
 export async function updateFuncCoreTools(context: IActionContext, packageManager: PackageManager, version: FuncVersion): Promise<void> {
     ext.outputChannel.show();
@@ -23,6 +25,7 @@ export async function updateFuncCoreTools(context: IActionContext, packageManage
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
+            await ensureBrewTapTrusted(context);
             const installedBrewPackageName: string = nonNullValue(await tryGetInstalledBrewPackageName(version), 'brewPackageName');
             if (brewPackageName !== installedBrewPackageName) {
                 // Uninstall deprecated tag and install latest tag
@@ -35,4 +38,6 @@ export async function updateFuncCoreTools(context: IActionContext, packageManage
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManager));
     }
+
+    await validateFuncCoreToolsCodeSignature(context, version);
 }

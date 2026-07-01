@@ -21,7 +21,6 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
  * Whether a version is expected to be signed depends on the platform (see `isCodeSignatureExpected`):
  *   - Windows: all versions (v1-v4) are Authenticode-signed.
  *   - macOS: only v4+ is codesigned/notarized; v2/v3 shipped unsigned (v1 was Windows-only).
- * v1 is Windows-only, so on non-Windows platforms it simply has no download link and is skipped.
  */
 
 const versions: FuncVersion[] = Object.values(FuncVersion);

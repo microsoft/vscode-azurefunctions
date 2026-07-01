@@ -5,12 +5,12 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import * as vscode from 'vscode';
 import { npmFuncPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { promptForFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { ensureBrewTapTrusted } from './ensureBrewTapTrusted';
 import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, type INpmDistTag } from './getNpmDistTag';
 import { validateFuncCoreToolsCodeSignature } from './validateFuncCoreToolsCodeSignature';
@@ -30,13 +30,7 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
-            const trust: vscode.MessageItem = { title: localize('trustTap', 'Trust') };
-            const trustMessage: string = localize('trustBrewTap', 'Installing the Azure Functions Core Tools requires tapping the "azure/functions" Homebrew repository. Only continue if you trust the maintainers of "azure/functions".');
-            await context.ui.showWarningMessage(trustMessage, { modal: true }, trust);
-            lastCoreToolsInstallCommand = ['brew', 'tap', 'azure/functions'];
-            await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
-            lastCoreToolsInstallCommand = ['brew', 'trust', 'azure/functions'];
-            await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
+            await ensureBrewTapTrusted(context);
             lastCoreToolsInstallCommand = ['brew', 'install', brewPackageName];
             await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
