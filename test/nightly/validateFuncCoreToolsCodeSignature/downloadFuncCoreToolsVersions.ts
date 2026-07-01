@@ -97,7 +97,19 @@ function resolveDownloadLink(feed: ICliFeed, versionTag: string): string | undef
     }
 
     const x64Fallback = coreTools.find(r => matchesCurrentOS(r) && r.Architecture === 'x64');
-    return x64Fallback?.downloadLink;
+    if (x64Fallback?.downloadLink) {
+        return x64Fallback.downloadLink;
+    }
+
+    // v1 (and other legacy builds) only ship as Windows/x86. Windows x64/arm64 can run x86 via WOW64.
+    if (process.platform === 'win32') {
+        const x86Fallback = coreTools.find(r => matchesCurrentOS(r) && r.Architecture === 'x86');
+        if (x86Fallback?.downloadLink) {
+            return x86Fallback.downloadLink;
+        }
+    }
+
+    return undefined;
 }
 
 async function downloadZip(downloadLink: string, destDir: string): Promise<string> {

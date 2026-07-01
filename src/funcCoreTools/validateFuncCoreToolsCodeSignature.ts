@@ -166,8 +166,14 @@ export function isValidDarwinSignature(codesignResult: { code: number }, dvvResu
 }
 
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
-    const psCommand = `$sig = Get-AuthenticodeSignature '${cliPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
-    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-Command', psCommand))());
+    // Escape single quotes for the PowerShell single-quoted string literal.
+    const escapedPath = cliPath.replace(/'/g, "''");
+    const psScript = `$sig = Get-AuthenticodeSignature '${escapedPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
+    // Pass the script via -EncodedCommand (base64 UTF-16LE). The base64 payload contains no spaces or
+    // special characters, so it survives shell escaping intact. Passing the raw script instead causes
+    // the shell to inject '^' escape characters into its spaces/backslashes and corrupt the command.
+    const encodedCommand = Buffer.from(psScript, 'utf16le').toString('base64');
+    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-NoProfile', '-EncodedCommand', encodedCommand))());
     return isValidWin32Signature(signingResult);
 }
 
