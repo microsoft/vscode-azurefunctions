@@ -82,6 +82,14 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
     > TIP: Your url should look like this: `https://<function app name>.azurewebsites.net/api/HttpTrigger1?name=world`
 1. A response of "Hello world" is returned in the browser and you know your function worked!
 
+## Troubleshooting
+
+### "unable to get local issuer certificate" on a corporate network
+
+If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), Azure operations may fail with errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain`. This happens because the extension's Azure calls run in the Node.js extension host, which does not use the operating system certificate store by default.
+
+To resolve it, point Node.js and VS Code at your corporate root CA (typically by setting `NODE_EXTRA_CA_CERTS`). See the [certificate troubleshooting guide in the Azure Resources extension README](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/README.md#unable-to-get-local-issuer-certificate-on-a-corporate-network) for the full steps.
+
 <!-- region exclude-from-marketplace -->
 
 ## Contributing
