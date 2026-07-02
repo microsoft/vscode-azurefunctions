@@ -14,10 +14,6 @@ const funcTap: string = 'azure/functions';
 
 /**
  * Prompts the user to trust the "azure/functions" Homebrew tap, then taps and trusts it.
- *
- * Both install and update flows require this: we can't assume a previously installed package was
- * ever tapped/trusted (e.g. it may predate this logic), so we establish trust before every brew
- * install/update. The `tap`/`trust` commands are idempotent, so running them again is a no-op.
  */
 export async function ensureBrewTapTrusted(context: IActionContext): Promise<void> {
     const trust: vscode.MessageItem = { title: localize('trustTap', 'Trust') };
