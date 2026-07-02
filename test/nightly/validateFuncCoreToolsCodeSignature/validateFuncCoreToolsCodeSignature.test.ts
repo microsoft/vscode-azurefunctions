@@ -19,7 +19,9 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
  *    to test and ensure the code signature validation logic is working as expected.
  *
  * Whether a version is expected to be signed depends on the platform (see `isCodeSignatureExpected`):
- *   - Windows: all versions (v1-v4) are Authenticode-signed.
+ *   - We only validate v4+ on every platform. Although Windows Authenticode-signs v1-v4 on the CLI feed,
+ *     the extension installs func via npm where the v1-v3 binaries are not reliably signed, so we keep
+ *     live and test behavior aligned by only expecting a signature for v4+.
  *   - macOS: only v4+ is codesigned/notarized; v2/v3 shipped unsigned (v1 was Windows-only).
  */
 
@@ -55,9 +57,12 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
     });
 
     for (const version of versions) {
-        const shouldBeSigned = isCodeSignatureExpected(version);
+        // Only versions we expect to be signed are worth validating; skip registering a test otherwise.
+        if (!isCodeSignatureExpected(version)) {
+            continue;
+        }
 
-        test(`Code signature is ${shouldBeSigned ? 'valid' : 'absent'} for func CLI ${version}`, async function () {
+        test(`Code signature is valid for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
                 // No download link for this version on the current platform
@@ -66,11 +71,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
 
             console.log(`\n--- func CLI ${version} (${binPath}) ---`);
             const isValidSignature = await validateCodeSignature(binPath);
-            if (shouldBeSigned) {
-                assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature on ${process.platform}`);
-            } else {
-                assert.strictEqual(isValidSignature, false, `Expected ${version} binary at ${binPath} to be unsigned on ${process.platform}`);
-            }
+            assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature on ${process.platform}`);
         });
     }
 

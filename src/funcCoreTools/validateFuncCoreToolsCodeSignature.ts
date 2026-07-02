@@ -40,8 +40,11 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
 }
 
 /**
- * Code signing differs by platform:
- * - Windows: func binaries signed across all versions (v1-v4).
+ * Code signing by platform:
+ * - Windows: older versions (v1-v3) are not signed when installed through npm (currently offered in production).
+ *   All are now signed when obtained directly from the feed though as confirmed through tests.
+ *   Since we can't reliably expect all older versions to be signed depending on where it was sourced,
+ *   just check signing on v4+ as that is what we recommend now and what is consistently signed (v2/v3 would show deprecation warning).
  * - macOS: binaries were only codesigned/notarized (Apple Developer ID) starting with v4; earlier
  *   cross-platform builds (v2, v3) seem to be shipped unsigned. (v1 was Windows-only)
  * - Other platforms (primarily Linux) we skip due to no well established form of signature validation.
@@ -49,7 +52,6 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
 export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.Platform = process.platform): boolean {
     switch (platform) {
         case 'win32':
-            return true;
         case 'darwin':
             return Number(getMajorVersion(version)) >= Number(getMajorVersion(FuncVersion.v4));
         default:
@@ -101,8 +103,6 @@ export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, pla
 }
 
 function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): string | undefined {
-    // No version segment is needed in this path because npm's global node_modules is flat and unversioned.
-    // Each package lives in a single folder named after it (only one version is globally installed at a time).
     const resolvedExe = path.join(path.dirname(funcLaunchPath), 'node_modules', npmFuncPackageName, 'bin', 'func.exe');
     return fse.pathExistsSync(resolvedExe) ? resolvedExe : undefined;
 }
@@ -146,7 +146,7 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
         return false;
     }
 
-    // Inspect the signing details to verify the signing was done by Microsoft Corporation
+    // Inspect the signing details to verify it was done by Microsoft Corporation
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
     const isValid = isValidDarwinSignature(codeSignResult, signingResult);
 
@@ -166,14 +166,11 @@ export function isValidDarwinSignature(codesignResult: { code: number }, dvvResu
 }
 
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
-    // Escape single quotes for the PowerShell single-quoted string literal.
+    // Escape single quotes for the PowerShell single-quoted string literal. PowerShell single-quoted
+    // strings have no backslash escaping; a literal ' is represented by doubling it ('').
     const escapedPath = cliPath.replace(/'/g, "''");
-    const psScript = `$sig = Get-AuthenticodeSignature '${escapedPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
-    // Pass the script via -EncodedCommand (base64 UTF-16LE). The base64 payload contains no spaces or
-    // special characters, so it survives shell escaping intact. Passing the raw script instead causes
-    // the shell to inject '^' escape characters into its spaces/backslashes and corrupt the command.
-    const encodedCommand = Buffer.from(psScript, 'utf16le').toString('base64');
-    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-NoProfile', '-EncodedCommand', encodedCommand))());
+    const psCommand = `$sig = Get-AuthenticodeSignature '${escapedPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
+    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-Command', psCommand))());
     return isValidWin32Signature(signingResult);
 }
 

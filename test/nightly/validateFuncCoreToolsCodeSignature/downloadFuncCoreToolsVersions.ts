@@ -90,7 +90,10 @@ function resolveDownloadLink(feed: ICliFeed, versionTag: string): string | undef
         return undefined;
     }
 
-    // Prefer native architecture, fall back to x64 (runs via Rosetta on arm64 macOS)
+    // Resolve the best download for this OS using an ordered priority ladder:
+    //   1. Native arch - arm64 for arm64 hosts, x64 for x64 hosts.
+    //   2. x64 fallback - primarily a fallback option for arm64 hosts on versions lacking an arm64 build
+    //   3. x86 (win32 only, below): last resort for legacy x86-only builds (e.g. v1)
     const nativeMatch = coreTools.find(r => matchesCurrentOS(r) && matchesArchitecture(r));
     if (nativeMatch?.downloadLink) {
         return nativeMatch.downloadLink;
@@ -101,7 +104,6 @@ function resolveDownloadLink(feed: ICliFeed, versionTag: string): string | undef
         return x64Fallback.downloadLink;
     }
 
-    // v1 (and other legacy builds) only ship as Windows/x86. Windows x64/arm64 can run x86 via WOW64.
     if (process.platform === 'win32') {
         const x86Fallback = coreTools.find(r => matchesCurrentOS(r) && r.Architecture === 'x86');
         if (x86Fallback?.downloadLink) {
@@ -135,8 +137,6 @@ async function extractZip(zipPath: string, destDir: string): Promise<string> {
     // Shell out to extract instead of unzipping in-process. The in-process JS unzip
     // (extract-zip/yauzl) deadlocks under the VS Code extension-host debugger.
     if (process.platform === 'win32') {
-        // bsdtar (tar.exe) fails to create nested subdirectories for these archives on Windows,
-        // so use native .NET zip extraction via PowerShell instead (fast and reliable).
         const psCommand = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${zipPath}', '${destDir}')`;
         await execFileAsync('powershell', ['-NoProfile', '-Command', psCommand]);
     } else {
