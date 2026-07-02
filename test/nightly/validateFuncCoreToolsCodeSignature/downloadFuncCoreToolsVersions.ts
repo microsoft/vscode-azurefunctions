@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { execFile } from 'child_process';
 import * as fse from 'fs-extra';
 import * as os from 'os';
@@ -122,7 +123,7 @@ async function downloadZip(downloadLink: string, destDir: string): Promise<strin
         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
     }
 
-    await fse.ensureDir(destDir);
+    await AzExtFsExtra.ensureDir(destDir);
     const arrayBuffer = await response.arrayBuffer();
     await fse.writeFile(zipPath, Buffer.from(arrayBuffer));
     console.log(`[downloadFuncCoreToolsVersions] ${path.basename(destDir)}: wrote ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB zip`);
@@ -144,7 +145,7 @@ async function extractZip(zipPath: string, destDir: string): Promise<string> {
     }
 
     console.log(`[downloadFuncCoreToolsVersions] ${path.basename(destDir)}: extraction done (${elapsed(extractStart)})`);
-    await fse.remove(zipPath);
+    await AzExtFsExtra.deleteResource(zipPath, { recursive: true });
 
     const funcExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
     const execPath = path.join(destDir, funcExecutable);

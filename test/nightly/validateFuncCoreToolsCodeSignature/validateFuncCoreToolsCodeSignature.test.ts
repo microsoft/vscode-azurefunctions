@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as os from 'os';
@@ -48,7 +49,7 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
 
     suiteTeardown(async () => {
         for (const dir of coreToolsDirs) {
-            await fse.remove(dir).catch(() => console.warn(`Failed to clean up Core Tools temp dir: "${dir}"`));
+            await AzExtFsExtra.deleteResource(dir, { recursive: true }).catch(() => console.warn(`Failed to clean up Core Tools temp dir: "${dir}"`));
         }
     });
 
@@ -56,8 +57,7 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
         test(`Code signature is valid for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
-                // No download link for this version on the current platform
-                return this.skip();
+                throw new Error(`No func CLI binary available for ${version} to validate its code signature.`);
             }
 
             console.log(`\n--- func CLI ${version} (${binPath}) ---`);
@@ -83,10 +83,10 @@ suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
 
         const tamperDir = path.join(os.tmpdir(), `funcSignatureTamper-${Date.now()}`);
         coreToolsDirs.push(tamperDir);
-        await fse.ensureDir(tamperDir);
+        await AzExtFsExtra.ensureDir(tamperDir);
 
         const tamperedBinPath = path.join(tamperDir, process.platform === 'win32' ? 'func.exe' : 'func');
-        await fse.copy(signedBinPath, tamperedBinPath);
+        await AzExtFsExtra.copy(signedBinPath, tamperedBinPath);
 
         // Modify a byte in the middle of the binary to invalidate the embedded signature.
         // The midpoint is reliably inside the hashed code body (not the header).

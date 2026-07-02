@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as os from 'os';
@@ -15,7 +16,7 @@ suite('parseFuncCoreToolsPath correctly resolves func CLI path from which/where 
 
     suiteTeardown(async () => {
         for (const dir of tempDirs) {
-            await fse.remove(dir).catch(() => { /* best effort cleanup */ });
+            await AzExtFsExtra.deleteResource(dir, { recursive: true }).catch(() => { /* best effort cleanup */ });
         }
     });
 
@@ -47,8 +48,8 @@ suite('parseFuncCoreToolsPath correctly resolves func CLI path from which/where 
         tempDirs.push(shimDir);
 
         const expected = path.join(shimDir, 'node_modules', npmFuncPackageName, 'bin', 'func.exe');
-        await fse.ensureDir(path.dirname(expected));
-        await fse.writeFile(expected, '');
+        await AzExtFsExtra.ensureDir(path.dirname(expected));
+        await AzExtFsExtra.writeFile(expected, '');
 
         // Actual shims you might find for a global npm install of core tools on Windows
         const funcLookupOutput = [
@@ -65,8 +66,8 @@ suite('parseFuncCoreToolsPath correctly resolves func CLI path from which/where 
         tempDirs.push(shimDir);
 
         const notFuncPackagePath: string = path.join(shimDir, 'node_modules', 'not-func-package');
-        await fse.ensureDir(notFuncPackagePath);
-        await fse.writeFile(path.join(notFuncPackagePath, 'not-func.exe'), '');
+        await AzExtFsExtra.ensureDir(notFuncPackagePath);
+        await AzExtFsExtra.writeFile(path.join(notFuncPackagePath, 'not-func.exe'), '');
 
         const firstShimPath = path.join(shimDir, 'func');
         const funcLookupOutput = [
