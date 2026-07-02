@@ -23,7 +23,7 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
 
 const versionsToTest: FuncVersion[] = Object.values(FuncVersion).filter(v => isCodeSignatureExpected(v));
 
-suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
+suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
 
     let coreToolsBinMap: Map<FuncVersion, string> = new Map();
