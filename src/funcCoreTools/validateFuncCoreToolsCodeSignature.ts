@@ -143,26 +143,20 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     // Verify the signature is valid (i.e. the binary has not been tampered with)
     const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v', cliPath))());
     if (codeSignResult.code !== 0) {
+        ext.outputChannel.appendLog(localize('failedVerifySignature', 'Failed verification of code signature.'));
         return false;
     }
 
     // Inspect the signing details to verify it was done by Microsoft Corporation
+    // -dvv writes to stderr
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
-    const isValid = isValidDarwinSignature(codeSignResult, signingResult);
+    const isValid = signingResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
 
     ext.outputChannel.appendLog(isValid ?
         localize('successVerifyAuthority', 'Successfully verified signing authority "{0}".', microsoftSubject) :
         localize('failedVerifyAuthority', 'Failed to verify signing authority "{0}".', microsoftSubject));
 
     return isValid;
-}
-
-export function isValidDarwinSignature(codesignResult: { code: number }, dvvResult: { cmdOutputIncludingStderr: string }): boolean {
-    if (codesignResult.code !== 0) {
-        return false;
-    }
-    // -dvv writes to stderr
-    return dvvResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
 }
 
 async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
