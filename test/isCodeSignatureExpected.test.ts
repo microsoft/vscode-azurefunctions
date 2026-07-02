@@ -21,9 +21,8 @@ suite('isCodeSignatureExpected maps platform + func version to signing expectati
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v2, 'darwin'), false);
     });
 
-    const funcVersions: FuncVersion[] = [FuncVersion.v1, FuncVersion.v2, FuncVersion.v3, FuncVersion.v4];
-
     test('linux (and other platforms) - skipped', () => {
+        const funcVersions: FuncVersion[] = [FuncVersion.v1, FuncVersion.v2, FuncVersion.v3, FuncVersion.v4];
         for (const version of funcVersions) {
             assert.strictEqual(isCodeSignatureExpected(version, 'linux'), false);
             assert.strictEqual(isCodeSignatureExpected(version, 'freebsd' as NodeJS.Platform), false);

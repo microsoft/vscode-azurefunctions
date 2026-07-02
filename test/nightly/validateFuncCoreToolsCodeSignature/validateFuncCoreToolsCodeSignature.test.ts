@@ -18,14 +18,10 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
  * 2. Pass each version's cliPath into `validateCodeSignature` directly
  *    to test and ensure the code signature validation logic is working as expected.
  *
- * Whether a version is expected to be signed depends on the platform (see `isCodeSignatureExpected`):
- *   - We only validate v4+ on every platform. Although Windows Authenticode-signs v1-v4 on the CLI feed,
- *     the extension installs func via npm where the v1-v3 binaries are not reliably signed, so we keep
- *     live and test behavior aligned by only expecting a signature for v4+.
- *   - macOS: only v4+ is codesigned/notarized; v2/v3 shipped unsigned (v1 was Windows-only).
+ * Whether a version is expected to be signed depends on the check from `isCodeSignatureExpected`.
  */
 
-const versions: FuncVersion[] = Object.values(FuncVersion);
+const versionsToTest: FuncVersion[] = Object.values(FuncVersion).filter(v => isCodeSignatureExpected(v));
 
 suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
@@ -44,7 +40,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
         const setupStart = Date.now();
         console.log(`\n[suiteSetup] Downloading Func Core Tools for signature validation (${process.platform}/${process.arch})...`);
 
-        const result = await downloadFuncCoreToolsVersions(versions);
+        const result = await downloadFuncCoreToolsVersions(versionsToTest);
         coreToolsBinMap = result.coreToolsBinMap;
         coreToolsDirs = result.coreToolsDirs;
         console.log(`[suiteSetup] Setup complete in ${((Date.now() - setupStart) / 1000).toFixed(1)}s\n`);
@@ -56,12 +52,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
         }
     });
 
-    for (const version of versions) {
-        // Only versions we expect to be signed are worth validating; skip registering a test otherwise.
-        if (!isCodeSignatureExpected(version)) {
-            continue;
-        }
-
+    for (const version of versionsToTest) {
         test(`Code signature is valid for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
