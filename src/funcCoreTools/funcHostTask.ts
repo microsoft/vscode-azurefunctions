@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { nonNullValue, registerEvent, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -14,6 +14,7 @@ import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { addErrorLinesFromChunk } from './funcHostErrorUtils';
+import { getJsonOutputFilePathFromTask } from './jsonOutputFile';
 
 export interface IRunningFuncTask {
     taskExecution: vscode.TaskExecution;
@@ -38,6 +39,17 @@ export interface IRunningFuncTask {
      * This prevents the async iteration loop from hanging indefinitely when the task ends.
      */
     streamAbortController?: AbortController;
+    /**
+     * File path written by func core tools when launched with --json-output-file. Contains the .NET
+     * isolated worker process ID and is read by pickFuncProcess to attach the debugger.
+     */
+    workerPidFile?: string;
+    /**
+     * Worker process ID parsed from the host's terminal output. Populated by the stream consumer when
+     * `--dotnet-isolated-debug` and `--enable-json-output` are set but `--json-output-file` is not, so
+     * pickFuncProcess can still discover the worker PID without relying on a temp file.
+     */
+    workerProcessId?: number;
 }
 
 export interface IStoppedFuncTask {
@@ -150,6 +162,7 @@ export const buildPathToWorkspaceFolderMap = new Map<string, vscode.WorkspaceFol
 const defaultFuncPort: string = '7071';
 
 const funcCommandRegex: RegExp = /(func(?:\.exe)?)\s+host\s+start/i;
+
 export function isFuncHostTask(task: vscode.Task): boolean {
     const execution = task.execution as vscode.ShellExecution | undefined;
     if (!execution) {
@@ -197,6 +210,7 @@ export function registerFuncHostTaskEvents(): void {
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const portNumber = await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope);
             const logs: string[] = [];
+            const workerPidFile = getJsonOutputFilePathFromTask(e.execution.task);
             const runningFuncTask: IRunningFuncTask = {
                 processId: e.processId,
                 taskExecution: e.execution,
@@ -207,6 +221,7 @@ export function registerFuncHostTaskEvents(): void {
                 errorLogs: [],
                 hasReportedLiveErrors: false,
                 streamAbortController: new AbortController(),
+                workerPidFile,
             };
 
             runningFuncTaskMap.set(e.execution.task.scope, runningFuncTask);
@@ -221,7 +236,8 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             const cwd = (e.execution.task.execution as vscode.ShellExecution).options?.cwd;
-            const task = runningFuncTaskMap.get(e.execution.task.scope, cwd);
+            const scope = nonNullValue(e.execution.task.scope);
+            const task = runningFuncTaskMap.get(scope, cwd);
 
             // Abort the stream iteration to prevent it from hanging indefinitely
             if (task?.streamAbortController) {
@@ -234,14 +250,14 @@ export function registerFuncHostTaskEvents(): void {
                     portNumber: task.portNumber,
                     startTime: task.startTime,
                     stopTime: new Date(),
-                    workspaceFolder: e.execution.task.scope,
+                    workspaceFolder: scope,
                     cwd,
                     logs: task.logs.slice(),
                     errorLogs: (task.errorLogs ?? []).slice(),
                 });
             }
 
-            runningFuncTaskMap.delete(e.execution.task.scope, cwd);
+            runningFuncTaskMap.delete(scope, cwd);
 
             runningFuncTasksChangedEmitter.fire();
         }
@@ -262,6 +278,7 @@ export function registerFuncHostTaskEvents(): void {
         }
 
         const maxLogEntries = 1000;
+        const workerStartupName = 'dotnet-worker-startup';
 
         try {
             for await (const chunk of task.stream ?? []) {
@@ -273,6 +290,25 @@ export function registerFuncHostTaskEvents(): void {
                 task.logs.push(chunk);
                 if (task.logs.length > maxLogEntries) {
                     task.logs.splice(0, task.logs.length - maxLogEntries);
+                }
+
+                // Fallback for dotnet-isolated debug when no --json-output-file is configured: parse the
+                // worker PID directly from the terminal output so pickFuncProcess can still attach.
+                if (!task.workerPidFile && task.workerProcessId === undefined && chunk.includes(workerStartupName)) {
+                    let obj: unknown;
+                    try { obj = JSON.parse(chunk); } catch { /* not full JSON, try regex below */ }
+                    if (
+                        typeof obj === 'object' && obj !== null &&
+                        (obj as Record<string, unknown>)['name'] === workerStartupName &&
+                        typeof (obj as Record<string, unknown>)['workerProcessId'] === 'number'
+                    ) {
+                        task.workerProcessId = (obj as Record<string, unknown>)['workerProcessId'] as number;
+                    } else {
+                        const match = chunk.match(/"workerProcessId"\s*:\s*(\d+)/);
+                        if (match) {
+                            task.workerProcessId = Number(match[1]);
+                        }
+                    }
                 }
 
                 // Split chunk into log entries by timestamp, check each for red

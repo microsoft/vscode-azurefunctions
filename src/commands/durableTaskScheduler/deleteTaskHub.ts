@@ -7,7 +7,7 @@ import {type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type DurableTaskSchedulerClient } from "../../tree/durableTaskScheduler/DurableTaskSchedulerClient";
 import { localize } from "../../localize";
 import { type DurableTaskHubResourceModel } from "../../tree/durableTaskScheduler/DurableTaskHubResourceModel";
-import { type MessageItem } from "vscode";
+import { commands, type MessageItem } from "vscode";
 import { withAzureActivity } from "../../utils/AzureActivity";
 import { withCancellation } from "../../utils/cancellation";
 
@@ -52,6 +52,7 @@ export function deleteTaskHubCommandFactory(schedulerClient: DurableTaskSchedule
         }
         finally {
             taskHub.scheduler.refresh();
+            await commands.executeCommand('azureResourceGroups.refresh');
         }
     };
 }

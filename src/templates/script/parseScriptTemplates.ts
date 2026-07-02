@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isString } from 'util';
 import { ProjectLanguage, sqlBindingTemplateRegex } from '../../constants';
 import { ParsedFunctionJson, type IFunctionBinding } from '../../funcConfig/function';
 import { localize } from '../../localize';
@@ -82,7 +81,7 @@ export interface IResources {
 }
 
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
-    if (!isString(data)) {
+    if (typeof data !== 'string') {
         // This evaluates to a non-string value in rare cases, in which case we just return the value as-is
         return data;
     }

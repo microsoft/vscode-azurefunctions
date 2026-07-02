@@ -5,22 +5,17 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { localize } from '../../../localize';
 import { cpUtils } from "../../../utils/cpUtils";
 
 import * as path from 'path';
 
-export async function getJavaVersion(): Promise<number> {
+export async function getJavaVersion(): Promise<number | undefined> {
     const javaHome: string | undefined = process.env['JAVA_HOME'];
     let javaVersion = javaHome ? await checkVersionInReleaseFile(javaHome) : undefined;
     if (!javaVersion) {
         javaVersion = await checkVersionByCLI(javaHome ? path.join(javaHome, 'bin', 'java') : 'java');
     }
-    if (!javaVersion) {
-        const message: string = localize('javaNotFound', 'Failed to get Java version. Please ensure that Java is installed and JAVA_HOME environment variable is set.');
-        throw new Error(message);
-    }
-    return javaVersion;
+    return javaVersion || undefined;
 }
 
 async function checkVersionInReleaseFile(javaHome: string): Promise<number | undefined> {

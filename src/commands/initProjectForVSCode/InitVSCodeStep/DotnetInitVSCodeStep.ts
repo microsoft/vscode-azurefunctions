@@ -7,7 +7,7 @@ import { DialogResponses, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type DebugConfiguration, type MessageItem, type TaskDefinition } from 'vscode';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
-import { ProjectLanguage, func, hostStartCommand } from '../../../constants';
+import { ProjectLanguage, dotnetIsolatedDebugFlag, enableJsonOutputFlag, func, hostStartCommand } from '../../../constants';
 import { localize } from "../../../localize";
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -22,7 +22,8 @@ const dotnetPublishTaskLabel: string = convertToFunctionsTaskLabel('publish');
 export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = dotnetPublishTaskLabel;
     stepName: string = 'DotnetInitVSCodeStep';
-    private _debugSubpath: string;
+    // gets set in executeCore
+    private _debugSubpath!: string;
 
     protected getDebugConfiguration(version: FuncVersion): DebugConfiguration {
         return {
@@ -157,6 +158,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                     cwd: this._debugSubpath
                 },
                 command: hostStartCommand,
+                args: [dotnetIsolatedDebugFlag, enableJsonOutputFlag],
                 isBackground: true,
                 problemMatcher: getFuncWatchProblemMatcher(language)
             }

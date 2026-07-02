@@ -6,13 +6,14 @@
 import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, DialogResponses, subscriptionExperience, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, DialogResponses, subscriptionExperience, UserCancelledError, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
 import type * as vscode from 'vscode';
 import { CodeAction, deploySubpathSetting, DurableBackend, hostFileName, ProjectLanguage, remoteBuildSetting, ScmType, stackUpgradeLearnMoreLink } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
+import { validateGoInstalled } from '../../funcCoreTools/validateGoInstalled';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -131,6 +132,22 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
+    if (language === ProjectLanguage.Go) {
+        // func pack produces a linux/amd64 binary, so a zip will deploy successfully to a
+        // Windows app but the worker will fail to start at runtime. Catch this up front.
+        if (!site.isLinux) {
+            context.errorHandling.suppressReportIssue = true;
+            throw new Error(localize('goNotAvailableOnWindows', 'Go projects are not supported on Windows Function Apps. Deploy to a Linux Flex Function App instead.'));
+        }
+
+        // `func pack` builds the Go binary locally using the user's installed Go
+        // toolchain, so Go must be on PATH before any pre-deploy work runs.
+        if (!await validateGoInstalled(context, context.workspaceFolder.uri.fsPath)) {
+            context.errorHandling.suppressReportIssue = true;
+            throw new UserCancelledError('validateGoInstalled');
+        }
+    }
+
     void showCoreToolsWarning(context, version, site.fullName);
 
     const client = await site.createClient(actionContext);
@@ -148,16 +165,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const isFlexConsumption: boolean = await client.getIsConsumptionV2(actionContext);
     actionContext.telemetry.properties.isFlexConsumption = String(isFlexConsumption);
-
-    if (language === ProjectLanguage.Python && isFlexConsumption) {
-        const runtimeVersion = site.rawSite.functionAppConfig?.runtime?.version;
-        if (runtimeVersion === '3.14') {
-            const errorMessage = localize('python314FlexError', 'Remote build for Python 3.14 is not supported for flex. Please refer to https://aka.ms/py314-remote-build-flex.');
-            ext.outputChannel.appendLog(errorMessage);
-            throw new Error(errorMessage);
-        }
-    }
-
     // don't use remote build setting for consumption v2
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath) && !isFlexConsumption;
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);

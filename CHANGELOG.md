@@ -1,24 +1,70 @@
 # Change Log
 
-## 1.21.0 - 2026-04-03
+## 1.22.0 - 2026-06-02
+
+### Overview
+This release adds **Go language support** for Azure Functions — including project scaffolding, local debugging, and deployment — and introduces an opt-in **Template Gallery** for the Create New Project experience.
 
 ### Added
-* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add a **Function Host Debug** view in the Run and Debug panel that lists running Function Host tasks, displays recent error output, and send errors to Copilot or provides commands to view logs
-* [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support for domain name label scopes
+* [[5061](https://github.com/microsoft/vscode-azurefunctions/pull/5061)] Add **Go language support** — project scaffolding (`main.go`, `go.mod`), local debugging via Delve, zip-push deployment with `func pack`, and Function App creation including Flex Consumption
+* [[4964](https://github.com/microsoft/vscode-azurefunctions/pull/4964)] Add opt-in **Template Gallery** for Create New Project — a searchable, filterable visual gallery that replaces the default wizard. Enable by setting `azureFunctions.enableTemplateGallery` to `true`
+
+## 1.21.2 - 2026-05-28
+
+### Engineering
+* [[5057](https://github.com/microsoft/vscode-azurefunctions/pull/5057), [5058](https://github.com/microsoft/vscode-azurefunctions/pull/5058)] Bump runtime dependencies (`tmp`, `@microsoft/vscode-azext-utils`, `@microsoft/vscode-azext-azureappservice`)
+
+## 1.21.1 - 2026-05-27
+
+### Added
+* [[4765](https://github.com/microsoft/vscode-azurefunctions/pull/4765)] Support **debug-isolated** flag and stream `func` CLI output during debugging
+* [[5002](https://github.com/microsoft/vscode-azurefunctions/pull/5002)] Add **MCP Prompt** template
+* [[4966](https://github.com/microsoft/vscode-azurefunctions/pull/4966)] Add **MCP Resource trigger** templates for JavaScript and TypeScript
+* [[4959](https://github.com/microsoft/vscode-azurefunctions/pull/4959)] Add a setting to bypass **emulator validation**
 
 ### Changed
-* [[4826](https://github.com/microsoft/vscode-azurefunctions/pull/4826)] Group templates by filter rather than filtering them out
-* [[4892](https://github.com/microsoft/vscode-azurefunctions/pull/4892)] Use StorageV2 for storage account creation
-* [[4902](https://github.com/microsoft/vscode-azurefunctions/pull/4902)] Auto-open `mcp.json` after Self-Hosted MCP Server project creation
+* [[5008](https://github.com/microsoft/vscode-azurefunctions/pull/5008)] Hide `Get MCP Host Key` from the command palette
+* [[4999](https://github.com/microsoft/vscode-azurefunctions/pull/4999)] Stop filtering the **Java version** picker by locally installed JDKs
 
 ### Fixed
+* [[5020](https://github.com/microsoft/vscode-azurefunctions/pull/5020)] Fix missing icons for **role assignment scope** nodes under User Assigned Identities
+* [[5005](https://github.com/microsoft/vscode-azurefunctions/pull/5005)] Fix invalid `--namespace` CLI arg when creating **C# functions** with templates that lack namespace support
+* [[4993](https://github.com/microsoft/vscode-azurefunctions/pull/4993)] Fix **SignalR Trigger** C# template showing `"null"` as the default hub name
+
+## 1.21.0 - 2026-04-14
+
+### Overview
+This release brings DTS consumption plan support, a new Function Host Debugger View with Copilot support, domain name label scope support, and includes several bug fixes for scheduler creation, .NET templates, and containerized deployments.
+
+### Added
+* [[4951](https://github.com/microsoft/vscode-azurefunctions/pull/4951)] Support **DTS consumption plan** and remove preview flag
+* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI errors in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
+* [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support **domain name label scopes**
+
+### Changed
+* [[4946](https://github.com/microsoft/vscode-azurefunctions/pull/4946)] Open sample file and `mcp.json` in split editor when creating **Self-Hosted MCP Server** projects
+* [[4902](https://github.com/microsoft/vscode-azurefunctions/pull/4902)] Auto-open `mcp.json` after **Self-Hosted MCP Server** project creation
+* [[4944](https://github.com/microsoft/vscode-azurefunctions/pull/4944)] Remove `proxies.json` JSON schema contribution
+* [[4826](https://github.com/microsoft/vscode-azurefunctions/pull/4826)] Group templates by filter rather than filtering them out
+* [[4892](https://github.com/microsoft/vscode-azurefunctions/pull/4892)] Use **StorageV2** for storage account creation
+* [[4901](https://github.com/microsoft/vscode-azurefunctions/pull/4901)] Respect **Java remote debugging** setting precedence when both debug modes are enabled
+* [[4923](https://github.com/microsoft/vscode-azurefunctions/pull/4923)] Improve extension responsiveness in common Azure Functions workflows
+* [[4954](https://github.com/microsoft/vscode-azurefunctions/pull/4954)] Update aka.ms link for Remote Debugging
+
+### Fixed
+* [[4963](https://github.com/microsoft/vscode-azurefunctions/pull/4963)] Fix and improve scheduler creation with **consumption SKU**
+* [[4929](https://github.com/microsoft/vscode-azurefunctions/pull/4929)] Fix fallback to storage suffix endpoint when not available
+* [[4915](https://github.com/microsoft/vscode-azurefunctions/pull/4915)] Fix not being able to get **.NET** latest templates
+* [[4914](https://github.com/microsoft/vscode-azurefunctions/pull/4914)] Fix no response when executing **Create New Project** command
 * [[4880](https://github.com/microsoft/vscode-azurefunctions/pull/4880)] Fix refresh error on collapsed function app nodes
-* [[4901](https://github.com/microsoft/vscode-azurefunctions/pull/4901)] Respect Java remote debugging setting precedence when both debug modes are enabled
-* [[4914](https://github.com/microsoft/vscode-azurefunctions/pull/4914)] Fix no response when executing "Create New Project" command
-* [[4915](https://github.com/microsoft/vscode-azurefunctions/pull/4915)] Fix not being able to get .NET latest templates
-* [[4923](https://github.com/microsoft/vscode-azurefunctions/pull/4923)] Performance improvements
-* [[4929](https://github.com/microsoft/vscode-azurefunctions/pull/4929)] Don't call for `storageConnectionString` if it's not needed
-* [[4944](https://github.com/microsoft/vscode-azurefunctions/pull/4944)] Remove `proxies.json` from JSON schema contribution
+* [[4770](https://github.com/microsoft/vscode-azurefunctions/pull/4770)] Pin EventGrid sample files URL to specific commit SHA
+
+### Engineering
+* [[4947](https://github.com/microsoft/vscode-azurefunctions/pull/4947)] Replace **JsonCli** tool with direct nupkg parsing and native `dotnet new`
+* [[4894](https://github.com/microsoft/vscode-azurefunctions/pull/4894)] Migrate to **esbuild**
+* [[4906](https://github.com/microsoft/vscode-azurefunctions/pull/4906)] Refactor **cpUtils** to use `vscode-processutils`
+* [[4920](https://github.com/microsoft/vscode-azurefunctions/pull/4920)] Migrate tests to use testApi with esbuild
+* Bump 15 dependencies across build, test, and tooling infrastructure
 
 ## 1.20.3 - 2025-12-16
 

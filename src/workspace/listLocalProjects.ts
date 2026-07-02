@@ -25,6 +25,7 @@ export type LocalProjectOptionsInternal = {
     languageModel?: number;
     preCompiledProjectPath?: string
     isIsolated?: boolean;
+    isNativeWorker?: boolean;
 }
 
 export type LocalProjectInternal = { options: LocalProjectOptionsInternal } & IProjectTreeItem;
@@ -62,6 +63,7 @@ export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
                         } else {
                             effectiveProjectPath = projectPath;
                         }
+                        const isNativeWorker: boolean = language === ProjectLanguage.Go;
                         result.initializedProjects.push(new LocalProject({
                             effectiveProjectPath,
                             folder: workspaceFolder,
@@ -70,6 +72,7 @@ export async function listLocalProjects(): Promise<ListLocalProjectsResult> {
                             version,
                             preCompiledProjectPath,
                             isIsolated,
+                            isNativeWorker,
                         }));
                     }
                 } catch (error: unknown) {

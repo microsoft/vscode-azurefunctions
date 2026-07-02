@@ -16,8 +16,8 @@ export class DurableStorageTypeListStep<T extends IFunctionWizardContext> extend
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackend | undefined>[] = [
-            { label: 'Azure Storage', description: defaultDescription, data: DurableBackend.Storage },
-            { label: 'Durable Task Scheduler', data: DurableBackend.DTS },
+            { label: 'Durable Task Scheduler', description: defaultDescription, data: DurableBackend.DTS },
+            { label: 'Azure Storage', data: DurableBackend.Storage },
             { label: 'MSSQL', data: DurableBackend.SQL },
             { label: durableStorageInfo, data: undefined }
         ];

@@ -5,7 +5,7 @@
 
 import { type ServiceClient } from "@azure/core-client";
 import { createPipelineRequest } from "@azure/core-rest-pipeline";
-import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
+import { createGenericClient, sendRequestWithTimeout, type AzExtPipelineResponse, type AzExtRequestPrepareOptions, type IGenericClientOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
@@ -16,6 +16,12 @@ import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { nonNullProp, nonNullValue } from "./nonNull";
 
 export namespace requestUtils {
+    /**
+     * Opt-in client options that re-enable cross-origin redirects. @azure/core-rest-pipeline >= 1.23.0
+     * drops cross-origin redirects by default. Only pass these at anonymous/public call sites that
+     * never carry credentials or secrets (e.g. the `x-functions-key` header).
+     */
+    export const allowCrossOriginRedirectsOptions: IGenericClientOptions = { redirectOptions: { allowCrossOriginRedirects: true } };
     export const timeoutKey: string = 'requestTimeout';
 
     export function getRequestTimeoutMS(): number {
@@ -26,11 +32,11 @@ export namespace requestUtils {
     /**
      * Send a request using the extension's user-controlled timeout setting
      */
-    export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions): Promise<AzExtPipelineResponse> {
+    export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions, clientOptions?: IGenericClientOptions): Promise<AzExtPipelineResponse> {
         const timeout = getRequestTimeoutMS();
 
         try {
-            return await sendRequestWithTimeout(context, options, timeout, undefined);
+            return await sendRequestWithTimeout(context, options, timeout, undefined, clientOptions);
         } catch (error) {
             if (isTimeoutError(error)) {
                 throw new Error(
@@ -47,11 +53,11 @@ export namespace requestUtils {
         return parseError(error).errorType === 'REQUEST_ABORTED_ERROR';
     }
 
-    export async function downloadFile(context: IActionContext, requestOptionsOrUrl: string | AzExtRequestPrepareOptions, filePath: string): Promise<void> {
+    export async function downloadFile(context: IActionContext, requestOptionsOrUrl: string | AzExtRequestPrepareOptions, filePath: string, clientOptions?: IGenericClientOptions): Promise<void> {
         await AzExtFsExtra.ensureDir(path.dirname(filePath));
         const request = createPipelineRequest(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseStatusCodes = new Set([Number.POSITIVE_INFINITY]);
-        const client: ServiceClient = await createGenericClient(context, undefined);
+        const client: ServiceClient = await createGenericClient(context, undefined, clientOptions);
         const response: AzExtPipelineResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise<void>((resolve, reject): void => {

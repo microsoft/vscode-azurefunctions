@@ -10,7 +10,8 @@ import { type EventHubManagementClient } from '@azure/arm-eventhub';
 import { type ResourceGraphClient } from '@azure/arm-resourcegraph';
 import { type ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { type SqlManagementClient } from '@azure/arm-sql';
-import { AzExtClientType, createAzureClient, createAzureSubscriptionClient, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
+import { type ServiceClient } from '@azure/core-client';
+import { AzExtClientType, AzExtSubscriptionClientType, createAzureClient, createAzureSubscriptionClient, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
 // NOTE: The client is the only import that matters, the rest of the types disappear when compiled to JavaScript
@@ -38,9 +39,11 @@ export async function createWebSiteClient(context: AzExtClientContext): Promise<
 }
 
 export async function createAppInsightsClient(context: AzExtClientContext): Promise<ApplicationInsightsManagementClient> {
-    return createAzureClient(context, (await import('@azure/arm-appinsights')).ApplicationInsightsManagementClient);
+    // For typecast reasoning, see: https://github.com/microsoft/vscode-azuretools/pull/2184
+    return createAzureClient(context, (await import('@azure/arm-appinsights')).ApplicationInsightsManagementClient as unknown as AzExtClientType<ServiceClient>) as unknown as ApplicationInsightsManagementClient;
 }
 
 export async function createResourceGraphClient(context: AzExtClientContext): Promise<ResourceGraphClient> {
-    return createAzureSubscriptionClient(context, (await import('@azure/arm-resourcegraph')).ResourceGraphClient);
+    // For typecast reasoning, see: https://github.com/microsoft/vscode-azuretools/pull/2184
+    return createAzureSubscriptionClient(context, (await import('@azure/arm-resourcegraph')).ResourceGraphClient as unknown as AzExtSubscriptionClientType<ResourceGraphClient>);
 }
