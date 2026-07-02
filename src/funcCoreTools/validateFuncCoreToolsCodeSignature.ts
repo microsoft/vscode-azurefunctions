@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { composeArgs, withArg } from "@microsoft/vscode-processutils";
 import * as fse from "fs-extra";
 import * as path from "path";
@@ -15,28 +15,27 @@ import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
 import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
 
-export async function validateFuncCoreToolsCodeSignature(context: IActionContext, version: FuncVersion): Promise<boolean> {
+export async function validateFuncCoreToolsCodeSignature(context: IActionContext, version: FuncVersion): Promise<void> {
     if (!isCodeSignatureExpected(version)) {
         // Nothing to verify for this version/platform combination
-        return true;
+        return;
     }
 
     const funcCoreToolsPath: string | undefined = await getFuncCoreToolsPath();
     if (!funcCoreToolsPath) {
-        return false;
+        ext.outputChannel.appendLog(localize('funcPathNotResolved', 'Could not resolve the Azure Functions Core Tools path to validate its code signature.'));
+        return;
     }
 
-    const isValid = await validateCodeSignature(funcCoreToolsPath);
     ext.outputChannel.appendLog(localize('validatingCodeSignature', 'Validating code signature for Azure Functions Core Tools at "{0}"...', funcCoreToolsPath));
+    const isValid = await validateCodeSignature(funcCoreToolsPath);
     ext.outputChannel.appendLog(isValid ?
         localize('codeSignatureValid', 'Successfully validated code signature for Azure Functions Core Tools.') :
         localize('codeSignatureInvalid', 'Failed to validate code signature for Azure Functions Core Tools.'));
 
     if (!isValid) {
-        return await warnAndAskProceed(context, funcCoreToolsPath);
+        await warnAndAskProceed(context, funcCoreToolsPath);
     }
-
-    return true;
 }
 
 /**
@@ -107,7 +106,7 @@ function tryResolveWindowsFuncExeFromNpmGlobalInstall(funcLaunchPath: string): s
     return fse.pathExistsSync(resolvedExe) ? resolvedExe : undefined;
 }
 
-async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: string): Promise<boolean> {
+async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: string): Promise<void> {
     const message = localize(
         'codeSignatureFailed',
         'Azure Functions Core Tools failed code signature verification.\n\n"{0}" was inspected, see the output log for details.',
@@ -120,10 +119,9 @@ async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: str
 
     if (result === uninstall) {
         await uninstallFuncCoreTools(context);
-        return false;
+        // Abort the surrounding install/update flow since the tools were just removed.
+        throw new UserCancelledError('validateFuncCoreToolsCodeSignature');
     }
-
-    return true;
 }
 
 export async function validateCodeSignature(cliPath: string): Promise<boolean> {
