@@ -131,7 +131,7 @@ export async function validateCodeSignature(cliPath: string): Promise<boolean> {
         case 'win32':
             return validateWin32CodeSignature(cliPath);
         default:
-            throw new Error();
+            throw new Error(localize('codeSignatureUnsupportedPlatform', 'Code signature validation is not supported on platform "{0}".', process.platform));
     }
 }
 
