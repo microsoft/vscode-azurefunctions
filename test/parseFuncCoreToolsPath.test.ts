@@ -12,7 +12,7 @@ import { npmFuncPackageName } from '../src/constants';
 import { parseFuncCoreToolsPath } from '../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
 
 // Verify the functions ability to take the raw output of the func lookup command (e.g. which / where.exe) and
-// resolves it to a single func executable path, handling multi-line output and Windows npm launcher shims.
+// resolve it to a single func executable path, handling multi-line output and Windows npm launcher shims.
 
 suite('parseFuncCoreToolsPath', () => {
     const tempDirs: string[] = [];
