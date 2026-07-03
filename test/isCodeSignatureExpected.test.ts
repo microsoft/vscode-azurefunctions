@@ -8,20 +8,20 @@ import { FuncVersion } from '../src/FuncVersion';
 import { isCodeSignatureExpected } from '../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
 
 suite('isCodeSignatureExpected', () => {
-    test('win32 - only v4 is validated', () => {
+    test('win32 - v4 is expected', () => {
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v4, 'win32'), true);
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v3, 'win32'), false);
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v2, 'win32'), false);
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v1, 'win32'), false);
     });
 
-    test('darwin - only v4 is validated', () => {
+    test('darwin - v4 is expected', () => {
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v4, 'darwin'), true);
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v3, 'darwin'), false);
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v2, 'darwin'), false);
     });
 
-    test('linux (and other platforms) - skipped', () => {
+    test('linux (and other platforms) - rest are skipped', () => {
         const funcVersions: FuncVersion[] = [FuncVersion.v1, FuncVersion.v2, FuncVersion.v3, FuncVersion.v4];
         for (const version of funcVersions) {
             assert.strictEqual(isCodeSignatureExpected(version, 'linux'), false);
