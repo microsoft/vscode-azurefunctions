@@ -119,7 +119,6 @@ async function warnAndAskProceed(context: IActionContext, funcCoreToolsPath: str
 
     if (result === uninstall) {
         await uninstallFuncCoreTools(context);
-        // Abort the surrounding install/update flow since the tools were just removed.
         throw new UserCancelledError('validateFuncCoreToolsCodeSignature');
     }
 }
@@ -163,9 +162,18 @@ async function validateWin32CodeSignature(cliPath: string): Promise<boolean> {
     const escapedPath = cliPath.replace(/'/g, "''");
     const psCommand = `$sig = Get-AuthenticodeSignature '${escapedPath}'; if ($sig.Status -ne 'Valid') { exit 1 }; $sig.SignerCertificate.Subject`;
     const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'powershell', composeArgs(withArg('-Command', psCommand))());
-    return isValidWin32Signature(signingResult);
-}
 
-export function isValidWin32Signature(psResult: { code: number; cmdOutput: string }): boolean {
-    return psResult.code === 0 && psResult.cmdOutput.includes(`O=${microsoftSubject}`);
+    // Verify the signature is valid (i.e. the binary has not been tampered with)
+    if (signingResult.code !== 0) {
+        ext.outputChannel.appendLog(localize('failedVerifySignature', 'Failed verification of code signature.'));
+        return false;
+    }
+
+    // Inspect the signing details to verify it was done by Microsoft Corporation
+    const isValid = signingResult.cmdOutput.includes(`O=${microsoftSubject}`);
+    ext.outputChannel.appendLog(isValid ?
+        localize('successVerifyAuthority', 'Successfully verified signing authority "{0}".', microsoftSubject) :
+        localize('failedVerifyAuthority', 'Failed to verify signing authority "{0}".', microsoftSubject));
+
+    return isValid;
 }
