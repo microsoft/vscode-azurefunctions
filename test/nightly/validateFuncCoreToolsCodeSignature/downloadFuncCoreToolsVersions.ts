@@ -31,10 +31,10 @@ export async function downloadFuncCoreToolsVersions(versions: FuncVersion[]): Pr
     const coreToolsDirs: string[] = [];
     const coreToolsBinMap: Map<FuncVersion, string> = new Map();
 
-    // 2. Download all func zips concurrently
+    // 2. Download func zips concurrently
     console.log(`[downloadFuncCoreToolsVersions] Resolving download links for versions: ${versions.join(', ')}`);
     const downloads = await Promise.all(versions.map(async (version) => {
-        // Enum values go from: ~1, ~2... => v1, v2...
+        // ~1, ~2... => v1, v2...
         const versionTag = version.replace('~', 'v');
         const link = resolveDownloadLink(cliFeed, versionTag);
         if (!link) {
@@ -92,7 +92,7 @@ function resolveDownloadLink(feed: ICliFeed, versionTag: string): string | undef
     // Resolve the best download for this OS using an ordered priority ladder:
     //   1. Native arch - arm64 for arm64 hosts, x64 for x64 hosts.
     //   2. x64 fallback - primarily a fallback option for arm64 hosts on versions lacking an arm64 build
-    //   3. x86 (win32 only, below): last resort for legacy x86-only builds (e.g. v1)
+    //   3. x86 (win32 only, below) - last resort for legacy x86-only builds (e.g. v1)
     const nativeMatch = coreTools.find(r => matchesCurrentOS(r) && matchesArchitecture(r));
     if (nativeMatch?.downloadLink) {
         return nativeMatch.downloadLink;
