@@ -7,6 +7,8 @@ import * as assert from 'assert';
 import { FuncVersion } from '../src/FuncVersion';
 import { isCodeSignatureExpected } from '../src/funcCoreTools/validateFuncCoreToolsCodeSignature';
 
+// Verify the expected func core tools binaries have their code signatures checked on install / update.
+
 suite('isCodeSignatureExpected', () => {
     test('win32 - v4 is expected', () => {
         assert.strictEqual(isCodeSignatureExpected(FuncVersion.v4, 'win32'), true);
