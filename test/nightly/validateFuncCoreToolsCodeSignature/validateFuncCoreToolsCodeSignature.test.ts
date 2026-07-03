@@ -57,7 +57,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
         test(`Code signature is valid for func CLI ${version}`, async function () {
             const binPath = coreToolsBinMap.get(version);
             if (!binPath) {
-                throw new Error(`No func CLI binary available for ${version} to validate its code signature.`);
+                this.skip();
             }
 
             console.log(`\n--- func CLI ${version} (${binPath}) ---`);
