@@ -4,18 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import { execFile } from 'child_process';
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { promisify } from 'util';
 import { FuncVersion } from '../../../src/FuncVersion';
 import { cliFeedUtils } from "../../../src/utils/cliFeedUtils";
+import { cpUtils } from '../../../src/utils/cpUtils';
 
 type ICliFeed = cliFeedUtils.ICliFeed;
 type ICoreToolsRelease = cliFeedUtils.ICoreToolsRelease;
-
-const execFileAsync = promisify(execFile);
 
 export async function downloadFuncCoreToolsVersions(versions: FuncVersion[]): Promise<{ coreToolsBinMap: Map<FuncVersion, string>, coreToolsDirs: string[] }> {
     // 1. Fetch the latest CLI feed which includes all the latest Core Tools download links
@@ -138,10 +136,13 @@ async function extractZip(zipPath: string, destDir: string): Promise<string> {
     // Shell out to extract instead of unzipping in-process. The in-process JS unzip
     // (extract-zip/yauzl) deadlocks under the VS Code extension-host debugger.
     if (process.platform === 'win32') {
-        const psCommand = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${zipPath}', '${destDir}')`;
-        await execFileAsync('powershell', ['-NoProfile', '-Command', psCommand]);
+        // Escape single quotes for the PowerShell single-quoted string literals by doubling them ('').
+        const escapedZipPath = zipPath.replace(/'/g, "''");
+        const escapedDestDir = destDir.replace(/'/g, "''");
+        const psCommand = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${escapedZipPath}', '${escapedDestDir}')`;
+        await cpUtils.executeCommand(undefined, undefined, 'powershell', composeArgs(withArg('-NoProfile'), withArg('-Command', psCommand))());
     } else {
-        await execFileAsync('unzip', ['-q', '-o', zipPath, '-d', destDir]);
+        await cpUtils.executeCommand(undefined, undefined, 'unzip', composeArgs(withArg('-q', '-o', zipPath, '-d', destDir))());
     }
 
     console.log(`[downloadFuncCoreToolsVersions] ${path.basename(destDir)}: extraction done (${elapsed(extractStart)})`);
