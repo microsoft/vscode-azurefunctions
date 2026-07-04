@@ -71,7 +71,7 @@ export async function downloadFuncCoreToolsVersions(versions: FuncVersion[]): Pr
     return {
         coreToolsBinMap,
         coreToolsDirs,
-    }
+    };
 }
 
 function elapsed(startMs: number): string {
