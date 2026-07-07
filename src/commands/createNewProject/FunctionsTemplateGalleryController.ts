@@ -78,6 +78,49 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             headerTitle: localize('templateGallery', 'Template Gallery'),
             headerSubtitle: localize('templateGallerySubtitle', 'Create a new Azure Functions project from a template'),
             supportsAiGeneration: true,
+            aiGeneration: {
+                tabLabel: localize('buildWithCopilotChat', 'Build with Copilot Chat'),
+                introDescription: localize(
+                    'copilotChatIntroWithSkills',
+                    'Describe the serverless agent or Azure Functions app you want to build. Azure Functions Skills will be installed into your workspace and Copilot Chat will use them to scaffold, validate, and refine the project.',
+                ),
+                promptPlaceholder: localize(
+                    'copilotChatPromptPlaceholderWithSkills',
+                    'e.g., Build a serverless agent on Azure Functions that summarizes new Microsoft blog posts every morning, stores session state, and exposes an HTTP endpoint for manual runs.',
+                ),
+                examplesLabel: localize('copilotChatExamplesWithSkills', 'Try a serverless agent example:'),
+                examplePrompts: [
+                    {
+                        label: localize('serverlessAgentDailySummaryLabel', 'Daily summary agent'),
+                        prompt: 'Create a serverless agent on Azure Functions that runs every morning, summarizes new Microsoft blog posts, stores session state, and sends a short digest to a configured channel. Use Azure Functions Skills and the azure-functions-agents guidance.',
+                    },
+                    {
+                        label: localize('serverlessAgentSupportTriageLabel', 'Support triage agent'),
+                        prompt: 'Create an Azure Functions serverless agent that accepts support tickets over HTTP, classifies urgency, extracts required customer context, and writes triage results to a queue for downstream handling.',
+                    },
+                    {
+                        label: localize('serverlessAgentToolGatewayLabel', 'Agent tool gateway'),
+                        prompt: 'Create an Azure Functions app that hosts agent tools for retrieving product data, updating a status record, and returning structured responses suitable for Copilot Chat.',
+                    },
+                    {
+                        label: localize('serverlessAgentWorkflowLabel', 'Workflow agent'),
+                        prompt: 'Create a durable serverless agent workflow on Azure Functions that breaks a research task into steps, runs tool calls, stores intermediate state, and returns a final report.',
+                    },
+                ],
+                openChatButtonLabel: localize('openCopilotWithSkills', 'Install skills and open Copilot Chat'),
+                chatConfirmationDescription: localize(
+                    'copilotChatConfirmationWithSkills',
+                    'Azure Functions Skills are being installed locally for this workspace. Copilot Chat will open with a concise prompt that routes generation through the skills, so you can review each proposed change before it is applied.',
+                ),
+                capabilitiesTitle: localize('copilotChatSkillsCapabilitiesTitle', 'What Azure Functions Skills add'),
+                capabilitiesAriaLabel: localize('copilotChatSkillsCapabilitiesAria', 'Azure Functions Skills capabilities'),
+                capabilities: [
+                    localize('copilotChatSkillCapabilityCreate', 'Guided Azure Functions and serverless-agent project creation'),
+                    localize('copilotChatSkillCapabilityBestPractices', 'Built-in runtime, trigger, identity, and deployment best practices'),
+                    localize('copilotChatSkillCapabilityValidation', 'Local validation and diagnostics guidance before deployment'),
+                    localize('copilotChatSkillCapabilityDeploy', 'Deployment handoff through Azure Skills when you are ready'),
+                ],
+            },
         };
 
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, initialLocation);
@@ -272,9 +315,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     // ── Optional overrides ──
 
-    protected override async continueInChat(prompt: string, language: string): Promise<void> {
+    protected override async continueInChat(prompt: string, language: string, location: string): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.continueInChat', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.language = language;
+            actionContext.telemetry.properties.skillsInstallTarget = location ? 'galleryLocation' : 'workspaceFallback';
+
+            const skillsInstall = await installAzureFunctionsSkillsForCopilotChat(location);
+            actionContext.telemetry.properties.skillsInstallResult = skillsInstall.result;
+            actionContext.telemetry.properties.skillsInstallFilesWritten = String(skillsInstall.filesWritten ?? 0);
 
             const chatQuery = [
                 `Please help me build an Azure Functions app.`,
@@ -283,26 +331,20 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 '',
                 `**Language:** ${language}`,
                 '',
-                `**Programming model & project structure:**`,
+                `**Azure Functions Skills:**`,
+                `- Azure Functions Skills have been installed locally in this workspace for GitHub Copilot Chat.`,
+                `- Use the relevant skills first, especially azure-functions-setup, azure-functions-create, and azure-functions-agents when this is a serverless-agent scenario.`,
+                `- If Azure Skills are not available for deployment, keep generation local and explain the deployment prerequisite.`,
+                skillsInstall.message ? `- Install note: ${skillsInstall.message}` : undefined,
+                '',
+                `**Project guidance:**`,
+                `- Prefer Azure Functions serverless-agent patterns when the requested app involves agents, tools, sessions, or model-backed workflows.`,
+                `- Keep the prompt-to-code flow concise: ask only for missing requirements, then scaffold working files.`,
+                `- Follow the selected language's current Azure Functions programming model.`,
+                '',
+                `**Language grounding:**`,
                 languageGrounding(language),
-                '',
-                `**General guidelines:**`,
-                `- Only use real trigger and binding types from the official Azure Functions SDK for ${language}`,
-                `- Include host.json with extensionBundle configured for any non-HTTP bindings`,
-                `- Include local.settings.json with the correct FUNCTIONS_WORKER_RUNTIME value`,
-                `- Add a README.md with local setup steps and how to run the app`,
-                `- Add brief inline comments explaining the key parts of the code`,
-                '',
-                `**Azure Functions best practices:**`,
-                `- Keep functions stateless — do not store shared state in global variables`,
-                `- Use output bindings instead of direct SDK/client calls where the binding supports it`,
-                `- Prefer async/await patterns to avoid blocking the function host`,
-                `- Use environment variables (application settings) for all secrets and connection strings, never hardcode them`,
-                `- Use Managed Identity over connection strings when connecting to Azure services`,
-                `- Keep each function focused on a single responsibility`,
-                `- Use Durable Functions for long-running workflows or fan-out/fan-in patterns`,
-                `- Handle errors gracefully and return meaningful HTTP status codes for HTTP triggers`,
-            ].join('\n');
+            ].filter((line): line is string => line !== undefined).join('\n');
 
             try {
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
@@ -468,6 +510,53 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
+}
+
+interface CopilotChatSkillsInstallResult {
+    result: 'succeeded' | 'failed' | 'skipped';
+    filesWritten?: number;
+    message?: string;
+}
+
+async function installAzureFunctionsSkillsForCopilotChat(location: string): Promise<CopilotChatSkillsInstallResult> {
+    const targetDir = resolveSkillsInstallTarget(location);
+    if (!targetDir) {
+        return {
+            result: 'skipped',
+            message: localize('skillsInstallNoWorkspace', 'No workspace folder is available for local Azure Functions Skills installation.'),
+        };
+    }
+
+    try {
+        const skills = await import('@azure/functions-skills/setup');
+        const result = await skills.installLocalSkills({
+            targetDir,
+            agents: ['ghcp'],
+            prerequisites: 'check-only',
+            yes: true,
+            checkForUpdates: false,
+            initializeGitForGhcp: false,
+        });
+
+        const prerequisite = result.setup?.prerequisites?.find(item => item.id === 'azure-skills');
+        return {
+            result: 'succeeded',
+            filesWritten: result.filesWritten,
+            message: prerequisite?.message,
+        };
+    } catch (error) {
+        const message = parseError(error).message;
+        ext.outputChannel.appendLog(localize('skillsInstallError', 'Failed to install Azure Functions Skills locally: {0}', message));
+        return { result: 'failed', message };
+    }
+}
+
+function resolveSkillsInstallTarget(location: string): string | undefined {
+    if (location) {
+        return location;
+    }
+
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
 function languageGrounding(language: string): string {

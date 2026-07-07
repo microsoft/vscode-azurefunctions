@@ -15,6 +15,7 @@ dist/test/**
 docs/**
 gulp*
 node_modules/**
+!node_modules/@azure/functions-skills/**
 out/**
 resources/readme/**
 src/**
