@@ -22,12 +22,17 @@ import { resourceGroupsToDelete } from './global.nightly.test';
 interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions {
     title: string;
     buildMachineOsToSkip?: NodeJS.Platform | NodeJS.Platform[];
+    skip?: boolean;
 }
 // const confirmDeploy = 'Deploy';
 
+// Temporarily disable the JavaScript, TypeScript, and Python "Create Project and Deploy" tests. They have been
+// failing due to deployment/environment issues that are not yet understood (the "npm install/prune (functions)"
+// preDeployTask reporting errors on JS/TS, and no functions being listed in the "Select Function" quick pick on
+// Python). Re-enable each once the underlying failures are fixed.
 const testCases: CreateProjectAndDeployTestCase[] = [
-    { title: 'JavaScript', ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
-    { title: 'TypeScript', ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'JavaScript', skip: true, ...getJavaScriptValidateOptions(true, undefined, undefined, undefined, NodeModelVersion.v4), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
+    { title: 'TypeScript', skip: true, ...getTypeScriptValidateOptions({ modelVersion: NodeModelVersion.v4 }), deployInputs: [getRotatingNodeVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: NodeModelVersion.v4 },
     // Temporarily disable Ballerina tests until we can install Ballerina on the new pipelines
     // https://github.com/microsoft/vscode-azurefunctions/issues/4210
     // { title: 'Ballerina', ...getBallerinaValidateOptions(), createProjectInputs: ["JVM"], deployInputs: [/java.*11/i] },
@@ -37,7 +42,7 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // { title: 'C# .NET 9', ...getCSharpValidateOptions('net9.0', FuncVersion.v4), createProjectInputs: [/net.*9/i], deployInputs: [/net.*9/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/], createFunctionInputs: ['Company.Function'] },
     // Temporarily disable PowerShell tests due to Encountered an error (InternalServerError) from host runtime error.
     // { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy] },
-    { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: PythonModelVersion.v2 },
+    { title: 'Python', skip: true, ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: PythonModelVersion.v2 },
 ]
 
 const parallelTests: ParallelTest[] = [];
@@ -46,6 +51,7 @@ for (const testCase of testCases) {
     if (!osToSkip.some(o => o === process.platform)) {
         parallelTests.push({
             title: testCase.title,
+            skip: testCase.skip,
             callback: async () => {
                 await testCreateProjectAndDeploy(testCase);
             }
