@@ -84,8 +84,8 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
             'Managed identity',                         // Auth type
             '$(plus) Create new user-assigned identity', // Create new identity
             app2Name,                                   // Identity name (reuse app2Name)
-            app2Name,                                   // SA name (reuse existing)
-            app2Name,                                   // AI name (reuse existing)
+            saName,                                     // SA name (reuse existing)
+            aiName,                                     // AI name (reuse existing)
         ];
         const testApi = getCachedTestApi();
         await runWithTestActionContext('createFunctionAppAdvanced', async context => {
