@@ -40,20 +40,12 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'Python', ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: PythonModelVersion.v2 },
 ]
 
-// Temporarily disable the "Create Project and Deploy" tests. They have been failing for a long time due to
-// deployment/environment issues that are not yet understood (e.g. the "npm install (functions)" preDeployTask
-// reporting errors, and no functions being listed in the "Select Function" quick pick after deploy).
-// Re-enable once the underlying failures are fixed. See tracking issue:
-// TODO: https://github.com/microsoft/vscode-azurefunctions/issues (replace with tracking issue link)
-const skipCreateProjectAndDeploy = true;
-
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
     const osToSkip = Array.isArray(testCase.buildMachineOsToSkip) ? testCase.buildMachineOsToSkip : [testCase.buildMachineOsToSkip];
     if (!osToSkip.some(o => o === process.platform)) {
         parallelTests.push({
             title: testCase.title,
-            skip: skipCreateProjectAndDeploy,
             callback: async () => {
                 await testCreateProjectAndDeploy(testCase);
             }
