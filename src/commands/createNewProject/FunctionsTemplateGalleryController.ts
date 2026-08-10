@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -128,11 +128,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         return markdown ?? '';
     }
 
-    protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string): Promise<void> {
+    protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.templateId = template.id;
+            actionContext.telemetry.properties.templateName = template.displayName;
             actionContext.telemetry.properties.language = language;
+            actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
 
             const projectPath = location;
             const branch = template.branch || 'main';
