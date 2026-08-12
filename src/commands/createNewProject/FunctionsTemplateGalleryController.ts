@@ -538,17 +538,12 @@ async function installAzureFunctionsSkillsLocally(location: string): Promise<Cop
         const result = await skills.installLocalSkills({
             targetDir,
             agents: ['ghcp'],
-            prerequisites: 'check-only',
-            yes: true,
             checkForUpdates: false,
-            initializeGitForGhcp: false,
         });
 
-        const prerequisite = result.setup?.prerequisites?.find(item => item.id === 'azure-skills');
         return {
             result: 'succeeded',
             filesWritten: result.filesWritten,
-            message: prerequisite?.message,
         };
     } catch (error) {
         const message = parseError(error).message;
