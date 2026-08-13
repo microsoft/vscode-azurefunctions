@@ -60,10 +60,7 @@ export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.P
 }
 
 async function getFuncCoreToolsPath(): Promise<string | undefined> {
-    // `which` searches PATH cross-platform (replacing the platform-specific `which` / `where.exe`
-    // shell-outs) and returns the first match directly (or null via `nothrow`), so there's no command
-    // output to split or trim. On Windows it honors PATHEXT, so a bare `func` still resolves the
-    // launcher shim / executable.
+    // Returns the first match or null
     const funcPath = await which('func', { nothrow: true });
     return resolveFuncCoreToolsPath(funcPath, process.platform);
 }
