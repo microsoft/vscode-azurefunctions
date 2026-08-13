@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { composeArgs, withArg } from "@microsoft/vscode-processutils";
+import { composeArgs, withArg, withQuotedArg } from "@microsoft/vscode-processutils";
 import * as fse from "fs-extra";
 import * as path from "path";
 import { type MessageItem } from "vscode";
@@ -126,7 +126,7 @@ export const microsoftSubject = 'Microsoft Corporation';
 
 async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
     // Verify the signature is valid (i.e. the binary has not been tampered with)
-    const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v', cliPath))());
+    const codeSignResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-v'), withQuotedArg(cliPath))());
     if (codeSignResult.code !== 0) {
         ext.outputChannel.appendLog(localize('failedVerifySignature', 'Failed verification of code signature.'));
         return false;
@@ -134,7 +134,7 @@ async function validateDarwinCodeSignature(cliPath: string): Promise<boolean> {
 
     // Inspect the signing details to verify it was done by Microsoft Corporation
     // -dvv writes to stderr
-    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv', cliPath))());
+    const signingResult = await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'codesign', composeArgs(withArg('-dvv'), withQuotedArg(cliPath))());
     const isValid = signingResult.cmdOutputIncludingStderr.includes(`Authority=Developer ID Application: ${microsoftSubject}`);
 
     ext.outputChannel.appendLog(isValid ?
