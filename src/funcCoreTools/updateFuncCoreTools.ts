@@ -5,24 +5,27 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { funcPackageName, PackageManager } from '../constants';
+import { npmFuncPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { nonNullValue } from '../utils/nonNull';
+import { ensureBrewTapTrusted } from './ensureBrewTapTrusted';
 import { getBrewPackageName, tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, type INpmDistTag } from './getNpmDistTag';
+import { validateFuncCoreToolsCodeSignature } from './validateFuncCoreToolsCodeSignature';
 
 export async function updateFuncCoreTools(context: IActionContext, packageManager: PackageManager, version: FuncVersion): Promise<void> {
     ext.outputChannel.show();
     switch (packageManager) {
         case PackageManager.npm:
             const distTag: INpmDistTag = await getNpmDistTag(context, version);
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', composeArgs(withArg('install', '-g', `${funcPackageName}@${distTag.tag}`))());
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', composeArgs(withArg('install', '-g', `${npmFuncPackageName}@${distTag.tag}`))());
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
+            await ensureBrewTapTrusted(context);
             const installedBrewPackageName: string = nonNullValue(await tryGetInstalledBrewPackageName(version), 'brewPackageName');
             if (brewPackageName !== installedBrewPackageName) {
                 // Uninstall deprecated tag and install latest tag
@@ -35,4 +38,6 @@ export async function updateFuncCoreTools(context: IActionContext, packageManage
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManager));
     }
+
+    await validateFuncCoreToolsCodeSignature(context, version);
 }

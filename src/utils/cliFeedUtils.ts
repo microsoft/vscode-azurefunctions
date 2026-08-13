@@ -11,9 +11,9 @@ import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
-    const funcCliFeedV4Url: string = 'https://aka.ms/funcCliFeedV4';
+    export const funcCliFeedV4Url: string = 'https://aka.ms/funcCliFeedV4';
 
-    interface ICliFeed {
+    export interface ICliFeed {
         tags: {
             [tag: string]: ITag | undefined;
         };
@@ -22,8 +22,16 @@ export namespace cliFeedUtils {
         };
     }
 
+    export interface ICoreToolsRelease {
+        OS?: string;
+        OperatingSystem?: string;
+        Architecture?: string;
+        downloadLink?: string;
+    }
+
     export interface IRelease {
         templates: string;
+        coreTools?: ICoreToolsRelease[];
         workerRuntimes: {
             dotnet: {
                 [key: string]: IWorkerRuntime

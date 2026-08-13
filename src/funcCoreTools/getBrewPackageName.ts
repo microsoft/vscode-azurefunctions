@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { funcPackageName } from '../constants';
+import { brewFuncPackageName } from '../constants';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
 
 export function getBrewPackageName(version: FuncVersion): string {
-    return `${funcPackageName}@${getMajorVersion(version)}`;
+    return `${brewFuncPackageName}@${getMajorVersion(version)}`;
 }
 
 export async function tryGetInstalledBrewPackageName(version: FuncVersion): Promise<string | undefined> {
@@ -19,9 +19,9 @@ export async function tryGetInstalledBrewPackageName(version: FuncVersion): Prom
     } else {
         let oldPackageName: string | undefined;
         if (version === FuncVersion.v2) {
-            oldPackageName = funcPackageName;
+            oldPackageName = brewFuncPackageName;
         } else if (version === FuncVersion.v3) {
-            oldPackageName = funcPackageName + '-v3-preview';
+            oldPackageName = brewFuncPackageName + '-v3-preview';
         }
 
         if (oldPackageName && await isBrewPackageInstalled(oldPackageName)) {

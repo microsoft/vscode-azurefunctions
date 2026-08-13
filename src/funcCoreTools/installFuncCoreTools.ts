@@ -5,13 +5,15 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
-import { funcPackageName, PackageManager } from '../constants';
+import { npmFuncPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { promptForFuncVersion, type FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { ensureBrewTapTrusted } from './ensureBrewTapTrusted';
 import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, type INpmDistTag } from './getNpmDistTag';
+import { validateFuncCoreToolsCodeSignature } from './validateFuncCoreToolsCodeSignature';
 
 export let lastCoreToolsInstallCommand: string[] = [];
 
@@ -23,17 +25,18 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
     switch (packageManagers[0]) {
         case PackageManager.npm:
             const distTag: INpmDistTag = await getNpmDistTag(context, version);
-            lastCoreToolsInstallCommand = ['npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`];
+            lastCoreToolsInstallCommand = ['npm', 'install', '-g', `${npmFuncPackageName}@${distTag.tag}`];
             await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
-            lastCoreToolsInstallCommand = ['brew', 'tap', 'azure/functions'];
-            await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
+            await ensureBrewTapTrusted(context);
             lastCoreToolsInstallCommand = ['brew', 'install', brewPackageName];
             await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManagers[0]));
     }
+
+    await validateFuncCoreToolsCodeSignature(context, version);
 }
