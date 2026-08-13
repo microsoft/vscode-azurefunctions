@@ -8,6 +8,7 @@ import { composeArgs, withArg } from "@microsoft/vscode-processutils";
 import * as fse from "fs-extra";
 import * as path from "path";
 import { type MessageItem } from "vscode";
+import which from "which";
 import { npmFuncPackageName } from "../constants";
 import { ext } from "../extensionVariables";
 import { FuncVersion, getMajorVersion } from "../FuncVersion";
@@ -58,36 +59,26 @@ export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.P
     }
 }
 
-async function getFuncCoreToolsPath(workspacePath?: string): Promise<string | undefined> {
-    let funcLookupOutput: string | undefined;
-    switch (process.platform) {
-        case 'darwin':
-        case 'linux':
-            funcLookupOutput = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'which', composeArgs(withArg('func'))());
-            break;
-        case 'win32':
-            funcLookupOutput = await cpUtils.executeCommand(ext.outputChannel, workspacePath, 'where.exe', composeArgs(withArg('func'))());
-            break;
-        default:
-            return undefined;
-    }
-
-    return parseFuncCoreToolsPath(funcLookupOutput, process.platform);
+async function getFuncCoreToolsPath(): Promise<string | undefined> {
+    // `which` searches PATH cross-platform (replacing the platform-specific `which` / `where.exe`
+    // shell-outs) and returns the first match directly (or null via `nothrow`), so there's no command
+    // output to split or trim. On Windows it honors PATHEXT, so a bare `func` still resolves the
+    // launcher shim / executable.
+    const funcPath = await which('func', { nothrow: true });
+    return resolveFuncCoreToolsPath(funcPath, process.platform);
 }
 
 /**
- * Resolves the func CLI path from the raw output of the path-lookup command (`which` / `where.exe`).
+ * Normalizes the func CLI path resolved by `which`, preferring the real executable over an npm
+ * launcher shim on Windows. Returns undefined when func could not be found.
  */
-export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, platform: NodeJS.Platform): string | undefined {
-    // Multiple lines can return. Split and trim so the resolved path never contains an embedded newline.
-    const matches = (funcLookupOutput ?? '').split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
-    if (matches.length === 0) {
+export function resolveFuncCoreToolsPath(funcPath: string | null, platform: NodeJS.Platform): string | undefined {
+    if (!funcPath) {
         return undefined;
     }
 
-    let funcPath: string = matches[0];
     if (platform === 'win32') {
-        // If the first match is already the real executable, use it directly.
+        // If which resolved the real executable, use it directly.
         if (funcPath.toLowerCase().endsWith('func.exe')) {
             return funcPath;
         }
@@ -95,7 +86,7 @@ export function parseFuncCoreToolsPath(funcLookupOutput: string | undefined, pla
         // Otherwise it could be an auto-generated launcher shim (func, func.cmd, func.ps1) from a global npm
         // install of azure-functions-core-tools. The shim itself isn't the signed binary, so try to
         // resolve the real func.exe from the npm global install pattern.
-        funcPath = tryResolveWindowsFuncExeFromNpmGlobalInstall(funcPath) ?? funcPath;
+        return tryResolveWindowsFuncExeFromNpmGlobalInstall(funcPath) ?? funcPath;
     }
 
     return funcPath;

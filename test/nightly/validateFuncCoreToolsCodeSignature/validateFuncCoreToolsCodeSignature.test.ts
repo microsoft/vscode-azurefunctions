@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as os from 'os';
@@ -24,7 +24,7 @@ import { downloadFuncCoreToolsVersions } from './downloadFuncCoreToolsVersions';
 
 const versionsToTest: FuncVersion[] = Object.values(FuncVersion).filter(v => isCodeSignatureExpected(v));
 
-suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
+suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
 
     let coreToolsBinMap: Map<FuncVersion, string> = new Map();
@@ -61,7 +61,7 @@ suite.only('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): v
             }
 
             console.log(`\n--- func CLI ${version} (${binPath}) ---`);
-            const isValidSignature = await validateCodeSignature(binPath);
+            const isValidSignature = await validateCodeSignature(nonNullValue(binPath));
             assert.strictEqual(isValidSignature, true, `Expected ${version} binary at ${binPath} to have a valid Microsoft code signature on ${process.platform}`);
         });
     }
