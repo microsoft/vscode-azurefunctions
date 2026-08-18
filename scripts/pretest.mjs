@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { exec } from 'child_process';
-import extract from 'extract-zip';
 import fse from 'fs-extra';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import { extractZip } from '../src/utils/zipUtils.js';
 
 const execAsync = promisify(exec);
 
@@ -78,7 +78,7 @@ async function downloadFuncCli(downloadLink) {
 
 async function extractFuncCli(funcZipPath) {
     try {
-        await extract(funcZipPath, { dir: funcDir });
+        await extractZip(funcZipPath, funcDir);
         console.log('Successfully extracted func CLI.');
 
         console.log('Setting executable permissions...');
