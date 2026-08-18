@@ -30,15 +30,11 @@ export async function extractZip(zipPath: string, destinationPath: string): Prom
 
 async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinationRoot: string, sourceZipPath: string, sourceZipStats: fs.Stats): Promise<void> {
     const destination = getEntryDestination(entry.fileName, destinationRoot);
-    const mode = (entry.externalFileAttributes >>> 16) & 0xffff;
-    const fileType = mode & fileTypeMask;
-    const madeBy = entry.versionMadeBy >>> 8;
-    const isDirectory = entry.fileName.endsWith('/')
-        || fileType === directoryFileType
-        || (madeBy === 0 && entry.externalFileAttributes === 16);
-    const permissions = mode & 0o777;
+    const entryMode = getEntryMode(entry);
+    const isDirectory = isDirectoryEntry(entry, entryMode);
+    const permissions = getEntryPermissions(entryMode);
 
-    if (fileType === symbolicLinkFileType) {
+    if (isSymbolicLinkEntry(entryMode)) {
         throw new Error(`Cannot extract symbolic link "${entry.fileName}".`);
     }
 
@@ -68,6 +64,29 @@ async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinat
     if (permissions !== 0) {
         await fs.promises.chmod(canonicalDestination, permissions);
     }
+}
+
+function getEntryMode(entry: yauzl.Entry): number {
+    return (entry.externalFileAttributes >>> 16) & 0xffff;
+}
+
+function getEntryPermissions(entryMode: number): number {
+    return entryMode & 0o777;
+}
+
+function isDirectoryEntry(entry: yauzl.Entry, entryMode: number): boolean {
+    const originatingSystem = entry.versionMadeBy >>> 8;
+    return entry.fileName.endsWith('/')
+        || getFileType(entryMode) === directoryFileType
+        || (originatingSystem === 0 && entry.externalFileAttributes === 16);
+}
+
+function isSymbolicLinkEntry(entryMode: number): boolean {
+    return getFileType(entryMode) === symbolicLinkFileType;
+}
+
+function getFileType(entryMode: number): number {
+    return entryMode & fileTypeMask;
 }
 
 function getEntryDestination(entryName: string, destinationRoot: string): string {
