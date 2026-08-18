@@ -13,23 +13,28 @@ const fileTypeMask = 0o170000;
 const symbolicLinkFileType = 0o120000;
 
 export async function extractZip(zipPath: string, destinationPath: string): Promise<void> {
+    const sourceZipPath = path.resolve(zipPath);
     const destinationRoot = path.resolve(destinationPath);
     await fs.promises.mkdir(destinationRoot, { recursive: true });
 
-    const zipFile = await yauzl.openPromise(zipPath, { lazyEntries: true });
+    const zipFile = await yauzl.openPromise(sourceZipPath, { lazyEntries: true });
     try {
         for await (const entry of zipFile.eachEntry()) {
-            await extractEntry(zipFile, entry, destinationRoot);
+            await extractEntry(zipFile, entry, destinationRoot, sourceZipPath);
         }
     } finally {
         zipFile.close();
     }
 }
 
-async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinationRoot: string): Promise<void> {
+async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinationRoot: string, sourceZipPath: string): Promise<void> {
     const destination = getEntryDestination(entry.fileName, destinationRoot);
     const mode = (entry.externalFileAttributes >>> 16) & 0xffff;
     const fileType = mode & fileTypeMask;
+
+    if (path.relative(sourceZipPath, destination) === '') {
+        throw new Error(`Cannot overwrite source ZIP with entry "${entry.fileName}".`);
+    }
 
     if (fileType === symbolicLinkFileType) {
         throw new Error(`Cannot extract symbolic link "${entry.fileName}".`);

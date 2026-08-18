@@ -11,6 +11,7 @@ import { extractZip } from '../src/utils/zipUtils';
 
 const validZip = 'UEsDBBQAAAAIAKpOEl2386lFDQAAAAsAAAAQAAAAbmVzdGVkL2hlbGxvLnR4dMtIzcnJV6hMLK3KAQBQSwECFAAUAAAACACqThJdt/OpRQ0AAAALAAAAEAAAAAAAAAAAAAAAAAAAAAAAbmVzdGVkL2hlbGxvLnR4dFBLBQYAAAAAAQABAD4AAAA7AAAAAAA=';
 const unsafeZip = 'UEsDBBQAAAAIAK5OEl2m/eq1DwAAAAcAAAAOAAAALi4vb3V0c2lkZS50eHTKLy0pzkxJBQAAAP//AwBQSwECFAAUAAAACACuThJdpv3qtQ8AAAAHAAAADgAAAAAAAAAAAAAAAAAAAAAALi4vb3V0c2lkZS50eHRQSwUGAAAAAAEAAQA8AAAAOwAAAAAA';
+const sourceOverwriteZip = 'UEsDBBQAAAAIAGJUEl0GgMErEQAAAAkAAAALAAAAYXJjaGl2ZS56aXDKL0stKi/KLEkFAAAA//8DAFBLAQIUABQAAAAIAGJUEl0GgMErEQAAAAkAAAALAAAAAAAAAAAAAAAAAAAAAABhcmNoaXZlLnppcFBLBQYAAAAAAQABADkAAAA6AAAAAAA=';
 
 suite('zipUtils', () => {
     let tempDir: string;
@@ -40,5 +41,16 @@ suite('zipUtils', () => {
 
         await assert.rejects(extractZip(zipPath, destination), /invalid relative path|outside of the destination directory/);
         assert.equal(fs.existsSync(path.join(tempDir, 'outside.txt')), false);
+    });
+
+    test('rejects entries that overwrite the source ZIP', async () => {
+        const destination = path.join(tempDir, 'destination');
+        const zipPath = path.join(destination, 'archive.zip');
+        const zipContents = Buffer.from(sourceOverwriteZip, 'base64');
+        await fs.promises.mkdir(destination);
+        await fs.promises.writeFile(zipPath, zipContents);
+
+        await assert.rejects(extractZip(zipPath, destination), /Cannot overwrite source ZIP/);
+        assert.deepEqual(await fs.promises.readFile(zipPath), zipContents);
     });
 });

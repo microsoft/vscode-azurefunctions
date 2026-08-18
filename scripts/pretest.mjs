@@ -14,9 +14,12 @@ import yauzl from 'yauzl';
 
 const execAsync = promisify(exec);
 
+const directoryFileType = 0o040000;
+const fileTypeMask = 0o170000;
 const funcDir = path.join(os.homedir(), 'tools', 'func');
 const funcZip = 'funccli.zip';
 const funcExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
+const symbolicLinkFileType = 0o120000;
 
 function matchesCliFeedOS(platform) {
     switch (process.platform) {
@@ -82,8 +85,15 @@ async function extractFuncCli(funcZipPath) {
         const zipFile = await yauzl.openPromise(funcZipPath, { lazyEntries: true });
         try {
             for await (const entry of zipFile.eachEntry()) {
-                const destination = getEntryDestination(entry.fileName);
-                if (entry.fileName.endsWith('/')) {
+                const destination = getEntryDestination(entry.fileName, funcZipPath);
+                const mode = (entry.externalFileAttributes >>> 16) & 0xffff;
+                const fileType = mode & fileTypeMask;
+
+                if (fileType === symbolicLinkFileType) {
+                    throw new Error(`Cannot extract symbolic link "${entry.fileName}".`);
+                }
+
+                if (entry.fileName.endsWith('/') || fileType === directoryFileType) {
                     await fs.mkdir(destination, { recursive: true });
                     continue;
                 }
@@ -108,11 +118,14 @@ async function extractFuncCli(funcZipPath) {
     }
 }
 
-function getEntryDestination(entryName) {
+function getEntryDestination(entryName, sourceZipPath) {
     const destinationRoot = path.resolve(funcDir);
     const destination = path.resolve(destinationRoot, entryName.replace(/\\/g, '/'));
     if (destination !== destinationRoot && !destination.startsWith(`${destinationRoot}${path.sep}`)) {
         throw new Error(`Cannot extract "${entryName}" outside of the destination directory.`);
+    }
+    if (path.relative(path.resolve(sourceZipPath), destination) === '') {
+        throw new Error(`Cannot overwrite source ZIP with entry "${entryName}".`);
     }
 
     return destination;
