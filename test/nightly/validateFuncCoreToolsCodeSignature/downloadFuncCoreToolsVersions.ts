@@ -134,7 +134,7 @@ async function extractZip(zipPath: string, destDir: string): Promise<string> {
     const extractStart = Date.now();
 
     // Shell out to extract instead of unzipping in-process. The in-process JS unzip
-    // (extract-zip/yauzl) deadlocks under the VS Code extension-host debugger.
+    // (yauzl) deadlocks under the VS Code extension-host debugger.
     if (process.platform === 'win32') {
         // Escape single quotes for the PowerShell single-quoted string literals by doubling them ('').
         const escapedZipPath = zipPath.replace(/'/g, "''");

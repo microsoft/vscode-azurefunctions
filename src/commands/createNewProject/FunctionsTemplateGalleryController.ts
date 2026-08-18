@@ -5,7 +5,6 @@
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
-import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -17,6 +16,7 @@ import { ProjectTemplateProvider } from '../../templates/projectTemplates/Projec
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
+import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
@@ -438,7 +438,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
 
         try {
-            await extract(zipPath, { dir: path.dirname(destDir) });
+            await extractZip(zipPath, path.dirname(destDir));
         } finally {
             if (await AzExtFsExtra.pathExists(zipPath)) {
                 await AzExtFsExtra.deleteResource(zipPath, { recursive: false });

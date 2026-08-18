@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { exec } from 'child_process';
-import extract from 'extract-zip';
 import fse from 'fs-extra';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
+import { pipeline } from 'stream/promises';
 import { promisify } from 'util';
+import yauzl from 'yauzl';
 
 const execAsync = promisify(exec);
 
@@ -78,7 +79,25 @@ async function downloadFuncCli(downloadLink) {
 
 async function extractFuncCli(funcZipPath) {
     try {
-        await extract(funcZipPath, { dir: funcDir });
+        const zipFile = await yauzl.openPromise(funcZipPath, { lazyEntries: true });
+        try {
+            for await (const entry of zipFile.eachEntry()) {
+                const destination = getEntryDestination(entry.fileName);
+                if (entry.fileName.endsWith('/')) {
+                    await fs.mkdir(destination, { recursive: true });
+                    continue;
+                }
+
+                await fs.mkdir(path.dirname(destination), { recursive: true });
+                await pipeline(
+                    await zipFile.openReadStreamPromise(entry),
+                    fse.createWriteStream(destination)
+                );
+            }
+        } finally {
+            zipFile.close();
+        }
+
         console.log('Successfully extracted func CLI.');
 
         console.log('Setting executable permissions...');
@@ -87,6 +106,16 @@ async function extractFuncCli(funcZipPath) {
     } finally {
         await fse.remove(funcZipPath);
     }
+}
+
+function getEntryDestination(entryName) {
+    const destinationRoot = path.resolve(funcDir);
+    const destination = path.resolve(destinationRoot, entryName.replace(/\\/g, '/'));
+    if (destination !== destinationRoot && !destination.startsWith(`${destinationRoot}${path.sep}`)) {
+        throw new Error(`Cannot extract "${entryName}" outside of the destination directory.`);
+    }
+
+    return destination;
 }
 
 async function printFuncVersion() {

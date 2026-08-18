@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUtils } from '@microsoft/vscode-azext-utils';
-import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { extractZip } from '../../utils/zipUtils';
 
 interface TemplateJsonSymbol {
     type: string;
@@ -66,7 +66,7 @@ export async function parseTemplatesFromNupkg(nupkgPath: string): Promise<RawTem
     const tempDir = path.join(os.tmpdir(), `azfunc-templates-${randomUtils.getRandomHexString()}`);
 
     try {
-        await extract(nupkgPath, { dir: tempDir });
+        await extractZip(nupkgPath, tempDir);
 
         const templateJsonFiles = await findTemplateJsonFiles(tempDir);
 

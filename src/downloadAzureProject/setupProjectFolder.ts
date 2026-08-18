@@ -7,7 +7,6 @@ import { type HostKeys } from '@azure/arm-appservice';
 import { createHttpHeaders } from '@azure/core-rest-pipeline';
 import { parseAzureResourceId, type AzExtRequestPrepareOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
@@ -16,6 +15,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { type SlotTreeItem } from "../tree/SlotTreeItem";
 import { requestUtils } from '../utils/requestUtils';
+import { extractZip } from '../utils/zipUtils';
 import { getRequiredQueryParameter } from './handleUri';
 
 export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vscode.Uri, context: IActionContext): Promise<void> {
@@ -58,7 +58,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
 
-            await extract(downloadFilePath, { dir: projectFilePath });
+            await extractZip(downloadFilePath, projectFilePath);
             await requestUtils.downloadFile(
                 context,
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
