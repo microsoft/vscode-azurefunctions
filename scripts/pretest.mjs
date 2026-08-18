@@ -17,7 +17,7 @@ const funcDir = path.join(os.homedir(), 'tools', 'func');
 const funcZip = 'funccli.zip';
 const funcExecutable = process.platform === 'win32' ? 'func.exe' : 'func';
 
-function matchesCliFeedOS(platform: string): boolean {
+function matchesCliFeedOS(platform) {
     switch (process.platform) {
         case 'win32':
             return platform === 'Windows';
@@ -28,7 +28,7 @@ function matchesCliFeedOS(platform: string): boolean {
     }
 }
 
-async function getFuncLink(): Promise<string> {
+async function getFuncLink() {
     const response = await fetch('https://aka.ms/V00v5v');
     if (!response.ok) {
         throw new Error(`Failed to fetch func CLI feed: ${response.status} ${response.statusText}`);
@@ -53,7 +53,7 @@ async function getFuncLink(): Promise<string> {
     return cliRelease.downloadLink;
 }
 
-async function download(url: string, targetPath: string): Promise<void> {
+async function download(url, targetPath) {
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`Request for func CLI responded with status code: ${response.status}`);
@@ -64,7 +64,7 @@ async function download(url: string, targetPath: string): Promise<void> {
     await fs.writeFile(targetPath, Buffer.from(arrayBuffer));
 }
 
-async function downloadFuncCli(downloadLink: string): Promise<string> {
+async function downloadFuncCli(downloadLink) {
     if (fse.pathExistsSync(funcDir)) {
         console.log('Removing old install of func.');
         fse.removeSync(funcDir);
@@ -76,7 +76,7 @@ async function downloadFuncCli(downloadLink: string): Promise<string> {
     return funcZipPath;
 }
 
-async function extractFuncCli(funcZipPath: string): Promise<void> {
+async function extractFuncCli(funcZipPath) {
     try {
         await extractZip(funcZipPath, funcDir);
         console.log('Successfully extracted func CLI.');
@@ -89,7 +89,7 @@ async function extractFuncCli(funcZipPath: string): Promise<void> {
     }
 }
 
-async function printFuncVersion(): Promise<void> {
+async function printFuncVersion() {
     const funcExecutablePath = path.join(funcDir, funcExecutable);
     const { stdout } = await execAsync(`"${funcExecutablePath}" --version`);
     console.log(`Verified func CLI version:\n${stdout}`);
