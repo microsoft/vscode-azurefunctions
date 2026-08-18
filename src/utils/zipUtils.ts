@@ -13,53 +13,95 @@ const fileTypeMask = 0o170000;
 const symbolicLinkFileType = 0o120000;
 
 export async function extractZip(zipPath: string, destinationPath: string): Promise<void> {
-    const sourceZipPath = path.resolve(zipPath);
-    const destinationRoot = path.resolve(destinationPath);
-    await fs.promises.mkdir(destinationRoot, { recursive: true });
+    const sourceZipPath = await fs.promises.realpath(zipPath);
+    const sourceZipStats = await fs.promises.stat(sourceZipPath);
+    await fs.promises.mkdir(destinationPath, { recursive: true });
+    const destinationRoot = await fs.promises.realpath(destinationPath);
 
     const zipFile = await yauzl.openPromise(sourceZipPath, { lazyEntries: true });
     try {
         for await (const entry of zipFile.eachEntry()) {
-            await extractEntry(zipFile, entry, destinationRoot, sourceZipPath);
+            await extractEntry(zipFile, entry, destinationRoot, sourceZipPath, sourceZipStats);
         }
     } finally {
         zipFile.close();
     }
 }
 
-async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinationRoot: string, sourceZipPath: string): Promise<void> {
+async function extractEntry(zipFile: yauzl.ZipFile, entry: yauzl.Entry, destinationRoot: string, sourceZipPath: string, sourceZipStats: fs.Stats): Promise<void> {
     const destination = getEntryDestination(entry.fileName, destinationRoot);
     const mode = (entry.externalFileAttributes >>> 16) & 0xffff;
     const fileType = mode & fileTypeMask;
-
-    if (path.relative(sourceZipPath, destination) === '') {
-        throw new Error(`Cannot overwrite source ZIP with entry "${entry.fileName}".`);
-    }
+    const madeBy = entry.versionMadeBy >>> 8;
+    const isDirectory = entry.fileName.endsWith('/')
+        || fileType === directoryFileType
+        || (madeBy === 0 && entry.externalFileAttributes === 16);
+    const permissions = mode & 0o777;
 
     if (fileType === symbolicLinkFileType) {
         throw new Error(`Cannot extract symbolic link "${entry.fileName}".`);
     }
 
-    if (entry.fileName.endsWith('/') || fileType === directoryFileType) {
+    if (destination === destinationRoot && !isDirectory) {
+        throw new Error(`Cannot extract file "${entry.fileName}" as the destination directory.`);
+    }
+
+    if (isDirectory) {
         await fs.promises.mkdir(destination, { recursive: true });
+        const canonicalDestination = await fs.promises.realpath(destination);
+        assertWithinDestination(canonicalDestination, destinationRoot, entry.fileName);
+        if (permissions !== 0 && canonicalDestination !== destinationRoot) {
+            await fs.promises.chmod(canonicalDestination, permissions);
+        }
         return;
     }
 
     await fs.promises.mkdir(path.dirname(destination), { recursive: true });
-    const readStream = await zipFile.openReadStreamPromise(entry);
-    await pipeline(readStream, fs.createWriteStream(destination));
+    const canonicalParent = await fs.promises.realpath(path.dirname(destination));
+    assertWithinDestination(canonicalParent, destinationRoot, entry.fileName);
+    const canonicalDestination = path.join(canonicalParent, path.basename(destination));
+    await assertDoesNotOverwriteSource(canonicalDestination, sourceZipPath, sourceZipStats, entry.fileName);
 
-    const permissions = mode & 0o777;
+    const readStream = await zipFile.openReadStreamPromise(entry);
+    await pipeline(readStream, fs.createWriteStream(canonicalDestination));
+
     if (permissions !== 0) {
-        await fs.promises.chmod(destination, permissions);
+        await fs.promises.chmod(canonicalDestination, permissions);
     }
 }
 
 function getEntryDestination(entryName: string, destinationRoot: string): string {
     const destination = path.resolve(destinationRoot, entryName.replace(/\\/g, '/'));
-    if (destination !== destinationRoot && !destination.startsWith(`${destinationRoot}${path.sep}`)) {
-        throw new Error(`Cannot extract "${entryName}" outside of the destination directory.`);
-    }
+    assertWithinDestination(destination, destinationRoot, entryName);
 
     return destination;
+}
+
+function assertWithinDestination(destination: string, destinationRoot: string, entryName: string): void {
+    const relativePath = path.relative(destinationRoot, destination);
+    if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+        throw new Error(`Cannot extract "${entryName}" outside of the destination directory.`);
+    }
+}
+
+async function assertDoesNotOverwriteSource(destination: string, sourceZipPath: string, sourceZipStats: fs.Stats, entryName: string): Promise<void> {
+    try {
+        const destinationStats = await fs.promises.lstat(destination);
+        if (destinationStats.isSymbolicLink()) {
+            throw new Error(`Cannot extract file "${entryName}" through a symbolic link.`);
+        }
+
+        if (destinationStats.dev === sourceZipStats.dev && destinationStats.ino === sourceZipStats.ino) {
+            throw new Error(`Cannot overwrite source ZIP with entry "${entryName}".`);
+        }
+
+        const canonicalDestination = await fs.promises.realpath(destination);
+        if (canonicalDestination === sourceZipPath) {
+            throw new Error(`Cannot overwrite source ZIP with entry "${entryName}".`);
+        }
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            throw error;
+        }
+    }
 }
