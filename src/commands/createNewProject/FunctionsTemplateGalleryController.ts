@@ -5,7 +5,6 @@
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig, type TemplateGalleryWorkspaceOptionValues } from '@microsoft/vscode-azext-webview';
-import extract from 'extract-zip';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';

@@ -13,11 +13,6 @@ const configs = autoSelectEsbuildConfig();
 // RoleDefinitionsTreeItem and other tree items from vscode-azext-azureutils) can resolve icons at runtime.
 configs.extensionConfig = {
     ...configs.extensionConfig,
-    external: [
-        ...(configs.extensionConfig.external ?? []),
-        '@azure/functions-skills',
-        '@azure/functions-skills/*',
-    ],
     plugins: [
         ...(configs.extensionConfig.plugins ?? []),
         copy({

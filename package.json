@@ -1623,7 +1623,7 @@
         "@azure/arm-storage": "^18.1.0",
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
-        "@azure/functions-skills": "file:azure-functions-skills-0.0.6-preview.tgz",
+        "@azure/functions-skills": "0.0.6-preview",
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^5.0.2",
         "@microsoft/vscode-azext-azureappsettings": "^1.0.0",
