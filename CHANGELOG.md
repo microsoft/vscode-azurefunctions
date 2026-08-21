@@ -1,5 +1,31 @@
 # Change Log
 
+## 1.22.1 - 2026-08-24
+
+### Added
+* [[5126](https://github.com/microsoft/vscode-azurefunctions/pull/5126)] Validate the code signature when installing or updating Azure Functions Core Tools
+
+### Changed
+* [[5108](https://github.com/microsoft/vscode-azurefunctions/pull/5108)] Use Durable Task Scheduler (DTS) as the default durable storage backend, and stop special-casing preview extension bundles
+
+### Fixed
+* [[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)] Fix "You are not signed in to an Azure account" when deploying — the App Service audience needed for Kudu/SCM is now consented to up front ([5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073), [5149](https://github.com/microsoft/vscode-azurefunctions/issues/5149))
+* [[5101](https://github.com/microsoft/vscode-azurefunctions/pull/5101)] Add an `isNativeWorker` flag so Go functions appear in the workspace Functions node
+* [[5110](https://github.com/microsoft/vscode-azurefunctions/pull/5110)] Default `AzureWebJobsStorage` to `UseDevelopmentStorage=true` in the classic project creation flow, matching the Template Gallery
+* [[5104](https://github.com/microsoft/vscode-azurefunctions/pull/5104)] Re-allow Python 3.14 deployments to Flex Consumption plans now that remote build is supported
+* [[5085](https://github.com/microsoft/vscode-azurefunctions/pull/5085)] Stop using utilities that are unavailable in Node.js 24
+
+### Engineering
+* [[5161](https://github.com/microsoft/vscode-azurefunctions/pull/5161)] Replace `extract-zip` with `yauzl` and add traversal/symlink protection to ZIP extraction
+* [[5122](https://github.com/microsoft/vscode-azurefunctions/pull/5122)] Add `entryPoint` and template telemetry to Template Gallery project creation
+* [[5125](https://github.com/microsoft/vscode-azurefunctions/pull/5125)] Link to the certificate troubleshooting guide for corporate proxies
+* [[5115](https://github.com/microsoft/vscode-azurefunctions/pull/5115)] Upgrade `@microsoft/vscode-azext-eng` to 1.1.0-alpha.1
+* [[5044](https://github.com/microsoft/vscode-azurefunctions/pull/5044)] Use shared templates and policy to fix CFS issues
+* [[5098](https://github.com/microsoft/vscode-azurefunctions/pull/5098), [5097](https://github.com/microsoft/vscode-azurefunctions/pull/5097)] Build pipeline cleanup — remove the redundant `npmFeed` parameter, add `feedBaseUrl` passthrough
+* [[5148](https://github.com/microsoft/vscode-azurefunctions/pull/5148), [5139](https://github.com/microsoft/vscode-azurefunctions/pull/5139)] Test and dependency hoisting fixes
+* [[5152](https://github.com/microsoft/vscode-azurefunctions/pull/5152), [5145](https://github.com/microsoft/vscode-azurefunctions/pull/5145)] Apply `npm audit fix` with 7-day package-age enforcement
+* Bump dependencies (`dompurify`, `js-yaml`, `fast-uri`, `undici`, `immutable`, `linkify-it`, `brace-expansion`, `markdown-it`, `form-data`, `picomatch`, `ws`, `lodash`, `fast-xml-parser`, `qs`, `simple-git`)
+
 ## 1.22.0 - 2026-06-02
 
 ### Overview
