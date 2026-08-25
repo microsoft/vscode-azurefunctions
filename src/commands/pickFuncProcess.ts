@@ -11,7 +11,7 @@ import { hostStartTaskName, jsonOutputFileFlag } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
-import { generateJsonOutputFilePath, getWorkerPidFromJsonOutput, injectJsonOutputFileArgIfNeeded, isDotnetIsolatedDebugTask, shouldInjectJsonOutputFile } from '../funcCoreTools/jsonOutputFile';
+import { deleteWorkerPidFile, generateJsonOutputFilePath, getJsonOutputFilePathFromTask, getWorkerPidFromJsonOutput, isDotnetIsolatedDebugTask, shouldInjectJsonOutputFile } from '../funcCoreTools/jsonOutputFile';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -133,8 +133,15 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 
     const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
     await waitForPrevFuncTaskToStop(result.workspace, buildPath);
-    const taskToExecute = injectJsonOutputFileArgIfNeeded(funcTask);
-    const taskInfo = await startFuncTask(context, result.workspace, buildPath, taskToExecute);
+
+    // Remove a PID file left behind by a previous session so a dead worker's PID can't be picked up.
+    await deleteWorkerPidFile(getJsonOutputFilePathFromTask(funcTask));
+
+    // Execute the task exactly as VS Code resolved it from tasks.json. Rebuilding it here to append
+    // args would silently drop its `dependsOn` chain, because `dependsOn` lives in tasks.json and has
+    // no equivalent on the `vscode.Task` API - that skipped the project's clean/build tasks.
+    // The args func needs are added during resolution instead, in FuncTaskProvider.
+    const taskInfo = await startFuncTask(context, result.workspace, buildPath, funcTask);
     return await pickChildProcess(taskInfo);
 }
 
@@ -190,9 +197,10 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);
             if (taskInfo) {
                 if (dotnetIsolatedDebugMode) {
-                    // Prefer the file written by func core tools via --json-output-file; if that flag
-                    // isn't present (e.g., the task was already running before we could inject it),
-                    // fall back to the worker PID parsed from the terminal stream by funcHostTask.
+                    // Prefer the file func core tools writes via --json-output-file. If that file never
+                    // appears - e.g. a hand-written task the func task provider never resolved, so the
+                    // flag was never added - fall back to the worker PID funcHostTask parses out of the
+                    // terminal stream.
                     const newPid = await getWorkerPidFromJsonOutput(taskInfo.workerPidFile)
                         ?? taskInfo.workerProcessId;
                     if (newPid) {

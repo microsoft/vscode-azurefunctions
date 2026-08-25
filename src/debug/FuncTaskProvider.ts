@@ -10,6 +10,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
 import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
+import { getWorkerPidFileArgs, getWorkerPidFilePath } from '../funcCoreTools/jsonOutputFile';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
@@ -119,6 +120,13 @@ export class FuncTaskProvider implements TaskProvider {
         if (/^\s*(host )?start/i.test(command)) {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
+
+            // Tell func where to write the .NET isolated worker PID, so the debugger can attach before
+            // the worker runs any user code. Added here, while VS Code is still resolving the task,
+            // rather than onto the resolved task: rebuilding a resolved task drops its `dependsOn`
+            // chain and silently skips the project's clean/build tasks.
+            const workerPidFile: string = getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${definitionArgs.join(' ')}`);
+            allArgs.push(...getWorkerPidFileArgs(allArgs, workerPidFile));
         }
 
         options = options || {};
@@ -141,7 +149,7 @@ export class FuncTaskProvider implements TaskProvider {
         if (language === ProjectLanguage.Python) {
             // Python requires chaining venv activation with the func command via shell operators (&&, ;),
             // so we must use the string-based ShellExecution form
-            let commandLine = `${funcCliPath} ${[...commandParts, ...definitionArgs].join(' ')}`;
+            let commandLine = `${funcCliPath} ${allArgs.join(' ')}`;
             commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
             execution = new ShellExecution(commandLine, options);
         } else {
