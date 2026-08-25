@@ -143,11 +143,19 @@ export async function deleteWorkerPidFile(workerPidFile: string | undefined): Pr
     }
 
     try {
-        if (await AzExtFsExtra.pathExists(workerPidFile)) {
-            await AzExtFsExtra.deleteResource(workerPidFile);
+        if (!await AzExtFsExtra.pathExists(workerPidFile)) {
+            return;
         }
+        await AzExtFsExtra.deleteResource(workerPidFile);
+        return;
     } catch {
-        // Best effort - a file we can't delete just means we wait for func to overwrite it.
+        // fall through and try to blank the file instead
+    }
+
+    try {
+        await AzExtFsExtra.writeFile(workerPidFile, '{}');
+    } catch {
+        // Best effort - func core tools overwrites the file once the worker starts.
     }
 }
 

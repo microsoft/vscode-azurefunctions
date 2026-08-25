@@ -95,7 +95,7 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-             
+
             const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
@@ -121,11 +121,7 @@ export class FuncTaskProvider implements TaskProvider {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
 
-            // Tell func where to write the .NET isolated worker PID, so the debugger can attach before
-            // the worker runs any user code. Added here, while VS Code is still resolving the task,
-            // rather than onto the resolved task: rebuilding a resolved task drops its `dependsOn`
-            // chain and silently skips the project's clean/build tasks.
-            const workerPidFile: string = getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${definitionArgs.join(' ')}`);
+            const workerPidFile: string = getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${JSON.stringify(definitionArgs)}`);
             allArgs.push(...getWorkerPidFileArgs(allArgs, workerPidFile));
         }
 
