@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import * as crypto from 'crypto';
+import { AzExtFsExtra, randomUtils } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -101,16 +100,19 @@ export function generateJsonOutputFilePath(): string {
  * the same path we delete before starting, and so temp files don't accumulate. `key` should identify
  * the func task, i.e. its workspace folder plus its configured command and args.
  */
-export function getWorkerPidFilePath(key: string): string {
-    const hash: string = crypto.createHash('sha256').update(key).digest('hex').slice(0, 16);
+export async function getWorkerPidFilePath(key: string): Promise<string> {
+    const hash: string = (await randomUtils.getPseudononymousStringHash(key)).slice(0, 16);
     return path.join(os.tmpdir(), `azfunc-worker-pid-${hash}.json`);
 }
 
 /**
  * The extra args that make func core tools write the .NET isolated worker PID to `workerPidFile`.
  *
- * Returns an empty array unless the task is a dotnet-isolated debug task that doesn't already name
- * an output file, so a `--json-output-file` the user configured themselves always wins.
+ * Only applies to a dotnet-isolated debug task that already opted into JSON output and doesn't
+ * already name an output file. `--enable-json-output` changes what func prints to the terminal, so
+ * a task that leaves it off is treated as a deliberate choice and is left alone - the picker falls
+ * back to the host status endpoint for those, exactly as it did before. A `--json-output-file` the
+ * user configured themselves always wins.
  *
  * These get added while the task is still being resolved (see `FuncTaskProvider.createTask`) rather
  * than rebuilt onto an already-resolved task. Rebuilding drops the task's `dependsOn` chain, because
@@ -118,19 +120,14 @@ export function getWorkerPidFilePath(key: string): string {
  * which silently skipped the clean/build tasks a .NET project depends on.
  */
 export function getWorkerPidFileArgs(existingArgs: readonly string[], workerPidFile: string): string[] {
-    if (!existingArgs.includes(dotnetIsolatedDebugFlag)) {
+    if (!existingArgs.includes(dotnetIsolatedDebugFlag) || !existingArgs.includes(enableJsonOutputFlag)) {
         return [];
     }
     if (existingArgs.some(a => a === jsonOutputFileFlag || a.startsWith(`${jsonOutputFileFlag}=`))) {
         return [];
     }
 
-    const args: string[] = [];
-    if (!existingArgs.includes(enableJsonOutputFlag)) {
-        args.push(enableJsonOutputFlag);
-    }
-    args.push(jsonOutputFileFlag, workerPidFile);
-    return args;
+    return [jsonOutputFileFlag, workerPidFile];
 }
 
 /**

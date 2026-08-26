@@ -121,7 +121,7 @@ export class FuncTaskProvider implements TaskProvider {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
 
-            const workerPidFile: string = getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${JSON.stringify(definitionArgs)}`);
+            const workerPidFile: string = await getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${JSON.stringify(definitionArgs)}`);
             allArgs.push(...getWorkerPidFileArgs(allArgs, workerPidFile));
         }
 
