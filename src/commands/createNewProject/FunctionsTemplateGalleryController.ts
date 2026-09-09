@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig, type TemplateGalleryWorkspaceOptionValues } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -22,6 +22,8 @@ import { projectOpenBehaviorSetting } from '../../constants';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+
+const installAzureFunctionsSkillsOptionId = 'installAzureFunctionsSkills';
 
 /**
  * Azure Functions implementation of the shared TemplateGalleryController.
@@ -78,6 +80,57 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             headerTitle: localize('templateGallery', 'Template Gallery'),
             headerSubtitle: localize('templateGallerySubtitle', 'Create a new Azure Functions project from a template'),
             supportsAiGeneration: true,
+            workspaceOptions: [
+                {
+                    id: installAzureFunctionsSkillsOptionId,
+                    label: localize('installAzureFunctionsSkills', 'Install Azure Functions Skills'),
+                    description: localize('installAzureFunctionsSkillsDescription', 'Recommended. Adds Azure Functions-specific skills to this workspace so Copilot Chat can scaffold, validate, diagnose, and deploy with best-practice guidance.'),
+                    defaultValue: true,
+                },
+            ],
+            aiGeneration: {
+                tabLabel: localize('buildWithCopilotChat', 'Build with Copilot Chat'),
+                introDescription: localize(
+                    'copilotChatIntroWithSkills',
+                    'Describe the serverless agent or Azure Functions app you want to build. Azure Functions Skills will be installed into your workspace and Copilot Chat will use them to scaffold, validate, and refine the project.',
+                ),
+                promptPlaceholder: localize(
+                    'copilotChatPromptPlaceholderWithSkills',
+                    'e.g., Build an Azure Functions app that receives events, processes them, and stores the result in Azure.',
+                ),
+                examplesLabel: localize('copilotChatExamplesWithSkills', 'Try an example:'),
+                examplePrompts: [
+                    {
+                        label: localize('serverlessAgentLabel', 'Serverless agent'),
+                        prompt: 'Create a serverless agent on Azure Functions that runs every morning, summarizes new Microsoft blog posts, stores session state, and exposes an HTTP endpoint for manual runs. If prerequisites have not been checked yet, run azure-functions-setup first. Then use the azure-functions-agents skill.',
+                    },
+                    {
+                        label: localize('httpApiCosmosDbLabel', 'HTTP API + Cosmos DB'),
+                        prompt: 'Create an Azure Functions HTTP API that receives JSON payloads, validates them, and stores the records in Azure Cosmos DB. If prerequisites have not been checked yet, run azure-functions-setup first. Then use azure-functions-create.',
+                    },
+                    {
+                        label: localize('serviceBusConsumerLabel', 'Service Bus consumer'),
+                        prompt: 'Create an Azure Functions Service Bus queue consumer that processes order messages, calls a downstream HTTP API to enrich each order, and writes the result to Blob Storage. If prerequisites have not been checked yet, run azure-functions-setup first. Then use azure-functions-create.',
+                    },
+                    {
+                        label: localize('timerCleanupLabel', 'Timer-driven cleanup'),
+                        prompt: 'Create an Azure Functions timer-triggered cleanup job that runs every night, scans a Cosmos DB container for documents older than 90 days, archives them to Blob Storage, and then deletes them. If prerequisites have not been checked yet, run azure-functions-setup first. Then use azure-functions-create.',
+                    },
+                ],
+                openChatButtonLabel: localize('openCopilotWithSkills', 'Open in Copilot Chat'),
+                chatConfirmationDescription: localize(
+                    'copilotChatConfirmationWithSkills',
+                    'Copilot Chat will open with a concise Azure Functions prompt. If Azure Functions Skills are selected, they are installed locally before the chat opens.',
+                ),
+                capabilitiesTitle: localize('copilotChatSkillsCapabilitiesTitle', 'What Azure Functions Skills add'),
+                capabilitiesAriaLabel: localize('copilotChatSkillsCapabilitiesAria', 'Azure Functions Skills capabilities'),
+                capabilities: [
+                    localize('copilotChatSkillCapabilityCreate', 'Guided Azure Functions and serverless-agent project creation'),
+                    localize('copilotChatSkillCapabilityBestPractices', 'Built-in runtime, trigger, identity, and deployment best practices'),
+                    localize('copilotChatSkillCapabilityValidation', 'Local validation and diagnostics guidance before deployment'),
+                    localize('copilotChatSkillCapabilityDeploy', 'Deployment handoff through Azure Skills when you are ready'),
+                ],
+            },
         };
 
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, initialLocation);
@@ -128,13 +181,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         return markdown ?? '';
     }
 
-    protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
+    protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, options: TemplateGalleryWorkspaceOptionValues, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.templateId = template.id;
             actionContext.telemetry.properties.templateName = template.displayName;
             actionContext.telemetry.properties.language = language;
             actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
+            actionContext.telemetry.properties.installAzureFunctionsSkills = String(shouldInstallAzureFunctionsSkills(options));
 
             const projectPath = location;
             const branch = template.branch || 'main';
@@ -213,6 +267,15 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     // git init is optional
                 }
 
+                if (shouldInstallAzureFunctionsSkills(options)) {
+                    this.sendProgress('Installing Azure Functions Skills...');
+                    const skillsInstall = await installAzureFunctionsSkillsLocally(projectPath);
+                    actionContext.telemetry.properties.skillsInstallResult = skillsInstall.result;
+                    actionContext.telemetry.properties.skillsInstallFilesWritten = String(skillsInstall.filesWritten ?? 0);
+                } else {
+                    actionContext.telemetry.properties.skillsInstallResult = 'skipped';
+                }
+
                 actionContext.telemetry.properties.result = 'Succeeded';
 
                 // Open the README in the editor before disposing the webview so the user
@@ -272,37 +335,17 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     // ── Optional overrides ──
 
-    protected override async continueInChat(prompt: string, language: string): Promise<void> {
+    protected override async continueInChat(prompt: string, language: string, location: string, options: TemplateGalleryWorkspaceOptionValues): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.continueInChat', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.language = language;
+            actionContext.telemetry.properties.skillsInstallTarget = location ? 'galleryLocation' : 'workspaceFallback';
+            actionContext.telemetry.properties.installAzureFunctionsSkills = String(shouldInstallAzureFunctionsSkills(options));
 
-            const chatQuery = [
-                `Please help me build an Azure Functions app.`,
-                '',
-                `**What I want to build:** ${prompt}`,
-                '',
-                `**Language:** ${language}`,
-                '',
-                `**Programming model & project structure:**`,
-                languageGrounding(language),
-                '',
-                `**General guidelines:**`,
-                `- Only use real trigger and binding types from the official Azure Functions SDK for ${language}`,
-                `- Include host.json with extensionBundle configured for any non-HTTP bindings`,
-                `- Include local.settings.json with the correct FUNCTIONS_WORKER_RUNTIME value`,
-                `- Add a README.md with local setup steps and how to run the app`,
-                `- Add brief inline comments explaining the key parts of the code`,
-                '',
-                `**Azure Functions best practices:**`,
-                `- Keep functions stateless — do not store shared state in global variables`,
-                `- Use output bindings instead of direct SDK/client calls where the binding supports it`,
-                `- Prefer async/await patterns to avoid blocking the function host`,
-                `- Use environment variables (application settings) for all secrets and connection strings, never hardcode them`,
-                `- Use Managed Identity over connection strings when connecting to Azure services`,
-                `- Keep each function focused on a single responsibility`,
-                `- Use Durable Functions for long-running workflows or fan-out/fan-in patterns`,
-                `- Handle errors gracefully and return meaningful HTTP status codes for HTTP triggers`,
-            ].join('\n');
+            const skillsInstall = shouldInstallAzureFunctionsSkills(options) ? await installAzureFunctionsSkillsLocally(location) : undefined;
+            actionContext.telemetry.properties.skillsInstallResult = skillsInstall?.result ?? 'skipped';
+            actionContext.telemetry.properties.skillsInstallFilesWritten = String(skillsInstall?.filesWritten ?? 0);
+
+            const chatQuery = buildCopilotChatQuery(prompt, language, skillsInstall);
 
             try {
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
@@ -468,6 +511,102 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
+}
+
+interface CopilotChatSkillsInstallResult {
+    result: 'succeeded' | 'failed' | 'skipped';
+    filesWritten?: number;
+    message?: string;
+}
+
+function shouldInstallAzureFunctionsSkills(options: TemplateGalleryWorkspaceOptionValues): boolean {
+    return options[installAzureFunctionsSkillsOptionId] !== false;
+}
+
+async function installAzureFunctionsSkillsLocally(location: string): Promise<CopilotChatSkillsInstallResult> {
+    const targetDir = resolveSkillsInstallTarget(location);
+    if (!targetDir) {
+        return {
+            result: 'skipped',
+            message: localize('skillsInstallNoWorkspace', 'No workspace folder is available for local Azure Functions Skills installation.'),
+        };
+    }
+
+    try {
+        const skills = await import('@azure/functions-skills/setup');
+        const result = await skills.installLocalSkills({
+            targetDir,
+            agents: ['ghcp'],
+            checkForUpdates: false,
+        });
+
+        return {
+            result: 'succeeded',
+            filesWritten: result.filesWritten,
+        };
+    } catch (error) {
+        const message = parseError(error).message;
+        ext.outputChannel.appendLog(localize('skillsInstallError', 'Failed to install Azure Functions Skills locally: {0}', message));
+        return { result: 'failed', message };
+    }
+}
+
+function buildCopilotChatQuery(
+    prompt: string,
+    language: string,
+    skillsInstall: CopilotChatSkillsInstallResult | undefined,
+): string {
+    if (isServerlessAgentPrompt(prompt)) {
+        return [
+            `Please help me build a serverless agent on Azure Functions.`,
+            '',
+            `**What I want to build:** ${prompt}`,
+        ].join('\n');
+    }
+
+    return [
+        `Please help me build an Azure Functions app.`,
+        '',
+        `**What I want to build:** ${prompt}`,
+        '',
+        `**Language:** ${language}`,
+        '',
+        skillsInstall ? azureFunctionsSkillsSection(skillsInstall) : undefined,
+        skillsInstall ? '' : undefined,
+        `**Project guidance:**`,
+        `- Keep the prompt-to-code flow concise: ask only for missing requirements, then scaffold working files.`,
+        `- Follow the selected language's current Azure Functions programming model.`,
+        '',
+        `**Language grounding:**`,
+        languageGrounding(language),
+    ].filter((line): line is string => line !== undefined).join('\n');
+}
+
+function azureFunctionsSkillsSection(skillsInstall: CopilotChatSkillsInstallResult): string {
+    const installLine = skillsInstall.result === 'succeeded'
+        ? `- Azure Functions Skills have been installed locally in this workspace for GitHub Copilot Chat.`
+        : `- Azure Functions Skills installation was requested for this workspace but did not complete successfully.`;
+
+    return [
+        `**Azure Functions Skills:**`,
+        installLine,
+        `- If prerequisites have not been checked yet, run azure-functions-setup first.`,
+        `- Follow the skill routing requested in the prompt: use azure-functions-agents for serverless-agent scenarios and azure-functions-create for standard Azure Functions app creation.`,
+        `- If Azure Skills are not available for deployment, keep generation local and explain the deployment prerequisite.`,
+        skillsInstall.message ? `- Install note: ${skillsInstall.message}` : undefined,
+    ].filter((line): line is string => line !== undefined).join('\n');
+}
+
+function isServerlessAgentPrompt(prompt: string): boolean {
+    return /\b(serverless agent|azure-functions-agents)\b/i.test(prompt);
+}
+
+function resolveSkillsInstallTarget(location: string): string | undefined {
+    if (location) {
+        return location;
+    }
+
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
 function languageGrounding(language: string): string {
