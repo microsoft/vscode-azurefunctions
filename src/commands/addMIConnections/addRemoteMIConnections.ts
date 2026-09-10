@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingTreeItem, type AppSettingsTreeItem } from "@microsoft/vscode-azext-azureappsettings";
-import { RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
+import { LocationListStep, RoleAssignmentExecuteStep, UserAssignedIdentityListStep } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizard, nonNullProp, type AzureWizardExecuteStep, type AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { type MessageItem } from "vscode";
 import { localize } from "../../localize";
@@ -15,6 +15,18 @@ import { type AddMIConnectionsContext } from "./AddMIConnectionsContext";
 import { ConnectionsListStep, type Connection } from "./ConnectionsListStep";
 import { RemoteSettingsAddStep } from "./RemoteSettingsAddStep";
 import { SettingsAddBaseStep } from "./SettingsAddBaseStep";
+
+export function getDefaultResourceGroupForIdentityCreation(context: AddMIConnectionsContext): { name: string; location: string } | undefined {
+    const site = context.functionapp?.site;
+    if (!site?.resourceGroup || !site?.location) {
+        return undefined;
+    }
+
+    return {
+        name: site.resourceGroup,
+        location: site.location,
+    };
+}
 
 export async function addRemoteMIConnections(context: AddMIConnectionsContext, node?: AppSettingTreeItem | AppSettingsTreeItem): Promise<void> {
     const connections: Connection[] = [];
@@ -55,6 +67,12 @@ export async function addRemoteMIConnectionsInternal(context: AddMIConnectionsCo
         wizardContext.credentials = nonNullProp(wizardContext, 'functionapp').subscription.credentials;
         wizardContext.environment = nonNullProp(wizardContext, 'functionapp').subscription.environment;
         wizardContext.subscriptionId = nonNullProp(wizardContext, 'functionapp').subscription.subscriptionId;
+    }
+
+    const defaultResourceGroup = getDefaultResourceGroupForIdentityCreation(wizardContext);
+    if (defaultResourceGroup) {
+        wizardContext.resourceGroup ??= defaultResourceGroup;
+        await LocationListStep.setAutoSelectLocation(wizardContext, defaultResourceGroup.location);
     }
 
     promptSteps.push(new ConnectionsListStep(), new UserAssignedIdentityListStep());
