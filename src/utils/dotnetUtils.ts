@@ -15,6 +15,7 @@ import { findFiles } from './workspace';
 
 export namespace dotnetUtils {
     export const isolatedSdkName: string = 'Microsoft.Azure.Functions.Worker.Sdk';
+    const isolatedSdkNames: string[] = [isolatedSdkName, 'Azure.Functions.Sdk'];
 
     export class ProjectFile {
         public name: string;
@@ -71,7 +72,8 @@ export namespace dotnetUtils {
 
     export async function getIsIsolated(projFile: ProjectFile): Promise<boolean> {
         try {
-            return (await projFile.getContents()).toLowerCase().includes(isolatedSdkName.toLowerCase());
+            const contents = (await projFile.getContents()).toLowerCase();
+            return isolatedSdkNames.some(sdkName => contents.includes(sdkName.toLowerCase()));
         } catch {
             return false;
         }
@@ -128,7 +130,7 @@ export namespace dotnetUtils {
     }
 
     export function getTemplateKeyFromFeedEntry(runtimeInfo: cliFeedUtils.IWorkerRuntime): string {
-        const isIsolated = runtimeInfo.sdk.name.toLowerCase() === isolatedSdkName.toLowerCase();
+        const isIsolated = isolatedSdkNames.some(sdkName => runtimeInfo.sdk.name.toLowerCase() === sdkName.toLowerCase());
         return getProjectTemplateKey(runtimeInfo.targetFramework, isIsolated);
     }
 
