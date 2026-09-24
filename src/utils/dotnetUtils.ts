@@ -73,7 +73,8 @@ export namespace dotnetUtils {
     export async function getIsIsolated(projFile: ProjectFile): Promise<boolean> {
         try {
             const contents = (await projFile.getContents()).toLowerCase();
-            return isolatedSdkNames.some(sdkName => contents.includes(sdkName.toLowerCase()));
+            return contents.includes(isolatedSdkName.toLowerCase()) ||
+                /<project\b[^>]*\bsdk\s*=\s*["']azure\.functions\.sdk(?:\/[^"']*)?["']/.test(contents);
         } catch {
             return false;
         }
