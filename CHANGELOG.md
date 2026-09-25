@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.22.2 - 2026-09-25
+
+### Fixed
+* [[5199](https://github.com/microsoft/vscode-azurefunctions/pull/5199)] Recognize projects and tooling feed entries that use `Azure.Functions.Sdk` as .NET isolated
+
+### Engineering
+* [[5170](https://github.com/microsoft/vscode-azurefunctions/pull/5170), [5179](https://github.com/microsoft/vscode-azurefunctions/pull/5179)] Bump `fast-uri` and `js-yaml` to address security advisories
+
 ## 1.22.1 - 2026-08-24
 
 ### Added
