@@ -181,6 +181,46 @@ export async function validateDotnetInstalled(context: IActionContext): Promise<
     await getFramework(context, undefined);
 }
 
+/**
+ * Determines the target framework moniker (e.g. "net8.0") from the output of
+ * `dotnet --version` and/or `dotnet --list-sdks`. Prioritizes GA (i.e. "1.0.0")
+ * versions over preview (i.e. "1.0.0-alpha") versions.
+ * Returns `undefined` if no supported version could be found.
+ */
+export function getFrameworkFromVersions(versions: string): string | undefined {
+    // Prioritize "LTS", then "Current", then "Preview"
+    const netVersions: string[] = ['6.0', '7.0', '8.0', '9.0', '10.0', '11.0'];
+    const semVersions: SemVer[] = netVersions.map(v => semVerCoerce(v) as SemVer);
+
+    let pickedVersion: SemVer | undefined;
+
+    // Try to get a GA version first (i.e. "1.0.0")
+    for (const semVersion of semVersions) {
+        const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.[0-9]+(\\s|$)`, 'm');
+        if (regExp.test(versions)) {
+            pickedVersion = semVersion;
+            break;
+        }
+    }
+
+    // Otherwise allow a preview version (i.e. "1.0.0-alpha")
+    if (!pickedVersion) {
+        for (const semVersion of semVersions) {
+            const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.`, 'm');
+            if (regExp.test(versions)) {
+                pickedVersion = semVersion;
+                break;
+            }
+        }
+    }
+
+    if (!pickedVersion) {
+        return undefined;
+    }
+
+    return `${pickedVersion.major < 4 ? 'netcoreapp' : 'net'}${pickedVersion.major}.${pickedVersion.minor}`;
+}
+
 let cachedFramework: string | undefined;
 async function getFramework(context: IActionContext, workingDirectory: string | undefined): Promise<string> {
     if (!cachedFramework) {
@@ -197,38 +237,12 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             // ignore
         }
 
-        // Prioritize "LTS", then "Current", then "Preview"
-        const netVersions: string[] = ['6.0', '7.0', '8.0', '9.0', '10.0'];
-        const semVersions: SemVer[] = netVersions.map(v => semVerCoerce(v) as SemVer);
-
-        let pickedVersion: SemVer | undefined;
-
-        // Try to get a GA version first (i.e. "1.0.0")
-        for (const semVersion of semVersions) {
-            const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.[0-9]+(\\s|$)`, 'm');
-            if (regExp.test(versions)) {
-                pickedVersion = semVersion;
-                break;
-            }
-        }
-
-        // Otherwise allow a preview version (i.e. "1.0.0-alpha")
-        if (!pickedVersion) {
-            for (const semVersion of semVersions) {
-                const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.`, 'm');
-                if (regExp.test(versions)) {
-                    pickedVersion = semVersion;
-                    break;
-                }
-            }
-        }
-
-
-        if (!pickedVersion) {
+        const framework = getFrameworkFromVersions(versions);
+        if (!framework) {
             context.errorHandling.suppressReportIssue = true;
             throw new Error(localize('noMatchingFramework', 'You must have the [.NET Core SDK](https://aka.ms/AA4ac70) installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
         } else {
-            cachedFramework = `${pickedVersion.major < 4 ? 'netcoreapp' : 'net'}${pickedVersion.major}.${pickedVersion.minor}`;
+            cachedFramework = framework;
         }
     }
 
