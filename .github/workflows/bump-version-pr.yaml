@@ -10,14 +10,14 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
 
       - name: Bump version
         id: bump
-        uses: alexweininger/bump-prerelease-version@v0.1.1
+        uses: alexweininger/bump-prerelease-version@91183ecfa908d49e9e7c1c62e9c781a49aa7c307 # v0.1.1
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54 # v4.2.4
         with:
           title: ${{ env.MESSAGE }}
           body: Automatically created by ${{ env.RUN_LINK }}
