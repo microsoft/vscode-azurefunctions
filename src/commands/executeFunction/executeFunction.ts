@@ -114,7 +114,7 @@ export async function executeFunctionWithInput(context: IActionContext, function
                     method: 'POST',
                     ...triggerRequest,
                     headers,
-                    body: JSON.stringify(body),
+                    body: triggerRequest.method === 'GET' || triggerRequest.method === 'HEAD' ? undefined : JSON.stringify(body),
                 })
             ).bodyAsText;
         } catch (error) {
@@ -125,7 +125,7 @@ export async function executeFunctionWithInput(context: IActionContext, function
                     localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'),
                     { cause: error }
                 );
-            } else if (errorType === '400') {
+            } else if (!func.isHttpTrigger && errorType === '400') {
                 const response = await fetch(triggerRequest.url, {
                     method: 'POST',
                     body: JSON.stringify({

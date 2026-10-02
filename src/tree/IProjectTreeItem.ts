@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type HttpMethods } from '@azure/core-rest-pipeline';
 import { type FuncVersion } from '../FuncVersion';
 import { type IParsedHostJson } from '../funcConfig/host';
 import { type ProjectSource } from './projectContextValues';
 
 export type ApplicationSettings = { [propertyName: string]: string };
 
-export type FuncHostRequest = { url: string, rejectUnauthorized?: boolean };
+export type FuncHostRequest = { url: string, rejectUnauthorized?: boolean, method?: HttpMethods };
 
 export interface IProjectTreeItem {
     source: ProjectSource;
