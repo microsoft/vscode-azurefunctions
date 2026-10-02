@@ -20,7 +20,7 @@ export namespace venvUtils {
     }
 
     export async function runPipInstallCommandIfPossible(projectPath: string, venvName?: string): Promise<void> {
-        venvName ??= getWorkspaceSetting(pythonVenvSetting) || '.venv';
+        venvName ??= getWorkspaceSetting(pythonVenvSetting, projectPath) || '.venv';
 
         const venvPath: string = path.join(projectPath, <string>venvName);
         if (!await AzExtFsExtra.pathExists(venvPath)) {

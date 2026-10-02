@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type HttpMethods } from '@azure/core-rest-pipeline';
 import { type IFunctionTemplate } from "../templates/IFunctionTemplate";
 import { isMcpTriggerType } from "../utils/mcpUtils";
 
@@ -74,7 +75,21 @@ export class ParsedFunctionJson {
         if (this.template?.triggerType) {
             return /^http/i.test(this.template.triggerType);
         }
+
         return !!this.triggerBinding && !!this.triggerBinding.type && /^http/i.test(this.triggerBinding.type);
+    }
+
+    public get httpMethod(): HttpMethods {
+        const supportedMethods: HttpMethods[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE'];
+        const methods = this.triggerBinding?.methods;
+        const declaredMethods = Array.isArray(methods)
+            ? methods.filter((method): method is string => typeof method === 'string').map(method => method.toUpperCase())
+            : [];
+        if (declaredMethods.includes('POST')) {
+            return 'POST';
+        }
+        return declaredMethods.map(method => supportedMethods.find(supported => supported === method))
+            .find((method): method is HttpMethods => method !== undefined) ?? 'POST';
     }
 
     public get isTimerTrigger(): boolean {

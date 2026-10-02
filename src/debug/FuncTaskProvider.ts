@@ -99,7 +99,8 @@ export class FuncTaskProvider implements TaskProvider {
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
                 const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                return this.createTask(context, command, folder, undefined, language, task.definition);
+                const projectRoot = await tryGetFunctionProjectRoot(context, folder);
+                return this.createTask(context, command, folder, projectRoot, language, task.definition);
             }
 
             return undefined;

@@ -43,7 +43,7 @@ export abstract class FunctionBase implements IFunction {
                 triggerUrl.searchParams.set('code', key);
             }
 
-            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized };
+            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized, method: this.config.httpMethod };
         }
     }
 

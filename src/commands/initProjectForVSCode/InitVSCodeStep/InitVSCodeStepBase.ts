@@ -80,7 +80,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
     }
 
     protected addSubDir(context: IProjectWizardContext, fsPath: string): string {
-        const subDir: string = path.relative(context.workspacePath, context.projectPath);
+        const subDir: string = path.relative(context.workspacePath, context.projectPath).split(path.sep).join(path.posix.sep);
         // always use posix for debug config
         return path.posix.join(subDir, fsPath);
     }
@@ -240,10 +240,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
 
         // Add "projectSubpath" setting if project is far enough down that we won't auto-detect it
-        if (path.posix.relative(context.projectPath, context.workspacePath).startsWith('../..')) {
+        if (path.relative(context.projectPath, context.workspacePath).split(path.sep).join(path.posix.sep).startsWith('../..')) {
             settings.push({
                 key: projectSubpathSetting,
-                value: path.posix.relative(context.workspacePath, context.projectPath)
+                value: path.relative(context.workspacePath, context.projectPath).split(path.sep).join(path.posix.sep)
             });
         }
 

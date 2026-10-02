@@ -37,6 +37,9 @@ export interface IProjectTemplate {
     /** Branch to clone from (default: main). */
     branch?: string;
 
+    /** Git ref or commit SHA to fetch. Takes precedence over the legacy branch. */
+    gitRef?: string;
+
     /**
      * Folder path within the repository to use as the project root.
      * When set, a git sparse-checkout is performed so only this folder is downloaded.
@@ -79,4 +82,3 @@ export enum TemplateCategory {
     Workflows = 'workflows',
     Other = 'other'
 }
-
