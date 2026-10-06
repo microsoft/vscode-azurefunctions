@@ -42,6 +42,7 @@ import { getWarningsForConnectionSettings } from './getWarningsForConnectionSett
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { showCoreToolsWarning } from './showCoreToolsWarning';
+import { validatePythonDeploymentRuntime } from './validatePythonDeploymentRuntime';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -156,6 +157,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         client.getSiteConfig(),
         client.getIsConsumption(actionContext),
     ]);
+    validatePythonDeploymentRuntime(language, siteConfig, site.rawSite);
     let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
     if (!isZipDeploy && site.isLinux && isConsumption) {
         ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: site.fullName });
