@@ -43,7 +43,7 @@ import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreT
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
-import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
+import { DockerCliContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
@@ -55,7 +55,7 @@ import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
 
-const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
+const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new DockerCliContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;

@@ -24,7 +24,7 @@ export interface ContainerClient {
     stopContainer(id: string): Promise<void>;
 }
 
-export class ShellContainerClient implements ContainerClient {
+export class DockerCliContainerClient implements ContainerClient {
     private readonly dockerClient = new CodeContainerClient.DockerClient();
     private readonly factory = new CodeContainerClient.ShellStreamCommandRunnerFactory({ shellProvider: new NoShell() });
 

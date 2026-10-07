@@ -9,9 +9,9 @@ import * as assert from 'assert';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { ShellContainerClient } from '../src/tree/durableTaskScheduler/ContainerClient';
+import { DockerCliContainerClient } from '../src/tree/durableTaskScheduler/ContainerClient';
 
-suite('ShellContainerClient', () => {
+suite('DockerCliContainerClient', () => {
     test('preserves quoted arguments without a shell', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc container client '));
         const originalListContainers = DockerClient.prototype.listContainers;
@@ -28,7 +28,7 @@ suite('ShellContainerClient', () => {
                 }
             });
 
-            assert.deepStrictEqual(await new ShellContainerClient().getContainers(), []);
+            assert.deepStrictEqual(await new DockerCliContainerClient().getContainers(), []);
         } finally {
             DockerClient.prototype.listContainers = originalListContainers;
             await fs.rm(directory, { recursive: true, force: true });
