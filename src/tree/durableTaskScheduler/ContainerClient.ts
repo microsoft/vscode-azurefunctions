@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as CodeContainerClient from '@microsoft/vscode-container-client';
+import { NoShell } from '@microsoft/vscode-processutils';
 import { localize } from '../../localize';
 
 export interface DockerContainer {
@@ -25,7 +26,7 @@ export interface ContainerClient {
 
 export class ShellContainerClient implements ContainerClient {
     private readonly dockerClient = new CodeContainerClient.DockerClient();
-    private readonly factory = new CodeContainerClient.ShellStreamCommandRunnerFactory({});
+    private readonly factory = new CodeContainerClient.ShellStreamCommandRunnerFactory({ shellProvider: new NoShell() });
 
     async getContainers(): Promise<DockerContainer[]> {
         return await this.withErrorHandling(
