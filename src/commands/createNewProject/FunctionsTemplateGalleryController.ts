@@ -60,13 +60,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     public static createOrShow(context: vscode.ExtensionContext, options: TemplateGalleryLaunchOptions = {}): FunctionsTemplateGalleryController {
         const existing = FunctionsTemplateGalleryController.currentController;
         if (existing) {
-            // If the caller supplied a fresh initialLocation (typically from the classic
-            // wizard's folder picker) and it differs from what the existing panel was
-            // created with, the old defaultLocation is stale. Dispose so we recreate
-            // with the new location instead of silently ignoring it.
+            // Recreate when launch options need to be reapplied. Explicit filters must
+            // always be reapplied because the user may have changed them in the open panel.
             const hasNewLocation = options.initialLocation !== undefined &&
                 (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, options.initialLocation));
-            const hasNewFilters = !areInitialFiltersEqual(existing.initialFilters, options.initialFilters);
+            const hasNewFilters = options.initialFilters !== undefined ||
+                !areInitialFiltersEqual(existing.initialFilters, options.initialFilters);
             if (hasNewLocation || hasNewFilters) {
                 existing.panel.dispose();
             } else {
