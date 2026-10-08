@@ -22,7 +22,7 @@ export interface VerifiedInit {
 }
 
 /**
- * Simpler function than `verifyVSCodeConfigOnActivate` to be used right before an operation that requires the project to be initialized for VS Code
+ * Ensures a project is initialized before an operation that requires its VS Code configuration.
  */
 export async function verifyInitForVSCode(context: IActionContext, fsPath: string, language?: string, languageModel?: number, version?: string): Promise<VerifiedInit> {
     language = language || getWorkspaceSetting(projectLanguageSetting, fsPath);
