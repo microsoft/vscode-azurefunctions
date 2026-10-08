@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
@@ -43,7 +43,7 @@ import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreT
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
-import { ShellContainerClient } from './tree/durableTaskScheduler/ContainerClient';
+import { DockerCliContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { DockerDurableTaskSchedulerEmulatorClient } from './tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
@@ -55,7 +55,7 @@ import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
 
-const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new ShellContainerClient());
+const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new DockerCliContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     ext.context = context;
@@ -131,7 +131,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerContentProvider();
 
-        ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi();
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore

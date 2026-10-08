@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext, type IAzExtOutputChannel, type IExperimentationServiceAdapter } from '@microsoft/vscode-azext-utils';
+import { type IActionContext, type IAzExtOutputChannel } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import { type DiagnosticCollection, type ExtensionContext } from 'vscode';
@@ -55,7 +55,6 @@ export namespace ext {
     export let defaultFuncCliPath: string = func;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureFunctions';
-    export let experimentationService: IExperimentationServiceAdapter;
     export const templateProvider = new ActionVariable<CentralTemplateProvider>('_centralTemplateProvider');
     export let rgApi: AzureHostExtensionApi;
     export let rgApiV2: AzureResourcesExtensionApi;
