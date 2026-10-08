@@ -31,7 +31,7 @@ import { MCPDownloadSnippetsPromptStep } from './mcpServerSteps/MCPDownloadSnipp
 import { MCPOpenFileStep } from './mcpServerSteps/MCPOpenFileStep';
 import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
-import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
+import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from './FunctionsTemplateGalleryController';
 
 // Sentinel value used to detect when the user picks "Browse Template Gallery…"
 const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
@@ -41,11 +41,18 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
     private readonly _templateId?: string;
     private readonly _functionSettings?: { [key: string]: string | undefined };
+    private readonly _showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void;
 
-    public constructor(templateId: string | undefined, functionSettings: { [key: string]: string | undefined } | undefined) {
+    public constructor(
+        templateId: string | undefined,
+        functionSettings: { [key: string]: string | undefined } | undefined,
+        showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void = options => {
+            FunctionsTemplateGalleryController.createOrShow(ext.context, options);
+        }) {
         super();
         this._templateId = templateId;
         this._functionSettings = functionSettings;
+        this._showTemplateGallery = showTemplateGallery;
     }
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
@@ -88,8 +95,17 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
 
         if (result.language === templateGalleryLanguage) {
-            FunctionsTemplateGalleryController.createOrShow(ext.context, context.projectPath);
+            this._showTemplateGallery({ initialLocation: context.projectPath });
             context.telemetry.properties.flow = 'templateGalleryFromWizard';
+            throw new UserCancelledError('templateGallery');
+        }
+
+        if (result.language === ProjectLanguage.Go && !context.containerizedProject && !this._templateId) {
+            this._showTemplateGallery({
+                initialLocation: context.projectPath,
+                initialFilters: { language: 'go' },
+            });
+            context.telemetry.properties.flow = 'templateGalleryFromGo';
             throw new UserCancelledError('templateGallery');
         }
 
