@@ -1628,7 +1628,7 @@
         "@microsoft/vscode-azext-azureappsettings": "^2.0.0",
         "@microsoft/vscode-azext-azureutils": "^5.0.0",
         "@microsoft/vscode-azext-utils": "^5.0.0",
-        "@microsoft/vscode-azext-webview": "^2.0.0",
+        "@microsoft/vscode-azext-webview": "^2.0.1",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
         "@microsoft/vscode-container-client": "^1.1.0",
         "@microsoft/vscode-processutils": "^1.0.0",

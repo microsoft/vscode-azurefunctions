@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, registerWebviewExtensionVariables, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -23,6 +23,11 @@ import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardC
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 
+export interface TemplateGalleryLaunchOptions {
+    initialLocation?: string;
+    initialFilters?: InitialTemplateFilters;
+}
+
 /**
  * Azure Functions implementation of the shared TemplateGalleryController.
  * The shared package owns the UI, message routing, and panel lifecycle.
@@ -36,11 +41,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
     private readonly initialLocation: string | undefined;
+    private readonly initialFilters: InitialTemplateFilters | undefined;
 
-    private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, initialLocation?: string) {
+    private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, options: TemplateGalleryLaunchOptions) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
-        this.initialLocation = initialLocation;
+        this.initialLocation = options.initialLocation;
+        this.initialFilters = options.initialFilters;
 
         this.registerDisposable(
             this.onDisposed(() => {
@@ -50,15 +57,18 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         );
     }
 
-    public static createOrShow(context: vscode.ExtensionContext, initialLocation?: string): FunctionsTemplateGalleryController {
+    public static createOrShow(context: vscode.ExtensionContext, options: TemplateGalleryLaunchOptions = {}): FunctionsTemplateGalleryController {
         const existing = FunctionsTemplateGalleryController.currentController;
         if (existing) {
             // If the caller supplied a fresh initialLocation (typically from the classic
             // wizard's folder picker) and it differs from what the existing panel was
             // created with, the old defaultLocation is stale. Dispose so we recreate
             // with the new location instead of silently ignoring it.
-            if (initialLocation !== undefined && (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, initialLocation))) {
-                existing.dispose();
+            const hasNewLocation = options.initialLocation !== undefined &&
+                (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, options.initialLocation));
+            const hasNewFilters = !areInitialFiltersEqual(existing.initialFilters, options.initialFilters);
+            if (hasNewLocation || hasNewFilters) {
+                existing.panel.dispose();
             } else {
                 existing.revealToForeground();
                 return existing;
@@ -78,9 +88,10 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             headerTitle: localize('templateGallery', 'Template Gallery'),
             headerSubtitle: localize('templateGallerySubtitle', 'Create a new Azure Functions project from a template'),
             supportsAiGeneration: true,
+            initialFilters: options.initialFilters,
         };
 
-        FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, initialLocation);
+        FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, options);
         return FunctionsTemplateGalleryController.currentController;
     }
 
@@ -468,6 +479,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
+}
+
+function areInitialFiltersEqual(left: InitialTemplateFilters | undefined, right: InitialTemplateFilters | undefined): boolean {
+    return left?.language === right?.language &&
+        left?.useCase === right?.useCase &&
+        left?.resource === right?.resource &&
+        left?.search === right?.search;
 }
 
 function languageGrounding(language: string): string {
