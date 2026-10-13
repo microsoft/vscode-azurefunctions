@@ -13,10 +13,9 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 suite('NewProjectLanguageStep', () => {
     const browseTemplateGalleryLabel = 'Browse Template Gallery (Preview)...';
 
-    async function getPromptPicks(containerizedProject: boolean): Promise<IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]> {
+    async function getPromptPicks(): Promise<IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]> {
         let picksResult: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [];
         const context = {
-            containerizedProject,
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[], _options?: unknown) => {
@@ -36,14 +35,9 @@ suite('NewProjectLanguageStep', () => {
         return picksResult;
     }
 
-    test('shows template gallery quick pick for non-containerized projects', async () => {
-        const picks = await getPromptPicks(false);
-        assert.ok(picks.some(p => p.data.language === ('TemplateGallery' as ProjectLanguage)), browseTemplateGalleryLabel);
-    });
-
-    test('does not show template gallery quick pick for containerized projects', async () => {
-        const picks = await getPromptPicks(true);
-        assert.ok(!picks.some(p => p.data.language === ('TemplateGallery' as ProjectLanguage)), browseTemplateGalleryLabel);
+    test('does not show the generic template gallery quick pick', async () => {
+        const picks = await getPromptPicks();
+        assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)), browseTemplateGalleryLabel);
     });
 
     test('opens template gallery with Go selected', async () => {
