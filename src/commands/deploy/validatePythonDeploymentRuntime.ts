@@ -7,7 +7,7 @@ import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 
-export function validatePythonDeploymentRuntime(language: ProjectLanguage, siteConfig: SiteConfigResource, site: Site): void {
+export function validatePythonDeploymentRuntime(language: ProjectLanguage, siteConfig: SiteConfigResource, site: Pick<Site, 'functionAppConfig'>): void {
     if (language !== ProjectLanguage.Python) {
         return;
     }

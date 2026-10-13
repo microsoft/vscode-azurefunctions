@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Site } from '@azure/arm-appservice';
 import * as assert from 'assert';
 import { validatePythonDeploymentRuntime } from '../src/commands/deploy/validatePythonDeploymentRuntime';
 import { ProjectLanguage } from '../src/constants';
@@ -17,7 +16,7 @@ suite('validatePythonDeploymentRuntime', () => {
     });
 
     test('blocks Python 3.15 on Flex Consumption apps', () => {
-        const site: Site = { functionAppConfig: { runtime: { name: 'python', version: '3.15' } } };
+        const site = { functionAppConfig: { runtime: { name: 'python', version: '3.15' } } };
         assert.throws(
             () => validatePythonDeploymentRuntime(ProjectLanguage.Python, {}, site),
             /Python 3\.15.*not supported/i
