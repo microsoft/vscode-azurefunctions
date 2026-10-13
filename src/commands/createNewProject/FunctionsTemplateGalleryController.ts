@@ -480,11 +480,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
 }
 
-function areInitialFiltersEqual(left: InitialTemplateFilters | undefined, right: InitialTemplateFilters | undefined): boolean {
-    return left?.language === right?.language &&
-        left?.useCase === right?.useCase &&
-        left?.resource === right?.resource &&
-        left?.search === right?.search;
+function areInitialFiltersEqual(existing: InitialTemplateFilters | undefined, current: InitialTemplateFilters | undefined): boolean {
+    return existing?.language === current?.language &&
+        existing?.useCase === current?.useCase &&
+        existing?.resource === current?.resource &&
+        existing?.search === current?.search;
 }
 
 function languageGrounding(language: string): string {
