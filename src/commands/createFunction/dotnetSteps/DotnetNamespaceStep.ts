@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
-import XRegExp from 'xregexp';
 import { localize } from "../../../localize";
 import { type FunctionTemplateBase, type IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { TemplateSchemaVersion } from '../../../templates/TemplateProviderBase';
@@ -45,7 +44,8 @@ const letterCharacter: string = '\\p{Lu}|\\p{Ll}|\\p{Lt}|\\p{Lm}|\\p{Lo}|\\p{Nl}
 const identifierPartCharacter: string = `${letterCharacter}|${decimalDigitCharacter}|${connectingCharacter}|${combiningCharacter}|${formattingCharacter}`;
 const identifierStartCharacter: string = `(${letterCharacter}|_)`;
 const identifierOrKeyword: string = `${identifierStartCharacter}(${identifierPartCharacter})*`;
-const identifierRegex: RegExp = XRegExp(`^${identifierOrKeyword}$`);
+// The `u` flag enables the Unicode property escapes used by the C# identifier specification.
+const identifierRegex: RegExp = new RegExp(`^${identifierOrKeyword}$`, 'u');
 // Keywords: https://github.com/dotnet/csharplang/blob/master/spec/lexical-structure.md#keywords
 const keywords: string[] = ['abstract', 'as', 'base', 'bool', 'break', 'byte', 'case', 'catch', 'char', 'checked', 'class', 'const', 'continue', 'decimal', 'default', 'delegate', 'do', 'double', 'else', 'enum', 'event', 'explicit', 'extern', 'false', 'finally', 'fixed', 'float', 'for', 'foreach', 'goto', 'if', 'implicit', 'in', 'int', 'interface', 'internal', 'is', 'lock', 'long', 'namespace', 'new', 'null', 'object', 'operator', 'out', 'override', 'params', 'private', 'protected', 'public', 'readonly', 'ref', 'return', 'sbyte', 'sealed', 'short', 'sizeof', 'stackalloc', 'static', 'string', 'struct', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'uint', 'ulong', 'unchecked', 'unsafe', 'ushort', 'using', 'virtual', 'void', 'volatile', 'while'];
 

@@ -14,6 +14,9 @@ suite('validateCSharpNamespace', () => {
         assert.equal(validateCSharpNamespace('a'), undefined);
         assert.equal(validateCSharpNamespace('_a'), undefined);
         assert.equal(validateCSharpNamespace('a9'), undefined);
+        // XRegExp previously supplied the Unicode categories required by C# identifiers; native RegExp now supports them with the `u` flag.
+        assert.equal(validateCSharpNamespace('Éclair.Δelta.变量'), undefined);
+        assert.equal(validateCSharpNamespace('Cafe\u0301'), undefined);
     });
 
     test('Invalid - Extra period', () => {
