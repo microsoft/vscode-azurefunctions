@@ -1,5 +1,5 @@
 ---
-applyTo: "src/vscode-azurefunctions.api.d.ts,src/commands/api/**,src/testApi.ts,src/agent/**,test/api.test.ts,test/utils/**"
+applyTo: "src/extension.ts,src/vscode-azurefunctions.api.d.ts,src/commands/api/**,src/testApi.ts,src/agent/**,test/api.test.ts,test/utils/**"
 ---
 
 # API and agent integration instructions

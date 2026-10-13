@@ -1,5 +1,5 @@
 ---
-applyTo: "src/commands/createFunctionApp/**,src/commands/deploy/**,src/commands/appSettings/**,src/commands/addBinding/**,src/commands/addMIConnections/**,src/commands/identity/**,src/commands/executeFunction/**,src/commands/logstream/**,src/commands/remoteDebug/**,src/commands/remoteDebugJava/**,src/commands/durableTaskScheduler/**,src/tree/durableTaskScheduler/**,src/tree/containerizedFunctionApp/**,test/nightly/**"
+applyTo: "src/commands/createFunctionApp/**,src/commands/createFunction/durableSteps/**,src/commands/deploy/**,src/commands/appSettings/**,src/commands/addBinding/**,src/commands/addMIConnections/**,src/commands/identity/**,src/commands/executeFunction/**,src/commands/logstream/**,src/commands/remoteDebug/**,src/commands/remoteDebugJava/**,src/commands/durableTaskScheduler/**,src/funcConfig/local.settings.ts,src/tree/SubscriptionTreeItem.ts,src/tree/durableTaskScheduler/**,src/tree/containerizedFunctionApp/**,test/nightly/**"
 ---
 
 # Azure workflow instructions
