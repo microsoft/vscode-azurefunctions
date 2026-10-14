@@ -59,12 +59,15 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } },
             { label: localize('selfHostedMCPServer', 'Self-hosted MCP server'), data: { language: ProjectLanguage.SelfHostedMCPServer } }
         ];
+
+        if (this._templateId) {
+            languagePicks.splice(4, 0, { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } });
+        }
 
         if (getWorkspaceSetting(showBallerinaProjectCreationSetting)) {
             languagePicks.push({ label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } });
@@ -76,26 +79,24 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        if (!context.containerizedProject && !this._templateId && languagePicks.some(p => p.data.language === ProjectLanguage.Go)) {
+        if (!context.containerizedProject && !this._templateId && (!context.languageFilter || context.languageFilter.test(ProjectLanguage.Go))) {
             languagePicks.push({
-                label: `$(info) ${localize('templateGalleryGuidance', 'For connector triggers and Go, create from the Template Gallery.')}`,
+                label: `$(info) ${localize('templateGalleryGoGuidance', 'Create a Go project from the Template Gallery.')}`,
                 data: { language: ProjectLanguage.Go },
-                onPicked: () => { /* do nothing */ },
+                onPicked: () => {
+                    context.telemetry.properties.flow = 'templateGalleryFromGo';
+                    this._showTemplateGallery({
+                        initialLocation: context.projectPath,
+                        initialFilters: { language: 'go' },
+                    });
+                    throw new UserCancelledError('templateGallery');
+                },
                 suppressPersistence: true,
             });
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
-
-        if (result.language === ProjectLanguage.Go && !context.containerizedProject && !this._templateId) {
-            this._showTemplateGallery({
-                initialLocation: context.projectPath,
-                initialFilters: { language: 'go' },
-            });
-            context.telemetry.properties.flow = 'templateGalleryFromGo';
-            throw new UserCancelledError('templateGallery');
-        }
 
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
@@ -178,6 +179,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             isProjectWizard: true,
             templateId: this._templateId,
             functionSettings: this._functionSettings,
+            showTemplateGallery: this._showTemplateGallery,
         }));
 
         return wizardOptions;

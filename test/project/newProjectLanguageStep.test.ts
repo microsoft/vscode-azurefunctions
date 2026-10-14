@@ -12,7 +12,7 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 
 suite('NewProjectLanguageStep', () => {
     const browseTemplateGalleryLabel = 'Browse Template Gallery (Preview)...';
-    const templateGalleryGuidanceLabel = '$(info) For connector triggers and Go, create from the Template Gallery.';
+    const templateGalleryGuidanceLabel = '$(info) Create a Go project from the Template Gallery.';
 
     async function getPromptPicks(): Promise<IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]> {
         let picksResult: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [];
@@ -39,23 +39,24 @@ suite('NewProjectLanguageStep', () => {
     test('shows template gallery guidance below the classic language choices', async () => {
         const picks = await getPromptPicks();
         assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)), browseTemplateGalleryLabel);
+        assert.ok(!picks.some(p => p.data.language === ProjectLanguage.Go && !p.onPicked));
         assert.strictEqual(picks[picks.length - 1].label, templateGalleryGuidanceLabel);
         assert.strictEqual(typeof picks[picks.length - 1].onPicked, 'function');
     });
 
-    test('opens template gallery with Go selected', async () => {
+    test('opens template gallery from the Go guidance item', async () => {
         let launchOptions: TemplateGalleryLaunchOptions | undefined;
         const context = {
             projectPath: 'test-project',
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
-                    assert.ok(picks.some(p => p.label === templateGalleryGuidanceLabel));
-                    const goPick = picks.find(p => p.data.language === ProjectLanguage.Go);
-                    if (!goPick) {
-                        throw new Error('Expected Go project type in quick picks.');
+                    const guidancePick = picks.find(p => p.label === templateGalleryGuidanceLabel);
+                    if (!guidancePick?.onPicked) {
+                        throw new Error('Expected clickable Go gallery guidance in quick picks.');
                     }
-                    return goPick;
+                    await guidancePick.onPicked();
+                    throw new Error('Expected Go gallery guidance to cancel the classic wizard.');
                 }
             }
         } as unknown as IProjectWizardContext;
@@ -72,30 +73,27 @@ suite('NewProjectLanguageStep', () => {
         assert.strictEqual(context.telemetry.properties.flow, 'templateGalleryFromGo');
     });
 
-    test('keeps containerized Go projects in the classic flow', async () => {
-        let galleryOpened = false;
+    test('does not offer Go for containerized projects', async () => {
         const context = {
             containerizedProject: true,
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
                     assert.ok(!picks.some(p => p.label === templateGalleryGuidanceLabel));
-                    const goPick = picks.find(p => p.data.language === ProjectLanguage.Go);
-                    if (!goPick) {
-                        throw new Error('Expected Go project type in quick picks.');
+                    assert.ok(!picks.some(p => p.data.language === ProjectLanguage.Go));
+                    const javascriptPick = picks.find(p => p.data.language === ProjectLanguage.JavaScript);
+                    if (!javascriptPick) {
+                        throw new Error('Expected JavaScript project type in quick picks.');
                     }
-                    return goPick;
+                    return javascriptPick;
                 }
             }
         } as unknown as IProjectWizardContext;
 
-        const step = new NewProjectLanguageStep(undefined, undefined, () => {
-            galleryOpened = true;
-        });
+        const step = new NewProjectLanguageStep(undefined, undefined);
 
         await step.prompt(context);
-        assert.strictEqual(galleryOpened, false);
-        assert.strictEqual(context.language, ProjectLanguage.Go);
+        assert.strictEqual(context.language, ProjectLanguage.JavaScript);
     });
 
     test('keeps specific-template Go projects in the classic flow', async () => {
