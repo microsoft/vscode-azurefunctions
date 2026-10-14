@@ -90,7 +90,7 @@ suite('Connector Gallery', () => {
             const connectors = (await step['getPicks'](context)).filter(p => p.data === connectorGallery.id);
             assert.strictEqual(connectors.length, 1);
             assert.strictEqual(connectors[0].label, 'Connector Trigger');
-            assert.strictEqual(connectors[0].description, undefined);
+            assert.strictEqual(connectors[0].description, 'Browse catalog');
             assert.strictEqual(connectors[0].group, TemplateFilter.Verified);
             await context.ui.runWithInputs(['Connector Trigger'], async () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);

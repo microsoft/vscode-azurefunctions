@@ -1,5 +1,5 @@
 {
-  "$schema": "./schemas/manifest.schema.json",
+  "$schema": "https://cdn.functions.azure.com/public/templates-manifest/schemas/manifest.schema.json",
   "generatedAt": "2026-10-13T02:51:46Z",
   "version": "1.10.3",
   "totalTemplates": 76,

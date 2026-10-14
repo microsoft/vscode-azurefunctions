@@ -162,6 +162,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 sortTemplates(p.data, { id: connectorGallery.id, name: label }) > 0);
             picks.splice(index === -1 ? picks.length : index, 0, {
                 label,
+                description: localize('connectorTriggerDescription', 'Browse catalog'),
                 data: connectorGallery.id,
                 group: TemplateFilter.Verified
             });
