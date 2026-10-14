@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { type QuickPickOptions } from 'vscode';
+import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -80,19 +80,26 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         }
 
         if (!context.containerizedProject && !this._templateId && (!context.languageFilter || context.languageFilter.test(ProjectLanguage.Go))) {
-            languagePicks.push({
-                label: `${localize('goTemplateGallery', 'Go project creation is only supported in the Template Gallery')} $(link-external)`,
-                data: { language: ProjectLanguage.Go },
-                onPicked: () => {
-                    context.telemetry.properties.flow = 'templateGalleryFromGo';
-                    this._showTemplateGallery({
-                        initialLocation: context.projectPath,
-                        initialFilters: { language: 'go' },
-                    });
-                    throw new UserCancelledError('templateGallery');
+            languagePicks.push(
+                {
+                    label: '',
+                    data: { language: ProjectLanguage.Go },
+                    kind: QuickPickItemKind.Separator,
                 },
-                suppressPersistence: true,
-            });
+                {
+                    label: `${localize('goTemplateGallery', 'Go project creation is only supported in the Template Gallery')} $(link-external)`,
+                    data: { language: ProjectLanguage.Go },
+                    onPicked: () => {
+                        context.telemetry.properties.flow = 'templateGalleryFromGo';
+                        this._showTemplateGallery({
+                            initialLocation: context.projectPath,
+                            initialFilters: { language: 'go' },
+                        });
+                        throw new UserCancelledError('templateGallery');
+                    },
+                    suppressPersistence: true,
+                },
+            );
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };

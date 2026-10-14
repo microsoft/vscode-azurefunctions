@@ -5,6 +5,7 @@
 
 import { UserCancelledError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import { QuickPickItemKind } from 'vscode';
 import { ProjectLanguage } from '../../src/constants';
 import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { NewProjectLanguageStep } from '../../src/commands/createNewProject/NewProjectLanguageStep';
@@ -39,7 +40,8 @@ suite('NewProjectLanguageStep', () => {
     test('shows template gallery guidance below the classic language choices', async () => {
         const picks = await getPromptPicks();
         assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)), browseTemplateGalleryLabel);
-        assert.ok(!picks.some(p => p.data.language === ProjectLanguage.Go && !p.onPicked));
+        assert.ok(!picks.some(p => p.label === ProjectLanguage.Go));
+        assert.strictEqual(picks[picks.length - 2].kind, QuickPickItemKind.Separator);
         assert.strictEqual(picks[picks.length - 1].label, templateGalleryGuidanceLabel);
         assert.strictEqual(typeof picks[picks.length - 1].onPicked, 'function');
     });
