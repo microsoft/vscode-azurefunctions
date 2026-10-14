@@ -12,7 +12,7 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 
 suite('NewProjectLanguageStep', () => {
     const browseTemplateGalleryLabel = 'Browse Template Gallery (Preview)...';
-    const templateGalleryGuidanceLabel = '$(info) Create a Go project from the Template Gallery.';
+    const templateGalleryGuidanceLabel = '$(link-external) Go (Template Gallery)...';
 
     async function getPromptPicks(): Promise<IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]> {
         let picksResult: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [];
