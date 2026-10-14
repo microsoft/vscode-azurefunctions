@@ -5,7 +5,6 @@
 
 import { UserCancelledError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import { QuickPickItemKind } from 'vscode';
 import { ProjectLanguage } from '../../src/constants';
 import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { NewProjectLanguageStep } from '../../src/commands/createNewProject/NewProjectLanguageStep';
@@ -41,7 +40,7 @@ suite('NewProjectLanguageStep', () => {
         const picks = await getPromptPicks();
         assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)), browseTemplateGalleryLabel);
         assert.strictEqual(picks[picks.length - 1].label, templateGalleryGuidanceLabel);
-        assert.strictEqual(picks[picks.length - 1].kind, QuickPickItemKind.Separator);
+        assert.strictEqual(typeof picks[picks.length - 1].onPicked, 'function');
     });
 
     test('opens template gallery with Go selected', async () => {
