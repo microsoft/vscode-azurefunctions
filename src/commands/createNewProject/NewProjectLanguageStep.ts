@@ -81,7 +81,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         if (!context.containerizedProject && !this._templateId && (!context.languageFilter || context.languageFilter.test(ProjectLanguage.Go))) {
             languagePicks.push({
-                label: `$(link-external) ${localize('goTemplateGallery', 'Go (Template Gallery)...')}`,
+                label: `${localize('goTemplateGallery', 'Go project creation is only supported in the Template Gallery')} $(link-external)`,
                 data: { language: ProjectLanguage.Go },
                 onPicked: () => {
                     context.telemetry.properties.flow = 'templateGalleryFromGo';
