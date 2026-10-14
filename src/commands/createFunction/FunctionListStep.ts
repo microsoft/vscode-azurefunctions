@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, UserCancelledError, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
-import { JavaBuildTool, ProjectLanguage } from '../../constants';
+import { connectorGallery, JavaBuildTool, ProjectLanguage, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase, type IFunctionTemplate } from '../../templates/IFunctionTemplate';
@@ -15,6 +15,7 @@ import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from '../createNewProject/FunctionsTemplateGalleryController';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
@@ -26,12 +27,18 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
+    private readonly _showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void;
 
-    public constructor(options: IFunctionListStepOptions) {
+    public constructor(
+        options: IFunctionListStepOptions,
+        showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void = launchOptions => {
+            FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
+        }) {
         super();
         this._options = options;
         this._isProjectWizard = options.isProjectWizard;
         this._functionSettings = options.functionSettings || {};
+        this._showTemplateGallery = showTemplateGallery;
     }
 
     public async configureBeforePrompt(context: IFunctionWizardContext): Promise<void> {
@@ -106,6 +113,20 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else if (result === 'reloadTemplates') {
                 await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), context.languageModel, nonNullProp(context, 'version'));
                 context.telemetry.properties.reloaded = 'true';
+            } else if (result === connectorGallery.id) {
+                const language = nonNullProp(context, 'language');
+                this._showTemplateGallery({
+                    initialLocation: context.projectPath,
+                    initialFilters: {
+                        language: language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase(),
+                        useCase: connectorGallery.useCase,
+                        resource: connectorGallery.resource,
+                    },
+                });
+                context.telemetry.properties.flow = connectorGallery.telemetryFlow;
+                context.telemetry.properties.templateId = connectorGallery.id;
+                // Hand off before the classic wizard executes any project creation steps.
+                throw new UserCancelledError('templateGallery');
             } else {
                 context.functionTemplate = result;
             }
@@ -131,6 +152,21 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b))
             .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
+
+        if (this._isProjectWizard && !context.containerizedProject && !this._options.templateId &&
+            (isPythonV2Plus(language, languageModel) ||
+                language === ProjectLanguage.CSharp ||
+                isNodeV4Plus(context))) {
+            const label = localize('connectorTrigger', 'Connector Trigger');
+            const index = picks.findIndex(p => typeof p.data === 'object' &&
+                sortTemplates(p.data, { id: connectorGallery.id, name: label }) > 0);
+            picks.splice(index === -1 ? picks.length : index, 0, {
+                label,
+                description: localize('connectorTriggerDescription', 'Browse catalog'),
+                data: connectorGallery.id,
+                group: TemplateFilter.Verified
+            });
+        }
 
         if (templates.length === 0) {
             picks.push({
@@ -180,7 +216,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'skipForNow' | 'openAPI' | 'reloadTemplates';
+type TemplatePromptResult = 'skipForNow' | 'openAPI' | 'reloadTemplates' | typeof connectorGallery.id;
 
 // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup
@@ -202,7 +238,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
  * Sorts templates by priority, placing HttpTrigger and TimerTrigger templates first since they're the most popular,
  * and using the template name to help determine the relative order of the remaining templates.
  */
-function sortTemplates(a: FunctionTemplateBase, b: FunctionTemplateBase): number {
+function sortTemplates(a: Pick<FunctionTemplateBase, 'id' | 'name'>, b: Pick<FunctionTemplateBase, 'id' | 'name'>): number {
     function getPriority(id: string): number {
         if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger
             return 1;
