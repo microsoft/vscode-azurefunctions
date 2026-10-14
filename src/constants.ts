@@ -56,6 +56,13 @@ export enum TemplateFilter {
     Verified = 'Verified'
 }
 
+export const connectorGallery = {
+    id: 'connectorGallery',
+    useCase: 'connectors',
+    resource: 'connector',
+    telemetryFlow: 'templateGalleryFromConnector'
+} as const;
+
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const functionJsonFileName: string = 'function.json';
