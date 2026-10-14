@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { type QuickPickOptions } from 'vscode';
+import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -73,6 +73,15 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         if (context.languageFilter) {
             languagePicks = languagePicks.filter(p => {
                 return context.languageFilter?.test(p.data.language);
+            });
+        }
+
+        if (!context.containerizedProject && !this._templateId && languagePicks.some(p => p.data.language === ProjectLanguage.Go)) {
+            languagePicks.push({
+                label: `$(info) ${localize('templateGalleryGuidance', 'For connector triggers and Go, create from the Template Gallery.')}`,
+                data: { language: ProjectLanguage.Go },
+                kind: QuickPickItemKind.Separator,
+                suppressPersistence: true,
             });
         }
 

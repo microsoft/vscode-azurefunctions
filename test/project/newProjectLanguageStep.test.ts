@@ -5,6 +5,7 @@
 
 import { UserCancelledError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import { QuickPickItemKind } from 'vscode';
 import { ProjectLanguage } from '../../src/constants';
 import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { NewProjectLanguageStep } from '../../src/commands/createNewProject/NewProjectLanguageStep';
@@ -12,6 +13,7 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 
 suite('NewProjectLanguageStep', () => {
     const browseTemplateGalleryLabel = 'Browse Template Gallery (Preview)...';
+    const templateGalleryGuidanceLabel = '$(info) For connector triggers and Go, create from the Template Gallery.';
 
     async function getPromptPicks(): Promise<IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]> {
         let picksResult: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [];
@@ -35,9 +37,11 @@ suite('NewProjectLanguageStep', () => {
         return picksResult;
     }
 
-    test('does not show the generic template gallery quick pick', async () => {
+    test('shows template gallery guidance below the classic language choices', async () => {
         const picks = await getPromptPicks();
         assert.ok(!picks.some(p => p.label.includes(browseTemplateGalleryLabel)), browseTemplateGalleryLabel);
+        assert.strictEqual(picks[picks.length - 1].label, templateGalleryGuidanceLabel);
+        assert.strictEqual(picks[picks.length - 1].kind, QuickPickItemKind.Separator);
     });
 
     test('opens template gallery with Go selected', async () => {
@@ -47,6 +51,7 @@ suite('NewProjectLanguageStep', () => {
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
+                    assert.ok(picks.some(p => p.label === templateGalleryGuidanceLabel));
                     const goPick = picks.find(p => p.data.language === ProjectLanguage.Go);
                     if (!goPick) {
                         throw new Error('Expected Go project type in quick picks.');
@@ -75,6 +80,7 @@ suite('NewProjectLanguageStep', () => {
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
+                    assert.ok(!picks.some(p => p.label === templateGalleryGuidanceLabel));
                     const goPick = picks.find(p => p.data.language === ProjectLanguage.Go);
                     if (!goPick) {
                         throw new Error('Expected Go project type in quick picks.');
@@ -99,6 +105,7 @@ suite('NewProjectLanguageStep', () => {
             telemetry: { properties: {} },
             ui: {
                 showQuickPick: async (picks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[]) => {
+                    assert.ok(!picks.some(p => p.label === templateGalleryGuidanceLabel));
                     const goPick = picks.find(p => p.data.language === ProjectLanguage.Go);
                     if (!goPick) {
                         throw new Error('Expected Go project type in quick picks.');
