@@ -1573,9 +1573,8 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
-        "build": "npm run build:esbuild & npm run build:webview & npm run build:check",
+        "build": "npm run build:esbuild & npm run build:check",
         "build:esbuild": "node esbuild.mjs",
-        "build:webview": "node scripts/copyWebviewAssets.mjs",
         "build:check": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
         "check": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
         "compile": "node ./node_modules/@typescript/native/bin/tsc -watch",
