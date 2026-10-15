@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, UserCancelledError, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
 import { JavaBuildTool, ProjectLanguage } from '../../constants';
@@ -19,7 +19,6 @@ import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
 import { DurableStorageTypeListStep } from './durableSteps/DurableStorageTypePromptStep';
-import { type TemplateGalleryLaunchOptions } from '../createNewProject/FunctionsTemplateGalleryController';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -107,13 +106,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else if (result === 'reloadTemplates') {
                 await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), context.languageModel, nonNullProp(context, 'version'));
                 context.telemetry.properties.reloaded = 'true';
-            } else if (this._isProjectWizard && this._options.showTemplateGallery && isConnectorTriggerTemplateId(result.id)) {
-                context.telemetry.properties.flow = 'templateGalleryFromConnector';
-                this._options.showTemplateGallery({
-                    initialLocation: context.projectPath,
-                    initialFilters: { resource: 'connector' },
-                });
-                throw new UserCancelledError('templateGallery');
             } else {
                 context.functionTemplate = result;
             }
@@ -186,14 +178,9 @@ interface IFunctionListStepOptions {
     isProjectWizard: boolean;
     templateId: string | undefined;
     functionSettings: { [key: string]: string | undefined } | undefined;
-    showTemplateGallery?: (options: TemplateGalleryLaunchOptions) => void;
 }
 
 type TemplatePromptResult = 'skipForNow' | 'openAPI' | 'reloadTemplates';
-
-export function isConnectorTriggerTemplateId(templateId: string): boolean {
-    return /connector(?:-|_)?trigger/i.test(templateId);
-}
 
 // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup

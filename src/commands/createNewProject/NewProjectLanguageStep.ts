@@ -186,7 +186,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             isProjectWizard: true,
             templateId: this._templateId,
             functionSettings: this._functionSettings,
-            showTemplateGallery: this._showTemplateGallery,
         }));
 
         return wizardOptions;
