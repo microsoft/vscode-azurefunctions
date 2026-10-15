@@ -12,12 +12,13 @@
         "noUnusedLocals": true,
         "noImplicitThis": true,
         "noImplicitReturns": true,
+        "strict": false,
         "strictNullChecks": true,
         "skipLibCheck": true, // needed to ignore vscode-jsonrpc package
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
         "types": [
-            "mocha",
+            "@microsoft/vscode-azext-eng/mocha/test-globals",
             "node"
         ]
     },
