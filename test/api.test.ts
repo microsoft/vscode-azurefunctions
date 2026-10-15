@@ -9,7 +9,6 @@ import { extensions, type Extension } from "vscode";
 import { extensionId, ProjectLanguage } from '../src/constants';
 import { FuncVersion } from '../src/FuncVersion';
 import { nonNullValue } from '../src/utils/nonNull';
-// eslint-disable-next-line no-restricted-imports
 import type { TestApi } from '../src/testApi';
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
@@ -131,7 +130,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 languageFilter: /^C\#$/i,
                 functionSettings: { authLevel: 'anonymous' },
                 targetFramework: ['net7.0', 'net6.0']
-            })
+            });
         });
     });
 });

@@ -39,7 +39,7 @@ let testWorkspaceFolders: string[];
 let workspaceFolderIndex = 0;
 export function getTestWorkspaceFolder(): string {
     if (workspaceFolderIndex >= testWorkspaceFolders.length) {
-        throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".')
+        throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".');
     }
     const result = testWorkspaceFolders[workspaceFolderIndex];
     workspaceFolderIndex += 1;

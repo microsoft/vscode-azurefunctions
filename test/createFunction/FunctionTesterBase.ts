@@ -141,7 +141,7 @@ export abstract class FunctionTesterBase implements Disposable {
             const testApi = getCachedTestApi();
             await testApi.commands.createFunctionInternal(context, {
                 folderPath: testFolder,
-                language: <any>this.language,
+                language: this.language,
                 version: this.version
             });
         });

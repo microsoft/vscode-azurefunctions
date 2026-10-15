@@ -32,12 +32,12 @@ export type LanguageModelVersion = NodeModelVersion | PythonModelVersion;
 export const NodeModelInput = {
     [NodeModelVersion.v3]: /Model V3/,
     [NodeModelVersion.v4]: /Model V4/
-}
+};
 
 export const PythonModelInput = {
     [PythonModelVersion.v1]: /Model V1/,
     [PythonModelVersion.v2]: /Model V2/
-}
+};
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string, modelVersion: NodeModelVersion = NodeModelVersion.v3): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string | RegExp } = {
@@ -344,7 +344,7 @@ export function getCustomValidateOptions(version: FuncVersion = defaultTestFuncV
 }
 
 function getCommonExpectedPaths(projectPath: string, workspaceFolder?: string): string[] {
-    let projectRelativePaths = commonExpectedProjectPaths
+    let projectRelativePaths = commonExpectedProjectPaths;
     if (workspaceFolder) {
         const relativeProjectPath = path.relative(workspaceFolder, projectPath);
         projectRelativePaths = commonExpectedProjectPaths.map(p => path.join(relativeProjectPath, p));
@@ -397,7 +397,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     expectedPaths = expectedPaths.concat(options.expectedPaths);
     await Promise.all(expectedPaths.map(async p => {
         if (typeof p === 'object') {
-            const matches = await globby(p.globPattern, { cwd: rootPath })
+            const matches = await globby(p.globPattern, { cwd: rootPath });
             assert.equal(matches.length, p.numMatches, `Path "${p.globPattern}" does not have expected matches.`);
         } else {
             assert.ok(await AzExtFsExtra.pathExists(path.join(rootPath, p)), `Path "${p}" does not exist.`);

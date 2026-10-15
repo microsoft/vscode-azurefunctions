@@ -27,7 +27,7 @@ const versionsToTest: FuncVersion[] = Object.values(FuncVersion).filter(v => isC
 suite('validateFuncCoreToolsCodeSignature', function (this: Mocha.Suite): void {
     this.timeout(5 * 60 * 1000);
 
-    let coreToolsBinMap: Map<FuncVersion, string> = new Map();
+    let coreToolsBinMap = new Map<FuncVersion, string>();
     let coreToolsDirs: string[] = [];
 
     suiteSetup(async function (this: Mocha.Context): Promise<void> {

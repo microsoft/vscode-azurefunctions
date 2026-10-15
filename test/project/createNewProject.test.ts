@@ -73,7 +73,7 @@ for (const testCase of testCases) {
             title += ` ${testCase.description}`;
         }
         if (testCase.languageModelVersion) {
-            title += ` (Model v${testCase.languageModelVersion})`
+            title += ` (Model v${testCase.languageModelVersion})`;
         }
         title += ` (${source})`;
 
@@ -90,7 +90,7 @@ for (const testCase of testCases) {
                     await createAndValidateProject(context, testCase);
                 });
             }
-        })
+        });
     }
 }
 

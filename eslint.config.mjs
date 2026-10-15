@@ -8,14 +8,13 @@ import { defineConfig } from 'eslint/config';
 
 export default defineConfig([
     {
-        ignores: ['test/**', 'webpack.config.js', '.eslintrc.js', 'scripts/**'],
+        ignores: ['scripts/**'],
     },
     ...azExtEslintRecommended,
     {
         rules: {
             '@typescript-eslint/no-namespace': 'off',
             'no-useless-escape': 'off',
-            'no-unused-vars': 'off',
             '@typescript-eslint/no-empty-object-type': 'off',
             '@typescript-eslint/no-require-imports': 'off',
             'no-case-declarations': 'off',
@@ -38,10 +37,7 @@ export default defineConfig([
                 {
                     selector: 'objectLiteralProperty',
                     format: null,
-                    filter: {
-                        regex: '^(Content-Type|Cache-Control|x-functions-key|api-version)$',
-                        match: true
-                    }
+                    modifiers: ['requiresQuotes']
                 },
             ]
         }

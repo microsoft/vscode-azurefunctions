@@ -29,7 +29,7 @@ export async function downloadFuncCoreToolsVersions(versions: FuncVersion[]): Pr
     console.log(`[downloadFuncCoreToolsVersions] Fetched CLI feed in ${elapsed(feedStart)}`);
 
     const coreToolsDirs: string[] = [];
-    const coreToolsBinMap: Map<FuncVersion, string> = new Map();
+    const coreToolsBinMap = new Map<FuncVersion, string>();
 
     // 2. Download func zips concurrently
     console.log(`[downloadFuncCoreToolsVersions] Resolving download links for versions: ${versions.join(', ')}`);
