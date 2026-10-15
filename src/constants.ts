@@ -7,6 +7,7 @@ import { type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
+export const mcpServerId: string = 'vscode-azurefunctions.mcp';
 export const projectLanguageSetting: string = 'projectLanguage';
 export const projectLanguageModelSetting: string = 'projectLanguageModel';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate

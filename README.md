@@ -59,6 +59,16 @@ Saved invocations stay in memory for the current VS Code window. Nothing is cach
 
 Redirects are displayed without being followed, and request and response bodies are limited to 5 MB. Requests use the `azureFunctions.requestTimeout` setting.
 
+### Create invocations with AI
+
+The extension provides an in-process MCP server named **Azure Functions Extension Tools**. Enable its `create_http_invocation` and `run_http_invocation` tools in your chat client's tool picker, then ask the agent to create an Azure Invoke request. For example, "Create an Azure Invoke request named Create order that POSTs JSON to http://localhost:7071/api/orders."
+
+The tool accepts a name and URL, plus an optional method, headers, query parameters, and raw body. It adds the invocation to the session collection and opens the populated editor. It does not send the request or write a collection file. Review the fields before selecting **Send**, and use **Save Collection...** to keep the invocation after VS Code closes.
+
+The agent can call `run_http_invocation` with the returned invocation ID to send the saved request. Unsaved editor changes are not included. Running can change server-side data, so the tool requests approval for every call. It uses the editor's timeout, cancellation, body limits, and no-retry/no-redirect behavior. The editor shows the full response and supports cancelling an AI-started request.
+
+AI receives status and duration for every response. For `localhost`, IPv4 loopback addresses (`127.0.0.0/8`), and IPv6 loopback (`::1`), it also receives the full response body up to the existing 5 MB limit and selected non-sensitive headers. Other endpoints return no body or headers to AI. Local bodies may contain sensitive data; response headers such as authorization, cookies, and custom credential headers are not shared.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer

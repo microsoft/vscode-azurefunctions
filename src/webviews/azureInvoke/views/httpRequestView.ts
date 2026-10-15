@@ -67,6 +67,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             </form>
             <section class="response-section" aria-labelledby="response-heading">
                 <div class="response-heading"><h2 id="response-heading" data-label="response"></h2><output id="status" role="status"></output></div>
+                <p id="saved-invocation-hint" class="hint" data-label="savedInvocationHint" hidden></p>
                 <p id="response-placeholder" class="hint" data-label="responsePlaceholder"></p>
                 <p id="error" role="alert" hidden></p>
                 <pre id="response-body" tabindex="0" hidden></pre>
@@ -247,18 +248,22 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         getElement('#response-body').setAttribute('aria-busy', String(value));
     }
 
+    function startRequest(saved: boolean): void {
+        error.hidden = true;
+        responseBody.hidden = true;
+        responseHeaders.hidden = true;
+        getElement('#response-placeholder').hidden = true;
+        getElement('#saved-invocation-hint').hidden = !saved;
+        status.textContent = labels.sending;
+        status.classList.remove('http-error');
+        setSending(true);
+    }
     getElement<HTMLFormElement>('#request-form').addEventListener('submit', event => {
         event.preventDefault();
         if (sending) {
             return;
         }
-        error.hidden = true;
-        responseBody.hidden = true;
-        responseHeaders.hidden = true;
-        getElement('#response-placeholder').hidden = true;
-        status.textContent = labels.sending;
-        status.classList.remove('http-error');
-        setSending(true);
+        startRequest(false);
         api.postMessage({
             command: 'sendRequest',
             request: {
@@ -270,7 +275,9 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     abort.addEventListener('click', () => api.postMessage({ command: 'abortRequest' }));
     window.addEventListener('message', (event: MessageEvent<HttpResponseMessage>) => {
         const message = event.data;
-        if (message.command === 'response') {
+        if (message.command === 'requestStarted') {
+            startRequest(message.saved);
+        } else if (message.command === 'response') {
             setSending(false);
             status.textContent = `${message.response.status} \u00b7 ${message.response.duration} ms`;
             status.classList.toggle('http-error', message.response.status >= 400);
@@ -303,4 +310,5 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             updateSaveState();
         }
     });
+    api.postMessage({ command: 'ready' });
 }

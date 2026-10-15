@@ -50,14 +50,19 @@ export interface HttpResponse {
 }
 
 export type HttpRequestMessage =
+    | { command: 'ready' }
     | { command: 'sendRequest'; request: HttpRequest }
     | { command: 'saveRequest'; request: HttpRequest }
     | { command: 'renameRequest' }
     | { command: 'abortRequest' };
 
-export type HttpResponseMessage =
+export type HttpRequestStateMessage =
+    | { command: 'requestStarted'; saved: boolean }
     | { command: 'response'; response: HttpResponse }
-    | { command: 'requestError'; message: string }
+    | { command: 'requestError'; message: string };
+
+export type HttpResponseMessage =
+    | HttpRequestStateMessage
     | { command: 'requestSaved' }
     | { command: 'saveError'; message: string }
     | { command: 'renamed'; name: string };
@@ -94,4 +99,5 @@ export interface HttpRequestViewLabels {
     saving: string;
     saved: string;
     unsaved: string;
+    savedInvocationHint: string;
 }

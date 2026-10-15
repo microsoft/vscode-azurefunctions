@@ -5,33 +5,12 @@
 
 import { registerCommand, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../tree/azureInvoke/AzureInvokeTreeDataProvider';
-import { HttpRequestController } from '../../webviews/azureInvoke/extension/HttpRequestController';
-import { type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { type HttpRequestEditors } from '../../webviews/azureInvoke/extension/HttpRequestEditors';
 import { openCollectionFile, saveCollectionFile } from './collectionFiles';
 
-export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider): void {
-    const controllers = new Map<string, HttpRequestController>();
-    function closeEditors(): void {
-        for (const controller of controllers.values()) {
-            controller.panel.dispose();
-        }
-    }
-    ext.context.subscriptions.push(new vscode.Disposable(closeEditors));
-
-    function openEditor(invocation: HttpInvocation, saved: boolean): void {
-        const existing = controllers.get(invocation.id);
-        if (existing) {
-            existing.revealToForeground(vscode.ViewColumn.Active);
-            return;
-        }
-        const controller = new HttpRequestController(ext.context, invocation, saved, snapshot => provider.saveRequest(snapshot));
-        controllers.set(invocation.id, controller);
-        controller.onDisposed(() => controllers.delete(invocation.id));
-    }
-
+export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors): void {
     registerCommand('azureFunctions.azureInvoke.add', async (context: IActionContext) => {
         const triggers = [
             { label: localize('azureInvoke.httpTrigger', 'HTTP trigger'), supported: true },
@@ -56,7 +35,7 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
             return;
         }
 
-        openEditor(provider.createRequest(), false);
+        editors.open(provider.createRequest(), false);
     });
 
     registerCommand('azureFunctions.azureInvoke.open', (context: IActionContext, request?: { id: string }) => {
@@ -65,25 +44,25 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         if (!invocation) {
             throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
         }
-        openEditor(invocation, true);
+        editors.open(invocation, true);
     });
 
-    registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: vscode.Uri) => {
+    registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
-        await saveCollectionFile(context, provider.getChildren(), target);
+        await saveCollectionFile(context, provider.getChildren(), target instanceof vscode.Uri ? target : undefined);
     });
 
-    registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: vscode.Uri) => {
+    registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
-        const invocations = await openCollectionFile(context, source);
-        if (provider.getChildren().length || controllers.size) {
+        const invocations = await openCollectionFile(context, source instanceof vscode.Uri ? source : undefined);
+        if (provider.getChildren().length || editors.size) {
             await context.ui.showWarningMessage(
                 localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
                 { modal: true, stepName: 'confirmOpenInvocationCollection' },
                 { title: localize('azureInvoke.openCollectionConfirm', 'Open Collection') },
             );
         }
-        closeEditors();
+        editors.closeAll();
         provider.replaceRequests(invocations);
     });
 }

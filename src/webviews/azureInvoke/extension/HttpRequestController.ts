@@ -10,12 +10,15 @@ import * as vscode from 'vscode';
 import { localize } from '../../../localize';
 import { validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
 import { requestUtils } from '../../../utils/requestUtils';
-import { isInvocationName, type HttpInvocation, type HttpRequestViewConfiguration, type HttpResponseMessage } from '../shared/httpRequest';
+import { isInvocationName, type HttpInvocation, type HttpRequestStateMessage, type HttpRequestViewConfiguration, type HttpResponse, type HttpResponseMessage } from '../shared/httpRequest';
 import { sendHttpRequest } from './sendHttpRequest';
 
 export class HttpRequestController extends WebviewController<HttpRequestViewConfiguration> {
     private activeRequest: AbortController | undefined;
     private name: string;
+    private webviewReady = false;
+    private requestStarted: HttpRequestStateMessage | undefined;
+    private requestResult: HttpRequestStateMessage | undefined;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -52,6 +55,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                 saving: localize('azureInvoke.saving', 'Saving...'),
                 saved: localize('azureInvoke.saved', 'Saved for this session'),
                 unsaved: localize('azureInvoke.unsaved', 'Unsaved changes'),
+                savedInvocationHint: localize('azureInvoke.savedInvocationHint', 'Using the saved invocation. Unsaved editor changes are not included.'),
             },
         }, vscode.ViewColumn.Active, vscode.Uri.joinPath(context.extensionUri, 'resources', 'azure-functions.svg'), {
             distDir: path.join(context.extensionPath, 'dist', 'azureInvoke'),
@@ -68,8 +72,21 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
             void callWithTelemetryAndErrorHandling(eventName, async (actionContext: IActionContext) => {
                 actionContext.telemetry.maskEntireErrorMessage = true;
                 actionContext.errorHandling.suppressDisplay = command !== 'renameRequest';
+                if (command === 'ready') {
+                    actionContext.telemetry.suppressAll = true;
+                    this.webviewReady = true;
+                    await Promise.all([this.requestStarted, this.requestResult]
+                        .filter(message => message !== undefined)
+                        .map(message => this.postMessage(message)));
+                    return;
+                }
                 if (command === 'abortRequest') {
                     this.activeRequest?.abort();
+                    return;
+                }
+                if (command === 'sendRequest') {
+                    const request = message && typeof message === 'object' && 'request' in message ? message.request : undefined;
+                    await this.sendRequest(actionContext, request);
                     return;
                 }
                 try {
@@ -78,37 +95,65 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                         return;
                     }
                     if (!message || typeof message !== 'object' || !('request' in message) ||
-                        (command !== 'sendRequest' && command !== 'saveRequest')) {
+                        command !== 'saveRequest') {
                         throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
                     }
-                    if (command === 'saveRequest') {
-                        const snapshot = { id: this.invocation.id, name: this.name, request: message.request };
-                        validateInvocation(snapshot);
-                        this.saveInvocation(snapshot);
-                        await this.postMessage({ command: 'requestSaved' });
-                        return;
-                    }
-                    if (this.activeRequest) {
-                        throw new Error(localize('azureInvoke.alreadySending', 'A request is already running.'));
-                    }
-                    const abort = new AbortController();
-                    this.activeRequest = abort;
-                    try {
-                        const response = await sendHttpRequest(actionContext, message.request, abort.signal, requestUtils.getRequestTimeoutMS());
-                        await this.postMessage({ command: 'response', response });
-                    } finally {
-                        this.activeRequest = undefined;
-                    }
+                    const snapshot = { id: this.invocation.id, name: this.name, request: message.request };
+                    validateInvocation(snapshot);
+                    this.saveInvocation(snapshot);
+                    await this.postMessage({ command: 'requestSaved' });
                 } catch (error) {
-                    const errorMessage = isUserCancelledError(error) ? localize('azureInvoke.cancelled', 'Request cancelled.') :
-                        error instanceof Error ? error.message : localize('azureInvoke.unexpectedError', 'The request failed.');
                     if (command !== 'renameRequest') {
-                        await this.postMessage({ command: command === 'saveRequest' ? 'saveError' : 'requestError', message: errorMessage });
+                        await this.postMessage({ command: command === 'saveRequest' ? 'saveError' : 'requestError', message: this.getErrorMessage(error) });
                     }
                     throw error;
                 }
             });
         }));
+    }
+
+    public async sendRequest(
+        context: IActionContext,
+        request: unknown,
+        options: { signal?: AbortSignal; saved?: boolean } = {},
+    ): Promise<HttpResponse> {
+        if (this.isDisposed) {
+            throw new Error(localize('azureInvoke.editorClosed', 'The invocation editor is closed. Reopen the invocation and try again.'));
+        }
+        if (this.activeRequest) {
+            throw new Error(localize('azureInvoke.alreadySending', 'A request is already running.'));
+        }
+        const abort = new AbortController();
+        this.activeRequest = abort;
+        const signal = options.signal ? AbortSignal.any([abort.signal, options.signal]) : abort.signal;
+        try {
+            await this.updateRequestState({ command: 'requestStarted', saved: options.saved ?? false });
+            const response = await sendHttpRequest(context, request, signal, requestUtils.getRequestTimeoutMS());
+            await this.updateRequestState({ command: 'response', response });
+            return response;
+        } catch (error) {
+            await this.updateRequestState({ command: 'requestError', message: this.getErrorMessage(error) });
+            throw error;
+        } finally {
+            this.activeRequest = undefined;
+        }
+    }
+
+    private getErrorMessage(error: unknown): string {
+        return isUserCancelledError(error) ? localize('azureInvoke.cancelled', 'Request cancelled.') :
+            error instanceof Error ? error.message : localize('azureInvoke.unexpectedError', 'The request failed.');
+    }
+
+    private async updateRequestState(message: HttpRequestStateMessage): Promise<void> {
+        if (message.command === 'requestStarted') {
+            this.requestStarted = message;
+            this.requestResult = undefined;
+        } else {
+            this.requestResult = message;
+        }
+        if (this.webviewReady) {
+            await this.postMessage(message);
+        }
     }
 
     private async rename(context: IActionContext): Promise<void> {
