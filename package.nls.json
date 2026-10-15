@@ -1,4 +1,10 @@
 {
+    "azureFunctions.azureInvoke.title": "Azure Invoke",
+    "azureFunctions.azureInvoke.add": "Add Invocation...",
+    "azureFunctions.azureInvoke.open": "Open HTTP Request",
+    "azureFunctions.azureInvoke.saveCollection": "Save Collection...",
+    "azureFunctions.azureInvoke.openCollection": "Open Collection...",
+    "azureFunctions.azureInvoke.welcome": "Ensure your API works by invoking a trigger or endpoint.\n[Add Invocation](command:azureFunctions.azureInvoke.add)\n[Open Collection](command:azureFunctions.azureInvoke.openCollection)\nSave invocations to keep them for this VS Code session. Save the collection to keep them after VS Code closes.",
     "azureFunctions.addBinding": "Add binding...",
     "azureFunctions.allowProgrammingModelSelection": "Allow the user to select a programming model when creating a new function project.",
     "azureFunctions.appSettings.add": "Add New Setting...",

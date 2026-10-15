@@ -43,6 +43,7 @@ import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreT
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
+import { AzureInvokeTreeDataProvider } from './tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { DockerCliContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -95,8 +96,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+        const azureInvokeProvider = new AzureInvokeTreeDataProvider();
+        context.subscriptions.push(
+            azureInvokeProvider,
+            vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
+        );
 
         registerCommands({
+            azureInvoke: azureInvokeProvider,
             dts: {
                 dataBranchProvider,
                 emulatorClient,

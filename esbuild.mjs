@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, isAutoWatch } from '@microsoft/vscode-azext-eng/esbuild';
+import { context } from 'esbuild';
 import { copy } from 'esbuild-plugin-copy';
 
 const configs = autoSelectEsbuildConfig();
@@ -27,3 +28,22 @@ configs.extensionConfig = {
 };
 
 await autoEsbuildOrWatch(configs);
+
+const webviewBuild = await context({
+    entryPoints: { views: 'src/webviews/azureInvoke/views/httpRequestView.ts' },
+    outdir: 'dist/azureInvoke',
+    bundle: true,
+    platform: 'browser',
+    format: 'esm',
+    target: 'es2022',
+    sourcemap: isAutoWatch,
+    minify: !isAutoWatch,
+});
+
+await webviewBuild.rebuild();
+if (isAutoWatch) {
+    process.on('SIGINT', () => void webviewBuild.dispose());
+    await webviewBuild.watch();
+} else {
+    await webviewBuild.dispose();
+}

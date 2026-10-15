@@ -1,0 +1,93 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+:root {
+    color-scheme: light dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+    margin: 0;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    font: var(--vscode-font-size) var(--vscode-font-family);
+}
+
+main { max-width: 1100px; margin: 0 auto; padding: 28px 32px; }
+header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.title-group { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.title-group h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtitle { flex-shrink: 0; }
+.save-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+#save-status { color: var(--vscode-descriptionForeground); font-size: 12px; }
+.icon-button { padding: 6px; width: 32px; flex-shrink: 0; }
+.icon-button svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; }
+h1 { font-size: 22px; font-weight: 500; margin: 0; }
+h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.subtitle, .hint { color: var(--vscode-descriptionForeground); }
+.hint { font-size: 12px; line-height: 1.6; margin: 10px 0 18px; }
+.request-bar { display: flex; gap: 8px; }
+.method-field { width: 110px; flex-shrink: 0; }
+.url-field { flex: 1; min-width: 0; }
+
+input, select, textarea, button {
+    font: inherit;
+    border-radius: 2px;
+    min-height: 32px;
+}
+
+input, select, textarea {
+    width: 100%;
+    color: var(--vscode-input-foreground);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    padding: 6px 8px;
+}
+
+input::placeholder { color: var(--vscode-input-placeholderForeground); }
+select { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
+textarea { resize: vertical; min-height: 150px; font-family: var(--vscode-editor-font-family); }
+
+button {
+    padding: 6px 16px;
+    border: 1px solid var(--vscode-button-border, transparent);
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+}
+
+button:hover { background: var(--vscode-button-hoverBackground); }
+button.secondary { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+button:disabled, textarea:disabled { opacity: 0.55; cursor: default; }
+input:focus, select:focus, textarea:focus, button:focus-visible, pre:focus-visible, summary:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.tabs { display: flex; border-bottom: 1px solid var(--vscode-panel-border); margin-bottom: 16px; }
+.tabs button { background: transparent; color: var(--vscode-descriptionForeground); border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 14px; }
+.tabs button[aria-selected="true"] { color: var(--vscode-foreground); border-bottom-color: var(--vscode-focusBorder); }
+[role="tabpanel"] { min-height: 190px; }
+.entry-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 32px; gap: 8px; margin-bottom: 8px; }
+.entry-row button { padding: 0; font-size: 18px; }
+.response-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vscode-panel-border); }
+.response-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+output { font-family: var(--vscode-editor-font-family); }
+#error, #save-error, .http-error { color: var(--vscode-errorForeground); }
+#error, #save-error { overflow-wrap: anywhere; }
+pre { margin: 12px 0; padding: 14px; background: var(--vscode-textCodeBlock-background); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 450px; overflow: auto; font-family: var(--vscode-editor-font-family); }
+summary { color: var(--vscode-descriptionForeground); cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+@media (max-width: 600px) {
+    main { padding: 20px 16px; }
+    .title-group { flex-basis: 100%; }
+    .request-bar { flex-wrap: wrap; }
+    .url-field { flex-basis: calc(100% - 118px); }
+    .tabs button { padding: 10px; }
+}

@@ -91,6 +91,14 @@
             }
         },
         "views": {
+            "azure": [
+                {
+                    "id": "azureFunctions.azureInvoke",
+                    "name": "%azureFunctions.azureInvoke.title%",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure-functions.svg"
+                }
+            ],
             "debug": [
                 {
                     "id": "azureFunctions.funcHostDebugView",
@@ -101,7 +109,36 @@
                 }
             ]
         },
+        "viewsWelcome": [
+            {
+                "view": "azureFunctions.azureInvoke",
+                "contents": "%azureFunctions.azureInvoke.welcome%"
+            }
+        ],
         "commands": [
+            {
+                "command": "azureFunctions.azureInvoke.add",
+                "title": "%azureFunctions.azureInvoke.add%",
+                "category": "Azure Functions",
+                "icon": "$(add)"
+            },
+            {
+                "command": "azureFunctions.azureInvoke.open",
+                "title": "%azureFunctions.azureInvoke.open%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.azureInvoke.saveCollection",
+                "title": "%azureFunctions.azureInvoke.saveCollection%",
+                "category": "Azure Functions",
+                "icon": "$(save-all)"
+            },
+            {
+                "command": "azureFunctions.azureInvoke.openCollection",
+                "title": "%azureFunctions.azureInvoke.openCollection%",
+                "category": "Azure Functions",
+                "icon": "$(folder-opened)"
+            },
             {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
@@ -541,6 +578,21 @@
             ],
             "view/title": [
                 {
+                    "command": "azureFunctions.azureInvoke.add",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.openCollection",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.saveCollection",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@3"
+                },
+                {
                     "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
@@ -966,6 +1018,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.azureInvoke.open",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.deployByFunctionAppId",
                     "when": "never"
@@ -1573,11 +1629,11 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
-        "build": "npm run build:esbuild & npm run build:webview & npm run build:check",
+        "build": "npm run build:esbuild && npm run build:webview && npm run check",
         "build:esbuild": "node esbuild.mjs",
         "build:webview": "node scripts/copyWebviewAssets.mjs",
         "build:check": "tsc --noEmit",
-        "check": "tsc --noEmit",
+        "check": "tsc --noEmit && tsc --noEmit -p src/webviews/azureInvoke/views",
         "compile": "tsc -watch",
         "version": "tsc --version",
         "cleanReadme": "node scripts/cleanReadme.mjs",

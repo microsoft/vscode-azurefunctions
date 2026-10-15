@@ -1,0 +1,306 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import { httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import './httpRequestView.css';
+
+declare global {
+    interface Window {
+        config: { _initialData: string };
+    }
+}
+
+function getElement<T extends HTMLElement>(selector: string): T {
+    const element = document.querySelector<T>(selector);
+    if (!element) {
+        throw new Error(`Missing HTTP request view element: ${selector}`);
+    }
+    return element;
+}
+
+export function render(_viewName: string, api: { postMessage(message: HttpRequestMessage): void }): void {
+    const configuration: HttpRequestViewConfiguration = JSON.parse(decodeURIComponent(window.config._initialData));
+    const labels = configuration.labels;
+    let invocationName = configuration.name;
+    getElement('#root').innerHTML = `
+        <main>
+            <header>
+                <div class="title-group">
+                    <h1 id="invocation-name"></h1>
+                    <button id="rename" type="button" class="secondary icon-button">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m10 2 4 4-8 8H2v-4ZM8 4l4 4"/></svg>
+                    </button>
+                    <span class="subtitle" data-label="subtitle"></span>
+                </div>
+                <div class="save-actions">
+                    <span id="save-status" role="status"></span>
+                    <button id="save" type="button" class="secondary" data-label="save"></button>
+                </div>
+            </header>
+            <p id="save-error" role="alert" hidden></p>
+            <form id="request-form">
+                <div class="request-bar">
+                    <label class="method-field"><span class="sr-only" data-label="method"></span><select id="method"></select></label>
+                    <label class="url-field"><span class="sr-only" data-label="url"></span><input id="url" type="url" placeholder="http://localhost:7071/api/HttpTrigger" required spellcheck="false"></label>
+                    <button id="send" type="submit" data-label="send"></button>
+                    <button id="abort" type="button" class="secondary" data-label="cancel" hidden></button>
+                </div>
+                <p class="hint" data-label="functionKeyHint"></p>
+                <div class="tabs" role="tablist" aria-label="">
+                    <button id="params-tab" type="button" role="tab" aria-controls="params-panel" aria-selected="true" data-label="params"></button>
+                    <button id="headers-tab" type="button" role="tab" aria-controls="headers-panel" aria-selected="false" tabindex="-1" data-label="headers"></button>
+                    <button id="body-tab" type="button" role="tab" aria-controls="body-panel" aria-selected="false" tabindex="-1" data-label="body"></button>
+                </div>
+                <section id="params-panel" role="tabpanel" aria-labelledby="params-tab">
+                    <div id="query-rows"></div><button id="add-query" type="button" class="secondary" data-label="add"></button>
+                </section>
+                <section id="headers-panel" role="tabpanel" aria-labelledby="headers-tab" hidden>
+                    <div id="header-rows"></div><button id="add-header" type="button" class="secondary" data-label="add"></button>
+                </section>
+                <section id="body-panel" role="tabpanel" aria-labelledby="body-tab" hidden>
+                    <label for="body" class="sr-only" data-label="requestBody"></label>
+                    <textarea id="body" rows="9" spellcheck="false"></textarea>
+                    <p id="body-hint" class="hint" data-label="getBodyHint"></p>
+                </section>
+            </form>
+            <section class="response-section" aria-labelledby="response-heading">
+                <div class="response-heading"><h2 id="response-heading" data-label="response"></h2><output id="status" role="status"></output></div>
+                <p id="response-placeholder" class="hint" data-label="responsePlaceholder"></p>
+                <p id="error" role="alert" hidden></p>
+                <pre id="response-body" tabindex="0" hidden></pre>
+                <details id="response-headers" hidden><summary data-label="headers"></summary><pre></pre></details>
+            </section>
+        </main>`;
+
+    for (const element of document.querySelectorAll<HTMLElement>('[data-label]')) {
+        element.textContent = labels[element.dataset.label as keyof HttpRequestViewLabels];
+    }
+    getElement('.tabs').setAttribute('aria-label', labels.requestOptions);
+    const heading = getElement('#invocation-name');
+    heading.textContent = invocationName;
+    heading.title = invocationName;
+    const rename = getElement<HTMLButtonElement>('#rename');
+    rename.title = labels.rename;
+    rename.setAttribute('aria-label', labels.rename);
+    rename.addEventListener('click', () => api.postMessage({ command: 'renameRequest' }));
+
+    const save = getElement<HTMLButtonElement>('#save');
+    const saveStatus = getElement('#save-status');
+    const saveError = getElement('#save-error');
+    let revision = 0;
+    let savedRevision = configuration.saved ? 0 : -1;
+    let savingRevision: number | undefined;
+    function updateSaveState(): void {
+        const saved = revision === savedRevision;
+        save.disabled = saved || savingRevision !== undefined;
+        save.textContent = savingRevision === undefined ? labels.save : labels.saving;
+        const text = saved ? labels.saved : labels.unsaved;
+        if (saveStatus.textContent !== text) {
+            saveStatus.textContent = text;
+        }
+    }
+    function markDirty(): void {
+        revision++;
+        updateSaveState();
+    }
+    updateSaveState();
+
+    const method = getElement<HTMLSelectElement>('#method');
+    for (const value of httpMethods) {
+        method.add(new Option(value, value));
+    }
+    method.value = configuration.request.method;
+    getElement<HTMLInputElement>('#url').value = configuration.request.url;
+
+    function addRow(container: HTMLElement, entry?: HttpRequestEntry): void {
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+        const name = document.createElement('input');
+        name.placeholder = labels.name;
+        name.setAttribute('aria-label', labels.name);
+        name.spellcheck = false;
+        name.value = entry?.name ?? '';
+        const value = document.createElement('input');
+        value.placeholder = labels.value;
+        value.setAttribute('aria-label', labels.value);
+        value.spellcheck = false;
+        value.value = entry?.value ?? '';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'secondary';
+        remove.textContent = '\u00d7';
+        remove.title = labels.remove;
+        remove.setAttribute('aria-label', labels.remove);
+        remove.addEventListener('click', () => {
+            row.remove();
+            markDirty();
+            getElement<HTMLButtonElement>(container.id === 'query-rows' ? '#add-query' : '#add-header').focus();
+        });
+        row.append(name, value, remove);
+        container.append(row);
+    }
+
+    const queryRows = getElement('#query-rows');
+    const headerRows = getElement('#header-rows');
+    for (const [container, selector, entries] of [
+        [queryRows, '#add-query', configuration.request.query],
+        [headerRows, '#add-header', configuration.request.headers],
+    ] as const) {
+        if (entries.length) {
+            entries.forEach(entry => addRow(container, entry));
+        } else {
+            addRow(container);
+        }
+        getElement(selector).addEventListener('click', () => {
+            addRow(container);
+            markDirty();
+            container.lastElementChild?.querySelector('input')?.focus();
+        });
+    }
+
+    function readEntries(container: HTMLElement): HttpRequestEntry[] {
+        return Array.from(container.children, row => {
+            const [name, value] = row.querySelectorAll('input');
+            return { name: name.value, value: value.value };
+        });
+    }
+
+    const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    function selectTab(tab: HTMLButtonElement): void {
+        for (const item of tabs) {
+            const selected = item === tab;
+            item.setAttribute('aria-selected', String(selected));
+            item.tabIndex = selected ? 0 : -1;
+            getElement(`#${item.getAttribute('aria-controls')}`).hidden = !selected;
+        }
+    }
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(tab));
+        tab.addEventListener('keydown', event => {
+            let target: HTMLButtonElement | undefined;
+            if (event.key === 'ArrowRight') {
+                target = tabs[(index + 1) % tabs.length];
+            } else if (event.key === 'ArrowLeft') {
+                target = tabs[(index + tabs.length - 1) % tabs.length];
+            } else if (event.key === 'Home') {
+                target = tabs[0];
+            } else if (event.key === 'End') {
+                target = tabs[tabs.length - 1];
+            }
+            if (target) {
+                event.preventDefault();
+                selectTab(target);
+                target.focus();
+            }
+        });
+    });
+
+    const body = getElement<HTMLTextAreaElement>('#body');
+    body.value = configuration.request.body;
+    function updateBodyState(): void {
+        body.disabled = method.value === 'GET' || method.value === 'HEAD';
+        getElement('#body-hint').hidden = !body.disabled;
+    }
+    method.addEventListener('change', updateBodyState);
+    updateBodyState();
+
+    function readRequest(): HttpRequest {
+        return {
+            method: httpMethods[method.selectedIndex],
+            url: getElement<HTMLInputElement>('#url').value,
+            query: readEntries(queryRows),
+            headers: readEntries(headerRows),
+            body: body.value,
+        };
+    }
+    getElement('#request-form').addEventListener('input', markDirty);
+    save.addEventListener('click', () => {
+        if (save.disabled) {
+            return;
+        }
+        savingRevision = revision;
+        saveError.hidden = true;
+        updateSaveState();
+        api.postMessage({ command: 'saveRequest', request: readRequest() });
+    });
+    window.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            save.click();
+        }
+    });
+
+    const send = getElement<HTMLButtonElement>('#send');
+    const abort = getElement<HTMLButtonElement>('#abort');
+    const status = getElement<HTMLOutputElement>('#status');
+    const error = getElement('#error');
+    const responseBody = getElement('#response-body');
+    const responseHeaders = getElement('#response-headers');
+    let sending = false;
+    function setSending(value: boolean): void {
+        sending = value;
+        send.disabled = value;
+        send.textContent = value ? labels.sending : labels.send;
+        abort.hidden = !value;
+        getElement('#response-body').setAttribute('aria-busy', String(value));
+    }
+
+    getElement<HTMLFormElement>('#request-form').addEventListener('submit', event => {
+        event.preventDefault();
+        if (sending) {
+            return;
+        }
+        error.hidden = true;
+        responseBody.hidden = true;
+        responseHeaders.hidden = true;
+        getElement('#response-placeholder').hidden = true;
+        status.textContent = labels.sending;
+        status.classList.remove('http-error');
+        setSending(true);
+        api.postMessage({
+            command: 'sendRequest',
+            request: {
+                ...readRequest(),
+                body: body.disabled ? '' : body.value,
+            },
+        });
+    });
+    abort.addEventListener('click', () => api.postMessage({ command: 'abortRequest' }));
+    window.addEventListener('message', (event: MessageEvent<HttpResponseMessage>) => {
+        const message = event.data;
+        if (message.command === 'response') {
+            setSending(false);
+            status.textContent = `${message.response.status} \u00b7 ${message.response.duration} ms`;
+            status.classList.toggle('http-error', message.response.status >= 400);
+            responseBody.textContent = message.response.body;
+            responseBody.hidden = false;
+            getElement('#response-headers pre').textContent = message.response.headers.map(entry => `${entry.name}: ${entry.value}`).join('\n');
+            responseHeaders.hidden = false;
+        } else if (message.command === 'requestError') {
+            setSending(false);
+            status.textContent = '';
+            error.textContent = message.message;
+            error.hidden = false;
+        } else if (message.command === 'renamed') {
+            if (invocationName !== message.name) {
+                invocationName = message.name;
+                heading.textContent = invocationName;
+                heading.title = invocationName;
+                markDirty();
+            }
+        } else if (message.command === 'requestSaved') {
+            if (savingRevision !== undefined) {
+                savedRevision = savingRevision;
+                savingRevision = undefined;
+                updateSaveState();
+            }
+        } else if (message.command === 'saveError') {
+            savingRevision = undefined;
+            saveError.textContent = message.message;
+            saveError.hidden = false;
+            updateSaveState();
+        }
+    });
+}

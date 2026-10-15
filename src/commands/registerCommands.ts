@@ -19,6 +19,7 @@ import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runW
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { type AzureInvokeTreeDataProvider } from '../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
@@ -32,6 +33,7 @@ import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSe
 import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { registerAzureInvokeCommands } from './azureInvoke/registerAzureInvokeCommands';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
@@ -87,12 +89,14 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(
     services: {
+        azureInvoke: AzureInvokeTreeDataProvider,
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
             emulatorClient: DurableTaskSchedulerEmulatorClient,
             schedulerClient: DurableTaskSchedulerClient
         }
     }): void {
+    registerAzureInvokeCommands(services.azureInvoke);
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);

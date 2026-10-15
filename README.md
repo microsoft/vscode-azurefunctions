@@ -47,6 +47,18 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
     ![debug3](resources/readme/debug3.png)
 
+## Azure Invoke
+
+Open **Azure Invoke** in the Azure sidebar and select **+** to choose a Functions trigger. Only **HTTP trigger** is supported for now.
+
+The HTTP editor has a method selector, URL, query parameters, headers, and request body. Select **Send** to make a real request and inspect the response status, duration, headers, and body. For protected functions, add an `x-functions-key` header. Requests run in the extension host and support local and deployed endpoints.
+
+Use the pencil beside the invocation name to rename it, then select **Save** to add or update its entry in the tree. Saved invocations can be closed and reopened with their request fields intact. Unsaved edits are discarded when a tab closes.
+
+Saved invocations stay in memory for the current VS Code window. Nothing is cached on disk automatically. Use **Save Collection...** in the view toolbar to export the saved invocations to a JSON file, and **Open Collection...** to load one later. Opening a collection replaces the current collection and closes its request tabs after confirmation. Collection files include all request data, including credentials, so export requires an explicit warning confirmation. Keep these files private and out of source control.
+
+Redirects are displayed without being followed, and request and response bodies are limited to 5 MB. Requests use the `azureFunctions.requestTimeout` setting.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer
