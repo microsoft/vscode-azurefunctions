@@ -3,27 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
-import { copy } from 'esbuild-plugin-copy';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin } from '@microsoft/vscode-azext-eng/esbuild';
+import { existsSync } from 'node:fs';
 
+// Prefer fresh sibling builds over the cached file: dependency during local development.
+const webviewDist = existsSync('../vscode-azuretools/webview/dist/views.js')
+    ? '../vscode-azuretools/webview/dist'
+    : './node_modules/@microsoft/vscode-azext-webview/dist';
+
+const webviewAssets = ['views.js', 'views.css'];
 const configs = autoSelectEsbuildConfig();
-
-// The default esbuild config only copies root-level SVGs from vscode-azext-azureutils/resources/*.svg.
-// We additionally copy the azureIcons subdirectory so that getAzureIconPath() (used by
-// RoleDefinitionsTreeItem and other tree items from vscode-azext-azureutils) can resolve icons at runtime.
-configs.extensionConfig = {
-    ...configs.extensionConfig,
-    plugins: [
-        ...(configs.extensionConfig.plugins ?? []),
-        copy({
-            assets: [
-                {
-                    from: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons/*.svg',
-                    to: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons',
-                },
-            ],
-        }),
-    ],
-};
+configs.extension.plugins.push(
+    {
+        name: 'validate-webview-assets',
+        setup(build) {
+            build.onStart(() => {
+                for (const file of webviewAssets) {
+                    const source = `${webviewDist}/${file}`;
+                    if (!existsSync(source)) {
+                        throw new Error(`Missing webview asset: ${source}`);
+                    }
+                }
+            });
+        },
+    },
+    copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
+);
 
 await autoEsbuildOrWatch(configs);
