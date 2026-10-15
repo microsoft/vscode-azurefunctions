@@ -87,7 +87,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                     kind: QuickPickItemKind.Separator,
                 },
                 {
-                    label: `${localize('goTemplateGallery', 'Go project creation is only supported in the Template Gallery')} $(link-external)`,
+                    label: `${localize('goTemplateGallery', 'Go (template gallery)')} $(link-external)`,
                     data: { language: ProjectLanguage.Go },
                     onPicked: () => {
                         context.telemetry.properties.flow = 'templateGalleryFromGo';
