@@ -43,7 +43,7 @@ const testCases: CreateProjectAndDeployTestCase[] = [
     // Temporarily disable PowerShell tests due to Encountered an error (InternalServerError) from host runtime error.
     // { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7.4/i, TestInput.UseDefaultValue /* instance mem size*/, TestInput.UseDefaultValue /*max instance*/, confirmDeploy] },
     { title: 'Python', skip: true, ...getPythonValidateOptions('.venv', undefined, PythonModelVersion.v2), createProjectInputs: [/py/], deployInputs: [getRotatingPythonVersion(), TestInput.UseDefaultValue /* auth type (Secrets) */], languageModelVersion: PythonModelVersion.v2 },
-]
+];
 
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
@@ -81,11 +81,11 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
         options.createFunctionInputs = options.createFunctionInputs || [];
         const inputs = [testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs];
         if (!isNewNodeProgrammingModel(options.language, options.languageModelVersion as NodeModelVersion)) {
-            inputs.push(new RegExp(getRotatingAuthLevel(), 'i'))
+            inputs.push(new RegExp(getRotatingAuthLevel(), 'i'));
         }
         await context.ui.runWithInputs(inputs, async () => {
             const createProjectOptions = options.version !== defaultTestFuncVersion ? { version: options.version } : {};
-            await testApi.commands.createNewProjectInternal(context, createProjectOptions)
+            await testApi.commands.createNewProjectInternal(context, createProjectOptions);
         });
     });
 
@@ -103,7 +103,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     await runWithTestActionContext('deploy', async context => {
         options.deployInputs = options.deployInputs || [];
         await context.ui.runWithInputs([testWorkspacePath, /create new function app/i, getRotatingLocation(), appName, ...options.deployInputs], async () => {
-            await testApi.commands.deployProductionSlot(context)
+            await testApi.commands.deployProductionSlot(context);
         });
     });
 
@@ -111,7 +111,7 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
 }
 
 function isNewNodeProgrammingModel(language: ProjectLanguage, modelVersion: NodeModelVersion = NodeModelVersion.v3): boolean {
-    return isNode(language) && modelVersion >= NodeModelVersion.v4
+    return isNode(language) && modelVersion >= NodeModelVersion.v4;
 }
 
 function isNode(language: ProjectLanguage): boolean {

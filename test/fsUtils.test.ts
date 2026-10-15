@@ -24,6 +24,7 @@ suite('fsUtils', () => {
     test('isPathEqual, win32, true', () => {
         let fsPath1: string = 'C:\\test\\';
         let fsPath2: string = 'C:\\test\\';
+        assert.equal(isPathEqual(fsPath1, fsPath2, path.win32.relative), true);
 
         // path separator mismatch
         fsPath1 = 'C:\\test\\';

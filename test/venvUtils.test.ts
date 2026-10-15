@@ -145,7 +145,7 @@ async function findPythonAlias(): Promise<string | undefined> {
 
 async function runWithWindowsTerminal(terminalPath: string, callback: () => void): Promise<void> {
     if (!(await AzExtFsExtra.pathExists(terminalPath))) {
-        throw new Error(`Terminal path cannot be set because it does not exist: ${terminalPath}`)
+        throw new Error(`Terminal path cannot be set because it does not exist: ${terminalPath}`);
     }
 
     const profileName = getRandomHexString();

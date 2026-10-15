@@ -8,7 +8,7 @@ import * as assert from 'assert';
 /**
  * Same as assert.throws except for async functions
  */
-export async function assertThrowsAsync<T>(block: () => Promise<T>, error: RegExp | Function, message?: string): Promise<void> {
+export async function assertThrowsAsync<T>(block: () => Promise<T>, error: assert.AssertPredicate, message?: string): Promise<void> {
     let blockSync = (): void => { /* ignore */ };
     try {
         await block();
