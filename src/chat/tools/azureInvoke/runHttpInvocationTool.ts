@@ -5,13 +5,12 @@
 
 import { callWithTelemetryAndErrorHandling, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { ConsentGuidance, type CopilotTool } from '@microsoft/vscode-inproc-mcp';
-import { isIPv4 } from 'net';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type HttpRequestEditors } from '../../../webviews/azureInvoke/extension/HttpRequestEditors';
 
-const inputSchema = z.object({ id: z.string().check(z.minLength(1), z.maxLength(100)) });
+const inputSchema = z.object({ id: z.string().check(z.minLength(1), z.maxLength(100)), runDependencies: z.optional(z.boolean()) });
 const outputSchema = z.object({
     status: z.number(),
     duration: z.number(),
@@ -29,12 +28,18 @@ export function runHttpInvocationTool(
 ): CopilotTool<typeof inputSchema, typeof outputSchema> {
     return {
         name: 'run_http_invocation',
-        title: localize('azureInvoke.runHttpInvocation', 'Run HTTP invocation'),
-        description: 'Send a saved Azure Invoke HTTP invocation by its ID, such as the ID returned by create_http_invocation. ' +
+        title: localize('azureInvoke.runHttpInvocation', 'Azure Invoke: Run API request'),
+        description: 'Test an HTTP API or Azure Functions HTTP endpoint using a saved Azure Invoke request. ' +
+            'Call list_http_invocations to find saved requests by name, including collections saved with Confirm. ' +
+            'Send the invocation by its ID, such as the ID returned by create_http_invocation or draft_http_invocation. ' +
             'Use the saved session snapshot, not unsaved editor changes. This makes a real HTTP request and can modify remote data. ' +
+            'By default, execute all prerequisites in dependency order, once each, then the target so generated data and linked IDs are ready. Set runDependencies false only to reuse current successful prerequisite results. ' +
+            'This can create, update, or delete data in every prerequisite. Explain the chain and obtain approval for all of it before execution. ' +
+            'Stop on a failed prerequisite, missing response field, cycle, or cancellation. No stale outputs are reused. ' +
             'Ask for user approval before running. Return HTTP status and duration in milliseconds. ' +
             'Only localhost and literal loopback targets also return the complete response body, up to 5 MB, and selected non-sensitive headers. ' +
-            'For all other targets, do not return any response body or headers to AI. The full response is displayed in the invocation editor. ' +
+            'For all other targets, or any chain with a non-local prerequisite, do not return any response body or headers to AI. ' +
+            'Update progress in the Azure Invoke tree without opening a tab. Full results are available when the user opens the request. ' +
             'Local response bodies may contain sensitive data. Redirects are not followed and requests are not retried.',
         inputSchema,
         outputSchema,
@@ -57,23 +62,10 @@ export function runHttpInvocationTool(
                 if (!invocation) {
                     throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
                 }
-                let editor;
-                try {
-                    editor = editors.open(invocation, true);
-                } catch {
-                    context.telemetry.properties.failureStage = 'openEditor';
-                    throw new Error(localize('azureInvoke.openEditorFailed', 'Could not open the Azure Invoke editor. Try creating the invocation again.'));
-                }
-                const request = {
-                    ...invocation.request,
-                    body: invocation.request.method === 'GET' || invocation.request.method === 'HEAD' ? '' : invocation.request.body,
-                };
-                const response = await editor.sendRequest(context, request, { signal: extras?.signal, saved: true });
+                const shareResponse = editors.canShareResponse(invocation);
+                const response = await editors.sendRequest(context, invocation, extras?.signal, input.runDependencies ?? true);
                 const metadata = { status: response.status, duration: response.duration };
-                const hostname = new URL(request.url).hostname;
-                const local = hostname === 'localhost' || hostname === 'localhost.' || hostname === '[::1]' ||
-                    (isIPv4(hostname) && hostname.startsWith('127.'));
-                if (!local) {
+                if (!shareResponse) {
                     return metadata;
                 }
                 return {

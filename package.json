@@ -117,6 +117,12 @@
         ],
         "commands": [
             {
+                "command": "azureFunctions.azureInvoke.buildWithAI",
+                "title": "%azureFunctions.azureInvoke.buildWithAI%",
+                "category": "Azure Functions",
+                "icon": "$(sparkle)"
+            },
+            {
                 "command": "azureFunctions.azureInvoke.add",
                 "title": "%azureFunctions.azureInvoke.add%",
                 "category": "Azure Functions",
@@ -577,6 +583,11 @@
                 }
             ],
             "view/title": [
+                {
+                    "command": "azureFunctions.azureInvoke.buildWithAI",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@0"
+                },
                 {
                     "command": "azureFunctions.azureInvoke.add",
                     "when": "view == azureFunctions.azureInvoke",
@@ -1581,6 +1592,13 @@
                         "description": "%azureFunctions.enableTemplateGallery%"
                     }
                 }
+            }
+        ],
+        "chatAgents": [
+            {
+                "name": "azure-invoke",
+                "description": "%azureFunctions.azureInvoke.agentDescription%",
+                "path": "./resources/agents/azure-invoke.agent.md"
             }
         ],
         "mcpServerDefinitionProviders": [

@@ -1,0 +1,60 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+@import './httpRequestView.css';
+
+.select-all { display: flex; align-items: center; gap: 10px; }
+input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrink: 0; accent-color: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder)); }
+.select-all { margin: 24px 0 16px; }
+.case-list { display: grid; gap: 26px; }
+.group-heading { margin: 0 0 10px; }
+.case { border-bottom: 1px solid var(--vscode-panel-border); overflow-wrap: anywhere; }
+.case:first-of-type { border-top: 1px solid var(--vscode-panel-border); }
+.case-row { display: flex; align-items: center; gap: 10px; min-height: 42px; }
+.case-row > input { margin: 0; }
+.case-toggle { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 10px 4px; text-align: left; background: transparent; color: var(--vscode-foreground); border: 0; }
+.case-toggle:hover { background: var(--vscode-list-hoverBackground); }
+.case-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-chevron { width: 7px; height: 7px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(-45deg); flex-shrink: 0; margin: 0 3px; }
+.case-toggle[aria-expanded="true"] .case-chevron { transform: rotate(45deg); }
+.auth-indicator { display: inline-flex; color: var(--vscode-descriptionForeground); flex-shrink: 0; }
+.auth-indicator svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.case-details { padding: 6px 0 22px 26px; }
+.case-description { margin: 0 0 20px; line-height: 1.6; color: var(--vscode-descriptionForeground); }
+.endpoint { font-family: var(--vscode-editor-font-family); color: var(--vscode-descriptionForeground); font-size: 12px; }
+.comment-label { display: grid; gap: 8px; margin-top: 16px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.comment-label textarea { min-height: 64px; font-family: var(--vscode-font-family); }
+.case-status { color: var(--vscode-descriptionForeground); font-size: 12px; flex-shrink: 0; max-width: 35%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.request-preview fieldset { padding: 0; border: 0; margin: 0; min-width: 0; }
+.request-field { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: start; gap: 12px; margin-bottom: 14px; }
+.request-field > span:first-child { padding-top: 7px; color: var(--vscode-descriptionForeground); }
+.request-field > span + span { padding-top: 7px; }
+.request-field select { max-width: 130px; }
+.request-preview h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+.preview-entries { margin: 22px 0; }
+.preview-entry { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 20px 28px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.preview-entry input[type="checkbox"] { margin: 0; }
+.remove-entry { padding: 0; }
+.request-field textarea { min-height: 120px; }
+.preview-actions { display: flex; gap: 8px; margin-top: 18px; }
+.preview-response { margin-top: 20px; }
+.preview-response output { display: block; margin-bottom: 10px; }
+.preview-error { color: var(--vscode-errorForeground); overflow-wrap: anywhere; }
+footer { position: sticky; bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding: 16px 0; background: var(--vscode-editor-background); border-top: 1px solid var(--vscode-panel-border); }
+footer span { margin-right: auto; color: var(--vscode-descriptionForeground); }
+#review-message { line-height: 1.6; }
+#review-error { color: var(--vscode-errorForeground); }
+.review-loading { min-height: calc(100vh - 160px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px 24px; text-align: center; }
+.review-loading .hint { max-width: 480px; margin: 0; }
+.is-loading footer { border: 0; justify-content: center; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--vscode-widget-border, var(--vscode-panel-border)); border-top-color: var(--vscode-progressBar-background, var(--vscode-focusBorder)); border-radius: 50%; animation: review-spin 0.9s linear infinite; }
+@keyframes review-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (max-width: 600px) {
+    .case-details { padding-left: 0; }
+    .request-field { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .request-field > span:first-child { padding-top: 0; }
+    .preview-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 20px 28px; gap: 6px; }
+}

@@ -25,6 +25,7 @@ import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTask
 import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { type HttpRequestEditors } from '../webviews/azureInvoke/extension/HttpRequestEditors';
+import { type CollectionReviews } from '../webviews/azureInvoke/extension/CollectionReviews';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
@@ -92,7 +93,8 @@ export function registerCommands(
     services: {
         azureInvoke: {
             provider: AzureInvokeTreeDataProvider,
-            editors: HttpRequestEditors
+            editors: HttpRequestEditors,
+            reviews: CollectionReviews
         },
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
@@ -100,7 +102,7 @@ export function registerCommands(
             schedulerClient: DurableTaskSchedulerClient
         }
     }): void {
-    registerAzureInvokeCommands(services.azureInvoke.provider, services.azureInvoke.editors);
+    registerAzureInvokeCommands(services.azureInvoke.provider, services.azureInvoke.editors, services.azureInvoke.reviews);
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);

@@ -30,7 +30,10 @@ configs.extensionConfig = {
 await autoEsbuildOrWatch(configs);
 
 const webviewBuild = await context({
-    entryPoints: { views: 'src/webviews/azureInvoke/views/httpRequestView.ts' },
+    entryPoints: {
+        views: 'src/webviews/azureInvoke/views/httpRequestView.ts',
+        collectionReview: 'src/webviews/azureInvoke/views/collectionReview.ts',
+    },
     outdir: 'dist/azureInvoke',
     bundle: true,
     platform: 'browser',

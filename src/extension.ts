@@ -15,6 +15,8 @@ import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool } from './chat/tools/azureInvoke/collectionReviewTools';
+import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from './chat/tools/azureInvoke/runHttpInvocationTool';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
@@ -58,6 +60,7 @@ import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTas
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
+import { CollectionReviews } from './webviews/azureInvoke/extension/CollectionReviews';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
@@ -105,14 +108,16 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+        const azureInvokeReviews = new CollectionReviews(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
+            azureInvokeReviews,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
         registerCommands({
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors },
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews },
             dts: {
                 dataBranchProvider,
                 emulatorClient,
@@ -127,7 +132,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             transport: 'tcp',
             eagerlyStart: true,
             registerTools: server => {
-                registerMcpTool(server, createHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
+                registerMcpTool(server, createHttpInvocationTool(azureInvokeProvider));
+                registerMcpTool(server, proposeInvocationCollectionTool(azureInvokeReviews));
+                registerMcpTool(server, getInvocationCollectionReviewTool(azureInvokeReviews));
+                registerMcpTool(server, draftHttpInvocationTool(azureInvokeProvider, azureInvokeReviews));
+                registerMcpTool(server, listHttpInvocationsTool(azureInvokeProvider));
                 registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
             },
         };

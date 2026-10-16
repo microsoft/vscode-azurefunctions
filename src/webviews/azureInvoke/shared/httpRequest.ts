@@ -8,6 +8,21 @@ export const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OP
 export interface HttpRequestEntry {
     name: string;
     value: string;
+    enabled?: boolean;
+}
+
+export interface HttpResponseBinding {
+    name: string;
+    sourceId: string;
+    pointer: string;
+}
+
+export function isResponseBindingName(value: string): boolean {
+    return value !== 'guid' && /^[a-z_][a-z0-9_]{0,63}$/i.test(value);
+}
+
+export function isResponsePointer(value: string): boolean {
+    return /^\/(?:body(?:\/.*)?|request\/body(?:\/.*)?|headers\/[^/]+|status)$/.test(value) && !/~(?![01])/.test(value) && value.length <= 1000;
 }
 
 export interface HttpRequest {
@@ -16,6 +31,8 @@ export interface HttpRequest {
     query: HttpRequestEntry[];
     headers: HttpRequestEntry[];
     body: string;
+    bindings?: HttpResponseBinding[];
+    dependsOn?: string[];
 }
 
 export interface HttpInvocation {
@@ -26,7 +43,8 @@ export interface HttpInvocation {
 
 function isEntryArray(value: unknown): value is HttpRequestEntry[] {
     return Array.isArray(value) && value.length <= 100 && value.every(entry =>
-        entry && typeof entry === 'object' && typeof entry.name === 'string' && typeof entry.value === 'string');
+        entry && typeof entry === 'object' && typeof entry.name === 'string' && typeof entry.value === 'string' &&
+        (entry.enabled === undefined || typeof entry.enabled === 'boolean'));
 }
 
 export function isHttpRequest(value: unknown): value is HttpRequest {
@@ -35,7 +53,20 @@ export function isHttpRequest(value: unknown): value is HttpRequest {
         'url' in value && typeof value.url === 'string' &&
         'body' in value && typeof value.body === 'string' &&
         'headers' in value && isEntryArray(value.headers) &&
-        'query' in value && isEntryArray(value.query);
+        'query' in value && isEntryArray(value.query) &&
+        (!('dependsOn' in value) || value.dependsOn === undefined ||
+            (Array.isArray(value.dependsOn) && value.dependsOn.length <= 100 && value.dependsOn.every(id => typeof id === 'string' && !!id && id.length <= 100) &&
+                new Set(value.dependsOn).size === value.dependsOn.length)) &&
+        (!('bindings' in value) || value.bindings === undefined ||
+            (Array.isArray(value.bindings) && value.bindings.length <= 100 && value.bindings.every(binding =>
+                binding && typeof binding === 'object' && typeof binding.name === 'string' && isResponseBindingName(binding.name) &&
+                typeof binding.sourceId === 'string' && !!binding.sourceId && binding.sourceId.length <= 100 &&
+                typeof binding.pointer === 'string' && isResponsePointer(binding.pointer)) &&
+                new Set(value.bindings.map(binding => binding.name)).size === value.bindings.length));
+}
+
+export function getRequestDependencies(request: Pick<HttpRequest, 'dependsOn' | 'bindings'>): string[] {
+    return [...new Set([...(request.dependsOn ?? []), ...(request.bindings ?? []).map(binding => binding.sourceId)])];
 }
 
 export function isInvocationName(value: unknown): value is string {
@@ -51,27 +82,52 @@ export interface HttpResponse {
 
 export type HttpRequestMessage =
     | { command: 'ready' }
-    | { command: 'sendRequest'; request: HttpRequest }
+    | { command: 'sendRequest'; request: HttpRequest; runDependencies?: boolean }
     | { command: 'saveRequest'; request: HttpRequest }
     | { command: 'renameRequest' }
     | { command: 'abortRequest' };
 
-export type HttpRequestStateMessage =
+export type HttpRequestStateMessage = (
     | { command: 'requestStarted'; saved: boolean }
     | { command: 'response'; response: HttpResponse }
-    | { command: 'requestError'; message: string };
+    | { command: 'requestError'; message: string; cancelled?: boolean }
+) & { sequence?: number };
 
 export type HttpResponseMessage =
     | HttpRequestStateMessage
     | { command: 'requestSaved' }
     | { command: 'saveError'; message: string }
-    | { command: 'renamed'; name: string };
+    | { command: 'renamed'; name: string }
+    | { command: 'sources'; sources: InvocationSource[] };
+
+export interface InvocationSource {
+    id: string;
+    name: string;
+}
+
+export interface DependencyLabels {
+    title: string;
+    prerequisites: string;
+    values: string;
+    name: string;
+    source: string;
+    pointer: string;
+    selectSource: string;
+    search: string;
+    noResults: string;
+    unavailable: string;
+    add: string;
+    remove: string;
+    hint: string;
+    runChain: string;
+}
 
 export interface HttpRequestViewConfiguration {
     labels: HttpRequestViewLabels;
     name: string;
     request: HttpRequest;
     saved: boolean;
+    sources?: InvocationSource[];
 }
 
 export interface HttpRequestViewLabels {
@@ -100,4 +156,6 @@ export interface HttpRequestViewLabels {
     saved: string;
     unsaved: string;
     savedInvocationHint: string;
+    enabled: string;
+    dependencies: DependencyLabels;
 }

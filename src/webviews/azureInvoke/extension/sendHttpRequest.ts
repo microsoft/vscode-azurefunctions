@@ -32,7 +32,7 @@ function getRequestError(error: unknown, cancelled: boolean, timedOut: boolean):
     return new Error(localize('azureInvoke.requestFailed', 'Request failed. Check the URL, network connection, TLS certificate, and whether the Functions host is running.'));
 }
 
-export async function sendHttpRequest(context: IActionContext, input: unknown, abortSignal: AbortSignal, timeout: number): Promise<HttpResponse> {
+export function prepareHttpRequest(input: unknown) {
     if (!isHttpRequest(input)) {
         throw new Error(localize('azureInvoke.invalidRequest', 'Invalid HTTP request. Use a supported method and at most 100 headers or query parameters.'));
     }
@@ -52,7 +52,13 @@ export async function sendHttpRequest(context: IActionContext, input: unknown, a
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
         throw new Error(localize('azureInvoke.invalidProtocol', 'Use an HTTP or HTTPS URL without embedded credentials. Add authentication in Headers.'));
     }
+    if (/(?:\{|%7b)[^/]*(?:\}|%7d)|\/:[a-z_][\w-]*(?=\/|$)/i.test(url.pathname)) {
+        throw new Error(localize('azureInvoke.fillRouteValues', 'Fill in route placeholders before sending the request.'));
+    }
     for (const entry of input.query) {
+        if (entry.enabled === false) {
+            continue;
+        }
         if (entry.name.trim()) {
             url.searchParams.append(entry.name, entry.value);
         } else if (entry.value) {
@@ -62,6 +68,9 @@ export async function sendHttpRequest(context: IActionContext, input: unknown, a
 
     const headers = createHttpHeaders();
     for (const entry of input.headers) {
+        if (entry.enabled === false) {
+            continue;
+        }
         if (!entry.name.trim() && !entry.value) {
             continue;
         }
@@ -74,7 +83,11 @@ export async function sendHttpRequest(context: IActionContext, input: unknown, a
         }
         headers.set(name, headers.has(name) ? `${headers.get(name)}, ${entry.value}` : entry.value);
     }
+    return { input, url, headers };
+}
 
+export async function sendHttpRequest(context: IActionContext, request: unknown, abortSignal: AbortSignal, timeout: number): Promise<HttpResponse> {
+    const { input, url, headers } = prepareHttpRequest(request);
     const started = Date.now();
     const timeoutAbort = new AbortController();
     const timer = setTimeout(() => timeoutAbort.abort(), timeout);

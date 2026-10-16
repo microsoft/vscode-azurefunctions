@@ -49,6 +49,8 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Azure Invoke
 
+For implementation details, design decisions, validation commands, and unfinished work, see the [prototype handoff](AZURE_INVOKE_PROTOTYPE.md).
+
 Open **Azure Invoke** in the Azure sidebar and select **+** to choose a Functions trigger. Only **HTTP trigger** is supported for now.
 
 The HTTP editor has a method selector, URL, query parameters, headers, and request body. Select **Send** to make a real request and inspect the response status, duration, headers, and body. For protected functions, add an `x-functions-key` header. Requests run in the extension host and support local and deployed endpoints.
@@ -59,15 +61,68 @@ Saved invocations stay in memory for the current VS Code window. Nothing is cach
 
 Redirects are displayed without being followed, and request and response bodies are limited to 5 MB. Requests use the `azureFunctions.requestTimeout` setting.
 
+### Link request outputs
+
+Use **Dependencies** in a request editor to reuse selected response fields instead of copying IDs or tokens into later requests. For example:
+
+1. Save a **Create account** request using `POST /accounts`.
+2. Open **Get account**, select **Dependencies**, and add a response value named `accountId`. Choose **Create account** as its source and `/body/id` as the selector.
+3. Set the GET URL to `http://localhost:7071/accounts/{{accountId}}`, then save it.
+4. Select **Run chain** to execute POST followed by GET. Afterward, **Send** repeats only GET using the current POST result, without creating another account.
+
+Bindings imply prerequisites. Search by request name in **Dependencies** to choose a source or add an order-only prerequisite. Only selected prerequisites remain listed. Pickers support arrow keys, Enter, and Escape. **Run chain** executes prerequisites in dependency order, once each, then the selected request. It can change data in every request it runs. Cancellation stops remaining work but cannot undo completed requests.
+
+Selectors use JSON Pointer: `/body/id` selects a JSON body field, `/body/items/0/id` selects an array item, `/headers/location` selects a response header, and `/status` selects the status code. Header names are lowercase. Escape `/` as `~1` and `~` as `~0` within JSON property names.
+
+Use `{{guid}}` for unique synthetic data in URL paths, query values, headers, or bodies:
+
+```json
+{
+  "email": "invoke-{{guid}}@example.com",
+  "password": "Invoke-{{guid}}-Aa1!"
+}
+```
+
+Each request execution generates a fresh UUID, reused at every `{{guid}}` occurrence in that request. The saved body keeps its placeholders. Adapt test passwords to the application's actual validation rules; do not use generated test data as production credentials. The name `guid` is reserved.
+
+To log in with the account just created, bind `accountEmail` to the create request's `/request/body/email` and `accountPassword` to `/request/body/password`, then use them in the login body. These selectors read the resolved JSON body actually sent, not the saved template or a response field. They require a current successful source result, just like response selectors. Use explicit source links across requests rather than repeating `{{guid}}`, which would generate a different value in a later request. Generated inputs stay in memory and are not exported.
+
+Use `{{accountId}}` in URL paths, query values, headers, or the body. URL substitutions are encoded as values and cannot change the host or protocol. In JSON bodies, write quoted placeholders such as `{"id":"{{accountId}}"}`. An exact placeholder retains the selected JSON type, including numbers, booleans, objects, arrays, and null. Embedded placeholders inside longer strings remain text.
+
+Missing fields, unavailable sources, cycles, and failed prerequisites stop the run instead of using empty or stale values. Only 2xx responses can supply dependency values. Save and rerun a changed source before reusing it. A newer upstream run also invalidates older dependent outputs. No arbitrary pre-request or post-response JavaScript is executed.
+
+The collection review has the same dependency editor and **Run chain** preview. Keep required prerequisite cases selected before confirming. Response values stay in memory; exports contain selectors and placeholders, not captured results. Collections with dependencies use format version 2; ordinary collections remain version 1, and both versions can be imported.
+
 ### Create invocations with AI
 
-The extension provides an in-process MCP server named **Azure Functions Extension Tools**. Enable its `create_http_invocation` and `run_http_invocation` tools in your chat client's tool picker, then ask the agent to create an Azure Invoke request. For example, "Create an Azure Invoke request named Create order that POSTs JSON to http://localhost:7071/api/orders."
+Azure Invoke offers **Add Invocation Manually...** for individual requests and **Author Collection with AI...** for guided collection building. The AI entry point opens Copilot Chat with the extension's **Azure Invoke** custom agent.
 
-The tool accepts a name and URL, plus an optional method, headers, query parameters, and raw body. It adds the invocation to the session collection and opens the populated editor. It does not send the request or write a collection file. Review the fields before selecting **Send**, and use **Save Collection...** to keep the invocation after VS Code closes.
+The review opens with a loading indicator while the agent scans the workspace. It then lists one generic template per discovered HTTP method and route, grouped by resource, such as Posts. HTTP templates start checked and collapsed. Extra scenarios, such as invalid-query or validation tests, are only proposed when you request them. Other trigger types are listed as unsupported and cannot be selected.
 
-The agent can call `run_http_invocation` with the returned invocation ID to send the saved request. Unsaved editor changes are not included. Running can change server-side data, so the tool requests approval for every call. It uses the editor's timeout, cancellation, body limits, and no-retry/no-redirect behavior. The editor shows the full response and supports cancelling an AI-started request.
+Expand a row to see the method, endpoint, authentication requirements, headers, query parameters, and body. A lock indicates required authentication, an open lock indicates anonymous access, and a question mark means authentication could not be determined. The agent fills body fields with valid synthetic values and uses generators and dependencies where needed. Optional query values remain empty and disabled unless requested. Required inputs that cannot be inferred safely need your input. Edit values, enable entries, and select **Send** or **Run chain** to try requests directly in the review. Previews use the same timeout, cancellation, and response limits as the request editor. They make real HTTP requests but do not save collection entries.
 
-AI receives status and duration for every response. For `localhost`, IPv4 loopback addresses (`127.0.0.0/8`), and IPv6 loopback (`::1`), it also receives the full response body up to the existing 5 MB limit and selected non-sensitive headers. Other endpoints return no body or headers to AI. Local bodies may contain sensitive data; response headers such as authorization, cookies, and custom credential headers are not shared.
+GET drafts include query names discovered in handlers, query models, validation, and parsing helpers, including filters, pagination, and sorting for list endpoints. Instance routes include their required path IDs, linked to a matching create operation when possible.
+
+Keep the templates you want checked. Entering feedback in any row, including an unchecked row, changes **Confirm** to **Request changes**. Select it to ask Copilot to apply the feedback and refresh the same review without saving or sending requests. The revised proposal preserves your selections and manual field edits, and clears processed feedback. You can repeat this before saving. Manual field values are not included in the review returned to AI.
+
+With no feedback, select **Confirm** to save the checked requests' current fields directly in the tree. Confirmation is disabled while previews are running, and all required prerequisites must remain selected. Existing collection entries are preserved. Confirm does not launch another chat turn or send HTTP.
+
+AI-created requests are added without opening individual tabs. Ask Copilot to run saved requests whenever you are ready. It can discover their IDs and execute their prerequisite chains without recreating them. AI execution still requires approval and can change data in every prerequisite. The review and tree show **Ready**, **Running...**, status and duration, **Failed**, or **Cancelled**. Open a request from the tree to inspect or edit it and see its last full response. Collection reviews, results, and saved requests are session-only. Use **Save Collection...** to export definitions explicitly; results, resolved inputs, and review comments are not exported.
+
+The in-process MCP server is named **Azure Functions Extension Tools**. Enable its tools in your chat client's tool picker if they are unavailable. Its tools are:
+
+| Tool | Purpose |
+| --- | --- |
+| `propose_invocation_collection` | Fill the loading review or refresh a requested revision in the same review, without saving or sending requests. |
+| `get_invocation_collection_review` | Read submitted feedback and selections for a pending revision, or the confirmed HTTP selection and saved IDs. Local edited values remain private. |
+| `draft_http_invocation` | Revise an approved saved case, resolving prerequisite IDs without duplication. |
+| `create_http_invocation` | Create an individual API request with optional bindings and prerequisites directly in the session tree. |
+| `list_http_invocations` | Discover saved request IDs, names, methods, and prerequisite IDs without exposing request values. |
+| `run_http_invocation` | Run a saved request and its prerequisite chain without opening tabs. Set `runDependencies: false` to reuse current successful prerequisite results instead. |
+
+AI-generated names are limited to 60 characters. Individual creation accepts a name and URL, plus an optional method, headers, query parameters, and raw body. Running uses the saved request, not unsaved editor changes. It can change server-side data, so the tool requests approval for every call. Requests share the editor's timeout, cancellation, body limits, and no-retry/no-redirect behavior. Stop the chat request to cancel a headless run, or open its editor and select **Cancel**.
+
+AI receives final status and duration for every response. For `localhost`, IPv4 loopback addresses (`127.0.0.0/8`), and IPv6 loopback (`::1`), it also receives the full final response body up to the existing 5 MB limit and selected non-sensitive headers. Other endpoints return no body or headers to AI. A chain with any non-local prerequisite returns only status and timing, including when its final endpoint is localhost, so linked values cannot bypass that restriction. Local bodies may contain sensitive data; response headers such as authorization, cookies, and custom credential headers are not shared.
 
 ## Deploy to Azure
 

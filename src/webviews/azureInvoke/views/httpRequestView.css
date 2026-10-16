@@ -73,7 +73,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible, pre:focus-visib
 .tabs button { background: transparent; color: var(--vscode-descriptionForeground); border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 14px; }
 .tabs button[aria-selected="true"] { color: var(--vscode-foreground); border-bottom-color: var(--vscode-focusBorder); }
 [role="tabpanel"] { min-height: 190px; }
-.entry-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 32px; gap: 8px; margin-bottom: 8px; }
+.entry-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 20px 32px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.entry-row input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; margin: 0; }
 .entry-row button { padding: 0; font-size: 18px; }
 .response-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vscode-panel-border); }
 .response-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
@@ -83,6 +84,24 @@ output { font-family: var(--vscode-editor-font-family); }
 pre { margin: 12px 0; padding: 14px; background: var(--vscode-textCodeBlock-background); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 450px; overflow: auto; font-family: var(--vscode-editor-font-family); }
 summary { color: var(--vscode-descriptionForeground); cursor: pointer; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.response-bindings h3 { font-size: 13px; margin: 20px 0 10px; }
+.binding-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1.5fr) 32px; gap: 8px; align-items: end; margin-bottom: 12px; }
+.binding-row label { display: grid; gap: 6px; min-width: 0; }
+.binding-row label > span { font-size: 12px; color: var(--vscode-descriptionForeground); }
+.binding-row button { padding: 0; }
+.prerequisite-list { display: grid; gap: 8px; }
+.prerequisite-list:not(:empty) { margin-top: 12px; }
+.prerequisite-list label { display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.prerequisite-list input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; margin: 0; }
+.request-picker { position: relative; min-width: 0; }
+.request-options, .request-picker-empty { position: absolute; z-index: 2; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 4px; border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border)); border-radius: 2px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); box-shadow: 0 2px 8px var(--vscode-widget-shadow); }
+.request-options { list-style: none; max-height: 220px; overflow-y: auto; }
+.request-options li { display: grid; gap: 3px; padding: 7px 8px; cursor: pointer; }
+.request-options li > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.request-options small { font-size: 10px; color: var(--vscode-descriptionForeground); }
+.request-options li:hover, .request-options li.active { background: var(--vscode-list-hoverBackground); }
+.request-options li.active { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.request-picker-empty { padding: 10px 12px; font-size: 12px; color: var(--vscode-descriptionForeground); }
 
 @media (max-width: 600px) {
     main { padding: 20px 16px; }
@@ -90,4 +109,9 @@ summary { color: var(--vscode-descriptionForeground); cursor: pointer; }
     .request-bar { flex-wrap: wrap; }
     .url-field { flex-basis: calc(100% - 118px); }
     .tabs button { padding: 10px; }
+    .tabs { overflow-x: auto; }
+    .binding-row { grid-template-columns: minmax(0, 1fr) 32px; }
+    .binding-row label { grid-column: 1; }
+    .binding-row button { grid-column: 2; grid-row: 1 / span 3; align-self: end; }
+    #run-chain { flex-shrink: 0; }
 }

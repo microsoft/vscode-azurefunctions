@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import { ResponseBindingsEditor } from './ResponseBindingsEditor';
 import './httpRequestView.css';
 
 declare global {
@@ -45,6 +46,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                     <label class="method-field"><span class="sr-only" data-label="method"></span><select id="method"></select></label>
                     <label class="url-field"><span class="sr-only" data-label="url"></span><input id="url" type="url" placeholder="http://localhost:7071/api/HttpTrigger" required spellcheck="false"></label>
                     <button id="send" type="submit" data-label="send"></button>
+                    <button id="run-chain" type="button" class="secondary" hidden></button>
                     <button id="abort" type="button" class="secondary" data-label="cancel" hidden></button>
                 </div>
                 <p class="hint" data-label="functionKeyHint"></p>
@@ -52,6 +54,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                     <button id="params-tab" type="button" role="tab" aria-controls="params-panel" aria-selected="true" data-label="params"></button>
                     <button id="headers-tab" type="button" role="tab" aria-controls="headers-panel" aria-selected="false" tabindex="-1" data-label="headers"></button>
                     <button id="body-tab" type="button" role="tab" aria-controls="body-panel" aria-selected="false" tabindex="-1" data-label="body"></button>
+                    <button id="dependencies-tab" type="button" role="tab" aria-controls="dependencies-panel" aria-selected="false" tabindex="-1"></button>
                 </div>
                 <section id="params-panel" role="tabpanel" aria-labelledby="params-tab">
                     <div id="query-rows"></div><button id="add-query" type="button" class="secondary" data-label="add"></button>
@@ -64,6 +67,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                     <textarea id="body" rows="9" spellcheck="false"></textarea>
                     <p id="body-hint" class="hint" data-label="getBodyHint"></p>
                 </section>
+                <section id="dependencies-panel" role="tabpanel" aria-labelledby="dependencies-tab" hidden></section>
             </form>
             <section class="response-section" aria-labelledby="response-heading">
                 <div class="response-heading"><h2 id="response-heading" data-label="response"></h2><output id="status" role="status"></output></div>
@@ -76,7 +80,11 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         </main>`;
 
     for (const element of document.querySelectorAll<HTMLElement>('[data-label]')) {
-        element.textContent = labels[element.dataset.label as keyof HttpRequestViewLabels];
+        const text = labels[element.dataset.label as keyof HttpRequestViewLabels];
+        if (typeof text !== 'string') {
+            throw new Error('Missing HTTP request label.');
+        }
+        element.textContent = text;
     }
     getElement('.tabs').setAttribute('aria-label', labels.requestOptions);
     const heading = getElement('#invocation-name');
@@ -107,6 +115,18 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         updateSaveState();
     }
     updateSaveState();
+    const runChain = getElement<HTMLButtonElement>('#run-chain');
+    runChain.textContent = labels.dependencies.runChain;
+    getElement('#dependencies-tab').textContent = labels.dependencies.title;
+    const dependencies = new ResponseBindingsEditor(configuration.request, configuration.sources ?? [], labels.dependencies, () => {
+        markDirty();
+        updateChain();
+    });
+    getElement('#dependencies-panel').append(dependencies.element);
+    function updateChain(): void {
+        runChain.hidden = !getRequestDependencies(dependencies.read()).length;
+    }
+    updateChain();
 
     const method = getElement<HTMLSelectElement>('#method');
     for (const value of httpMethods) {
@@ -128,6 +148,16 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         value.setAttribute('aria-label', labels.value);
         value.spellcheck = false;
         value.value = entry?.value ?? '';
+        const enabled = document.createElement('input');
+        enabled.type = 'checkbox';
+        enabled.checked = entry?.enabled !== false;
+        enabled.setAttribute('aria-label', labels.enabled);
+        row.dataset.explicitEnabled = String(entry?.enabled !== undefined);
+        value.addEventListener('input', () => {
+            if (value.value) {
+                enabled.checked = true;
+            }
+        });
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'secondary';
@@ -139,7 +169,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             markDirty();
             getElement<HTMLButtonElement>(container.id === 'query-rows' ? '#add-query' : '#add-header').focus();
         });
-        row.append(name, value, remove);
+        row.append(name, value, enabled, remove);
         container.append(row);
     }
 
@@ -163,8 +193,12 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
 
     function readEntries(container: HTMLElement): HttpRequestEntry[] {
         return Array.from(container.children, row => {
-            const [name, value] = row.querySelectorAll('input');
-            return { name: name.value, value: value.value };
+            const [name, value, enabled] = row.querySelectorAll('input');
+            return {
+                name: name.value,
+                value: value.value,
+                ...((row instanceof HTMLElement && row.dataset.explicitEnabled === 'true') || !enabled.checked ? { enabled: enabled.checked } : {}),
+            };
         });
     }
 
@@ -214,6 +248,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             query: readEntries(queryRows),
             headers: readEntries(headerRows),
             body: body.value,
+            ...dependencies.read(),
         };
     }
     getElement('#request-form').addEventListener('input', markDirty);
@@ -240,9 +275,11 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     const responseBody = getElement('#response-body');
     const responseHeaders = getElement('#response-headers');
     let sending = false;
+    let sequence = 0;
     function setSending(value: boolean): void {
         sending = value;
         send.disabled = value;
+        runChain.disabled = value;
         send.textContent = value ? labels.sending : labels.send;
         abort.hidden = !value;
         getElement('#response-body').setAttribute('aria-busy', String(value));
@@ -258,23 +295,38 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         status.classList.remove('http-error');
         setSending(true);
     }
-    getElement<HTMLFormElement>('#request-form').addEventListener('submit', event => {
-        event.preventDefault();
+    function sendRequest(runDependencies = false): void {
         if (sending) {
             return;
         }
         startRequest(false);
         api.postMessage({
             command: 'sendRequest',
+            runDependencies,
             request: {
                 ...readRequest(),
                 body: body.disabled ? '' : body.value,
             },
         });
+    }
+    getElement<HTMLFormElement>('#request-form').addEventListener('submit', event => {
+        event.preventDefault();
+        sendRequest();
+    });
+    runChain.addEventListener('click', () => {
+        if (getElement<HTMLFormElement>('#request-form').reportValidity()) {
+            sendRequest(true);
+        }
     });
     abort.addEventListener('click', () => api.postMessage({ command: 'abortRequest' }));
     window.addEventListener('message', (event: MessageEvent<HttpResponseMessage>) => {
         const message = event.data;
+        if ('sequence' in message && message.sequence !== undefined) {
+            if (message.sequence <= sequence) {
+                return;
+            }
+            sequence = message.sequence;
+        }
         if (message.command === 'requestStarted') {
             startRequest(message.saved);
         } else if (message.command === 'response') {
@@ -308,6 +360,8 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             saveError.textContent = message.message;
             saveError.hidden = false;
             updateSaveState();
+        } else if (message.command === 'sources') {
+            dependencies.setSources(message.sources);
         }
     });
     api.postMessage({ command: 'ready' });
