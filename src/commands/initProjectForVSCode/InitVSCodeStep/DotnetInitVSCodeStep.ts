@@ -18,6 +18,7 @@ import { type IProjectWizardContext } from '../../createNewProject/IProjectWizar
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
 const dotnetPublishTaskLabel: string = convertToFunctionsTaskLabel('publish');
+const dotnetBuildTaskLabel: string = convertToFunctionsTaskLabel('build');
 
 export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = dotnetPublishTaskLabel;
@@ -30,6 +31,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             name: localize('attachToNetFunc', "Attach to .NET Functions"),
             type: version === FuncVersion.v1 ? 'clr' : 'coreclr',
             request: 'attach',
+            funcBuildTask: dotnetBuildTaskLabel,
             processId: '\${command:azureFunctions.pickProcess}'
         };
     }
@@ -98,7 +100,6 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const commonArgs: string[] = ['/property:GenerateFullPaths=true', '/consoleloggerparameters:NoSummary'];
         const releaseArgs: string[] = ['--configuration', 'Release'];
 
-        const buildLabel = convertToFunctionsTaskLabel('build');
         const cleanLabel = convertToFunctionsTaskLabel('clean');
         const cleanReleaseLabel = convertToFunctionsTaskLabel('clean release');
 
@@ -114,7 +115,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 problemMatcher: '$msCompile'
             },
             {
-                label: buildLabel,
+                label: dotnetBuildTaskLabel,
                 command: 'dotnet',
                 args: [
                     'build',
@@ -153,7 +154,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             },
             {
                 type: func,
-                dependsOn: buildLabel,
+                dependsOn: dotnetBuildTaskLabel,
                 options: {
                     cwd: this._debugSubpath
                 },
