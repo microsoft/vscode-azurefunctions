@@ -6,6 +6,7 @@
 import { type CollectionReviewConfiguration, type HttpInvocationCandidate } from '../shared/collectionReview';
 import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestStateMessage, type InvocationSource } from '../shared/httpRequest';
 import { ResponseBindingsEditor } from './ResponseBindingsEditor';
+import { formatResponseBody } from './formatResponseBody';
 
 type Labels = CollectionReviewConfiguration['labels'];
 
@@ -110,6 +111,8 @@ export class HttpRequestPreview {
     private enabled = true;
     private busy = false;
     private sequence = 0;
+    private failedResult = false;
+    private sentRequest: string | undefined;
 
     public constructor(
         candidate: HttpInvocationCandidate,
@@ -120,6 +123,9 @@ export class HttpRequestPreview {
         sources: InvocationSource[],
     ) {
         this.element.className = 'request-preview';
+        for (const event of ['input', 'change', 'click']) {
+            this.element.addEventListener(event, () => this.onBusyChange());
+        }
         this.headers = entriesEditor(labels.headers, labels);
         this.query = entriesEditor(labels.query, labels);
         this.dependencies = new ResponseBindingsEditor(candidate.request, sources, labels.dependencies, () => this.updateControls());
@@ -204,6 +210,10 @@ export class HttpRequestPreview {
         return this.busy;
     }
 
+    public get failed(): boolean {
+        return this.failedResult && this.sentRequest === JSON.stringify(this.request);
+    }
+
     public get request(): HttpRequest {
         return { method: httpMethods[this.method.selectedIndex], url: this.url.value, body: this.body.value, headers: this.headers.read(), query: this.query.read(), ...this.dependencies.read() };
     }
@@ -231,6 +241,11 @@ export class HttpRequestPreview {
             this.sequence = message.sequence;
         }
         this.busy = message.command === 'requestStarted';
+        this.failedResult = message.command === 'response' ? message.response.status < 200 || message.response.status >= 300 :
+            message.command === 'requestError' && !message.cancelled && !message.blocked;
+        if (message.command === 'requestStarted' || this.sentRequest === undefined) {
+            this.sentRequest = JSON.stringify(this.request);
+        }
         this.error.hidden = true;
         if (message.command === 'requestStarted') {
             this.status.textContent = this.labels.sending;
@@ -238,13 +253,14 @@ export class HttpRequestPreview {
             this.responseHeaders.hidden = true;
         } else if (message.command === 'response') {
             this.status.textContent = `${message.response.status}, ${message.response.duration} ms`;
-            this.responseBody.textContent = message.response.body;
+            this.responseBody.textContent = formatResponseBody(message.response.body);
             this.responseBody.hidden = false;
             this.headerValues.textContent = message.response.headers.map(header => `${header.name}: ${header.value}`).join('\n');
             this.responseHeaders.hidden = !message.response.headers.length;
         } else {
             this.status.textContent = '';
             this.error.textContent = message.message;
+            this.error.classList.toggle('request-warning', !!message.blocked);
             this.error.hidden = false;
         }
         this.updateControls();

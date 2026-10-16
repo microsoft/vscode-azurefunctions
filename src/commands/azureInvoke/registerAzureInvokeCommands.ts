@@ -56,13 +56,13 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
 
     registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
-        await saveCollectionFile(context, provider.getChildren(), target instanceof vscode.Uri ? target : undefined);
+        await saveCollectionFile(context, provider.getRequests(), target instanceof vscode.Uri ? target : undefined);
     });
 
     registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
         const invocations = await openCollectionFile(context, source instanceof vscode.Uri ? source : undefined);
-        if (provider.getChildren().length || editors.size) {
+        if (provider.getRequests().length || editors.size) {
             await context.ui.showWarningMessage(
                 localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
                 { modal: true, stepName: 'confirmOpenInvocationCollection' },

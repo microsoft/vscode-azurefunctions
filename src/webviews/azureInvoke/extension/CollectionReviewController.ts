@@ -5,14 +5,25 @@
 
 import { callWithTelemetryAndErrorHandling, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController } from '@microsoft/vscode-azext-webview';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
+import { StringDecoder } from 'string_decoder';
 import * as vscode from 'vscode';
 import { localize } from '../../../localize';
-import { copyInvocation, validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
-import { type CollectionReviewConfiguration, type CollectionReviewResponse, type CollectionReviewState, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
-import { type HttpInvocation } from '../shared/httpRequest';
+import { copyInvocation, planInvocationChain, validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
+import { type CollectionReviewConfiguration, type CollectionReviewResponse, type CollectionReviewState, type InvocationCandidate, type InvocationDiagnosisCase, type InvocationPreviewDiagnostic, type InvocationSelection } from '../shared/collectionReview';
+import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage } from '../shared/httpRequest';
 import { HttpInvocationRunner } from './HttpInvocationRunner';
+import { InvocationBlockedError } from './HttpRequestRunner';
 import { getDependencyLabels } from './dependencyLabels';
+import { isLocalHttpRequest } from './requestBindings';
+import { getShareableHttpResponse } from './sendHttpRequest';
+
+interface PreviewRecord {
+    invocation: HttpInvocation;
+    plan?: HttpInvocation[];
+    result?: HttpRequestStateMessage;
+}
 
 export class CollectionReviewController extends WebviewController<CollectionReviewConfiguration> {
     private state: CollectionReviewState;
@@ -22,6 +33,10 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
     private selections: InvocationSelection[] = [];
     private readonly previews: HttpInvocationRunner;
     private readonly previewInputs = new Map<string, HttpInvocation>();
+    private readonly previewRecords = new Map<string, PreviewRecord>();
+    private diagnosis: { id: string; cases: InvocationDiagnosisCase[] } | undefined;
+    private diagnosing = false;
+    private diagnosisNotice: string | undefined;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -31,23 +46,33 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
         private readonly cancelReview: () => void,
         private readonly requestChanges: (selections: unknown) => InvocationSelection[],
         private readonly continueChanges: () => Promise<void>,
+        private readonly openDiagnosis: (diagnosisId: string) => Promise<void>,
+        updatingSaved = false,
     ) {
-        super(context, localize('azureInvoke.collectionReview', 'Azure Invoke: Review collection'), 'azureInvokeCollectionReview', {
+        super(context, updatingSaved ? localize('azureInvoke.savedRequestReview', 'Azure Invoke: Review saved request changes') : localize('azureInvoke.collectionReview', 'Azure Invoke: Review collection'), 'azureInvokeCollectionReview', {
             candidates: candidates ?? [],
+            updatingSaved,
             loading: !candidates,
             version: 0,
             labels: {
-                title: localize('azureInvoke.reviewTitle', 'Build your test collection'),
-                introduction: localize('azureInvoke.reviewIntroduction', 'Review one request template per HTTP method and route. Expand a row to fill values, try the request, or leave feedback. Uncheck templates you do not want to keep.'),
+                title: updatingSaved ? localize('azureInvoke.reviewFixesTitle', 'Review saved request changes') : localize('azureInvoke.reviewTitle', 'Build your test collection'),
+                introduction: updatingSaved ?
+                    localize('azureInvoke.reviewFixesIntroduction', 'Expand each request to review the proposed fields. Prerequisites are included for context. Apply updates selected saved requests in place without sending them or editing application code. Uncheck requests you do not want to update. To ask for a different proposal, return to chat.') :
+                    localize('azureInvoke.reviewIntroduction', 'Review one request template per HTTP method and route. Expand a row to fill values, try the request, or leave feedback. Uncheck templates you do not want to keep.'),
                 selectAll: localize('azureInvoke.selectAllHttp', 'Select all HTTP cases'),
                 comment: localize('azureInvoke.reviewComment', 'Feedback for Copilot'),
                 unsupported: localize('azureInvoke.unsupportedTrigger', 'Not yet supported'),
-                confirm: localize('azureInvoke.confirmCollection', 'Confirm'),
+                confirm: updatingSaved ? localize('azureInvoke.applyRequestChanges', 'Apply request changes') : localize('azureInvoke.confirmCollection', 'Confirm'),
                 requestChanges: localize('azureInvoke.requestChanges', 'Request changes'),
+                diagnoseRequest: localize('azureInvoke.diagnoseRequest', 'Diagnose with Copilot'),
+                diagnoseFailed: localize('azureInvoke.diagnoseFailed', 'Diagnose failed requests'),
+                diagnosisHint: localize('azureInvoke.diagnosisHint', 'Diagnosis shares failed localhost responses with Copilot. Responses can contain sensitive data. Remote response bodies and private request edits are not shared directly. Diagnosis does not change drafts, edit application code, or send requests.'),
                 cancel: localize('azureInvoke.cancelReview', 'Cancel'),
                 selected: localize('azureInvoke.selectedCases', 'Selected'),
-                approved: localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run them when you are ready.'),
-                cancelled: localize('azureInvoke.reviewCancelled', 'Review cancelled. No additional requests will be drafted from this proposal.'),
+                approved: updatingSaved ?
+                    localize('azureInvoke.requestChangesApplied', 'Applied the selected request changes. Existing request tabs keep their fields; close and reopen a tab to load the updated saved request. Ask Copilot to rerun with approval when ready.') :
+                    localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run them when you are ready.'),
+                cancelled: updatingSaved ? localize('azureInvoke.requestChangesCancelled', 'Review cancelled. Saved requests are unchanged.') : localize('azureInvoke.reviewCancelled', 'Review cancelled. No additional requests will be drafted from this proposal.'),
                 selectCases: localize('azureInvoke.selectCases', 'Select at least one HTTP case to continue.'),
                 loadingTitle: localize('azureInvoke.loadingReview', 'Discovering endpoints'),
                 loadingMessage: localize('azureInvoke.loadingReviewMessage', 'Copilot is scanning your workspace for request templates. Answer any questions in chat while it prepares your review.'),
@@ -67,7 +92,9 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 send: localize('azureInvoke.send', 'Send'),
                 sending: localize('azureInvoke.sending', 'Sending...'),
                 response: localize('azureInvoke.response', 'Response'),
-                previewHint: localize('azureInvoke.previewHint', 'Send makes a real HTTP request and can change data. Disabled parameters are not sent. {{guid}} generates one UUID per request run. Confirm saves your current fields. Manual values are not included in the review sent to Copilot.'),
+                previewHint: updatingSaved ?
+                    localize('azureInvoke.savedPreviewHint', 'Send makes a real HTTP request and can change data. Apply request changes saves selected fields in the existing entries without sending them. Private saved and manual values stay in this review, not the review data returned to Copilot.') :
+                    localize('azureInvoke.previewHint', 'Send makes a real HTTP request and can change data. Disabled parameters are not sent. {{guid}} generates one UUID per request run. Confirm saves your current fields. Manual values are not included in the review sent to Copilot.'),
                 name: localize('azureInvoke.name', 'Name'),
                 value: localize('azureInvoke.value', 'Value'),
                 enabled: localize('azureInvoke.enabled', 'Enabled'),
@@ -84,6 +111,10 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
             const candidate = this.configuration.candidates.find(candidate => candidate.id === id);
             return candidate?.trigger === 'http' ? this.previewInputs.get(id) ?? candidate : undefined;
         }, (id, message) => {
+            const record = this.previewRecords.get(id);
+            if (record) {
+                record.result = message;
+            }
             const version = this.configuration.version;
             void callWithTelemetryAndErrorHandling('azureFunctions.azureInvoke.previewProgress', async context => {
                 context.telemetry.suppressAll = true;
@@ -104,6 +135,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 context.errorHandling.suppressDisplay = true;
                 const command = message && typeof message === 'object' && 'command' in message ? message.command : undefined;
                 let requestedVersion: number | undefined;
+                let diagnosisVersion: number | undefined;
                 try {
                     if (command === 'ready') {
                         context.telemetry.suppressAll = true;
@@ -113,6 +145,27 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                         }
                     } else if (command === 'previewRequest' && message && typeof message === 'object' && 'id' in message && 'request' in message) {
                         await this.previewRequest(context, message.id, message.request, 'runDependencies' in message && message.runDependencies === true, 'requests' in message ? message.requests : undefined);
+                    } else if (command === 'diagnoseRequests' && message && typeof message === 'object' && 'ids' in message && 'requests' in message) {
+                        if (this.configuration.updatingSaved || this.state !== 'reviewing' || this.confirming || this.diagnosing || this.previews.running) {
+                            throw new Error(localize('azureInvoke.diagnosisUnavailable', 'Wait for previews to finish and diagnose failures in the active review.'));
+                        }
+                        const cases = this.captureDiagnostics(message.ids, message.requests);
+                        const diagnosisId = randomUUID();
+                        this.diagnosis = { id: diagnosisId, cases };
+                        diagnosisVersion = this.configuration.version;
+                        this.diagnosing = true;
+                        this.errorMessage = undefined;
+                        this.diagnosisNotice = undefined;
+                        try {
+                            await this.postState();
+                            await this.openDiagnosis(diagnosisId);
+                            if (this.state === 'reviewing' && diagnosisVersion === this.configuration.version) {
+                                this.diagnosisNotice = localize('azureInvoke.diagnosisOpened', 'Opened Copilot Chat to diagnose the failure. Drafts and application code are unchanged. Use Request changes if you decide to correct a request draft.');
+                            }
+                        } finally {
+                            this.diagnosing = false;
+                        }
+                        await this.postState();
                     } else if (command === 'cancelPreview' && message && typeof message === 'object' && 'id' in message && typeof message.id === 'string') {
                         if (this.state !== 'reviewing' || !this.configuration.candidates.some(candidate => candidate.id === message.id && candidate.trigger === 'http')) {
                             throw new Error(localize('azureInvoke.previewUnavailable', 'Only HTTP templates in the active review can be previewed.'));
@@ -123,25 +176,31 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                             return;
                         }
                         this.cancelReview();
+                        this.diagnosis = undefined;
                         this.state = 'cancelled';
                         this.errorMessage = undefined;
                         this.previews.cancel();
                         await this.postState();
                     } else if (command === 'requestChanges' && message && typeof message === 'object' && 'selections' in message) {
-                        if (this.state !== 'reviewing' || this.confirming) {
+                        if (this.configuration.updatingSaved) {
+                            throw new Error(localize('azureInvoke.reviseSavedChanges', 'Ask Copilot in chat for another saved-request proposal. No changes have been applied.'));
+                        }
+                        if (this.state !== 'reviewing' || this.confirming || this.diagnosing) {
                             return;
                         }
                         if (this.previews.running) {
                             throw new Error(localize('azureInvoke.previewRunning', 'Wait for running previews to finish or cancel them before confirming.'));
                         }
                         this.selections = this.requestChanges(message.selections);
+                        this.diagnosis = undefined;
+                        this.diagnosisNotice = undefined;
                         requestedVersion = this.configuration.version;
                         this.errorMessage = undefined;
                         this.state = 'revising';
                         await this.postState();
                         await this.continueChanges();
                     } else if (command === 'confirmCollection' && message && typeof message === 'object' && 'selections' in message) {
-                        if (this.confirming || (this.state !== 'reviewing' && this.state !== 'approved')) {
+                        if (this.confirming || this.diagnosing || (this.state !== 'reviewing' && this.state !== 'approved')) {
                             return;
                         }
                         this.confirming = true;
@@ -151,6 +210,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                                 throw new Error(localize('azureInvoke.previewRunning', 'Wait for running previews to finish or cancel them before confirming.'));
                             }
                             this.selections = this.confirmSelection(message.selections);
+                            this.diagnosis = undefined;
                             this.statuses = this.selections.map(selection => ({ id: selection.id, text: localize('azureInvoke.ready', 'Ready') }));
                             this.state = 'approved';
                             await this.postState();
@@ -161,6 +221,13 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                         throw new Error(localize('azureInvoke.invalidReviewMessage', 'Invalid collection review action.'));
                     }
                 } catch (error) {
+                    if (diagnosisVersion !== undefined) {
+                        this.diagnosis = undefined;
+                        if (this.state !== 'reviewing' || diagnosisVersion !== this.configuration.version) {
+                            context.telemetry.properties.failureStage = 'supersededDiagnosis';
+                            return;
+                        }
+                    }
                     if (requestedVersion !== undefined && (this.state !== 'revising' || requestedVersion !== this.configuration.version)) {
                         context.telemetry.properties.failureStage = 'supersededRevision';
                         return;
@@ -170,7 +237,12 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                     }
                     const errorMessage = error instanceof Error ? error.message : localize('azureInvoke.reviewFailed', 'Could not confirm the collection. Try again.');
                     if (command === 'previewRequest' && message && typeof message === 'object' && 'id' in message && typeof message.id === 'string') {
-                        await this.postMessage({ command: 'preview', version: this.configuration.version, id: message.id, message: { command: 'requestError', message: errorMessage, cancelled: isUserCancelledError(error) } });
+                        const result = { command: 'requestError' as const, message: errorMessage, cancelled: isUserCancelledError(error), ...(error instanceof InvocationBlockedError ? { blocked: true } : {}) };
+                        const record = this.previewRecords.get(message.id);
+                        if (record && !this.previews.isRunning(message.id)) {
+                            record.result = result;
+                        }
+                        await this.postMessage({ command: 'preview', version: this.configuration.version, id: message.id, message: result });
                     } else {
                         this.errorMessage = errorMessage;
                         await this.postState();
@@ -190,6 +262,9 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
         this.statuses = [];
         this.previews.clear();
         this.previewInputs.clear();
+        this.previewRecords.clear();
+        this.diagnosis = undefined;
+        this.diagnosisNotice = undefined;
         this.state = 'reviewing';
         this.errorMessage = undefined;
         await this.postState(true);
@@ -207,7 +282,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
 
     private async previewRequest(context: IActionContext, id: unknown, request: unknown, runDependencies: boolean, requests: unknown): Promise<void> {
         const candidate = this.configuration.candidates.find(candidate => candidate.id === id);
-        if (this.isDisposed || this.state !== 'reviewing' || !candidate || candidate.trigger !== 'http') {
+        if (this.isDisposed || this.state !== 'reviewing' || this.diagnosing || !candidate || candidate.trigger !== 'http') {
             throw new Error(localize('azureInvoke.previewUnavailable', 'Only HTTP templates in the active review can be previewed.'));
         }
         const snapshot: unknown = { id: candidate.id, name: candidate.name, request };
@@ -228,11 +303,101 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 snapshots.push(copyInvocation(input));
             }
         }
-        for (const input of snapshots) {
-            this.previewInputs.set(input.id, input);
+        const definitions = new Map(this.configuration.candidates.flatMap(candidate =>
+            candidate.trigger === 'http' ? [[candidate.id, copyInvocation(candidate)] as const] : []));
+        for (const [id, input] of this.previewInputs) {
+            definitions.set(id, input);
         }
-        this.previewInputs.set(candidate.id, copyInvocation(snapshot));
+        for (const input of [...snapshots, snapshot]) {
+            if (!this.previews.isRunning(input.id)) {
+                definitions.set(input.id, copyInvocation(input));
+            }
+        }
+        if (this.previews.isRunning(snapshot.id)) {
+            throw new Error(localize('azureInvoke.chainBusy', 'A request in this chain is already running. Wait or cancel it before starting another run.'));
+        }
+        const record: PreviewRecord = { invocation: copyInvocation(snapshot) };
+        this.previewRecords.set(candidate.id, record);
+        this.diagnosis = undefined;
+        this.diagnosisNotice = undefined;
+        const plan = planInvocationChain(snapshot, id => definitions.get(id));
+        if ((runDependencies ? plan : [snapshot]).some(input => this.previews.isRunning(input.id))) {
+            throw new Error(localize('azureInvoke.chainBusy', 'A request in this chain is already running. Wait or cancel it before starting another run.'));
+        }
+        for (const [id, input] of definitions) {
+            this.previewInputs.set(id, input);
+        }
+        record.plan = plan;
+        if (runDependencies) {
+            for (const input of plan.slice(0, -1)) {
+                this.previewRecords.set(input.id, { invocation: input, plan: planInvocationChain(input, id => definitions.get(id)) });
+            }
+        }
         await this.previews.send(context, snapshot, { runDependencies });
+    }
+
+    private captureDiagnostics(ids: unknown, requests: unknown): InvocationDiagnosisCase[] {
+        if (!Array.isArray(ids) || !ids.length || ids.length > 100 || new Set(ids).size !== ids.length ||
+            !Array.isArray(requests) || requests.length > 100) {
+            throw new Error(localize('azureInvoke.invalidDiagnosis', 'Choose failed HTTP previews to diagnose.'));
+        }
+        const current = new Map<string, HttpInvocation>();
+        for (const entry of requests) {
+            const candidate = entry && typeof entry === 'object' && 'id' in entry ?
+                this.configuration.candidates.find(candidate => candidate.id === entry.id && candidate.trigger === 'http') : undefined;
+            const input: unknown = { id: candidate?.id, name: candidate?.name, request: entry && typeof entry === 'object' && 'request' in entry ? entry.request : undefined };
+            validateInvocation(input);
+            if (current.has(input.id)) {
+                throw new Error(localize('azureInvoke.invalidDiagnosis', 'Choose failed HTTP previews to diagnose.'));
+            }
+            current.set(input.id, copyInvocation(input));
+        }
+        let remainingBodyBytes = 512 * 1024;
+        return ids.map((id: unknown): InvocationDiagnosisCase => {
+            const candidate = this.configuration.candidates.find(candidate => candidate.id === id && candidate.trigger === 'http');
+            const record = typeof id === 'string' ? this.previewRecords.get(id) : undefined;
+            const result = record?.result;
+            if (!candidate || candidate.trigger !== 'http' || !record || !result ||
+                result.command === 'requestStarted' ||
+                (result.command === 'response' ? result.response.status >= 200 && result.response.status < 300 : result.cancelled || result.blocked)) {
+                throw new Error(localize('azureInvoke.invalidDiagnosis', 'Choose failed HTTP previews to diagnose.'));
+            }
+            for (const input of record.plan ?? [record.invocation]) {
+                const latest = current.get(input.id);
+                if (!latest || JSON.stringify(copyInvocation(latest).request) !== JSON.stringify(input.request)) {
+                    throw new Error(localize('azureInvoke.diagnosisStalePreview', 'A request changed after its preview. Send it again before diagnosing the failure.'));
+                }
+            }
+            let diagnostic: InvocationPreviewDiagnostic;
+            if (result.command === 'response') {
+                const shared = getShareableHttpResponse(result.response, !!record.plan?.every(input => isLocalHttpRequest(input.request)));
+                const body = shared.body === undefined ? undefined : Buffer.from(shared.body);
+                const limit = Math.min(64 * 1024, remainingBodyBytes);
+                diagnostic = {
+                    outcome: 'response',
+                    ...shared,
+                    ...(body ? { body: new StringDecoder('utf8').write(body.subarray(0, limit)), bodyTruncated: body.length > limit } : {}),
+                };
+                remainingBodyBytes -= Math.min(body?.length ?? 0, limit);
+            } else {
+                diagnostic = { outcome: 'requestError', message: result.message };
+            }
+            const fields = ['method', 'url', 'headers', 'query', 'body', 'bindings', 'dependsOn'] as const;
+            return {
+                ...candidate,
+                request: copyInvocation(candidate).request,
+                reviewedFields: fields.filter(field => JSON.stringify(record.invocation.request[field]) !== JSON.stringify(candidate.request[field])),
+                dependencyIds: getRequestDependencies(record.invocation.request),
+                diagnostic,
+            };
+        });
+    }
+
+    public getDiagnostics(diagnosisId: string) {
+        if (this.isDisposed || this.state !== 'reviewing' || !this.diagnosis || this.diagnosis.id !== diagnosisId || this.previews.running) {
+            throw new Error(localize('azureInvoke.diagnosisExpired', 'This diagnosis is no longer active. Select Diagnose with Copilot in the current review.'));
+        }
+        return { diagnosisId, cases: this.diagnosis.cases };
     }
 
     public async updateStatuses(statuses: { id: string; text: string }[]): Promise<void> {
@@ -241,7 +406,10 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
     }
 
     private async postState(proposal = false): Promise<void> {
-        const snapshot = { version: this.configuration.version, state: this.state, selections: this.selections, statuses: this.statuses, error: this.errorMessage };
+        const snapshot = {
+            version: this.configuration.version, state: this.state, selections: this.selections, statuses: this.statuses, error: this.errorMessage,
+            diagnosing: this.diagnosing, diagnosisNotice: this.diagnosisNotice,
+        };
         await this.postMessage(proposal ?
             { ...snapshot, command: 'proposal', candidates: this.configuration.candidates } :
             { ...snapshot, command: 'state' });

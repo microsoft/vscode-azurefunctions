@@ -40,8 +40,12 @@ input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrin
 .request-field textarea { min-height: 120px; }
 .preview-actions { display: flex; gap: 8px; margin-top: 18px; }
 .preview-response { margin-top: 20px; }
+.diagnose-preview { margin-top: 12px; }
+.diagnosis-hint { margin-top: 20px; }
+#diagnosis-notice { line-height: 1.6; }
 .preview-response output { display: block; margin-bottom: 10px; }
 .preview-error { color: var(--vscode-errorForeground); overflow-wrap: anywhere; }
+.preview-error.request-warning { color: var(--vscode-editorWarning-foreground); }
 footer { position: sticky; bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding: 16px 0; background: var(--vscode-editor-background); border-top: 1px solid var(--vscode-panel-border); }
 footer span { margin-right: auto; color: var(--vscode-descriptionForeground); }
 #review-message { line-height: 1.6; }

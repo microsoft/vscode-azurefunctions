@@ -18,6 +18,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
     private readonly runner: HttpRequestRunner;
     private name: string;
     private webviewReady = false;
+    private debugging = false;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -28,6 +29,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
             runner?: HttpRequestRunner;
             sources?: InvocationSource[];
             execute?: (context: IActionContext, request: HttpRequest, options: InvocationRunOptions) => Promise<HttpResponse>;
+            debug?: (context: IActionContext) => Promise<void>;
         } = {},
     ) {
         super(context, invocation.name, 'azureInvokeHttpRequest', {
@@ -35,6 +37,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
             request: invocation.request,
             saved,
             sources: execution.sources,
+            debugAvailable: !!execution.debug,
             labels: {
                 subtitle: localize('azureInvoke.subtitle', 'HTTP trigger'),
                 method: localize('azureInvoke.method', 'Method'),
@@ -61,6 +64,8 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                 saved: localize('azureInvoke.saved', 'Saved for this session'),
                 unsaved: localize('azureInvoke.unsaved', 'Unsaved changes'),
                 savedInvocationHint: localize('azureInvoke.savedInvocationHint', 'Using the saved invocation. Unsaved editor changes are not included.'),
+                debug: localize('azureInvoke.debugWithCopilot', 'Debug with Copilot'),
+                debugHint: localize('azureInvoke.debugHint', 'Share this localhost response with Copilot to choose breakpoints and replay the captured request in your already running VS Code debugger. Responses may contain sensitive data. Unsaved editor changes are not used.'),
                 enabled: localize('azureInvoke.enabled', 'Enabled'),
                 dependencies: getDependencyLabels(),
             },
@@ -105,6 +110,23 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                     this.runner.cancel();
                     return;
                 }
+                if (command === 'debugRequest') {
+                    try {
+                        if (!this.execution.debug || this.debugging) {
+                            throw new Error(localize('azureInvoke.debugUnavailable', 'Debugging is unavailable or already opening. Open a saved invocation and try again.'));
+                        }
+                        this.debugging = true;
+                        await this.postMessage({ command: 'debugState', busy: true });
+                        await this.execution.debug(actionContext);
+                        await this.postMessage({ command: 'debugState', busy: false, message: localize('azureInvoke.debugOpened', 'Opened Copilot Chat to choose breakpoints and replay the captured request. No application code or request definitions have changed.') });
+                    } catch (error) {
+                        await this.postMessage({ command: 'debugState', busy: false, error: this.getErrorMessage(error) });
+                        throw error;
+                    } finally {
+                        this.debugging = false;
+                    }
+                    return;
+                }
                 if (command === 'sendRequest') {
                     const request = message && typeof message === 'object' && 'request' in message ? message.request : undefined;
                     const previous = this.runner.messages.at(-1);
@@ -127,7 +149,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                         command !== 'saveRequest') {
                         throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
                     }
-                    const snapshot = { id: this.invocation.id, name: this.name, request: message.request };
+                    const snapshot = { ...this.invocation, name: this.name, request: message.request };
                     validateInvocation(snapshot);
                     this.saveInvocation(snapshot);
                     await this.postMessage({ command: 'requestSaved' });

@@ -36,14 +36,26 @@ export function render(_viewName: string, api: { postMessage(message: Collection
     selectAllLabel.append(selectAll, document.createTextNode(labels.selectAll));
     const list = document.createElement('div');
     list.className = 'case-list';
-    let rows: { candidate: InvocationCandidate; checkbox: HTMLInputElement; toggle: HTMLButtonElement; comment: HTMLTextAreaElement; status: HTMLElement; preview?: HttpRequestPreview; locked: boolean }[] = [];
+    let rows: { candidate: InvocationCandidate; checkbox: HTMLInputElement; toggle: HTMLButtonElement; comment: HTMLTextAreaElement; status: HTMLElement; preview?: HttpRequestPreview; diagnose?: HTMLButtonElement; locked: boolean }[] = [];
     const footer = document.createElement('footer');
     const count = document.createElement('span');
     count.setAttribute('role', 'status');
     const confirm = document.createElement('button');
     confirm.id = 'confirm-collection';
     confirm.textContent = labels.confirm;
+    const diagnoseAll = document.createElement('button');
+    diagnoseAll.id = 'diagnose-failed';
+    diagnoseAll.className = 'secondary';
+    diagnoseAll.textContent = labels.diagnoseFailed;
+    diagnoseAll.title = labels.diagnosisHint;
+    const diagnosisHint = document.createElement('p');
+    diagnosisHint.className = 'hint diagnosis-hint';
+    diagnosisHint.textContent = labels.diagnosisHint;
+    const diagnosisNotice = document.createElement('p');
+    diagnosisNotice.id = 'diagnosis-notice';
+    diagnosisNotice.setAttribute('role', 'status');
     const cancel = document.createElement('button');
+    cancel.id = 'cancel-collection';
     cancel.className = 'secondary';
     cancel.textContent = labels.cancel;
     const message = document.createElement('p');
@@ -55,6 +67,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
     error.hidden = true;
     let state: CollectionReviewState = config.loading ? 'loading' : 'reviewing';
     let submitting = false;
+    let diagnosing = false;
     let version = -1;
     function populate(candidates: InvocationCandidate[], nextVersion: number, selections?: InvocationSelection[]): void {
         if (nextVersion <= version) {
@@ -138,6 +151,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             description.textContent = candidate.description;
             details.append(description);
             let preview: HttpRequestPreview | undefined;
+            let diagnose: HTMLButtonElement | undefined;
             if (candidate.trigger === 'http') {
                 preview = new HttpRequestPreview(candidate, labels,
                     (request, runDependencies) => api.postMessage({
@@ -151,6 +165,13 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                     preview.setRequest(selection.request);
                 }
                 details.append(preview.element);
+                diagnose = document.createElement('button');
+                diagnose.type = 'button';
+                diagnose.className = 'secondary diagnose-preview';
+                diagnose.textContent = labels.diagnoseRequest;
+                diagnose.title = labels.diagnosisHint;
+                diagnose.addEventListener('click', () => diagnoseRequests([candidate.id]));
+                details.append(diagnose);
             } else {
                 const endpoint = document.createElement('p');
                 endpoint.className = 'endpoint';
@@ -168,13 +189,13 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             comment.value = selection?.comment ?? '';
             comment.addEventListener('input', updateSelection);
             commentLabel.append(comment);
-            if (candidate.trigger === 'http') {
+            if (candidate.trigger === 'http' && !config.updatingSaved) {
                 details.append(commentLabel);
             }
             summary.append(checkbox, toggle, status);
             card.append(summary, details);
             group.append(card);
-            return { candidate, checkbox, toggle, comment, status, preview, locked: false };
+            return { candidate, checkbox, toggle, comment, status, preview, diagnose, locked: false };
         });
         updateSelection();
     }
@@ -184,16 +205,37 @@ export function render(_viewName: string, api: { postMessage(message: Collection
         const supported = rows.filter(row => row.candidate.trigger === 'http');
         count.textContent = `${labels.selected}: ${selected.length}`;
         const feedback = hasFeedback();
+        const running = rows.some(row => row.preview?.running);
+        const failures = rows.filter(row => row.preview?.failed);
+        diagnoseAll.hidden = !!config.updatingSaved || state !== 'reviewing' || !failures.length;
+        diagnoseAll.disabled = submitting || diagnosing || running;
+        diagnosisHint.hidden = diagnoseAll.hidden;
+        for (const row of rows) {
+            if (row.diagnose) {
+                row.diagnose.hidden = !!config.updatingSaved || state !== 'reviewing' || !row.preview?.failed;
+                row.diagnose.disabled = submitting || diagnosing || running;
+            }
+        }
         confirm.textContent = feedback ? labels.requestChanges : labels.confirm;
-        confirm.disabled = submitting || (!selected.length && !feedback) || (state !== 'reviewing' && state !== 'approved') || rows.some(row => row.preview?.running);
+        confirm.disabled = submitting || diagnosing || (!selected.length && !feedback) || (state !== 'reviewing' && state !== 'approved') || running;
         selectAll.checked = !!supported.length && selected.length === supported.length;
         selectAll.indeterminate = !!selected.length && selected.length < supported.length;
-        selectAll.disabled = state !== 'reviewing' || !supported.length;
+        selectAll.disabled = diagnosing || state !== 'reviewing' || !supported.length;
         confirm.title = selected.length || feedback ? confirm.textContent : labels.selectCases;
     }
     function hasFeedback(): boolean {
-        return rows.some(row => row.candidate.trigger === 'http' && !!row.comment.value.trim());
+        return !config.updatingSaved && rows.some(row => row.candidate.trigger === 'http' && !!row.comment.value.trim());
     }
+    function diagnoseRequests(ids: string[]): void {
+        submitting = true;
+        error.hidden = true;
+        updateSelection();
+        api.postMessage({
+            command: 'diagnoseRequests', ids,
+            requests: rows.flatMap(row => row.preview ? [{ id: row.candidate.id, request: row.preview.request }] : []),
+        });
+    }
+    diagnoseAll.addEventListener('click', () => diagnoseRequests(rows.filter(row => row.preview?.failed).map(row => row.candidate.id)));
     function updateState(): void {
         const discovering = state === 'loading' || state === 'revising';
         loadingTitle.textContent = state === 'revising' ? labels.revisingTitle : labels.loadingTitle;
@@ -241,6 +283,8 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                 return;
             }
             state = response.state;
+            diagnosing = response.diagnosing;
+            diagnosisNotice.textContent = response.diagnosisNotice ?? '';
             submitting = false;
             error.textContent = response.error ?? '';
             error.hidden = !response.error;
@@ -256,9 +300,9 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                 } else if (state === 'approved' && !selection) {
                     row.checkbox.checked = false;
                 }
-                row.checkbox.disabled = state !== 'reviewing' || row.candidate.trigger !== 'http';
-                row.comment.disabled = state !== 'reviewing';
-                row.preview?.setEnabled(state === 'reviewing');
+                row.checkbox.disabled = diagnosing || state !== 'reviewing' || row.candidate.trigger !== 'http';
+                row.comment.disabled = diagnosing || state !== 'reviewing';
+                row.preview?.setEnabled(!diagnosing && state === 'reviewing');
                 const status = response.statuses.find(status => status.id === row.candidate.id);
                 if (status) {
                     row.status.textContent = status.text;
@@ -269,8 +313,8 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             rows.find(row => row.candidate.id === response.id)?.preview?.update(response.message);
         }
     });
-    footer.append(count, confirm, cancel);
-    main.append(loading, heading, introduction, selectAllLabel, list, message, error, footer);
+    footer.append(count, diagnoseAll, confirm, cancel);
+    main.append(loading, heading, introduction, selectAllLabel, list, diagnosisHint, diagnosisNotice, message, error, footer);
     const root = document.querySelector('#root');
     if (!root) {
         throw new Error('Missing collection review root element.');

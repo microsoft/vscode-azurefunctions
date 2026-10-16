@@ -22,6 +22,7 @@ interface CollectionReview {
     drafts: Map<string, string>;
     revision: number;
     feedback?: InvocationSelection[];
+    originals?: Map<string, HttpInvocation>;
 }
 
 export class CollectionReviews implements vscode.Disposable {
@@ -111,9 +112,49 @@ export class CollectionReviews implements vscode.Disposable {
         return this.create(copied);
     }
 
-    private create(candidates?: InvocationCandidate[]): CollectionReviewController {
+    public openChanges(changes: { invocation: HttpInvocation; request: Partial<HttpRequest>; reason: string }[]): CollectionReviewController {
+        if (!changes.length || changes.length > 100 || new Set(changes.map(change => change.invocation.id)).size !== changes.length) {
+            throw new Error(localize('azureInvoke.invalidRequestChanges', 'Propose changes to 1 to 100 unique saved requests.'));
+        }
+        const saved = new Map(this.provider.getRequests().map(invocation => [invocation.id, copyInvocation(invocation)]));
+        const proposed = new Map(saved);
+        for (const change of changes) {
+            if (JSON.stringify(saved.get(change.invocation.id)) !== JSON.stringify(copyInvocation(change.invocation))) {
+                throw new Error(localize('azureInvoke.inspectionExpired', 'The collection or its results changed. Inspect the saved request again before proposing changes.'));
+            }
+            proposed.set(change.invocation.id, { ...change.invocation, request: { ...change.invocation.request, ...change.request } });
+        }
+        const included = new Map<string, HttpInvocation>();
+        for (const change of changes) {
+            const invocation = proposed.get(change.invocation.id);
+            if (!invocation) {
+                throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
+            }
+            validateInvocation(invocation);
+            for (const input of planInvocationChain(invocation, id => proposed.get(id))) {
+                included.set(input.id, input);
+            }
+        }
+        if (included.size > 100) {
+            throw new Error(localize('azureInvoke.tooManyRequestChanges', 'Review fewer requests at once; proposed changes and their prerequisites must fit within 100 requests.'));
+        }
+        const candidates: InvocationCandidate[] = [...included.values()].map(invocation => {
+            const change = changes.find(change => change.invocation.id === invocation.id);
+            return {
+                ...invocation, trigger: 'http', auth: 'unknown',
+                group: invocation.group ?? localize('azureInvoke.requestsGroup', 'Requests'),
+                description: change ?
+                    localize('azureInvoke.requestChangeReason', '{0} Proposed fields: {1}.', change.reason, Object.keys(change.request).join(', ')) :
+                    localize('azureInvoke.unchangedPrerequisite', 'Unchanged prerequisite included for context. Applying this review does not run it.'),
+            };
+        });
+        const originals = new Map([...saved].filter(([id]) => included.has(id)));
+        return this.create(candidates, originals);
+    }
+
+    private create(candidates?: InvocationCandidate[], originals?: Map<string, HttpInvocation>): CollectionReviewController {
         this.controller?.panel.dispose();
-        const review: CollectionReview = { id: randomUUID(), candidates: candidates ?? [], cancelled: false, drafts: new Map(), revision: 0 };
+        const review: CollectionReview = { id: randomUUID(), candidates: candidates ?? [], cancelled: false, drafts: new Map(), revision: 0, originals };
         this.current = review;
         this.controller = new CollectionReviewController(
             this.context, review.id, candidates,
@@ -129,6 +170,8 @@ export class CollectionReviews implements vscode.Disposable {
                 return parsed;
             },
             () => this.openChat(review.id, review.revision),
+            diagnosisId => this.openChat(review.id, undefined, diagnosisId),
+            !!originals,
         );
         return this.controller;
     }
@@ -146,7 +189,18 @@ export class CollectionReviews implements vscode.Disposable {
         return this.getApproved(reviewId);
     }
 
+    public getDiagnostics(reviewId: string, diagnosisId: string) {
+        const review = this.current;
+        if (!review || review.id !== reviewId || review.originals || review.cancelled || review.selections || !this.controller || this.controller.isDisposed) {
+            throw new Error(localize('azureInvoke.diagnosisExpired', 'This diagnosis is no longer active. Select Diagnose with Copilot in the current review.'));
+        }
+        return { reviewId, ...this.controller.getDiagnostics(diagnosisId) };
+    }
+
     private describeReview(review: CollectionReview, selections: InvocationSelection[], state: 'approved' | 'changesRequested') {
+        if (review.originals) {
+            throw new Error(localize('azureInvoke.savedReviewPrivate', 'Saved-request review fields stay private. Inspect saved requests and propose changes with the saved-request tools instead.'));
+        }
         return {
             reviewId: review.id,
             revision: review.revision,
@@ -224,8 +278,19 @@ export class CollectionReviews implements vscode.Disposable {
             if (!candidate || candidate.trigger !== 'http') {
                 throw new Error(localize('azureInvoke.caseNotFound', 'This proposed case is no longer available.'));
             }
-            return { id: candidate.id, name: candidate.name, request: selection.request ?? candidate.request };
+            return { id: candidate.id, name: candidate.name, group: review.originals ? review.originals.get(candidate.id)?.group : candidate.group, request: selection.request ?? candidate.request };
         });
+        if (review.originals) {
+            for (const [id, original] of review.originals) {
+                if (JSON.stringify(this.provider.getRequest(id)) !== JSON.stringify(original)) {
+                    throw new Error(localize('azureInvoke.savedReviewStale', 'A saved request changed while this review was open. Ask Copilot to inspect it and propose changes again. Nothing has been applied.'));
+                }
+            }
+            this.provider.saveRequests(invocations);
+            review.drafts = new Map(invocations.map(invocation => [invocation.id, invocation.id]));
+            review.selections = selections;
+            return selections.map(selection => ({ ...selection }));
+        }
         for (const invocation of invocations) {
             planInvocationChain(invocation, id => invocations.find(source => source.id === id));
         }
@@ -282,7 +347,7 @@ export class CollectionReviews implements vscode.Disposable {
 
     private requireApproved(reviewId: string): CollectionReview & { selections: InvocationSelection[] } {
         const review = this.current;
-        if (!review || review.id !== reviewId || review.cancelled || !review.selections) {
+        if (!review || review.id !== reviewId || review.originals || review.cancelled || !review.selections) {
             throw new Error(localize('azureInvoke.reviewNotApproved', 'Confirm the active collection review in the webview before drafting or testing requests.'));
         }
         return { ...review, selections: review.selections };

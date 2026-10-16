@@ -39,9 +39,11 @@ export const httpInvocationInputSchema = z.object({
 const outputSchema = z.object({ id: z.string(), message: z.string() });
 
 export function saveHttpInvocation(provider: AzureInvokeTreeDataProvider, input: z.infer<typeof httpInvocationInputSchema>, id?: string) {
+    const existing = id ? provider.getRequest(id) : undefined;
     const invocation: HttpInvocation = {
         id: id ?? provider.createRequest().id,
         name: input.name.trim(),
+        ...(existing?.group === undefined ? {} : { group: existing.group }),
         request: {
             method: input.method ?? 'GET',
             url: input.url,

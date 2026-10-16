@@ -5,6 +5,7 @@
 
 import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
 import { ResponseBindingsEditor } from './ResponseBindingsEditor';
+import { formatResponseBody } from './formatResponseBody';
 import './httpRequestView.css';
 
 declare global {
@@ -76,6 +77,12 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 <p id="error" role="alert" hidden></p>
                 <pre id="response-body" tabindex="0" hidden></pre>
                 <details id="response-headers" hidden><summary data-label="headers"></summary><pre></pre></details>
+                <div class="response-actions">
+                    <button id="debug-response" type="button" class="secondary" data-label="debug" hidden></button>
+                    <p id="debug-hint" class="hint" data-label="debugHint" hidden></p>
+                    <p id="debug-notice" role="status" hidden></p>
+                    <p id="debug-error" role="alert" hidden></p>
+                </div>
             </section>
         </main>`;
 
@@ -274,8 +281,27 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     const error = getElement('#error');
     const responseBody = getElement('#response-body');
     const responseHeaders = getElement('#response-headers');
+    const debug = getElement<HTMLButtonElement>('#debug-response');
+    const debugHint = getElement('#debug-hint');
+    const debugNotice = getElement('#debug-notice');
+    const debugError = getElement('#debug-error');
     let sending = false;
+    let debugging = false;
+    let hasResult = false;
     let sequence = 0;
+    function updateDebugControls(): void {
+        debug.hidden = !configuration.debugAvailable || savedRevision < 0 || !hasResult || sending;
+        debugHint.hidden = debug.hidden;
+        debug.disabled = sending || debugging;
+    }
+    debug.title = labels.debugHint;
+    debug.addEventListener('click', () => {
+        debugging = true;
+        debugNotice.hidden = true;
+        debugError.hidden = true;
+        updateDebugControls();
+        api.postMessage({ command: 'debugRequest' });
+    });
     function setSending(value: boolean): void {
         sending = value;
         send.disabled = value;
@@ -283,9 +309,13 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         send.textContent = value ? labels.sending : labels.send;
         abort.hidden = !value;
         getElement('#response-body').setAttribute('aria-busy', String(value));
+        updateDebugControls();
     }
 
     function startRequest(saved: boolean): void {
+        hasResult = false;
+        debugNotice.hidden = true;
+        debugError.hidden = true;
         error.hidden = true;
         responseBody.hidden = true;
         responseHeaders.hidden = true;
@@ -333,15 +363,27 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             setSending(false);
             status.textContent = `${message.response.status} \u00b7 ${message.response.duration} ms`;
             status.classList.toggle('http-error', message.response.status >= 400);
-            responseBody.textContent = message.response.body;
+            responseBody.textContent = formatResponseBody(message.response.body);
             responseBody.hidden = false;
             getElement('#response-headers pre').textContent = message.response.headers.map(entry => `${entry.name}: ${entry.value}`).join('\n');
             responseHeaders.hidden = false;
+            hasResult = true;
+            updateDebugControls();
         } else if (message.command === 'requestError') {
             setSending(false);
             status.textContent = '';
             error.textContent = message.message;
+            error.classList.toggle('request-warning', !!message.blocked);
             error.hidden = false;
+            hasResult = !message.cancelled && !message.blocked;
+            updateDebugControls();
+        } else if (message.command === 'debugState') {
+            debugging = message.busy;
+            debugNotice.textContent = message.message ?? '';
+            debugNotice.hidden = !message.message;
+            debugError.textContent = message.error ?? '';
+            debugError.hidden = !message.error;
+            updateDebugControls();
         } else if (message.command === 'renamed') {
             if (invocationName !== message.name) {
                 invocationName = message.name;
@@ -354,6 +396,7 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 savedRevision = savingRevision;
                 savingRevision = undefined;
                 updateSaveState();
+                updateDebugControls();
             }
         } else if (message.command === 'saveError') {
             savingRevision = undefined;

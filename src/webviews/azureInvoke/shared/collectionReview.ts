@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type DependencyLabels, type HttpRequest, type HttpRequestStateMessage } from './httpRequest';
+import { type DependencyLabels, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from './httpRequest';
 
 export const otherInvocationTriggers = ['timer', 'blob', 'queue', 'serviceBus', 'eventHub', 'eventGrid', 'cosmosDB', 'other'] as const;
 
@@ -34,8 +34,19 @@ export interface InvocationSelection {
     selected?: boolean;
 }
 
+export type InvocationPreviewDiagnostic =
+    | { outcome: 'response'; bodyTruncated?: boolean } & Pick<HttpResponse, 'status' | 'duration'> & Partial<Pick<HttpResponse, 'headers' | 'body'>>
+    | { outcome: 'requestError'; message: string };
+
+export interface InvocationDiagnosisCase extends HttpInvocationCandidate {
+    reviewedFields: string[];
+    dependencyIds: string[];
+    diagnostic: InvocationPreviewDiagnostic;
+}
+
 export interface CollectionReviewConfiguration {
     candidates: InvocationCandidate[];
+    updatingSaved?: boolean;
     loading: boolean;
     version: number;
     selections?: InvocationSelection[];
@@ -47,6 +58,9 @@ export interface CollectionReviewConfiguration {
         unsupported: string;
         confirm: string;
         requestChanges: string;
+        diagnoseRequest: string;
+        diagnoseFailed: string;
+        diagnosisHint: string;
         cancel: string;
         selected: string;
         approved: string;
@@ -84,6 +98,7 @@ export type CollectionReviewMessage =
     | { command: 'ready' }
     | { command: 'confirmCollection'; selections: InvocationSelection[] }
     | { command: 'requestChanges'; selections: InvocationSelection[] }
+    | { command: 'diagnoseRequests'; ids: string[]; requests: { id: string; request: HttpRequest }[] }
     | { command: 'previewRequest'; id: string; request: HttpRequest; runDependencies?: boolean; requests?: { id: string; request: HttpRequest }[] }
     | { command: 'cancelPreview'; id: string }
     | { command: 'cancelCollection' };
@@ -94,6 +109,8 @@ interface CollectionReviewSnapshot {
     selections: InvocationSelection[];
     statuses: { id: string; text: string }[];
     error?: string;
+    diagnosing: boolean;
+    diagnosisNotice?: string;
 }
 
 export type CollectionReviewResponse =

@@ -15,8 +15,10 @@ import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
-import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool } from './chat/tools/azureInvoke/collectionReviewTools';
+import { debugHttpInvocationTool, getHttpInvocationDebugContextTool } from './chat/tools/azureInvoke/debugHttpInvocationTools';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool } from './chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
+import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from './chat/tools/azureInvoke/savedHttpInvocationTools';
 import { runHttpInvocationTool } from './chat/tools/azureInvoke/runHttpInvocationTool';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
@@ -135,8 +137,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 registerMcpTool(server, createHttpInvocationTool(azureInvokeProvider));
                 registerMcpTool(server, proposeInvocationCollectionTool(azureInvokeReviews));
                 registerMcpTool(server, getInvocationCollectionReviewTool(azureInvokeReviews));
+                registerMcpTool(server, getInvocationDiagnosticsTool(azureInvokeReviews));
+                registerMcpTool(server, getHttpInvocationDebugContextTool(azureInvokeEditors));
+                registerMcpTool(server, debugHttpInvocationTool(azureInvokeEditors));
                 registerMcpTool(server, draftHttpInvocationTool(azureInvokeProvider, azureInvokeReviews));
                 registerMcpTool(server, listHttpInvocationsTool(azureInvokeProvider));
+                registerMcpTool(server, getHttpInvocationInspectionTool(azureInvokeEditors));
+                registerMcpTool(server, proposeHttpInvocationChangesTool(azureInvokeEditors, azureInvokeReviews));
                 registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
             },
         };

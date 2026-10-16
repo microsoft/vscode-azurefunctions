@@ -10,8 +10,9 @@ export function validateInvocation(value: unknown): asserts value is HttpInvocat
     if (!value || typeof value !== 'object' ||
         !('id' in value) || typeof value.id !== 'string' || !value.id || value.id.length > 100 ||
         !('name' in value) || !isInvocationName(value.name) ||
+        ('group' in value && value.group !== undefined && !isInvocationName(value.group)) ||
         !('request' in value) || !isHttpRequest(value.request)) {
-        throw new Error(localize('azureInvoke.invalidInvocation', 'Invalid invocation. Use a name of 1 to 100 characters, a supported HTTP method, and at most 100 entries per parameter or dependency list. Bindings need unique identifier names other than guid, a source request, and a /body, /request/body, /headers, or /status selector.'));
+        throw new Error(localize('azureInvoke.invalidInvocation', 'Invalid invocation. Use a name and optional group of 1 to 100 characters without line breaks, a supported HTTP method, and at most 100 entries per parameter or dependency list. Bindings need unique identifier names other than guid, a source request, and a /body, /request/body, /headers, or /status selector.'));
     }
     if (Buffer.byteLength(value.request.body) > 5 * 1024 * 1024) {
         throw new Error(localize('azureInvoke.requestTooLarge', 'Request bodies must not exceed 5 MB.'));
@@ -22,6 +23,7 @@ export function copyInvocation(invocation: HttpInvocation): HttpInvocation {
     return {
         id: invocation.id,
         name: invocation.name.trim(),
+        ...(invocation.group === undefined ? {} : { group: invocation.group.trim() }),
         request: {
             method: invocation.request.method,
             url: invocation.request.url,

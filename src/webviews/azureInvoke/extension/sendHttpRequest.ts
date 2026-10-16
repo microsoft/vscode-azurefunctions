@@ -8,9 +8,26 @@ import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { validateHeaderName, validateHeaderValue } from 'http';
 import { localize } from '../../../localize';
+import { StringDecoder } from 'string_decoder';
 import { isHttpRequest, type HttpResponse } from '../shared/httpRequest';
 
 const maxBodyBytes = 5 * 1024 * 1024;
+const sharedResponseHeaders = new Set([
+    'allow', 'cache-control', 'content-encoding', 'content-language', 'content-length',
+    'content-type', 'date', 'etag', 'expires', 'last-modified', 'retry-after', 'server',
+]);
+
+export function getShareableHttpResponse(response: HttpResponse, shareBody: boolean, bodyLimit?: number) {
+    return {
+        status: response.status,
+        duration: response.duration,
+        ...(shareBody ? {
+            headers: response.headers.filter(header => sharedResponseHeaders.has(header.name.toLowerCase())),
+            body: bodyLimit === undefined ? response.body : new StringDecoder('utf8').write(Buffer.from(response.body).subarray(0, bodyLimit)),
+            ...(bodyLimit === undefined ? {} : { bodyTruncated: Buffer.byteLength(response.body) > bodyLimit }),
+        } : {}),
+    };
+}
 
 class ResponseTooLargeError extends Error {
     public constructor() {
@@ -86,11 +103,11 @@ export function prepareHttpRequest(input: unknown) {
     return { input, url, headers };
 }
 
-export async function sendHttpRequest(context: IActionContext, request: unknown, abortSignal: AbortSignal, timeout: number): Promise<HttpResponse> {
+export async function sendHttpRequest(context: IActionContext, request: unknown, abortSignal: AbortSignal, timeout: number | undefined): Promise<HttpResponse> {
     const { input, url, headers } = prepareHttpRequest(request);
     const started = Date.now();
     const timeoutAbort = new AbortController();
-    const timer = setTimeout(() => timeoutAbort.abort(), timeout);
+    const timer = timeout === undefined ? undefined : setTimeout(() => timeoutAbort.abort(), timeout);
     const signal = AbortSignal.any([abortSignal, timeoutAbort.signal]);
     try {
         const client = await createGenericClient(context, undefined, {

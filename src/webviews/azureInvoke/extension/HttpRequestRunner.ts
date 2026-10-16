@@ -10,6 +10,12 @@ import { requestUtils } from '../../../utils/requestUtils';
 import { type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
 import { sendHttpRequest } from './sendHttpRequest';
 
+export class InvocationBlockedError extends Error {
+    public constructor(message = localize('azureInvoke.prerequisiteBlocked', 'Not run because a prerequisite failed. Resolve that failure and rerun the chain.')) {
+        super(message);
+    }
+}
+
 export class HttpRequestRunner implements vscode.Disposable {
     private activeRequest: AbortController | undefined;
     private readonly changeEmitter = new vscode.EventEmitter<HttpRequestStateMessage>();
@@ -31,7 +37,13 @@ export class HttpRequestRunner implements vscode.Disposable {
         this.activeRequest?.abort();
     }
 
-    public async sendRequest(context: IActionContext, request: unknown, options: { signal?: AbortSignal; saved?: boolean; prepare?: (signal: AbortSignal) => Promise<unknown> } = {}): Promise<HttpResponse> {
+    public block(message: string): void {
+        this.started = undefined;
+        this.result = { command: 'requestError', message, blocked: true, sequence: ++this.sequence };
+        this.changeEmitter.fire(this.result);
+    }
+
+    public async sendRequest(context: IActionContext, request: unknown, options: { signal?: AbortSignal; saved?: boolean; timeout?: number | null; prepare?: (signal: AbortSignal) => Promise<unknown> } = {}): Promise<HttpResponse> {
         if (this.disposed) {
             throw new Error(localize('azureInvoke.requestClosed', 'This invocation is no longer available. Reopen it and try again.'));
         }
@@ -49,7 +61,8 @@ export class HttpRequestRunner implements vscode.Disposable {
             if (signal.aborted) {
                 throw new UserCancelledError('azureInvoke.request');
             }
-            const response = await sendHttpRequest(context, input, signal, requestUtils.getRequestTimeoutMS());
+            const timeout = options.timeout === null ? undefined : options.timeout ?? requestUtils.getRequestTimeoutMS();
+            const response = await sendHttpRequest(context, input, signal, timeout);
             this.result = { command: 'response', response, sequence: ++this.sequence };
             this.changeEmitter.fire(this.result);
             return response;
@@ -57,6 +70,7 @@ export class HttpRequestRunner implements vscode.Disposable {
             this.result = {
                 command: 'requestError',
                 cancelled: isUserCancelledError(error),
+                ...(error instanceof InvocationBlockedError ? { blocked: true } : {}),
                 sequence: ++this.sequence,
                 message: isUserCancelledError(error) ? localize('azureInvoke.cancelled', 'Request cancelled.') :
                     error instanceof Error ? error.message : localize('azureInvoke.unexpectedError', 'The request failed.'),

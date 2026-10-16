@@ -38,6 +38,7 @@ export interface HttpRequest {
 export interface HttpInvocation {
     readonly id: string;
     readonly name: string;
+    readonly group?: string;
     readonly request: HttpRequest;
 }
 
@@ -85,12 +86,13 @@ export type HttpRequestMessage =
     | { command: 'sendRequest'; request: HttpRequest; runDependencies?: boolean }
     | { command: 'saveRequest'; request: HttpRequest }
     | { command: 'renameRequest' }
+    | { command: 'debugRequest' }
     | { command: 'abortRequest' };
 
 export type HttpRequestStateMessage = (
     | { command: 'requestStarted'; saved: boolean }
     | { command: 'response'; response: HttpResponse }
-    | { command: 'requestError'; message: string; cancelled?: boolean }
+    | { command: 'requestError'; message: string; cancelled?: boolean; blocked?: boolean }
 ) & { sequence?: number };
 
 export type HttpResponseMessage =
@@ -98,7 +100,8 @@ export type HttpResponseMessage =
     | { command: 'requestSaved' }
     | { command: 'saveError'; message: string }
     | { command: 'renamed'; name: string }
-    | { command: 'sources'; sources: InvocationSource[] };
+    | { command: 'sources'; sources: InvocationSource[] }
+    | { command: 'debugState'; busy: boolean; message?: string; error?: string };
 
 export interface InvocationSource {
     id: string;
@@ -128,6 +131,7 @@ export interface HttpRequestViewConfiguration {
     request: HttpRequest;
     saved: boolean;
     sources?: InvocationSource[];
+    debugAvailable?: boolean;
 }
 
 export interface HttpRequestViewLabels {
@@ -156,6 +160,8 @@ export interface HttpRequestViewLabels {
     saved: string;
     unsaved: string;
     savedInvocationHint: string;
+    debug: string;
+    debugHint: string;
     enabled: string;
     dependencies: DependencyLabels;
 }

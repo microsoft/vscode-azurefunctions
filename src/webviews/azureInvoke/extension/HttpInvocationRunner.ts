@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type Disposable } from 'vscode';
 import { localize } from '../../../localize';
 import { copyInvocation, planInvocationChain } from '../../../tree/azureInvoke/invocationCollection';
-import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
-import { HttpRequestRunner } from './HttpRequestRunner';
+import { getRequestDependencies, type HttpInvocation, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
+import { HttpRequestRunner, InvocationBlockedError } from './HttpRequestRunner';
 import { isLocalHttpRequest, resolveRequestBindings, validateRequestTemplate, type HttpInvocationResult } from './requestBindings';
 
 interface RunOutput extends HttpInvocationResult {
@@ -20,12 +20,15 @@ export interface InvocationRunOptions {
     signal?: AbortSignal;
     saved?: boolean;
     runDependencies?: boolean;
+    timeout?: number | null;
+    replayRequest?: HttpRequest;
 }
 
 export class HttpInvocationRunner implements Disposable {
     private readonly runners = new Map<string, HttpRequestRunner>();
     private readonly outputs = new Map<string, RunOutput>();
     private readonly reservations = new Map<string, symbol>();
+    private readonly lastRuns = new Map<string, { invocation: HttpInvocation; request: HttpRequest; canShareResponse: boolean }>();
     private epoch = 0;
 
     public constructor(
@@ -35,6 +38,20 @@ export class HttpInvocationRunner implements Disposable {
 
     public get running(): boolean {
         return this.reservations.size > 0;
+    }
+
+    public isRunning(id: string): boolean {
+        return this.reservations.has(id);
+    }
+
+    public getLastRun(id: string) {
+        const run = this.lastRuns.get(id);
+        const message = this.runners.get(id)?.messages.at(-1);
+        if (!run || this.isRunning(id) || !message || message.command === 'requestStarted' ||
+            (message.command === 'requestError' && (message.cancelled || message.blocked))) {
+            return undefined;
+        }
+        return { run, message };
     }
 
     public get messages(): { id: string; message: HttpRequestStateMessage }[] {
@@ -63,6 +80,9 @@ export class HttpInvocationRunner implements Disposable {
     }
 
     public async send(context: IActionContext, invocation: HttpInvocation, options: InvocationRunOptions = {}): Promise<HttpResponse> {
+        if (!this.isRunning(invocation.id)) {
+            this.lastRuns.delete(invocation.id);
+        }
         this.outputs.delete(invocation.id);
         const plan = planInvocationChain(invocation, this.getInvocation);
         const executing = options.runDependencies ? plan : [plan[plan.length - 1]];
@@ -72,43 +92,61 @@ export class HttpInvocationRunner implements Disposable {
         }
         const reservation = Symbol();
         const epoch = this.epoch;
+        const attempted = new Set<string>();
+        const failedPrerequisites = new Set<string>();
         for (const item of executing) {
             this.reservations.set(item.id, reservation);
             this.outputs.delete(item.id);
         }
         const run = async (item: HttpInvocation, signal?: AbortSignal, prerequisites?: HttpInvocation[]): Promise<HttpResponse> => {
+            attempted.add(item.id);
+            this.lastRuns.delete(item.id);
             let inputs = new Map<string, RunOutput>();
             let resolvedRequest = item.request;
             const response = await this.getRunner(item.id).sendRequest(context, item.request, {
-                signal, saved: item.id === invocation.id ? options.saved : true,
+                signal, saved: item.id === invocation.id ? options.saved : true, timeout: options.timeout,
                 prepare: async signal => {
                     for (const prerequisite of prerequisites ?? []) {
                         if (signal.aborted) {
                             throw new UserCancelledError('azureInvoke.request');
                         }
-                        const result = await run(prerequisite, signal);
-                        if (result.status < 200 || result.status >= 300) {
-                            throw new Error(localize('azureInvoke.prerequisiteFailed', 'A prerequisite returned a non-success status. The chain stopped before sending the dependent request.'));
+                        try {
+                            const result = await run(prerequisite, signal);
+                            if (result.status < 200 || result.status >= 300) {
+                                throw new InvocationBlockedError(localize('azureInvoke.prerequisiteFailed', 'A prerequisite returned a non-success status. The chain stopped before sending the dependent request.'));
+                            }
+                        } catch (error) {
+                            if (isUserCancelledError(error)) {
+                                throw error;
+                            }
+                            failedPrerequisites.add(prerequisite.id);
+                            throw error instanceof InvocationBlockedError ? error : new InvocationBlockedError();
                         }
                     }
-                    inputs = new Map(getRequestDependencies(item.request).map(id => {
+                    const replayRequest = item.id === invocation.id ? options.replayRequest : undefined;
+                    inputs = new Map((replayRequest ? [] : getRequestDependencies(item.request)).map(id => {
                         const output = this.getOutput(id);
                         if (!output) {
-                            throw new Error(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
+                            throw new InvocationBlockedError(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
                         }
                         return [id, output];
                     }));
-                    resolvedRequest = resolveRequestBindings(item.request, id => {
+                    resolvedRequest = replayRequest ?? resolveRequestBindings(item.request, id => {
                         const output = inputs.get(id);
                         if (!output) {
-                            throw new Error(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
+                            throw new InvocationBlockedError(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
                         }
                         return output;
+                    });
+                    this.lastRuns.set(item.id, {
+                        invocation: copyInvocation(item),
+                        request: copyInvocation({ ...item, request: resolvedRequest }).request,
+                        canShareResponse: planInvocationChain(item, id => plan.find(input => input.id === id)).every(input => isLocalHttpRequest(input.request)),
                     });
                     return resolvedRequest;
                 },
             });
-            if (epoch === this.epoch && response.status >= 200 && response.status < 300) {
+            if (epoch === this.epoch && response.status >= 200 && response.status < 300 && !options.replayRequest) {
                 this.outputs.set(item.id, { request: resolvedRequest, response, definition: JSON.stringify(item.request), inputs });
             }
             return response;
@@ -118,6 +156,17 @@ export class HttpInvocationRunner implements Disposable {
                 throw new UserCancelledError('azureInvoke.request');
             }
             return await run(executing[executing.length - 1], options.signal, options.runDependencies ? executing.slice(0, -1) : undefined);
+        } catch (error) {
+            if (epoch === this.epoch && error instanceof InvocationBlockedError) {
+                for (const item of executing) {
+                    if (!attempted.has(item.id) && getRequestDependencies(item.request).some(id => failedPrerequisites.has(id))) {
+                        failedPrerequisites.add(item.id);
+                        this.lastRuns.delete(item.id);
+                        this.getRunner(item.id).block(error.message);
+                    }
+                }
+            }
+            throw error;
         } finally {
             for (const item of executing) {
                 if (this.reservations.get(item.id) === reservation) {
@@ -147,6 +196,7 @@ export class HttpInvocationRunner implements Disposable {
         this.runners.clear();
         this.outputs.clear();
         this.reservations.clear();
+        this.lastRuns.clear();
     }
 
     public dispose(): void {

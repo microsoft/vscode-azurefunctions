@@ -9,18 +9,16 @@ import * as z from 'zod/mini';
 import { localize } from '../../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type HttpRequestEditors } from '../../../webviews/azureInvoke/extension/HttpRequestEditors';
+import { getShareableHttpResponse } from '../../../webviews/azureInvoke/extension/sendHttpRequest';
 
 const inputSchema = z.object({ id: z.string().check(z.minLength(1), z.maxLength(100)), runDependencies: z.optional(z.boolean()) });
-const outputSchema = z.object({
+export const httpInvocationResponseSchema = z.object({
     status: z.number(),
     duration: z.number(),
     headers: z.optional(z.array(z.object({ name: z.string(), value: z.string() }))),
     body: z.optional(z.string()),
 });
-const sharedResponseHeaders = new Set([
-    'allow', 'cache-control', 'content-encoding', 'content-language', 'content-length',
-    'content-type', 'date', 'etag', 'expires', 'last-modified', 'retry-after', 'server',
-]);
+const outputSchema = httpInvocationResponseSchema;
 
 export function runHttpInvocationTool(
     provider: AzureInvokeTreeDataProvider,
@@ -64,15 +62,7 @@ export function runHttpInvocationTool(
                 }
                 const shareResponse = editors.canShareResponse(invocation);
                 const response = await editors.sendRequest(context, invocation, extras?.signal, input.runDependencies ?? true);
-                const metadata = { status: response.status, duration: response.duration };
-                if (!shareResponse) {
-                    return metadata;
-                }
-                return {
-                    ...metadata,
-                    headers: response.headers.filter(header => sharedResponseHeaders.has(header.name.toLowerCase())),
-                    body: response.body,
-                };
+                return getShareableHttpResponse(response, shareResponse);
             });
             // Azure Tools handles cancellation without rethrowing it, even when rethrow is enabled.
             if (!result) {
