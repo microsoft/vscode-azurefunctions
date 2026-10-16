@@ -16,9 +16,15 @@ suite('Create New Project experience', () => {
 
         await routeCreateNewProject(context, {}, handlers);
 
-        assert.deepStrictEqual(promptState.labels, [
-            'Classic Create (Template Feed)',
-            'New Create (Template Gallery)',
+        assert.deepStrictEqual(promptState.items, [
+            {
+                label: 'Classic Create (Template Feed)',
+                detail: 'Choose a language and function template step by step.',
+            },
+            {
+                label: 'New Create (Template Gallery)',
+                detail: 'Browse and filter complete project templates.',
+            },
         ]);
         assert.strictEqual(calls.classic, 1);
         assert.strictEqual(calls.templateGallery, 0);
@@ -54,15 +60,15 @@ suite('Create New Project experience', () => {
 
 function createContext(selection: ProjectCreationExperience): {
     context: IActionContext;
-    promptState: { count: number; labels: string[] };
+    promptState: { count: number; items: { label: string; detail: string | undefined }[] };
 } {
-    const promptState = { count: 0, labels: [] as string[] };
+    const promptState = { count: 0, items: [] as { label: string; detail: string | undefined }[] };
     const context = {
         telemetry: { properties: {} },
         ui: {
             showQuickPick: async (picks: IAzureQuickPickItem<ProjectCreationExperience>[]) => {
                 promptState.count += 1;
-                promptState.labels = picks.map(pick => pick.label);
+                promptState.items = picks.map(pick => ({ label: pick.label, detail: pick.detail }));
                 const selectionPick = picks.find(pick => pick.data === selection);
                 assert.ok(selectionPick);
                 return selectionPick;
