@@ -3,17 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
+import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
 import type * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryParseFuncVersion, type FuncVersion } from '../FuncVersion';
-import { localize } from '../localize';
 import { verifyExtensionsConfig } from '../utils/verifyExtensionBundle';
-import { getWorkspaceSetting, updateGlobalSetting } from './settings';
+import { getWorkspaceSetting } from './settings';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
 
@@ -59,30 +56,8 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     if (!isDotnet) {
                         await verifyExtensionsConfig(context, workspacePath, projectPath);
                     }
-                } else {
-                    await promptToInitializeProject(workspacePath, context);
                 }
             }
         }
-    }
-}
-
-async function promptToInitializeProject(workspacePath: string, context: IActionContext): Promise<void> {
-    const settingKey: string = 'showProjectWarning';
-    if (getWorkspaceSetting<boolean>(settingKey)) {
-        context.telemetry.properties.verifyConfigPrompt = 'initProject';
-
-        const learnMoreLink: string = 'https://aka.ms/azFuncProject';
-        const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(workspacePath));
-        const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink }, DialogResponses.yes, DialogResponses.dontWarnAgain);
-        if (result === DialogResponses.dontWarnAgain) {
-            context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
-            await updateGlobalSetting(settingKey, false);
-        } else {
-            context.telemetry.properties.verifyConfigResult = 'update';
-            await initProjectForVSCode(context, workspacePath);
-        }
-    } else {
-        context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
 }
