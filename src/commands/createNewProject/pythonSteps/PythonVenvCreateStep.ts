@@ -42,7 +42,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
 
         const venvName = nonNullProp(context, 'venvName');
         await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, composeArgs(withArg('-m', 'venv', venvName))());
-        await venvUtils.runPipInstallCommandIfPossible(venvName, context.projectPath);
+        await venvUtils.runPipInstallCommandIfPossible(context.projectPath, venvName);
     }
 
     public shouldExecute(context: IPythonVenvWizardContext): boolean {

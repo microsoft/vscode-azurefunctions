@@ -133,9 +133,41 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 
     const buildPath: string = (funcTask.execution as vscode.ShellExecution)?.options?.cwd || result.workspace.uri.fsPath;
     await waitForPrevFuncTaskToStop(result.workspace, buildPath);
+    const buildTaskName = debugConfig.funcBuildTask as string | undefined;
+    if (buildTaskName) {
+        const buildTask = tasks.find(t => t.scope === result.workspace && t.name === buildTaskName);
+        if (!buildTask) {
+            throw new Error(localize('noBuildTask', 'Failed to find "{0}" task.', buildTaskName));
+        }
+        await executeTaskAndWait(buildTask);
+    }
     const taskToExecute = injectJsonOutputFileArgIfNeeded(funcTask);
     const taskInfo = await startFuncTask(context, result.workspace, buildPath, taskToExecute);
     return await pickChildProcess(taskInfo);
+}
+
+async function executeTaskAndWait(task: vscode.Task): Promise<void> {
+    let execution: vscode.TaskExecution | undefined;
+    let listener!: vscode.Disposable;
+    const endPromise = new Promise<void>((resolve, reject) => {
+        listener = vscode.tasks.onDidEndTaskProcess(event => {
+            if ((execution && event.execution === execution) || taskUtils.isTaskEqual(event.execution.task, task)) {
+                listener.dispose();
+                if (event.exitCode === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(localize('taskFailed', 'Error exists after running preLaunchTask "{0}". View task output for more information.', task.name, event.exitCode)));
+                }
+            }
+        });
+    });
+
+    try {
+        execution = await vscode.tasks.executeTask(task);
+        await endPromise;
+    } finally {
+        listener.dispose();
+    }
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder, buildPath?: string): Promise<void> {
