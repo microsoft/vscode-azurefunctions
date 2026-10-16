@@ -19,11 +19,11 @@ suite('Create New Project experience', () => {
         assert.deepStrictEqual(promptState.items, [
             {
                 label: 'Classic Create',
-                detail: 'Template Feed',
+                description: 'Template Feed',
             },
             {
                 label: 'New Create',
-                detail: 'Template Gallery',
+                description: 'Template Gallery',
             },
         ]);
         assert.strictEqual(calls.classic, 1);
@@ -60,15 +60,15 @@ suite('Create New Project experience', () => {
 
 function createContext(selection: ProjectCreationExperience): {
     context: IActionContext;
-    promptState: { count: number; items: { label: string; detail: string | undefined }[] };
+    promptState: { count: number; items: { label: string; description: string | undefined }[] };
 } {
-    const promptState = { count: 0, items: [] as { label: string; detail: string | undefined }[] };
+    const promptState = { count: 0, items: [] as { label: string; description: string | undefined }[] };
     const context = {
         telemetry: { properties: {} },
         ui: {
             showQuickPick: async (picks: IAzureQuickPickItem<ProjectCreationExperience>[]) => {
                 promptState.count += 1;
-                promptState.items = picks.map(pick => ({ label: pick.label, detail: pick.detail }));
+                promptState.items = picks.map(pick => ({ label: pick.label, description: pick.description }));
                 const selectionPick = picks.find(pick => pick.data === selection);
                 assert.ok(selectionPick);
                 return selectionPick;
