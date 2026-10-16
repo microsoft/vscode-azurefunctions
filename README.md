@@ -84,6 +84,10 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Troubleshooting
 
+### Local project or function is not detected
+
+Local project and function discovery honors VS Code's `files.exclude` setting. If a project or function is not detected, check that this setting does not exclude its folder, `host.json`, `function.json`, language entrypoint, or `.csproj`/`.fsproj` file. Discovery also excludes `node_modules` and hidden files and directories.
+
 ### "unable to get local issuer certificate" on a corporate network
 
 If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), Azure operations may fail with errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain`. This happens because the extension's Azure calls run in the Node.js extension host, which does not use the operating system certificate store by default.

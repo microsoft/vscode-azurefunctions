@@ -7,10 +7,9 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { glob } from 'tinyglobby';
 import { JavaBuildTool, ProjectLanguage, extensionId } from '../../src/constants';
 import { FuncVersion } from '../../src/FuncVersion';
-import { getContainingWorkspace } from '../../src/utils/workspace';
+import { findFiles, getContainingWorkspace } from '../../src/utils/workspace';
 import { IExtensionsJson } from '../../src/vsCodeConfig/extensions';
 import { ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { ITasksJson } from '../../src/vsCodeConfig/tasks';
@@ -397,7 +396,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     expectedPaths = expectedPaths.concat(options.expectedPaths);
     await Promise.all(expectedPaths.map(async p => {
         if (typeof p === 'object') {
-            const matches = await glob(p.globPattern, { cwd: rootPath });
+            const matches = await findFiles(rootPath, p.globPattern);
             assert.equal(matches.length, p.numMatches, `Path "${p.globPattern}" does not have expected matches.`);
         } else {
             assert.ok(await AzExtFsExtra.pathExists(path.join(rootPath, p)), `Path "${p}" does not exist.`);

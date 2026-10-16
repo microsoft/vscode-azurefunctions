@@ -8,13 +8,20 @@ import * as assert from 'assert';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { Uri, type WorkspaceFolder } from 'vscode';
+import { ConfigurationTarget, Uri, workspace, type WorkspaceFolder } from 'vscode';
 import { findFiles } from '../src/utils/workspace';
-import './global.test';
+import { getTestApi } from './utils/testApiAccess';
 
 suite('workspace.findFiles', () => {
     let tempDir: string;
     let projectPath: string;
+
+    suiteSetup(async () => {
+        if (process.env.AZFUNC_TEST_NO_WORKSPACE) {
+            assert.strictEqual(workspace.workspaceFolders, undefined);
+        }
+        await getTestApi();
+    });
 
     setup(async () => {
         tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vsazfn-find-files-'));
@@ -29,6 +36,7 @@ suite('workspace.findFiles', () => {
     test('finds files outside the workspace with special characters in the base path', async () => {
         const projectFile = path.join(projectPath, 'app.csproj');
         await AzExtFsExtra.writeFile(projectFile, '');
+        await AzExtFsExtra.writeFile(path.join(projectPath, '.hidden.csproj'), '');
         await AzExtFsExtra.ensureDir(path.join(projectPath, 'directory.csproj'));
         await AzExtFsExtra.ensureDir(path.join(projectPath, 'nested'));
         await AzExtFsExtra.writeFile(path.join(projectPath, 'nested', 'other.csproj'), '');
@@ -74,5 +82,59 @@ suite('workspace.findFiles', () => {
 
     test('returns no matches for a missing file', async () => {
         assert.deepStrictEqual(await findFiles(projectPath, '*.fsproj'), []);
+    });
+
+    test('honors user file exclusions during project discovery', async () => {
+        const hostFile = path.join(projectPath, 'host.json');
+        await AzExtFsExtra.writeFile(hostFile, '{}');
+        const configuration = workspace.getConfiguration('files');
+        const originalExcludes = configuration.inspect<Record<string, boolean>>('exclude')?.globalValue;
+        try {
+            await configuration.update('exclude', { ...originalExcludes, '**/host.json': true }, ConfigurationTarget.Global);
+
+            const files = await findFiles(projectPath, 'host.json');
+
+            assert.deepStrictEqual(files, []);
+        } finally {
+            await configuration.update('exclude', originalExcludes, ConfigurationTarget.Global);
+        }
+    });
+
+    test('does not apply user search exclusions to project discovery', async () => {
+        const hostFile = path.join(projectPath, 'host.json');
+        await AzExtFsExtra.writeFile(hostFile, '{}');
+        const configuration = workspace.getConfiguration('search');
+        const originalExcludes = configuration.inspect<Record<string, boolean>>('exclude')?.globalValue;
+        try {
+            await configuration.update('exclude', { ...originalExcludes, '**/host.json': true }, ConfigurationTarget.Global);
+
+            const files = await findFiles(projectPath, 'host.json');
+
+            assert.deepStrictEqual(files.map(file => file.fsPath), [Uri.file(hostFile).fsPath]);
+        } finally {
+            await configuration.update('exclude', originalExcludes, ConfigurationTarget.Global);
+        }
+    });
+
+    test('does not apply ignore files to project discovery', async () => {
+        const hostFile = path.join(projectPath, 'host.json');
+        await AzExtFsExtra.writeFile(hostFile, '{}');
+        await AzExtFsExtra.writeFile(path.join(projectPath, '.ignore'), 'host.json\n');
+
+        const files = await findFiles(projectPath, 'host.json');
+
+        assert.deepStrictEqual(files.map(file => file.fsPath), [Uri.file(hostFile).fsPath]);
+    });
+
+    test('follows directory symlinks', async () => {
+        const targetPath = path.join(tempDir, 'target');
+        await AzExtFsExtra.ensureDir(targetPath);
+        await AzExtFsExtra.writeFile(path.join(targetPath, 'host.json'), '{}');
+        const linkPath = path.join(projectPath, 'linked');
+        await fs.symlink(targetPath, linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+
+        const files = await findFiles(projectPath, '**/host.json');
+
+        assert.deepStrictEqual(files.map(file => file.fsPath), [Uri.file(path.join(linkPath, 'host.json')).fsPath]);
     });
 });
