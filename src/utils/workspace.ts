@@ -5,7 +5,8 @@
 
 import { AzExtFsExtra, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { glob } from 'tinyglobby';
+// Avoid fdir's ESM import.meta.url initialization in the CommonJS extension bundle.
+import tinyglobby = require('tinyglobby');
 import * as vscode from 'vscode';
 import { browseItem } from '../constants';
 import { localize } from '../localize';
@@ -40,7 +41,7 @@ export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder |
  */
 export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: string): Promise<vscode.Uri[]> {
     const cwd = typeof base === 'string' ? base : base.uri.fsPath;
-    return (await glob(pattern, { cwd, absolute: true, ignore: ['**/node_modules/**'] })).map(s => vscode.Uri.file(s));
+    return (await tinyglobby.glob(pattern, { cwd, absolute: true, ignore: ['**/node_modules/**'] })).map(s => vscode.Uri.file(s));
 }
 
 export async function selectWorkspaceFolder(context: IActionContext, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {

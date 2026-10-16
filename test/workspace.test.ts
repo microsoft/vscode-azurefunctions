@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Uri, type WorkspaceFolder } from 'vscode';
 import { findFiles } from '../src/utils/workspace';
+import './global.test';
 
 suite('workspace.findFiles', () => {
     let tempDir: string;
