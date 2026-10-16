@@ -83,13 +83,13 @@ export async function routeCreateNewProject(
 
     const picks: IAzureQuickPickItem<ProjectCreationExperience>[] = [
         {
-            label: localize('classicCreateTemplateFeed', 'Classic Create (Template Feed)'),
-            detail: localize('classicCreateTemplateFeedDetail', 'Choose a language and function template step by step.'),
+            label: localize('classicCreate', 'Classic Create'),
+            detail: localize('templateFeed', 'Template Feed'),
             data: 'classic',
         },
         {
-            label: localize('newCreateTemplateGallery', 'New Create (Template Gallery)'),
-            detail: localize('newCreateTemplateGalleryDetail', 'Browse and filter complete project templates.'),
+            label: localize('newCreate', 'New Create'),
+            detail: localize('templateGallery', 'Template Gallery'),
             data: 'templateGallery',
         },
     ];

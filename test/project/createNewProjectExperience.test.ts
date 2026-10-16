@@ -18,12 +18,12 @@ suite('Create New Project experience', () => {
 
         assert.deepStrictEqual(promptState.items, [
             {
-                label: 'Classic Create (Template Feed)',
-                detail: 'Choose a language and function template step by step.',
+                label: 'Classic Create',
+                detail: 'Template Feed',
             },
             {
-                label: 'New Create (Template Gallery)',
-                detail: 'Browse and filter complete project templates.',
+                label: 'New Create',
+                detail: 'Template Gallery',
             },
         ]);
         assert.strictEqual(calls.classic, 1);
