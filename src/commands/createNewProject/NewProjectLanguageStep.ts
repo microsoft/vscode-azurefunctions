@@ -33,9 +33,6 @@ import { MCPProjectCreateStep } from './mcpServerSteps/MCPProjectCreateStep';
 import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguagePromptStep';
 import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from './FunctionsTemplateGalleryController';
 
-// Sentinel value used to detect when the user picks "Browse Template Gallery…"
-const templateGalleryLanguage = 'TemplateGallery' as ProjectLanguage;
-
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
 
@@ -62,12 +59,15 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } },
             { label: localize('selfHostedMCPServer', 'Self-hosted MCP server'), data: { language: ProjectLanguage.SelfHostedMCPServer } }
         ];
+
+        if (this._templateId) {
+            languagePicks.splice(4, 0, { label: ProjectLanguage.Go, data: { language: ProjectLanguage.Go } });
+        }
 
         if (getWorkspaceSetting(showBallerinaProjectCreationSetting)) {
             languagePicks.push({ label: ProjectLanguage.Ballerina, data: { language: ProjectLanguage.Ballerina } });
@@ -79,13 +79,24 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        if (!context.containerizedProject) {
-            // Add a separator and a "Browse Template Gallery…" option at the bottom
+        if (!context.containerizedProject && !this._templateId && (!context.languageFilter || context.languageFilter.test(ProjectLanguage.Go))) {
             languagePicks.push(
-                { label: '', data: { language: templateGalleryLanguage }, kind: QuickPickItemKind.Separator },
                 {
-                    label: `$(library) ${localize('browseTemplateGallery', 'Browse Template Gallery (Preview)...')}`,
-                    data: { language: templateGalleryLanguage },
+                    label: '',
+                    data: { language: ProjectLanguage.Go },
+                    kind: QuickPickItemKind.Separator,
+                },
+                {
+                    label: `${localize('goTemplateGallery', 'Go (template gallery)')} $(link-external)`,
+                    data: { language: ProjectLanguage.Go },
+                    onPicked: () => {
+                        context.telemetry.properties.flow = 'templateGalleryFromGo';
+                        this._showTemplateGallery({
+                            initialLocation: context.projectPath,
+                            initialFilters: { language: 'go' },
+                        });
+                        throw new UserCancelledError('templateGallery');
+                    },
                     suppressPersistence: true,
                 },
             );
@@ -93,21 +104,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const options: QuickPickOptions = { placeHolder: localize('selectProjectType', 'Select a project type') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
-
-        if (result.language === templateGalleryLanguage) {
-            this._showTemplateGallery({ initialLocation: context.projectPath });
-            context.telemetry.properties.flow = 'templateGalleryFromWizard';
-            throw new UserCancelledError('templateGallery');
-        }
-
-        if (result.language === ProjectLanguage.Go && !context.containerizedProject && !this._templateId) {
-            this._showTemplateGallery({
-                initialLocation: context.projectPath,
-                initialFilters: { language: 'go' },
-            });
-            context.telemetry.properties.flow = 'templateGalleryFromGo';
-            throw new UserCancelledError('templateGallery');
-        }
 
         context.language = result.language;
         this.setTemplateSchemaVersion(context);
