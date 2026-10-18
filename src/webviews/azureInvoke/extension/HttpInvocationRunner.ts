@@ -16,19 +16,23 @@ interface RunOutput extends HttpInvocationResult {
     inputs: Map<string, RunOutput>;
 }
 
+interface InvocationRunSnapshot {
+    invocation: HttpInvocation;
+    request: HttpRequest;
+    canShareResponse: boolean;
+}
+
 export interface InvocationRunOptions {
     signal?: AbortSignal;
     saved?: boolean;
     runDependencies?: boolean;
-    timeout?: number | null;
-    replayRequest?: HttpRequest;
 }
 
 export class HttpInvocationRunner implements Disposable {
     private readonly runners = new Map<string, HttpRequestRunner>();
     private readonly outputs = new Map<string, RunOutput>();
     private readonly reservations = new Map<string, symbol>();
-    private readonly lastRuns = new Map<string, { invocation: HttpInvocation; request: HttpRequest; canShareResponse: boolean }>();
+    private readonly lastRuns = new Map<string, InvocationRunSnapshot>();
     private epoch = 0;
 
     public constructor(
@@ -104,7 +108,7 @@ export class HttpInvocationRunner implements Disposable {
             let inputs = new Map<string, RunOutput>();
             let resolvedRequest = item.request;
             const response = await this.getRunner(item.id).sendRequest(context, item.request, {
-                signal, saved: item.id === invocation.id ? options.saved : true, timeout: options.timeout,
+                signal, saved: item.id === invocation.id ? options.saved : true,
                 prepare: async signal => {
                     for (const prerequisite of prerequisites ?? []) {
                         if (signal.aborted) {
@@ -123,15 +127,14 @@ export class HttpInvocationRunner implements Disposable {
                             throw error instanceof InvocationBlockedError ? error : new InvocationBlockedError();
                         }
                     }
-                    const replayRequest = item.id === invocation.id ? options.replayRequest : undefined;
-                    inputs = new Map((replayRequest ? [] : getRequestDependencies(item.request)).map(id => {
+                    inputs = new Map(getRequestDependencies(item.request).map(id => {
                         const output = this.getOutput(id);
                         if (!output) {
                             throw new InvocationBlockedError(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
                         }
                         return [id, output];
                     }));
-                    resolvedRequest = replayRequest ?? resolveRequestBindings(item.request, id => {
+                    resolvedRequest = resolveRequestBindings(item.request, id => {
                         const output = inputs.get(id);
                         if (!output) {
                             throw new InvocationBlockedError(localize('azureInvoke.prerequisiteNotRun', 'A prerequisite has no current successful result. Save and send it first, or use Run chain to execute prerequisites.'));
@@ -146,7 +149,7 @@ export class HttpInvocationRunner implements Disposable {
                     return resolvedRequest;
                 },
             });
-            if (epoch === this.epoch && response.status >= 200 && response.status < 300 && !options.replayRequest) {
+            if (epoch === this.epoch && response.status >= 200 && response.status < 300) {
                 this.outputs.set(item.id, { request: resolvedRequest, response, definition: JSON.stringify(item.request), inputs });
             }
             return response;
@@ -172,6 +175,30 @@ export class HttpInvocationRunner implements Disposable {
                 if (this.reservations.get(item.id) === reservation) {
                     this.reservations.delete(item.id);
                 }
+            }
+        }
+    }
+
+    public async replay(context: IActionContext, snapshot: InvocationRunSnapshot, signal: AbortSignal): Promise<HttpResponse> {
+        const { id } = snapshot.invocation;
+        if (this.reservations.has(id)) {
+            throw new Error(localize('azureInvoke.chainBusy', 'A request in this chain is already running. Wait or cancel it before starting another run.'));
+        }
+        const reservation = Symbol();
+        this.reservations.set(id, reservation);
+        this.outputs.delete(id);
+        this.lastRuns.delete(id);
+        try {
+            return await this.getRunner(id).sendRequest(context, snapshot.request, {
+                signal, saved: true, timeout: null,
+                prepare: async () => {
+                    this.lastRuns.set(id, snapshot);
+                    return snapshot.request;
+                },
+            });
+        } finally {
+            if (this.reservations.get(id) === reservation) {
+                this.reservations.delete(id);
             }
         }
     }

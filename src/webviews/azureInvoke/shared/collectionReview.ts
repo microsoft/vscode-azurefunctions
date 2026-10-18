@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type DependencyLabels, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from './httpRequest';
+import { type BlobUploadDefinition } from './blobInvocation';
 
-export const otherInvocationTriggers = ['timer', 'blob', 'queue', 'serviceBus', 'eventHub', 'eventGrid', 'cosmosDB', 'other'] as const;
+export const otherInvocationTriggers = ['timer', 'queue', 'serviceBus', 'eventHub', 'eventGrid', 'cosmosDB', 'other'] as const;
 
 interface InvocationCandidateBase {
     id: string;
@@ -20,7 +21,12 @@ export interface HttpInvocationCandidate extends InvocationCandidateBase {
     request: HttpRequest;
 }
 
-export type InvocationCandidate = HttpInvocationCandidate | InvocationCandidateBase & {
+export interface BlobInvocationCandidate extends InvocationCandidateBase {
+    trigger: 'blob';
+    request: BlobUploadDefinition;
+}
+
+export type InvocationCandidate = HttpInvocationCandidate | BlobInvocationCandidate | InvocationCandidateBase & {
     trigger: typeof otherInvocationTriggers[number];
     endpoint: string;
 };
@@ -31,6 +37,7 @@ export interface InvocationSelection {
     id: string;
     comment: string;
     request?: HttpRequest;
+    blobRequest?: BlobUploadDefinition;
     selected?: boolean;
 }
 
@@ -50,12 +57,25 @@ export interface CollectionReviewConfiguration {
     loading: boolean;
     version: number;
     selections?: InvocationSelection[];
+    blobFiles?: { id: string; fileName: string }[];
     labels: {
         title: string;
         introduction: string;
         selectAll: string;
         comment: string;
         unsupported: string;
+        triggers: Record<InvocationCandidate['trigger'], string>;
+        blob: {
+            manualOnly: string;
+            target: string;
+            container: string;
+            blobName: string;
+            contentType: string;
+            file: string;
+            noFile: string;
+            hint: string;
+            fileRequired: string;
+        };
         confirm: string;
         requestChanges: string;
         diagnoseRequest: string;
@@ -101,6 +121,7 @@ export type CollectionReviewMessage =
     | { command: 'diagnoseRequests'; ids: string[]; requests: { id: string; request: HttpRequest }[] }
     | { command: 'previewRequest'; id: string; request: HttpRequest; runDependencies?: boolean; requests?: { id: string; request: HttpRequest }[] }
     | { command: 'cancelPreview'; id: string }
+    | { command: 'selectBlobFile'; id: string }
     | { command: 'cancelCollection' };
 
 interface CollectionReviewSnapshot {
@@ -111,6 +132,8 @@ interface CollectionReviewSnapshot {
     error?: string;
     diagnosing: boolean;
     diagnosisNotice?: string;
+    blobFiles: { id: string; fileName: string }[];
+    selectingBlobFile: boolean;
 }
 
 export type CollectionReviewResponse =

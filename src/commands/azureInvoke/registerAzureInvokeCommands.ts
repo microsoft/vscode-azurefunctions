@@ -9,9 +9,10 @@ import { localize } from '../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type HttpRequestEditors } from '../../webviews/azureInvoke/extension/HttpRequestEditors';
 import { type CollectionReviews } from '../../webviews/azureInvoke/extension/CollectionReviews';
+import { type BlobInvocationEditors } from '../../webviews/azureInvoke/extension/BlobInvocationEditors';
 import { openCollectionFile, saveCollectionFile } from './collectionFiles';
 
-export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, reviews: CollectionReviews): void {
+export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, reviews: CollectionReviews, blobs: BlobInvocationEditors): void {
     registerCommand('azureFunctions.azureInvoke.buildWithAI', async (context: IActionContext) => {
         context.telemetry.maskEntireErrorMessage = true;
         context.errorHandling.suppressDisplay = true;
@@ -20,9 +21,9 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
 
     registerCommand('azureFunctions.azureInvoke.add', async (context: IActionContext) => {
         const triggers = [
-            { label: localize('azureInvoke.httpTrigger', 'HTTP trigger'), supported: true },
+            { label: localize('azureInvoke.httpTrigger', 'HTTP trigger'), supported: true, triggerType: 'http' },
             { label: localize('azureInvoke.timerTrigger', 'Timer trigger'), supported: false },
-            { label: localize('azureInvoke.blobTrigger', 'Azure Blob Storage trigger'), supported: false },
+            { label: localize('azureInvoke.blobTrigger', 'Azure Blob Storage trigger'), supported: true, triggerType: 'blob' },
             { label: localize('azureInvoke.queueTrigger', 'Azure Queue Storage trigger'), supported: false },
             { label: localize('azureInvoke.serviceBusQueueTrigger', 'Azure Service Bus Queue trigger'), supported: false },
             { label: localize('azureInvoke.serviceBusTopicTrigger', 'Azure Service Bus Topic trigger'), supported: false },
@@ -38,15 +39,24 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         });
 
         if (!trigger.supported) {
-            void vscode.window.showInformationMessage(localize('azureInvoke.httpOnly', 'Only HTTP trigger invocation is available for now.'));
+            void vscode.window.showInformationMessage(localize('azureInvoke.supportedTriggers', 'HTTP requests and manual Blob uploads to Azurite are available. Other triggers are not yet supported.'));
             return;
         }
 
-        editors.open(provider.createRequest(), false);
+        if (trigger.triggerType === 'blob') {
+            blobs.open(provider.createBlobInvocation(), false);
+        } else {
+            editors.open(provider.createRequest(), false);
+        }
     });
 
     registerCommand('azureFunctions.azureInvoke.open', (context: IActionContext, request?: { id: string }) => {
         context.telemetry.maskEntireErrorMessage = true;
+        const blob = request && provider.getBlobInvocation(request.id);
+        if (blob) {
+            blobs.open(blob, true);
+            return;
+        }
         const invocation = request && provider.getRequest(request.id);
         if (!invocation) {
             throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
@@ -54,15 +64,23 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         editors.open(invocation, true);
     });
 
+    registerCommand('azureFunctions.azureInvoke.debugBlob', async (context: IActionContext, invocation?: { id: string }) => {
+        context.telemetry.maskEntireErrorMessage = true;
+        if (!invocation || !provider.getBlobInvocation(invocation.id)) {
+            throw new Error(localize('azureInvoke.blobNotSaved', 'Save this Blob invocation first, then try again.'));
+        }
+        await blobs.debugInvocation(context, invocation.id);
+    });
+
     registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
-        await saveCollectionFile(context, provider.getRequests(), target instanceof vscode.Uri ? target : undefined);
+        await saveCollectionFile(context, provider.getInvocations(), target instanceof vscode.Uri ? target : undefined);
     });
 
     registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
         const invocations = await openCollectionFile(context, source instanceof vscode.Uri ? source : undefined);
-        if (provider.getRequests().length || editors.size) {
+        if (provider.getInvocations().length || editors.size || blobs.size) {
             await context.ui.showWarningMessage(
                 localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
                 { modal: true, stepName: 'confirmOpenInvocationCollection' },
@@ -70,6 +88,7 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
             );
         }
         editors.closeAll();
+        blobs.closeAll();
         provider.replaceRequests(invocations);
     });
 }

@@ -12,11 +12,13 @@ import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vsc
 import { registerMcpTool } from '@microsoft/vscode-inproc-mcp/mcp';
 import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
+import { BlobInvocationEditors } from './webviews/azureInvoke/extension/BlobInvocationEditors';
+import { getBlobInvocationDebugContextTool, listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/azureInvoke/blobInvocationTools';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
 import { debugHttpInvocationTool, getHttpInvocationDebugContextTool } from './chat/tools/azureInvoke/debugHttpInvocationTools';
-import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool } from './chat/tools/azureInvoke/collectionReviewTools';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from './chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
 import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from './chat/tools/azureInvoke/savedHttpInvocationTools';
 import { runHttpInvocationTool } from './chat/tools/azureInvoke/runHttpInvocationTool';
@@ -110,16 +112,18 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+        const azureInvokeBlobs = new BlobInvocationEditors(context, azureInvokeProvider);
         const azureInvokeReviews = new CollectionReviews(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
+            azureInvokeBlobs,
             azureInvokeReviews,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
         registerCommands({
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews },
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews, blobs: azureInvokeBlobs },
             dts: {
                 dataBranchProvider,
                 emulatorClient,
@@ -145,6 +149,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 registerMcpTool(server, getHttpInvocationInspectionTool(azureInvokeEditors));
                 registerMcpTool(server, proposeHttpInvocationChangesTool(azureInvokeEditors, azureInvokeReviews));
                 registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
+                registerMcpTool(server, listBlobInvocationsTool(azureInvokeProvider));
+                registerMcpTool(server, selectBlobInvocationFileTool(azureInvokeReviews));
+                registerMcpTool(server, getBlobInvocationDebugContextTool(azureInvokeBlobs));
+                registerMcpTool(server, uploadBlobInvocationTool(azureInvokeBlobs));
             },
         };
         registerMcpHttpProvider(context, mcpOptions);

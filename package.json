@@ -134,6 +134,12 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.azureInvoke.debugBlob",
+                "title": "%azureFunctions.azureInvoke.debugBlob%",
+                "category": "Azure Functions",
+                "icon": "$(sparkle)"
+            },
+            {
                 "command": "azureFunctions.azureInvoke.saveCollection",
                 "title": "%azureFunctions.azureInvoke.saveCollection%",
                 "category": "Azure Functions",
@@ -621,6 +627,16 @@
             ],
             "view/item/context": [
                 {
+                    "command": "azureFunctions.azureInvoke.debugBlob",
+                    "when": "view == azureFunctions.azureInvoke && viewItem == azureInvoke.blob",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.debugBlob",
+                    "when": "view == azureFunctions.azureInvoke && viewItem == azureInvoke.blob",
+                    "group": "1@1"
+                },
+                {
                     "command": "azureFunctions.funcHostDebug.showRecentLogs",
                     "when": "view == azureFunctions.funcHostDebugView && viewItem == azFunc.funcHostDebug.hostTask",
                     "group": "inline"
@@ -1029,6 +1045,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.azureInvoke.debugBlob",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.azureInvoke.open",
                     "when": "never"

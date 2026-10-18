@@ -7,13 +7,14 @@ import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { localize } from '../../localize';
 import { type HttpInvocation, type HttpRequestStateMessage } from '../../webviews/azureInvoke/shared/httpRequest';
-import { copyInvocation, planInvocationChain, validateInvocation } from './invocationCollection';
+import { copyBlobInvocation, isBlobInvocation, type BlobInvocation, type BlobUploadState, type Invocation } from '../../webviews/azureInvoke/shared/blobInvocation';
+import { copyCollectionInvocation, copyInvocation, planInvocationChain, validateCollectionInvocation } from './invocationCollection';
 
-export type AzureInvokeTreeElement = HttpInvocation | { readonly group: string };
+export type AzureInvokeTreeElement = Invocation | { readonly group: string };
 export const invocationRunStatuses = ['notRun', 'running', 'succeeded', 'failed', 'blocked', 'cancelled'] as const;
 
 export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<AzureInvokeTreeElement>, vscode.Disposable {
-    private readonly requests = new Map<string, HttpInvocation>();
+    private readonly requests = new Map<string, Invocation>();
     private readonly statuses = new Map<string, {
         text: string; icon: string; color?: string; lastRun: Date;
         status: typeof invocationRunStatuses[number]; statusCode?: number; duration?: number;
@@ -30,19 +31,36 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         };
     }
 
-    public saveRequest(invocation: HttpInvocation): void {
+    public createBlobInvocation(): BlobInvocation {
+        return {
+            id: randomUUID(), name: localize('azureInvoke.blobInvocation', 'Blob upload {0}', ++this.requestNumber), trigger: 'blob',
+            request: {
+                target: { kind: 'azurite', url: 'http://127.0.0.1:10000/devstoreaccount1' },
+                container: '', blobName: '', content: '', encoding: 'base64', contentType: 'application/octet-stream',
+            },
+        };
+    }
+
+    public saveRequest(invocation: Invocation): void {
         this.saveRequests([invocation]);
     }
 
-    public saveRequests(invocations: readonly HttpInvocation[]): void {
-        invocations.forEach(validateInvocation);
+    public saveRequests(invocations: readonly Invocation[]): void {
+        invocations.forEach(validateCollectionInvocation);
         if (new Set(invocations.map(invocation => invocation.id)).size !== invocations.length) {
             throw new Error(localize('azureInvoke.duplicateInvocation', 'The collection contains duplicate invocation IDs.'));
         }
-        const snapshots = invocations.map(copyInvocation);
+        const snapshots = invocations.map(copyCollectionInvocation);
         const combined = new Map(this.requests);
         snapshots.forEach(invocation => combined.set(invocation.id, invocation));
-        snapshots.forEach(invocation => planInvocationChain(invocation, id => combined.get(id)));
+        combined.forEach(invocation => {
+            if (!isBlobInvocation(invocation)) {
+                planInvocationChain(invocation, id => {
+                    const source = combined.get(id);
+                    return source && !isBlobInvocation(source) ? source : undefined;
+                });
+            }
+        });
         for (const invocation of snapshots) {
             this.requests.set(invocation.id, invocation);
         }
@@ -50,7 +68,8 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
     }
 
     public updateRequestStatus(id: string, message: HttpRequestStateMessage): void {
-        if (!this.requests.has(id)) {
+        const invocation = this.requests.get(id);
+        if (!invocation || isBlobInvocation(invocation)) {
             return;
         }
         const status = message.command === 'requestStarted' ?
@@ -92,13 +111,43 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
 
     public getRequest(id: string): HttpInvocation | undefined {
         const invocation = this.requests.get(id);
-        return invocation && copyInvocation(invocation);
+        return invocation && !isBlobInvocation(invocation) ? copyInvocation(invocation) : undefined;
     }
 
-    public replaceRequests(invocations: readonly HttpInvocation[]): void {
-        invocations.forEach(validateInvocation);
+    public getBlobInvocation(id: string): BlobInvocation | undefined {
+        const invocation = this.requests.get(id);
+        return isBlobInvocation(invocation) ? copyBlobInvocation(invocation) : undefined;
+    }
+
+    public getInvocations(): Invocation[] {
+        return [...this.requests.values()].map(copyCollectionInvocation);
+    }
+
+    public updateBlobStatus(id: string, message: BlobUploadState): void {
+        if (!this.getBlobInvocation(id)) {
+            return;
+        }
+        const running = message.command === 'uploadStarted';
+        const uploaded = message.command === 'uploadResult';
+        const cancelled = message.command === 'uploadError' && message.cancelled;
+        this.statuses.set(id, {
+            text: running ? localize('azureInvoke.uploading', 'Uploading...') :
+                uploaded ? localize('azureInvoke.blobUploadedUnverified', 'Uploaded; function execution not observed') :
+                    cancelled ? localize('azureInvoke.uploadCancelled', 'Upload cancelled; storage may have changed') :
+                        localize('azureInvoke.uploadFailed', 'Upload not confirmed; storage may have changed'),
+            icon: running ? 'loading~spin' : uploaded ? 'cloud-upload' : cancelled ? 'circle-slash' : 'error',
+            lastRun: running ? new Date() : this.statuses.get(id)?.lastRun ?? new Date(),
+            status: running ? 'running' : uploaded ? 'succeeded' : cancelled ? 'cancelled' : 'failed',
+        });
+        this.changeEmitter.fire();
+    }
+
+    public replaceRequests(invocations: readonly Invocation[]): void {
+        invocations.forEach(validateCollectionInvocation);
         for (const invocation of invocations) {
-            planInvocationChain(invocation, id => invocations.find(source => source.id === id));
+            if (!isBlobInvocation(invocation)) {
+                planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+            }
         }
         if (new Set(invocations.map(invocation => invocation.id)).size !== invocations.length) {
             throw new Error(localize('azureInvoke.duplicateInvocation', 'The collection contains duplicate invocation IDs.'));
@@ -106,21 +155,21 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         this.requests.clear();
         this.statuses.clear();
         for (const invocation of invocations) {
-            this.requests.set(invocation.id, copyInvocation(invocation));
+            this.requests.set(invocation.id, copyCollectionInvocation(invocation));
         }
         this.changeEmitter.fire();
     }
 
     public getRequests(): HttpInvocation[] {
-        return [...this.requests.values()];
+        return [...this.requests.values()].filter((invocation): invocation is HttpInvocation => !isBlobInvocation(invocation)).map(copyInvocation);
     }
 
     public getChildren(element?: AzureInvokeTreeElement): AzureInvokeTreeElement[] {
         if (element) {
-            return 'request' in element ? [] : this.getRequests().filter(request => request.group === element.group);
+            return 'request' in element ? [] : this.getInvocations().filter(request => request.group === element.group);
         }
         const groups = new Set<string>();
-        return this.getRequests().flatMap((request): AzureInvokeTreeElement[] => {
+        return this.getInvocations().flatMap((request): AzureInvokeTreeElement[] => {
             if (!request.group) {
                 return [request];
             }
@@ -142,14 +191,20 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         const item = new vscode.TreeItem(request.name, vscode.TreeItemCollapsibleState.None);
         item.id = `request:${request.id}`;
         const status = this.statuses.get(request.id);
-        item.iconPath = status ? new vscode.ThemeIcon(status.icon, status.color ? new vscode.ThemeColor(status.color) : undefined) : new vscode.ThemeIcon('circle-outline');
-        item.description = status?.lastRun.toLocaleString();
+        const blob = isBlobInvocation(request);
+        item.contextValue = blob ? 'azureInvoke.blob' : 'azureInvoke.http';
+        item.iconPath = blob ? new vscode.ThemeIcon('cloud-upload') :
+            status ? new vscode.ThemeIcon(status.icon, status.color ? new vscode.ThemeColor(status.color) : undefined) : new vscode.ThemeIcon('circle-outline');
+        const trigger = blob ? localize('azureInvoke.blobTriggerDescription', 'Blob Trigger') : localize('azureInvoke.httpTriggerDescription', 'HTTP Trigger');
+        item.description = !blob && status ? localize('azureInvoke.triggerLastRun', '{0} ({1})', trigger, status.lastRun.toLocaleTimeString()) : trigger;
         item.tooltip = status ?
-            `${localize('azureInvoke.lastRun', 'Last run: {0}', status.lastRun.toLocaleString())}\n${status.text}` :
-            localize('azureInvoke.notRun', 'Not run yet');
+            `${blob ? localize('azureInvoke.lastUpload', 'Last upload attempt: {0}', status.lastRun.toLocaleString()) :
+                localize('azureInvoke.lastRun', 'Last run: {0}', status.lastRun.toLocaleString())}\n${status.text}` :
+            blob ? localize('azureInvoke.blobNotUploaded', 'Not uploaded yet. Manual invocation only; function execution is not observed.') :
+                localize('azureInvoke.notRun', 'Not run yet');
         item.command = {
             command: 'azureFunctions.azureInvoke.open',
-            title: localize('azureInvoke.open', 'Open HTTP Request'),
+            title: localize('azureInvoke.openInvocation', 'Open Invocation'),
             arguments: [{ id: request.id }],
         };
         return item;

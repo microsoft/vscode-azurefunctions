@@ -1,10 +1,34 @@
 # Azure Invoke prototype handoff
 
-This document captures the prototype as of October 16, 2026, including grouped tree status, response formatting, preview diagnosis, reviewed saved-request fixes, and breakpoint-driven replay. Check `git status` before continuing: the latest implementation changes are in the working tree and should not be assumed committed.
+This document captures the prototype as of October 18, 2026, including exact HTTP debug replay, manual Blob invocation and authoring, trigger descriptions, optional breakpoint guidance, and workspace editing through the custom agent. Check `git status` before continuing: session changes may already be staged, but no commit was created as part of this work.
 
-Azure Invoke is an HTTP request client inside the Azure Functions extension. It can target Functions or another HTTP API, including a local Go service. The prototype is not an assertion-based test runner. A successful HTTP status is an observation, not proof that an application's behavior is correct.
+Azure Invoke supports HTTP requests and manual Blob uploads inside the Azure Functions extension. HTTP requests can target Functions or another HTTP API, including a local Go service. The prototype is not an assertion-based test runner. HTTP responses and storage receipts are observations, not proof that an application's behavior is correct.
 
 For user-facing instructions, start with [Azure Invoke in the README](README.md#azure-invoke). This handoff explains ownership, decisions, implementation details, and unfinished work.
+
+## Session summary, October 18, 2026
+
+| Work completed | Implementation and decisions |
+| --- | --- |
+| Structured questions and HTTP guidance | Enabled `ask_user` and `vscode/askQuestions` for clarification. Corrected the function-key hint so it does not imply that every endpoint needs a key. |
+| Exact HTTP debug replay | Added a separate captured-request replay path. It preserves resolved generators, private credentials, and dependency-bound values despite later definition edits or newer source results. Ordinary execution still generates fresh inputs and runs prerequisites. |
+| Manual Blob invocation | Added a dedicated editor, mixed collection format version 3, lazy storage SDK integration, upload receipts, tree actions, and MCP tools for local Azurite. Blob uploads remain separate from generic HTTP test runs and dependency chains. Result polling and automatic function-success detection were deliberately deferred. |
+| Captured file fixtures | Replaced visible content and encoding controls with native file selection, shared through `pickBlobFile.ts`. Fixtures retain captured bytes and a display filename, not a live file path. Uploads overwrite by default; existence checks, overwrite questions, and mutation retries were removed. |
+| Blob breakpoint authorization | Bound one upload to the saved fixture and existing debugger. Editor and tree actions no longer invite another chat approval question. Native client tool approval remains in place. A binding mismatch produces a warning, not a silently rewritten target. |
+| Blob authoring through MCP | Added metadata-only Blob proposals and `select_blob_invocation_file`. The agent is instructed to infer bindings and emulator ports from project evidence. The review privately retains chosen files and local edits through revisions, then saves selected HTTP and Blob entries atomically without uploading. |
+| Breakpoint guidance | Added an optional native description prompt shared by the editor and tree actions. Guidance is attached to the authorized debug target, exposed through its context tool, and excluded from saved fixtures and exports. Cancellation and changes during the prompt cannot authorize a stale upload. |
+| Trigger descriptions | The Blob editor subtitle is `Blob Trigger`. HTTP tree entries show the trigger type and optional last-run time. Blob entries always keep the upload icon and plain `Blob Trigger` description, with upload details on hover. Proposal rows show trigger types alongside manual-only, unsupported, and execution statuses. |
+| Editing while testing | Enabled the custom agent's `edit` toolset and removed the blanket application-code ban and request-only repair policy. User-requested source and test fixes stay in the same chat, while invocation review, privacy, execution approval, and exact-replay boundaries remain intact. |
+
+The [README](README.md#azure-invoke) owns the user-facing workflows and limits. Implementation owners are listed in the [code map](#code-map); the [validation checkpoint](#validation-checkpoint) distinguishes the full-suite run from later focused checks.
+
+### Discussed but not implemented: question before file selection
+
+The user requested a less intrusive Blob authoring flow. The proposed change is to ask through the available `ask_user` or `vscode/askQuestions` tool whether to choose a file now or choose it later in the review. Only an affirmative choice should invoke `select_blob_invocation_file`. Deferral or dismissal should leave the review open without a native dialog. The review's explicit **Choose file...** button should continue working directly.
+
+This remains pending. Current authoring prompts, agent instructions, and proposal-tool guidance still tell Copilot to open the picker after proposing Blob fixtures. Update the initial and revision prompts in `openAzureInvokeChat.ts`, `resources/agents/azure-invoke.agent.md`, and the descriptions and response message in `collectionReviewTools.ts` together. Do not ask for file contents or paths in chat, reopen a cancelled picker automatically, or turn this question into another upload-approval step.
+
+The user also showed a picker still open after the chat reported that its MCP call timed out. That behavior was not reproduced locally or fixed in this session; question-first instructions alone should not be described as a timeout fix.
 
 ## Pick back up
 
@@ -22,7 +46,8 @@ Browser-only previews of the webview bundle do not exercise extension state, too
 
 | Area | Current behavior |
 | --- | --- |
-| View and manual entry | A dedicated Azure Invoke tree, add-trigger quick pick, manual HTTP editor, and AI authoring entry point. Other trigger types are listed but not executable. |
+| View and manual entry | A dedicated Azure Invoke tree, add-trigger quick pick, manual HTTP and Blob editors, and AI authoring entry point. Other trigger types are listed but not executable. |
+| Manual Blob invocation | A file picker with captured fixture bytes, local Azurite uploads that overwrite by default, upload receipts, and breakpoint-assisted upload through the editor, tree, and MCP. Excluded from HTTP tests and prerequisites. |
 | HTTP editor | Method, absolute URL, query parameters, headers, body, editable name, explicit Save, Send, cancellation, and status/timing/headers/body display. |
 | Response formatting | Shared display-only JSON formatting in saved editors and review previews. Raw response data remains unchanged. |
 | Saved requests | Stable IDs and session-only snapshots. Reopen an entry to edit it or inspect its last full response. Unsaved editor changes are not the saved snapshot used by MCP. |
@@ -30,6 +55,7 @@ Browser-only previews of the webview bundle do not exercise extension state, too
 | Dependencies | Searchable prerequisite/source pickers, order-only prerequisites, response and resolved-input selectors, and variable substitution. |
 | Runtime generation | `{{guid}}` generates one UUID per request execution, shared across its occurrences within that request. |
 | Guided AI authoring | Workspace discovery through a bundled custom agent, a grouped editable review, manual previews, iterative feedback, and direct saving on Confirm. |
+| Workspace editing | Source, test, configuration, and documentation changes through the same custom agent when part of the user's development task. |
 | Preview diagnosis | Explicit per-request or collection-wide sharing of failed preview evidence for read-only source-based diagnosis. |
 | Saved-request fixes | Last-run status discovery, approved evidence inspection, and field replacements reviewed before updating existing saved IDs. |
 | Debug replay | The same agent chooses breakpoints through Microsoft DebugMCP and replays captured local inputs against an existing VS Code debug session. |
@@ -59,9 +85,9 @@ Author Collection with AI
             -> later execution is a separate user request
 ```
 
-HTTP rows start checked and collapsed. Related methods and collection/item routes share a resource heading. Expanded rows show authentication evidence, editable request fields, dependencies, a response preview, and feedback. Lock, open-lock, and question-mark indicators mean required, anonymous, and unknown authentication.
+HTTP and Blob rows start checked and collapsed. Related invocations share a resource heading. HTTP rows show authentication evidence, editable request fields, dependencies, a response preview, and feedback. Blob rows use the manual authoring flow described in the README, with no upload preview.
 
-Nonempty feedback in any HTTP row, including an unchecked row, changes the action to **Request changes**. Whitespace alone does not. Submitting feedback saves nothing and starts a revision-specific chat turn containing the review identifier and revision number, not private request values.
+Nonempty feedback in any supported row, including an unchecked row, changes the action to **Request changes**. Whitespace alone does not. Submitting feedback saves nothing and starts a revision-specific chat turn containing the review identifier and revision number, not private request values.
 
 The revision tool reads explicitly submitted comments and selected flags. A replacement proposal must target the active review and current requested revision. Existing case IDs preserve selection and local edits. Processed comments clear after a replacement is accepted. Stale proposals, closed reviews, and premature drafting are rejected. Chat failures leave notes editable and retryable, and the user can cancel while chat is pending.
 
@@ -83,7 +109,7 @@ The agent's instructions and tool descriptions establish these defaults:
 
 These are model instructions, not a deterministic route scanner or a guarantee that every language/framework will be discovered correctly. Review the proposal against the application.
 
-Automatic draft execution and a run-and-correct authoring loop are **not implemented**. The agent proposes and stops; the user runs review previews manually. Explicit diagnosis and saved-request repair do not provide runtime feedback during initial authoring. Do not describe generated requests as tested unless their actual execution evidence supports that claim.
+Automatic draft execution and a run-and-correct authoring loop are **not implemented**. Authoring proposes drafts and may open native Blob file selection, but HTTP review previews remain manual. Explicit diagnosis and saved-request repair do not provide runtime feedback during initial authoring. Do not describe generated requests as tested unless their actual execution evidence supports that claim.
 
 ### Local edits and preview isolation
 
@@ -99,7 +125,7 @@ The diagnosis actions authorize a snapshot of selected failed previews for `get_
 
 Response sharing follows the execution tool's local-only policy, with additional limits of 64 KB per failure and 512 KB total. Truncation is explicit and preserves UTF-8 boundaries. The review warns that bodies may contain sensitive data, including values echoed by the application. Non-local chains expose status and timing only.
 
-The agent classifies evidence as a request-configuration problem, likely application bug, environment or authentication blocker, or uncertain cause. Diagnosis cannot change drafts, edit code, or execute requests. Request corrections use existing feedback and **Request changes**. Application investigation requires a separate request. See the README for the user-facing flow.
+The agent classifies evidence as a request-configuration problem, likely application bug, environment or authentication blocker, or uncertain cause. The diagnosis tool only reads captured evidence; request corrections use existing feedback and **Request changes**. Follow-up application fixes can use the agent's workspace editing tools. See the README for the user-facing flow and action defaults.
 
 ## Saved-request inspection and reviewed fixes
 
@@ -135,17 +161,35 @@ Microsoft DebugMCP is an external VS Code extension/MCP prerequisite, not a repo
 
 `resolveInvocationDebugSession` is the session-resolution seam. It currently requires the active VS Code session and returns its identity and workspace folder; it does not prove that the session serves the request's port. A future chooser or startup flow belongs there. `HttpRequestEditors` accepts the resolver and chat launcher so orchestration can be exercised without a real application debugger.
 
-The invocation runner captures executed definitions, resolved inputs, and source-locality provenance in memory. Debug authorization binds that snapshot to the existing session and saved request. The context tool omits private input values, while the single-use replay tool resends resolved inputs without regenerating values or rerunning prerequisites. Replay retains the original definition's identity for later debugging. Cancellation, debugger termination, editor disposal, and collection replacement still abort it.
+The invocation runner captures executed definitions, resolved inputs, and source-locality provenance in memory. Debug authorization binds that execution snapshot to the existing session, independently of later definition edits or prerequisite results. The context tool omits private input values, while the single-use replay tool calls the runner's separate replay method without planning dependencies, resolving bindings, or regenerating inputs. Replay retains the original definition's identity and locality provenance for later debugging. Cancellation, debugger termination, editor disposal, and collection replacement still abort it.
 
-Only debug replay passes `timeout: null` through the internal run options to disable the HTTP timeout. Ordinary requests retain the configured timeout, including the previous zero/negative-setting behavior. Do not disable timeouts globally to accommodate breakpoint pauses.
+Only the separate replay method passes `timeout: null` to the HTTP request runner to disable the HTTP timeout. Ordinary requests retain the configured timeout, including the previous zero/negative-setting behavior. Do not disable timeouts globally to accommodate breakpoint pauses.
 
-Authorization expires when the saved effective request, last result, active debugger, or collection changes. Comparison ignores empty editor rows and disabled GET/HEAD bodies, which do not change the actual request. Missing, running, cancelled, or blocked results are not eligible. Unsaved editor values are neither saved nor replayed.
+Authorization expires when the last execution, active debugger, or collection changes, not when a saved definition is edited. Missing, running, cancelled, or blocked results are not eligible. Unavailable authorization or snapshots require renewed authorization, never a normal-run fallback. Saved and unsaved edits are neither applied nor replayed. The README owns the user-facing replay contract, including the effect of repeated mutations on application state.
 
 The agent uses full source paths for DebugMCP workspace routing, then checks breakpoints and debugger status before replay. It must not resume a debugger that is already paused. The HTTP replay waits while the user inspects and resumes manually. A requested breakpoint is not proof that it binds or hits.
 
 Debug replays do not populate dependency-output caches because their captured inputs can outlive the prerequisite results they originally used. Their responses remain visible and inspectable. A normal run is required before using them as linked sources.
 
 See the README for setup, sharing warnings, and the user-facing flow.
+
+## Manual Blob implementation
+
+The [README](README.md#invoke-a-blob-trigger-manually) owns the user-facing behavior and limits.
+
+`shared/blobInvocation.ts` defines the explicit `trigger: 'blob'` collection entry and its Azurite target. HTTP entries retain their existing shape. `AzureInvokeTreeDataProvider.getRequests` and `getRequest` remain HTTP-only, so HTTP execution, dependency planning, and saved-request inspection cannot include a Blob upload. `getInvocations` covers mixed import/export and tree rendering; version 3 adds mixed collections without changing version 1/2 HTTP files.
+
+`BlobInvocationEditors` owns private fixtures, upload cancellation, last upload receipts, and single-use debug authorization. `BlobInvocationController` uses the shared webview framework and the separate `blobInvocation` browser bundle. The native file picker captures bytes and a display filename, not a persistent local path. The encoding stays internal; older text fixtures still import without exposing text or encoding controls.
+
+Collection proposals accept `BlobUploadDefinition` metadata, not file contents or paths. `CollectionReviewController` owns private captured files and exposes only filenames to its webview. Both review and manual editor use `pickBlobFile.ts`; `select_blob_invocation_file` delegates to that same review owner. Picker completion is tied to the review version and active lifecycle. Stable Blob candidate IDs preserve files through revisions; user-edited target fields take priority. `CollectionReviews` returns only original proposal metadata, changed field names, and a `fileSelected` flag to MCP. Confirmation materializes selected fixtures locally and saves mixed entries atomically while translating only HTTP dependencies.
+
+`uploadBlob.ts` uses the lazy SDK factory in `utils/azureClients.ts`, with default emulator credentials supplied by the SDK. Writes are unconditional and do not prompt for overwrite confirmation. The README owns the user-facing overwrite contract. SDK retry attempts are disabled. Receipts use storage response metadata rather than a pre-upload existence check, and never contain fixture bytes or credentials. Completion does not become a synthetic HTTP response.
+
+The editor and tree action both call `BlobInvocationEditors.debugInvocation`. Authorization captures the saved fixture and existing debug session before opening chat. The metadata tool exposes only binding-relevant target information; the approved upload tool validates and consumes authorization, rechecks before storage mutations, and never substitutes edited contents or falls back to an ordinary upload. The custom agent selects useful source breakpoints through DebugMCP before calling the upload tool. Debugger control and function-result observation remain outside this flow.
+
+The optional native breakpoint-guidance prompt is owned by `BlobInvocationEditors`, so editor and tree actions share it. Guidance belongs to the captured debug target, not the saved fixture. The context tool returns it only under the matching debug authorization; chat launch still carries opaque IDs rather than the description.
+
+The chat prompt and tool descriptions treat the button click as authorization for that single upload, not an invitation to ask for another chat confirmation. Native client tool approval remains unchanged. The README owns the warning-versus-blocker behavior when the captured target differs from the discovered trigger binding.
 
 ## Request model and execution
 
@@ -192,7 +236,7 @@ Cancellation stops pending work and aborts active transport. It cannot undo an a
 
 ### Run status and blocked requests
 
-`AzureInvokeTreeDataProvider` owns structured run status and its tree presentation. Descriptions show a localized last-run timestamp rather than method or duration. Hover retains status/timing details. The list tool exposes the same state with an ISO timestamp.
+`AzureInvokeTreeDataProvider` owns structured run status and its tree presentation. HTTP descriptions show the trigger type and optional localized last-run time in parentheses; Blob entries keep a fixed upload icon and trigger description. Hover retains the full date, status, and timing details. The list tool exposes the same state with an ISO timestamp.
 
 | Status | Tree icon | Meaning |
 | --- | --- | --- |
@@ -271,6 +315,7 @@ The in-process server is **Azure Functions Extension Tools**, provider ID `vscod
 | --- | --- |
 | `create_http_invocation` | Save one complete request directly into the session tree without opening a tab or sending it. |
 | `propose_invocation_collection` | Fill the discovery review or replace an explicitly requested revision without saving or sending. |
+| `select_blob_invocation_file` | Open the native picker for a Blob review draft and capture its contents privately, without saving or uploading. |
 | `get_invocation_collection_review` | Read submitted feedback with `changesRequested`, or an approved selection with saved IDs and `approved`. |
 | `get_invocation_diagnostics` | Read the failed preview snapshots explicitly shared through an active review, without changing or sending requests. |
 | `draft_http_invocation` | Legacy approved-case revision by candidate ID. Still registered for existing clients, but excluded from the custom agent and not the reviewed-fix path. |
@@ -280,10 +325,13 @@ The in-process server is **Azure Functions Extension Tools**, provider ID `vscod
 | `get_http_invocation_debug_context` | Read explicitly shared last-run evidence tied to a saved local request and existing debugger. |
 | `debug_http_invocation` | Consume debug authorization to replay captured local inputs once with approval, without rerunning prerequisites. |
 | `run_http_invocation` | Execute a saved snapshot and normally its prerequisite chain. Marked destructive, open-world, non-idempotent, and `AlwaysRequired` consent guidance. |
+| `list_blob_invocations` | Discover saved manual-only fixtures without content. |
+| `get_blob_invocation_debug_context` | Read target metadata authorized by the Blob editor or tree action. |
+| `upload_blob_invocation` | Upload one explicitly requested saved fixture with approval, optionally bound to its breakpoint-flow authorization. Returns storage metadata only. |
 
-The bundled agent in `resources/agents/azure-invoke.agent.md` uses native read/search tools plus the guided, inspection, reviewed-fix, and execution tools. It intentionally omits `create_http_invocation`, legacy `draft_http_invocation`, edit tools, and terminal tools. It should not replace this workflow with curl, generated test files, or application edits.
+The bundled agent in `resources/agents/azure-invoke.agent.md` uses native read/search, workspace editing, and question tools plus the guided, inspection, reviewed-fix, and execution tools. Clarifications use `ask_user` in the Copilot harness or `vscode/askQuestions` when available; private values stay in the request editor. It intentionally omits `create_http_invocation`, legacy `draft_http_invocation`, and terminal tools. User-requested source and test fixes stay in the same chat; collection management and invocation execution still use Azure Invoke rather than another HTTP client. The README owns the user-facing editing scope and action defaults.
 
-All eleven tools above are registered in `src/extension.ts`. The custom agent uses the same Azure Invoke profile for authoring, diagnosis, inspection, fixes, and debugging. It additionally allows only `debugmcp/add_breakpoint`, `debugmcp/list_breakpoints`, and `debugmcp/get_debug_status` from Microsoft DebugMCP.
+These tools are registered in `src/extension.ts`. The custom agent uses the same Azure Invoke profile for authoring, diagnosis, inspection, fixes, debugging, and manual Blob invocations. It additionally allows only `debugmcp/add_breakpoint`, `debugmcp/list_breakpoints`, and `debugmcp/get_debug_status` from Microsoft DebugMCP.
 
 `openAzureInvokeChat` opens `workbench.action.chat.open` in **Azure Invoke** mode. Discovery, feedback, and diagnosis have different prompts; `openInvocationDebugChat` supplies debug IDs and replay instructions. The static `contributes.chatAgents` entry avoids proposed VS Code APIs. Chat launch prompts carry identifiers, not private request/response values.
 
@@ -309,7 +357,7 @@ There is one current in-memory collection per extension window. There is no auto
 
 Historical Copilot messages and tool outputs are not live collection state or reusable authorization. The agent must not search chat history, offer restoration, or recreate an empty collection unless explicitly asked. Explicit recreation requires a fresh review and confirmation; historical review, invocation, diagnosis, inspection, and debug identifiers must not be treated as active.
 
-Collection files contain `{ version, invocations }`. Definitions without dependencies serialize as version 1. Definitions with bindings or order-only prerequisites serialize as version 2. Both import; version 1 with dependency links is rejected. GUID-only requests do not require version 2. Both versions support optional invocation groups. Last-run timestamps and status icons are session-only and are not exported.
+Collection files contain `{ version, invocations }`. HTTP-only definitions without dependencies serialize as version 1; HTTP dependencies require version 2. Mixed collections with Blob invocations use version 3. All versions support optional groups. Last-run timestamps, receipts, and status icons are session-only and are not exported. See the README for compatibility and fixture-content warnings.
 
 Exports retain placeholders and selectors, not resolved inputs or captured responses. They can still contain plaintext secrets typed into definitions. Export requires warning confirmation, and imported collections replace rather than merge with the current collection.
 
@@ -351,17 +399,20 @@ Commands, tree ownership, localization, action contexts, and disposables follow 
 | `src/webviews/azureInvoke/extension/CollectionReviews.ts` | Authoring/revision state, local-edit priority, ID translation, and saved-update review snapshots/application guards. |
 | `src/webviews/azureInvoke/extension/CollectionReviewController.ts` | Review lifecycle, isolated preview cache, diagnosis capture/budgets, authoring versus saved-update mode, and chat continuation. |
 | `src/webviews/azureInvoke/extension/HttpRequestEditors.ts`, `HttpRequestController.ts` | Saved editor lifetimes, execution, inspection tokens, stale-result metadata, debug authorization, and response-panel actions. |
+| `src/webviews/azureInvoke/extension/BlobInvocationEditors.ts`, `BlobInvocationController.ts`, `uploadBlob.ts` | Manual Blob editor lifetime, private file fixtures, uploads, cancellation, receipts, and breakpoint authorization. |
+| `src/webviews/azureInvoke/extension/pickBlobFile.ts` | Shared native file capture, size limits, cancellation checks, and filesystem-error redaction for manual and review editors. |
 | `src/webviews/azureInvoke/extension/HttpInvocationRunner.ts` | Chains, reservations, dependency caches, blocked propagation, last-run resolved inputs, and captured locality provenance. |
 | `src/webviews/azureInvoke/extension/HttpRequestRunner.ts`, `sendHttpRequest.ts` | Request progress, `InvocationBlockedError`, cancellation, debug-only timeout opt-out, transport, safe response sharing, and limits. |
 | `src/webviews/azureInvoke/extension/requestBindings.ts` | Static template checks, GUIDs, pointer selection, and safe substitution. |
 | `src/webviews/azureInvoke/views/` | HTTP editor, compact review, reusable request preview, dependency editor, searchable picker, and CSS. |
+| `src/webviews/azureInvoke/views/BlobRequestEditor.ts` | Editable Blob proposal metadata and file-selection display, without upload controls or fixture bytes. |
 | `src/webviews/azureInvoke/views/formatResponseBody.ts` | Shared display-only JSON formatter. |
 | `src/chat/tools/azureInvoke/` | MCP schemas and thin adapters into the shared services. |
 | `src/chat/tools/azureInvoke/savedHttpInvocationTools.ts` | Saved inspection and reviewed field-replacement tool contracts. |
 | `src/chat/tools/azureInvoke/debugHttpInvocationTools.ts` | Debug context and single-use, approved replay tool contracts. |
 | `resources/agents/azure-invoke.agent.md` | Session boundaries, discovery, revisions, diagnosis, reviewed fixes, breakpoint/replay instructions, and execution/reporting rules. |
-| `esbuild.mjs` | Separate browser bundles for the request editor and collection review. |
-| `test/azureInvoke.test.ts` | Native webview, HTTP fixture, MCP protocol, persistence, and dependency regression coverage. |
+| `esbuild.mjs` | Separate browser bundles for the HTTP editor, Blob editor, and collection review. |
+| `test/azureInvoke.test.ts` | Native webview, HTTP/storage fixtures, MCP protocol, persistence, and dependency regression coverage. |
 
 ### Implementation traps already encountered
 
@@ -380,7 +431,16 @@ Commands, tree ownership, localization, action contexts, and disposables follow 
 
 ## Validation checkpoint
 
-The latest implementation pass completed `npm run check`, `npm run lint`, `npm run build`, and all 68 native Azure Invoke tests on VS Code 1.141.0. The package still declares VS Code 1.106 as its minimum; the latest pass was not a new minimum-version compatibility check.
+The Blob-authoring pass completed all 81 native Azure Invoke tests on VS Code 1.142.0. Later additions were checked with focused native runs rather than another full-suite run:
+
+| Follow-up | Passing tests |
+| --- | --- |
+| Trigger descriptions and optional breakpoint guidance | 14 |
+| Trigger descriptions in collection review rows | 2 |
+| Fixed Blob tree presentation and unchanged HTTP status display | 2 |
+| Editing-enabled agent contribution and diagnosis/debug flows | 4 |
+
+The latest code pass completed `npm run build` and its TypeScript checks, plus `npm run lint` and `git diff --check`. Generated `main.js` remained unchanged. The package still declares VS Code 1.106 as its minimum; these runs were not a new minimum-version compatibility check.
 
 Earlier review layout checks covered 360px and 960px in light and dark themes. Do not treat those checks as a new visual pass for the saved-fix or debugging additions. The suite does not establish that a signed-in model discovers every endpoint, authors valid requests for an external application, or chooses breakpoints that bind and hit in that application.
 
@@ -390,15 +450,12 @@ To reproduce the focused validation:
 npm run check
 npm run lint
 npm run build
-./node_modules/.bin/vscode-test \
-  --run test/global.test.ts test/azureInvoke.test.ts \
-  --code-version 1.141.0 \
-  --skip-extension-dependencies
+npx vscode-test --grep '^Azure Invoke'
 git diff --check
 git diff --exit-code -- main.js
 ```
 
-Use the focused runner rather than `npm test` for this pass. The npm pretest script can modify the user-level Core Tools installation. Skipping extension dependency installation avoids an unrelated installer failure encountered during prototype work.
+Use the focused runner rather than `npm test` for this pass. The npm pretest script can modify the user-level Core Tools installation.
 
 The suite exercises actual webview bundles and MCP protocol against local HTTP fixtures. Coverage includes generated credential reuse, typed substitutions, encoded paths, stale caches, invalid graph preflight, cancellation, concurrency, privacy propagation, atomic saving, feedback loops, same-ID revisions, and readiness/progress races. Recent regressions cover:
 
@@ -408,6 +465,10 @@ The suite exercises actual webview bundles and MCP protocol against local HTTP f
 - Saved-request status discovery, inspection metadata, partial reviewed fixes, unchanged fields/IDs, unchecked entries, cancellation, and concurrent-edit rejection.
 - Debug session guards, single-use authorization, exact resolved-input replay, no prerequisite reruns, timeout opt-out, cancellation, locality, and dependency-cache safety.
 - Warning icons for HTTP- and transport-blocked transitive dependents, MCP `blocked` status, exclusion from independent diagnosis/debugging, and recovery after a successful rerun.
+- Manual Blob fixtures, native file selection and cancellation, captured-byte persistence, SDK uploads against an isolated storage-protocol fixture, unconditional overwrite without another prompt, cancellation, private breakpoint authorization, mixed collection files, and HTTP-only discovery/execution boundaries. These tests do not substitute for observing a real function hit a breakpoint under F5.
+- Mixed HTTP/Blob authoring through MCP, native picker privacy and cancellation, private edits and captured files surviving revisions, atomic confirmation without uploads, missing-file and size guards, and late picker results rejected after review or cancellation changes.
+- Optional breakpoint guidance, blank input, cancellation, and invalidation when the fixture or debugger changes during its prompt.
+- Trigger descriptions surviving review progress updates, fixed Blob tree presentation across upload states, and workspace editing enabled in the bundled custom agent.
 
 Known test-output noise includes warnings from the installed Azure Resource Groups extension about missing `.copilot-azure/sessions` folders and an MCP SDK JSON-schema fallback warning. The latter does not mean MCP initialization failed. Do not modify another installed extension's bundle to hide this output.
 
@@ -456,7 +517,7 @@ The user chose to defer this investigation. The next step is evidence collection
 
 ## Remaining prototype limits
 
-There is no automatic draft-validation/repair loop, collection-wide assertion runner, teardown policy, environment manager, secure secret store, automatic host startup, or non-HTTP execution. Running several targets through separate MCP calls can rerun their setup separately.
+There is no automatic draft-validation/repair loop, collection-wide assertion runner, teardown policy, environment manager, secure secret store, or automatic host startup. Non-HTTP execution is limited to manual Azurite Blob uploads. Running several HTTP targets through separate MCP calls can rerun their setup separately.
 
 Debug replay still assumes that the active session is the intended application debugger. Matching the HTTP target to a session, choosing among sessions, and starting/attaching one are future work at `resolveInvocationDebugSession`, not behavior to add implicitly to the agent prompt.
 

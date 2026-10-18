@@ -7,9 +7,9 @@ import { AzExtFsExtra, UserCancelledError, type IActionContext } from '@microsof
 import * as vscode from 'vscode';
 import { localize } from '../../localize';
 import { parseInvocationCollection, serializeInvocationCollection } from '../../tree/azureInvoke/invocationCollection';
-import { type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { type Invocation } from '../../webviews/azureInvoke/shared/blobInvocation';
 
-export async function saveCollectionFile(context: IActionContext, invocations: readonly HttpInvocation[], target?: vscode.Uri): Promise<void> {
+export async function saveCollectionFile(context: IActionContext, invocations: readonly Invocation[], target?: vscode.Uri): Promise<void> {
     if (!invocations.length) {
         throw new Error(localize('azureInvoke.emptyCollection', 'Save an invocation in the editor before saving a collection.'));
     }
@@ -26,7 +26,7 @@ export async function saveCollectionFile(context: IActionContext, invocations: r
     context.valuesToMask.push(uri.fsPath, uri.toString());
     const save = { title: localize('azureInvoke.saveCollectionConfirm', 'Save Collection') };
     await context.ui.showWarningMessage(
-        localize('azureInvoke.collectionSecrets', 'This file will contain all saved invocation URLs, headers, query parameters, and bodies in plain text, including any function keys or authorization credentials. Keep it private and do not commit it to source control. Unsaved editor changes are not included.'),
+        localize('azureInvoke.collectionSecrets', 'This file will contain all saved request data and Blob fixture contents in plain text or reversible Base64, including any function keys or authorization credentials. Keep it private and do not commit it to source control. Unsaved editor changes are not included.'),
         { modal: true, stepName: 'confirmSaveInvocationCollection' },
         save,
     );
@@ -40,7 +40,7 @@ export async function saveCollectionFile(context: IActionContext, invocations: r
     await AzExtFsExtra.writeFile(uri, content);
 }
 
-export async function openCollectionFile(context: IActionContext, source?: vscode.Uri): Promise<HttpInvocation[]> {
+export async function openCollectionFile(context: IActionContext, source?: vscode.Uri): Promise<Invocation[]> {
     const uri = source ?? (await context.ui.showOpenDialog({
         title: localize('azureInvoke.openCollection', 'Open Azure Invoke Collection'),
         canSelectFiles: true,

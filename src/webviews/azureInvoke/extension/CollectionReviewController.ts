@@ -18,6 +18,8 @@ import { InvocationBlockedError } from './HttpRequestRunner';
 import { getDependencyLabels } from './dependencyLabels';
 import { isLocalHttpRequest } from './requestBindings';
 import { getShareableHttpResponse } from './sendHttpRequest';
+import { copyBlobDefinition, type BlobFixtureFile, type BlobUploadDefinition, type BlobUploadRequest } from '../shared/blobInvocation';
+import { pickBlobFile } from './pickBlobFile';
 
 interface PreviewRecord {
     invocation: HttpInvocation;
@@ -37,6 +39,8 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
     private diagnosis: { id: string; cases: InvocationDiagnosisCase[] } | undefined;
     private diagnosing = false;
     private diagnosisNotice: string | undefined;
+    private readonly blobFiles = new Map<string, BlobFixtureFile>();
+    private selectingBlobFile = false;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -58,10 +62,32 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 title: updatingSaved ? localize('azureInvoke.reviewFixesTitle', 'Review saved request changes') : localize('azureInvoke.reviewTitle', 'Build your test collection'),
                 introduction: updatingSaved ?
                     localize('azureInvoke.reviewFixesIntroduction', 'Expand each request to review the proposed fields. Prerequisites are included for context. Apply updates selected saved requests in place without sending them or editing application code. Uncheck requests you do not want to update. To ask for a different proposal, return to chat.') :
-                    localize('azureInvoke.reviewIntroduction', 'Review one request template per HTTP method and route. Expand a row to fill values, try the request, or leave feedback. Uncheck templates you do not want to keep.'),
-                selectAll: localize('azureInvoke.selectAllHttp', 'Select all HTTP cases'),
+                    localize('azureInvoke.reviewIntroduction', 'Review HTTP request templates and manual Blob fixtures. Expand a row to edit values, choose a file, or leave feedback. Confirm saves selected entries without sending requests or uploading blobs.'),
+                selectAll: localize('azureInvoke.selectAllInvocations', 'Select all supported invocations'),
                 comment: localize('azureInvoke.reviewComment', 'Feedback for Copilot'),
                 unsupported: localize('azureInvoke.unsupportedTrigger', 'Not yet supported'),
+                triggers: {
+                    http: localize('azureInvoke.httpTriggerDescription', 'HTTP Trigger'),
+                    blob: localize('azureInvoke.blobTriggerDescription', 'Blob Trigger'),
+                    timer: localize('azureInvoke.timerTriggerDescription', 'Timer Trigger'),
+                    queue: localize('azureInvoke.queueTriggerDescription', 'Queue Trigger'),
+                    serviceBus: localize('azureInvoke.serviceBusTriggerDescription', 'Service Bus Trigger'),
+                    eventHub: localize('azureInvoke.eventHubTriggerDescription', 'Event Hub Trigger'),
+                    eventGrid: localize('azureInvoke.eventGridTriggerDescription', 'Event Grid Trigger'),
+                    cosmosDB: localize('azureInvoke.cosmosDBTriggerDescription', 'Cosmos DB Trigger'),
+                    other: localize('azureInvoke.otherTriggerDescription', 'Other Trigger'),
+                },
+                blob: {
+                    manualOnly: localize('azureInvoke.supportedManualOnly', 'Supported / Manual only'),
+                    target: localize('azureInvoke.blobReviewTarget', 'Azurite URL'),
+                    container: localize('azureInvoke.blobContainer', 'Container'),
+                    blobName: localize('azureInvoke.blobName', 'Blob name'),
+                    contentType: localize('azureInvoke.blobContentType', 'Content type'),
+                    file: localize('azureInvoke.chooseBlobFile', 'Choose file...'),
+                    noFile: localize('azureInvoke.noBlobFile', 'No file selected'),
+                    hint: localize('azureInvoke.blobReviewHint', 'Choose a file of at most 5 MB. Its captured contents stay private. Confirm saves this manual fixture without uploading it. Later uploads overwrite blobs with the same name.'),
+                    fileRequired: localize('azureInvoke.blobReviewFileRequired', 'Choose a file for each selected Blob fixture, or uncheck it before confirming.'),
+                },
                 confirm: updatingSaved ? localize('azureInvoke.applyRequestChanges', 'Apply request changes') : localize('azureInvoke.confirmCollection', 'Confirm'),
                 requestChanges: localize('azureInvoke.requestChanges', 'Request changes'),
                 diagnoseRequest: localize('azureInvoke.diagnoseRequest', 'Diagnose with Copilot'),
@@ -71,9 +97,9 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 selected: localize('azureInvoke.selectedCases', 'Selected'),
                 approved: updatingSaved ?
                     localize('azureInvoke.requestChangesApplied', 'Applied the selected request changes. Existing request tabs keep their fields; close and reopen a tab to load the updated saved request. Ask Copilot to rerun with approval when ready.') :
-                    localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run them when you are ready.'),
+                    localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run HTTP requests when ready. Blob uploads remain manual.'),
                 cancelled: updatingSaved ? localize('azureInvoke.requestChangesCancelled', 'Review cancelled. Saved requests are unchanged.') : localize('azureInvoke.reviewCancelled', 'Review cancelled. No additional requests will be drafted from this proposal.'),
-                selectCases: localize('azureInvoke.selectCases', 'Select at least one HTTP case to continue.'),
+                selectCases: localize('azureInvoke.selectInvocations', 'Select at least one supported invocation to continue.'),
                 loadingTitle: localize('azureInvoke.loadingReview', 'Discovering endpoints'),
                 loadingMessage: localize('azureInvoke.loadingReviewMessage', 'Copilot is scanning your workspace for request templates. Answer any questions in chat while it prepares your review.'),
                 revisingTitle: localize('azureInvoke.revisingReview', 'Updating your collection'),
@@ -125,6 +151,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
         this.registerDisposable(this.previews);
         this.state = candidates ? 'reviewing' : 'loading';
         this.registerDisposable(this.onDisposed(() => {
+            this.blobFiles.clear();
             if (this.state !== 'approved') {
                 this.cancelReview();
             }
@@ -143,6 +170,8 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                         for (const preview of this.previews.messages) {
                             await this.postMessage({ command: 'preview', version: this.configuration.version, ...preview });
                         }
+                    } else if (command === 'selectBlobFile' && message && typeof message === 'object' && 'id' in message && typeof message.id === 'string') {
+                        await this.selectBlobFile(context, message.id);
                     } else if (command === 'previewRequest' && message && typeof message === 'object' && 'id' in message && 'request' in message) {
                         await this.previewRequest(context, message.id, message.request, 'runDependencies' in message && message.runDependencies === true, 'requests' in message ? message.requests : undefined);
                     } else if (command === 'diagnoseRequests' && message && typeof message === 'object' && 'ids' in message && 'requests' in message) {
@@ -188,7 +217,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                         if (this.state !== 'reviewing' || this.confirming || this.diagnosing) {
                             return;
                         }
-                        if (this.previews.running) {
+                        if (this.previews.running || this.selectingBlobFile) {
                             throw new Error(localize('azureInvoke.previewRunning', 'Wait for running previews to finish or cancel them before confirming.'));
                         }
                         this.selections = this.requestChanges(message.selections);
@@ -206,7 +235,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                         this.confirming = true;
                         try {
                             this.errorMessage = undefined;
-                            if (this.previews.running) {
+                            if (this.previews.running || this.selectingBlobFile) {
                                 throw new Error(localize('azureInvoke.previewRunning', 'Wait for running previews to finish or cancel them before confirming.'));
                             }
                             this.selections = this.confirmSelection(message.selections);
@@ -243,7 +272,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                             record.result = result;
                         }
                         await this.postMessage({ command: 'preview', version: this.configuration.version, id: message.id, message: result });
-                    } else {
+                    } else if (command !== 'selectBlobFile' || !isUserCancelledError(error)) {
                         this.errorMessage = errorMessage;
                         await this.postState();
                     }
@@ -256,6 +285,11 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
     public async setCandidates(candidates: InvocationCandidate[], selections?: InvocationSelection[]): Promise<void> {
         this.configuration.version++;
         this.configuration.candidates = candidates;
+        for (const id of this.blobFiles.keys()) {
+            if (!candidates.some(candidate => candidate.id === id && candidate.trigger === 'blob')) {
+                this.blobFiles.delete(id);
+            }
+        }
         this.configuration.loading = false;
         this.configuration.selections = selections;
         this.selections = selections ?? [];
@@ -268,6 +302,44 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
         this.state = 'reviewing';
         this.errorMessage = undefined;
         await this.postState(true);
+    }
+
+    public hasBlobFile(id: string): boolean {
+        return this.blobFiles.has(id);
+    }
+
+    public getBlobRequest(id: string, definition: BlobUploadDefinition): BlobUploadRequest {
+        const file = this.blobFiles.get(id);
+        if (!file) {
+            throw new Error(localize('azureInvoke.blobReviewFileRequired', 'Choose a file for each selected Blob fixture, or uncheck it before confirming.'));
+        }
+        return {
+            ...copyBlobDefinition(definition), ...file, encoding: 'base64',
+            blobName: definition.blobName || file.fileName,
+        };
+    }
+
+    public async selectBlobFile(context: IActionContext, id: string, signal?: AbortSignal): Promise<void> {
+        const available = (): boolean => !this.isDisposed && !this.configuration.updatingSaved &&
+            this.state === 'reviewing' && !this.confirming && !this.diagnosing &&
+            this.configuration.candidates.some(candidate => candidate.id === id && candidate.trigger === 'blob');
+        if (!available() || this.selectingBlobFile) {
+            throw new Error(localize('azureInvoke.blobReviewUnavailable', 'Choose a Blob fixture in the active collection review. Wait for any open file picker to finish.'));
+        }
+        const version = this.configuration.version;
+        this.selectingBlobFile = true;
+        this.errorMessage = undefined;
+        try {
+            await this.postState();
+            const file = await pickBlobFile(context, signal);
+            if (!available() || version !== this.configuration.version) {
+                throw new Error(localize('azureInvoke.blobReviewChanged', 'The collection review changed while choosing a file. Select the file again in the current review.'));
+            }
+            this.blobFiles.set(id, file);
+        } finally {
+            this.selectingBlobFile = false;
+            await this.postState();
+        }
     }
 
     public async failLoading(cancelled: boolean): Promise<void> {
@@ -409,6 +481,8 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
         const snapshot = {
             version: this.configuration.version, state: this.state, selections: this.selections, statuses: this.statuses, error: this.errorMessage,
             diagnosing: this.diagnosing, diagnosisNotice: this.diagnosisNotice,
+            blobFiles: [...this.blobFiles].map(([id, file]) => ({ id, fileName: file.fileName })),
+            selectingBlobFile: this.selectingBlobFile,
         };
         await this.postMessage(proposal ?
             { ...snapshot, command: 'proposal', candidates: this.configuration.candidates } :

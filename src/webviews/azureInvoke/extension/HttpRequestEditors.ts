@@ -38,8 +38,7 @@ export class HttpRequestEditors implements vscode.Disposable {
         this.subscription = provider.onDidChangeTreeData(() => {
             this.inspections.clear();
             if (this.debugTarget) {
-                const saved = provider.getRequest(this.debugTarget.invocation.id);
-                if (!saved || getDebugDefinition(saved) !== getDebugDefinition(this.debugTarget.invocation)) {
+                if (!provider.getRequest(this.debugTarget.invocation.id)) {
                     this.debugTarget = undefined;
                 }
             }
@@ -138,13 +137,13 @@ export class HttpRequestEditors implements vscode.Disposable {
         const session = await this.debugging.resolveSession(context);
         const invocation = this.provider.getRequest(id);
         const snapshot = this.execution.getLastRun(id);
-        if (!invocation || !snapshot || getDebugDefinition(invocation) !== getDebugDefinition(snapshot.run.invocation)) {
-            throw new Error(localize('azureInvoke.debugRunRequired', 'Save and send this request before debugging its response. The saved request must match the last run; unsaved editor changes are not replayed.'));
+        if (!invocation || !snapshot) {
+            throw new Error(localize('azureInvoke.debugRunRequired', 'No replayable last execution is available. Send this request, then select Debug with Copilot again.'));
         }
         if (!snapshot.run.canShareResponse) {
             throw new Error(localize('azureInvoke.debugLocalOnly', 'This prototype debugs only localhost requests whose prerequisites are also local.'));
         }
-        const target = { id: randomUUID(), invocation: copyInvocation(invocation), snapshot, session };
+        const target = { id: randomUUID(), invocation: snapshot.run.invocation, snapshot, session };
         this.debugTarget = target;
         try {
             await this.debugging.openChat(id, target.id);
@@ -165,10 +164,9 @@ export class HttpRequestEditors implements vscode.Disposable {
         const invocation = this.provider.getRequest(id);
         const latest = this.execution.getLastRun(id);
         if (this.debugTarget !== target || session.id !== target.session.id || !invocation ||
-            latest?.run !== target.snapshot.run || latest.message !== target.snapshot.message ||
-            getDebugDefinition(invocation) !== getDebugDefinition(target.invocation)) {
+            latest?.run !== target.snapshot.run || latest.message !== target.snapshot.message) {
             this.debugTarget = undefined;
-            throw new Error(localize('azureInvoke.debugChanged', 'The request, its result, or the active debugger changed. Select Debug with Copilot again.'));
+            throw new Error(localize('azureInvoke.debugChanged', 'The last execution or the active debugger changed. Select Debug with Copilot again.'));
         }
         return target;
     }
@@ -196,11 +194,8 @@ export class HttpRequestEditors implements vscode.Disposable {
             }
         });
         try {
-            return await this.execution.send(context, target.invocation, {
-                saved: true, runDependencies: false, timeout: null,
-                replayRequest: target.snapshot.run.request,
-                signal: signal ? AbortSignal.any([signal, abort.signal]) : abort.signal,
-            });
+            return await this.execution.replay(context, target.snapshot.run,
+                signal ? AbortSignal.any([signal, abort.signal]) : abort.signal);
         } finally {
             subscription.dispose();
         }

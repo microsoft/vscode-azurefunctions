@@ -57,7 +57,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                 requestBody: localize('azureInvoke.requestBody', 'Request body'),
                 requestOptions: localize('azureInvoke.requestOptions', 'Request options'),
                 getBodyHint: localize('azureInvoke.getBodyHint', 'GET and HEAD requests do not send a body.'),
-                functionKeyHint: localize('azureInvoke.functionKeyHint', 'For protected functions, add an x-functions-key header.'),
+                functionKeyHint: localize('azureInvoke.functionKeyHint', 'For Azure Functions endpoints that require a function key, add it as an x-functions-key header.'),
                 rename: localize('azureInvoke.rename', 'Rename invocation'),
                 save: localize('azureInvoke.save', 'Save'),
                 saving: localize('azureInvoke.saving', 'Saving...'),

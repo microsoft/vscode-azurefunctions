@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, isUserCancelledError } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { openAzureInvokeChat } from '../../../commands/azureInvoke/openAzureInvokeChat';
 import { localize } from '../../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
-import { copyInvocation, planInvocationChain, validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
-import { type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
+import { copyInvocation, planInvocationChain, validateCollectionInvocation, validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
+import { type BlobInvocationCandidate, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
+import { copyBlobDefinition, isBlobInvocation, type BlobUploadDefinition, type Invocation } from '../shared/blobInvocation';
 import { getRequestDependencies, type HttpInvocation, type HttpRequest } from '../shared/httpRequest';
 import { CollectionReviewController } from './CollectionReviewController';
 
@@ -59,10 +60,13 @@ export class CollectionReviews implements vscode.Disposable {
         for (const candidate of candidates) {
             if (candidate.trigger === 'http') {
                 validateInvocation(candidate);
+            } else if (candidate.trigger === 'blob') {
+                validateBlobCandidate(candidate);
             }
         }
         const copied: InvocationCandidate[] = candidates.map(candidate => candidate.trigger === 'http' ?
-            { ...candidate, request: copyInvocation(candidate).request } : { ...candidate });
+            { ...candidate, request: copyInvocation(candidate).request } : candidate.trigger === 'blob' ?
+                { ...candidate, request: copyBlobDefinition(candidate.request) } : { ...candidate });
         let selections: InvocationSelection[] | undefined;
         if (reviewId) {
             const review = this.current;
@@ -72,16 +76,25 @@ export class CollectionReviews implements vscode.Disposable {
                 throw new Error(localize('azureInvoke.reviewExpired', 'This collection review is no longer active. Propose a new collection or use the current requested revision.'));
             }
             if (review.feedback) {
-                copied.push(...review.candidates.filter(candidate => candidate.trigger !== 'http' && !copied.some(updated => updated.id === candidate.id)));
+                copied.push(...review.candidates.filter(candidate => candidate.trigger !== 'http' && candidate.trigger !== 'blob' && !copied.some(updated => updated.id === candidate.id)));
                 if (copied.length > 100) {
                     throw new Error(localize('azureInvoke.invalidCandidates', 'Provide 1 to 100 proposed cases with unique IDs.'));
                 }
-                selections = copied.flatMap(candidate => {
-                    if (candidate.trigger !== 'http') {
+                selections = copied.flatMap<InvocationSelection>(candidate => {
+                    if (candidate.trigger !== 'http' && candidate.trigger !== 'blob') {
                         return [];
                     }
                     const edited = review.feedback?.find(selection => selection.id === candidate.id);
                     const original = review.candidates.find(original => original.id === candidate.id);
+                    if (candidate.trigger === 'blob') {
+                        const request = original?.trigger === 'blob' && edited?.blobRequest ?
+                            mergeReviewedBlob(original.request, edited.blobRequest, candidate.request) : candidate.request;
+                        validateBlobCandidate({ ...candidate, request });
+                        return [{
+                            id: candidate.id, comment: '', selected: edited?.selected ?? true,
+                            blobRequest: copyBlobDefinition(request),
+                        }];
+                    }
                     return [{
                         id: candidate.id, comment: '', selected: edited?.selected ?? true,
                         request: original?.trigger === 'http' && edited?.request ?
@@ -197,6 +210,15 @@ export class CollectionReviews implements vscode.Disposable {
         return { reviewId, ...this.controller.getDiagnostics(diagnosisId) };
     }
 
+    public async selectBlobFile(context: IActionContext, reviewId: string, candidateId: string, signal?: AbortSignal): Promise<void> {
+        const review = this.current;
+        if (!review || review.id !== reviewId || review.cancelled || review.selections || review.feedback ||
+            review.originals || !this.controller || this.controller.isDisposed) {
+            throw new Error(localize('azureInvoke.blobReviewUnavailable', 'Choose a Blob fixture in the active collection review. Wait for any open file picker to finish.'));
+        }
+        await this.controller.selectBlobFile(context, candidateId, signal);
+    }
+
     private describeReview(review: CollectionReview, selections: InvocationSelection[], state: 'approved' | 'changesRequested') {
         if (review.originals) {
             throw new Error(localize('azureInvoke.savedReviewPrivate', 'Saved-request review fields stay private. Inspect saved requests and propose changes with the saved-request tools instead.'));
@@ -207,8 +229,18 @@ export class CollectionReviews implements vscode.Disposable {
             state,
             cases: selections.map(selection => {
                 const candidate = review.candidates.find(candidate => candidate.id === selection.id);
-                if (!candidate || candidate.trigger !== 'http') {
+                if (!candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
                     throw new Error(localize('azureInvoke.caseNotFound', 'This proposed case is no longer available.'));
+                }
+                if (candidate.trigger === 'blob') {
+                    const fields = ['target', 'container', 'blobName', 'contentType'] as const;
+                    return {
+                        ...candidate, request: copyBlobDefinition(candidate.request), comment: selection.comment,
+                        selected: selection.selected ?? true, invocationId: review.drafts.get(candidate.id),
+                        reviewedFields: selection.blobRequest ?
+                            fields.filter(field => JSON.stringify(selection.blobRequest?.[field]) !== JSON.stringify(candidate.request[field])) : [],
+                        fileSelected: !!this.controller?.hasBlobFile(candidate.id) || review.drafts.has(candidate.id),
+                    };
                 }
                 const fields = ['method', 'url', 'headers', 'query', 'body', 'bindings', 'dependsOn'] as const;
                 const reviewedFields = selection.request ?
@@ -263,7 +295,8 @@ export class CollectionReviews implements vscode.Disposable {
 
     private approve(reviewId: string, input: unknown): InvocationSelection[] {
         const review = this.current;
-        if (!review || review.id !== reviewId || review.cancelled) {
+        const controller = this.controller;
+        if (!review || review.id !== reviewId || review.cancelled || !controller || controller.isDisposed) {
             throw new Error(localize('azureInvoke.reviewExpired', 'This collection review is no longer active. Propose a new collection.'));
         }
         if (review.selections) {
@@ -273,10 +306,18 @@ export class CollectionReviews implements vscode.Disposable {
         if (selections.some(selection => selection.comment.trim())) {
             throw new Error(localize('azureInvoke.feedbackNotConfirmed', 'Use Request changes to apply feedback, or clear the feedback before confirming.'));
         }
-        const invocations: HttpInvocation[] = selections.map(selection => {
+        const invocations: Invocation[] = selections.map(selection => {
             const candidate = review.candidates.find(candidate => candidate.id === selection.id);
-            if (!candidate || candidate.trigger !== 'http') {
+            if (!candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
                 throw new Error(localize('azureInvoke.caseNotFound', 'This proposed case is no longer available.'));
+            }
+            if (candidate.trigger === 'blob') {
+                const invocation: Invocation = {
+                    id: candidate.id, name: candidate.name, group: candidate.group, trigger: 'blob',
+                    request: controller.getBlobRequest(candidate.id, selection.blobRequest ?? candidate.request),
+                };
+                validateCollectionInvocation(invocation);
+                return invocation;
             }
             return { id: candidate.id, name: candidate.name, group: review.originals ? review.originals.get(candidate.id)?.group : candidate.group, request: selection.request ?? candidate.request };
         });
@@ -291,8 +332,9 @@ export class CollectionReviews implements vscode.Disposable {
             review.selections = selections;
             return selections.map(selection => ({ ...selection }));
         }
-        for (const invocation of invocations) {
-            planInvocationChain(invocation, id => invocations.find(source => source.id === id));
+        const httpInvocations = invocations.filter((invocation): invocation is HttpInvocation => !isBlobInvocation(invocation));
+        for (const invocation of httpInvocations) {
+            planInvocationChain(invocation, id => httpInvocations.find(source => source.id === id));
         }
         const ids = new Map(invocations.map(invocation => [invocation.id, randomUUID()]));
         const resolve = (id: string): string => {
@@ -302,7 +344,9 @@ export class CollectionReviews implements vscode.Disposable {
             }
             return savedId;
         };
-        this.provider.saveRequests(invocations.map(invocation => ({
+        this.provider.saveRequests(invocations.map(invocation => isBlobInvocation(invocation) ? {
+            ...invocation, id: resolve(invocation.id),
+        } : {
             ...invocation,
             id: resolve(invocation.id),
             request: {
@@ -310,7 +354,7 @@ export class CollectionReviews implements vscode.Disposable {
                 bindings: invocation.request.bindings?.map(binding => ({ ...binding, sourceId: resolve(binding.sourceId) })),
                 dependsOn: invocation.request.dependsOn?.map(resolve),
             },
-        })));
+        }));
         review.drafts = ids;
         review.selections = selections;
         review.feedback = undefined;
@@ -322,20 +366,24 @@ export class CollectionReviews implements vscode.Disposable {
             throw new Error(localize('azureInvoke.reviewExpired', 'This collection review is no longer active. Propose a new collection.'));
         }
         if (!Array.isArray(input) || !input.length || input.length > review.candidates.length ||
-            (feedback && input.length !== review.candidates.filter(candidate => candidate.trigger === 'http').length)) {
-            throw new Error(localize('azureInvoke.selectCases', 'Select at least one HTTP case to continue.'));
+            (feedback && input.length !== review.candidates.filter(candidate => candidate.trigger === 'http' || candidate.trigger === 'blob').length)) {
+            throw new Error(localize('azureInvoke.selectInvocations', 'Select at least one supported invocation to continue.'));
         }
         const selections: InvocationSelection[] = [];
         for (const entry of input) {
+            const candidate = review.candidates.find(candidate => candidate.id === entry?.id);
             if (!entry || typeof entry !== 'object' || typeof entry.id !== 'string' || typeof entry.comment !== 'string' ||
                 entry.comment.length > 2000 || selections.some(selection => selection.id === entry.id) ||
                 (feedback ? typeof entry.selected !== 'boolean' : entry.selected === false) ||
-                !review.candidates.some(candidate => candidate.id === entry.id && candidate.trigger === 'http')) {
-                throw new Error(localize('azureInvoke.invalidSelection', 'Select supported HTTP cases and keep each comment within 2,000 characters.'));
+                !candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
+                throw new Error(localize('azureInvoke.invalidSelection', 'Select supported invocations and keep each comment within 2,000 characters.'));
             }
             const selection: InvocationSelection = { id: entry.id, comment: entry.comment.trim(), ...(feedback ? { selected: entry.selected } : {}) };
-            if (entry.request !== undefined) {
-                const candidate = review.candidates.find(candidate => candidate.id === entry.id);
+            if (candidate.trigger === 'blob') {
+                const request: BlobUploadDefinition = entry.blobRequest ?? candidate.request;
+                validateBlobCandidate({ ...candidate, request });
+                selection.blobRequest = copyBlobDefinition(request);
+            } else if (entry.request !== undefined) {
                 const snapshot: unknown = { id: entry.id, name: candidate?.name, request: entry.request };
                 validateInvocation(snapshot);
                 selection.request = copyInvocation(snapshot).request;
@@ -361,7 +409,9 @@ export class CollectionReviews implements vscode.Disposable {
                 const invocationId = review.drafts.get(selection.id);
                 return {
                     id: selection.id,
-                    text: invocationId ? this.provider.getRequestStatus(invocationId) : localize('azureInvoke.ready', 'Ready'),
+                    text: review.candidates.find(candidate => candidate.id === selection.id)?.trigger === 'blob' ?
+                        localize('azureInvoke.manualOnly', 'Manual only') :
+                        invocationId ? this.provider.getRequestStatus(invocationId) : localize('azureInvoke.ready', 'Ready'),
                 };
             });
             void callWithTelemetryAndErrorHandling('azureFunctions.azureInvoke.reviewProgress', async context => {
@@ -377,6 +427,24 @@ export class CollectionReviews implements vscode.Disposable {
         this.controller?.panel.dispose();
         this.current = undefined;
     }
+}
+
+function validateBlobCandidate(candidate: BlobInvocationCandidate): void {
+    if (typeof candidate.request?.blobName !== 'string' || /\{[^}]*\}/.test(candidate.request.blobName)) {
+        throw new Error(localize('azureInvoke.concreteBlobName', 'Use a concrete Blob name, or leave it empty to use the selected file name. Do not use trigger-binding placeholders.'));
+    }
+    validateCollectionInvocation({
+        ...candidate, request: { ...candidate.request, blobName: candidate.request.blobName || 'fixture', content: '', encoding: 'base64' },
+    });
+}
+
+function mergeReviewedBlob(original: BlobUploadDefinition, edited: BlobUploadDefinition, proposed: BlobUploadDefinition): BlobUploadDefinition {
+    return {
+        target: JSON.stringify(edited.target) !== JSON.stringify(original.target) ? edited.target : proposed.target,
+        container: edited.container !== original.container ? edited.container : proposed.container,
+        blobName: edited.blobName !== original.blobName ? edited.blobName : proposed.blobName,
+        contentType: edited.contentType !== original.contentType ? edited.contentType : proposed.contentType,
+    };
 }
 
 function mergeReviewedRequest(original: HttpRequest, edited: HttpRequest, draft: HttpRequest): HttpRequest {

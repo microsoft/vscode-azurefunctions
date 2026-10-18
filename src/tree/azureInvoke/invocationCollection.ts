@@ -5,13 +5,14 @@
 
 import { localize } from '../../localize';
 import { getRequestDependencies, isHttpRequest, isInvocationName, type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { copyBlobInvocation, isBlobInvocation, isValidBlobFixture, type Invocation } from '../../webviews/azureInvoke/shared/blobInvocation';
 
 export function validateInvocation(value: unknown): asserts value is HttpInvocation {
     if (!value || typeof value !== 'object' ||
         !('id' in value) || typeof value.id !== 'string' || !value.id || value.id.length > 100 ||
         !('name' in value) || !isInvocationName(value.name) ||
         ('group' in value && value.group !== undefined && !isInvocationName(value.group)) ||
-        !('request' in value) || !isHttpRequest(value.request)) {
+        ('trigger' in value && value.trigger !== 'http') || !('request' in value) || !isHttpRequest(value.request)) {
         throw new Error(localize('azureInvoke.invalidInvocation', 'Invalid invocation. Use a name and optional group of 1 to 100 characters without line breaks, a supported HTTP method, and at most 100 entries per parameter or dependency list. Bindings need unique identifier names other than guid, a source request, and a /body, /request/body, /headers, or /status selector.'));
     }
     if (Buffer.byteLength(value.request.body) > 5 * 1024 * 1024) {
@@ -67,7 +68,21 @@ export function planInvocationChain(root: HttpInvocation, getInvocation: (id: st
     return plan;
 }
 
-export function parseInvocationCollection(content: string): HttpInvocation[] {
+export function validateCollectionInvocation(value: unknown): asserts value is Invocation {
+    if (isBlobInvocation(value)) {
+        if (!isValidBlobFixture(value.request)) {
+            throw new Error(localize('azureInvoke.invalidBlobFixture', 'Use a loopback Azurite URL ending in /devstoreaccount1, a lowercase container name of 3 to 63 characters without consecutive hyphens, a blob name of 1 to 1024 characters, a content type, and valid text or Base64 content of at most 5 MB.'));
+        }
+    } else {
+        validateInvocation(value);
+    }
+}
+
+export function copyCollectionInvocation(invocation: Invocation): Invocation {
+    return isBlobInvocation(invocation) ? copyBlobInvocation(invocation) : copyInvocation(invocation);
+}
+
+export function parseInvocationCollection(content: string): Invocation[] {
     let collection: unknown;
     try {
         collection = JSON.parse(content);
@@ -75,33 +90,42 @@ export function parseInvocationCollection(content: string): HttpInvocation[] {
         throw new Error(localize('azureInvoke.invalidCollectionJson', 'The collection is not valid JSON.'));
     }
     if (!collection || typeof collection !== 'object' ||
-        !('version' in collection) || (collection.version !== 1 && collection.version !== 2) ||
+        !('version' in collection) || (collection.version !== 1 && collection.version !== 2 && collection.version !== 3) ||
         !('invocations' in collection) || !Array.isArray(collection.invocations)) {
-        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with version 1 or 2 and an invocations array.'));
+        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with version 1, 2, or 3 and an invocations array.'));
     }
 
     const ids = new Set<string>();
     const invocations = collection.invocations.map((value: unknown) => {
-        validateInvocation(value);
-        if (collection.version === 1 && getRequestDependencies(value.request).length) {
+        validateCollectionInvocation(value);
+        if (isBlobInvocation(value) && collection.version !== 3) {
+            throw new Error(localize('azureInvoke.blobCollectionVersion', 'Collections with manual Blob invocations must use version 3.'));
+        }
+        if (!isBlobInvocation(value) && collection.version === 1 && getRequestDependencies(value.request).length) {
             throw new Error(localize('azureInvoke.dependenciesVersion', 'Collections with request dependencies must use version 2.'));
         }
         if (ids.has(value.id)) {
             throw new Error(localize('azureInvoke.duplicateInvocation', 'The collection contains duplicate invocation IDs.'));
         }
         ids.add(value.id);
-        return copyInvocation(value);
+        return copyCollectionInvocation(value);
     });
     for (const invocation of invocations) {
-        planInvocationChain(invocation, id => invocations.find(source => source.id === id));
+        if (!isBlobInvocation(invocation)) {
+            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+        }
     }
     return invocations;
 }
 
-export function serializeInvocationCollection(invocations: readonly HttpInvocation[]): string {
-    invocations.forEach(validateInvocation);
+export function serializeInvocationCollection(invocations: readonly Invocation[]): string {
+    invocations.forEach(validateCollectionInvocation);
     for (const invocation of invocations) {
-        planInvocationChain(invocation, id => invocations.find(source => source.id === id));
+        if (!isBlobInvocation(invocation)) {
+            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+        }
     }
-    return JSON.stringify({ version: invocations.some(invocation => getRequestDependencies(invocation.request).length) ? 2 : 1, invocations: invocations.map(copyInvocation) }, undefined, 4) + '\n';
+    const version = invocations.some(isBlobInvocation) ? 3 :
+        invocations.some(invocation => !isBlobInvocation(invocation) && getRequestDependencies(invocation.request).length) ? 2 : 1;
+    return JSON.stringify({ version, invocations: invocations.map(copyCollectionInvocation) }, undefined, 4) + '\n';
 }
