@@ -14,6 +14,7 @@ import { pickBlobFile } from './pickBlobFile';
 
 export class BlobInvocationController extends WebviewController<BlobViewConfiguration> {
     private ready = false;
+    private focusGuidance = false;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -23,7 +24,7 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
             save(invocation: BlobInvocation): void;
             upload(context: IActionContext, invocation: BlobInvocation): Promise<BlobUploadResult>;
             cancel(): void;
-            debug(context: IActionContext): Promise<void>;
+            debug(context: IActionContext, guidance: string): Promise<void>;
             state(): BlobUploadState | undefined;
             onDidChange: vscode.Event<{ id: string; message: BlobUploadState }>;
         },
@@ -34,7 +35,6 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
                 subtitle: localize('azureInvoke.blobTriggerDescription', 'Blob Trigger'),
                 name: localize('azureInvoke.invocationName', 'Invocation name'),
                 target: localize('azureInvoke.azuriteTarget', 'Storage target: Azurite blob service URL'),
-                targetHint: localize('azureInvoke.azuriteTargetHint', 'Uses the default devstoreaccount1 emulator account. Start the application, debugger, and Azurite yourself.'),
                 container: localize('azureInvoke.blobContainer', 'Container'),
                 blobName: localize('azureInvoke.blobName', 'Blob name'),
                 contentType: localize('azureInvoke.blobContentType', 'Content type'),
@@ -42,7 +42,6 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
                 file: localize('azureInvoke.chooseBlobFile', 'Choose file...'),
                 noFile: localize('azureInvoke.noBlobFile', 'No file selected'),
                 capturedFixture: localize('azureInvoke.capturedBlobFixture', 'Captured fixture'),
-                fileHint: localize('azureInvoke.blobFileHint', 'Select a file of at most 5 MB. Its contents are captured when selected; choose it again to refresh them.'),
                 save: localize('azureInvoke.save', 'Save'),
                 saving: localize('azureInvoke.saving', 'Saving...'),
                 saved: localize('azureInvoke.saved', 'Saved for this session'),
@@ -51,10 +50,11 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
                 uploading: localize('azureInvoke.uploading', 'Uploading...'),
                 cancel: localize('azureInvoke.cancel', 'Cancel'),
                 debug: localize('azureInvoke.uploadWithBreakpoints', 'Upload with Copilot breakpoints'),
-                debugHint: localize('azureInvoke.blobDebugHint', 'Save first. This action authorizes one upload of the saved fixture after Copilot sets source breakpoints in the existing debugger. Content stays private. You inspect and resume execution yourself.'),
+                breakpointGuidance: localize('azureInvoke.breakpointGuidanceLabel', 'Breakpoint guidance (optional)'),
+                breakpointGuidancePlaceholder: localize('azureInvoke.breakpointGuidancePlaceholder', 'For example, pause where inventory rows are validated.'),
+                breakpointGuidancePrivacy: localize('azureInvoke.breakpointGuidancePrivacy', 'Shared with Copilot for this upload only. Leave blank to let Copilot choose. Do not include secrets.'),
                 receipt: localize('azureInvoke.blobReceipt', 'Upload receipt'),
                 receiptHint: localize('azureInvoke.blobReceiptHint', 'An upload receipt does not prove the function ran or succeeded. Use breakpoints to observe execution.'),
-                uploadHint: localize('azureInvoke.blobUploadHint', 'Uploading overwrites any existing blob with the same name without another confirmation. The container is created if needed.'),
                 uploaded: localize('azureInvoke.blobUploaded', 'Uploaded to Azurite. Function execution not observed.'),
                 notConfirmed: localize('azureInvoke.blobUploadNotConfirmed', 'Upload not confirmed.'),
                 cancelled: localize('azureInvoke.blobUploadCancelled', 'Upload cancelled.'),
@@ -96,6 +96,14 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
         }));
     }
 
+    public async focusBreakpointGuidance(): Promise<void> {
+        this.focusGuidance = true;
+        if (this.ready) {
+            await this.postMessage({ command: 'focusBreakpointGuidance' });
+            this.focusGuidance = false;
+        }
+    }
+
     private async handleMessage(context: IActionContext, message: unknown): Promise<void> {
         if (!message || typeof message !== 'object' || !('command' in message)) {
             throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
@@ -107,10 +115,16 @@ export class BlobInvocationController extends WebviewController<BlobViewConfigur
             if (state) {
                 await this.postMessage(state);
             }
+            if (this.focusGuidance) {
+                await this.focusBreakpointGuidance();
+            }
         } else if (message.command === 'cancelUpload') {
             this.operations.cancel();
         } else if (message.command === 'debugBlob') {
-            await this.operations.debug(context);
+            if (!('breakpointGuidance' in message) || typeof message.breakpointGuidance !== 'string') {
+                throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
+            }
+            await this.operations.debug(context, message.breakpointGuidance);
             await this.postMessage({ command: 'notice', message: localize('azureInvoke.blobDebugOpened', 'Opened Copilot to set breakpoints and upload the authorized saved fixture.') });
         } else if (message.command === 'loadFile') {
             await this.postMessage({ command: 'fileLoaded', ...await pickBlobFile(context) });

@@ -29,7 +29,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
             runner?: HttpRequestRunner;
             sources?: InvocationSource[];
             execute?: (context: IActionContext, request: HttpRequest, options: InvocationRunOptions) => Promise<HttpResponse>;
-            debug?: (context: IActionContext) => Promise<void>;
+            debug?: (context: IActionContext, guidance: string) => Promise<void>;
         } = {},
     ) {
         super(context, invocation.name, 'azureInvokeHttpRequest', {
@@ -64,8 +64,11 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                 saved: localize('azureInvoke.saved', 'Saved for this session'),
                 unsaved: localize('azureInvoke.unsaved', 'Unsaved changes'),
                 savedInvocationHint: localize('azureInvoke.savedInvocationHint', 'Using the saved invocation. Unsaved editor changes are not included.'),
-                debug: localize('azureInvoke.debugWithCopilot', 'Debug with Copilot'),
-                debugHint: localize('azureInvoke.debugHint', 'Share this localhost response with Copilot to choose breakpoints and replay the captured request in your already running VS Code debugger. Responses may contain sensitive data. Unsaved editor changes are not used.'),
+                debug: localize('azureInvoke.httpRunWithBreakpoints', 'Run with Copilot breakpoints'),
+                debugHint: localize('azureInvoke.debugHint', 'Shares this localhost response with Copilot and replays the captured request in your running debugger. Responses may contain sensitive data. Unsaved request edits are not used.'),
+                guidance: localize('azureInvoke.breakpointGuidanceLabel', 'Breakpoint guidance (optional)'),
+                guidancePlaceholder: localize('azureInvoke.httpGuidancePlaceholder', 'For example, pause before the request is validated.'),
+                guidancePrivacy: localize('azureInvoke.httpGuidancePrivacy', 'Shared with Copilot for this replay only. Leave blank to let Copilot choose. Do not include secrets.'),
                 enabled: localize('azureInvoke.enabled', 'Enabled'),
                 dependencies: getDependencyLabels(),
             },
@@ -112,12 +115,16 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
                 }
                 if (command === 'debugRequest') {
                     try {
+                        const guidance = message && typeof message === 'object' && 'breakpointGuidance' in message ? message.breakpointGuidance : undefined;
+                        if (typeof guidance !== 'string') {
+                            throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
+                        }
                         if (!this.execution.debug || this.debugging) {
                             throw new Error(localize('azureInvoke.debugUnavailable', 'Debugging is unavailable or already opening. Open a saved invocation and try again.'));
                         }
                         this.debugging = true;
                         await this.postMessage({ command: 'debugState', busy: true });
-                        await this.execution.debug(actionContext);
+                        await this.execution.debug(actionContext, guidance);
                         await this.postMessage({ command: 'debugState', busy: false, message: localize('azureInvoke.debugOpened', 'Opened Copilot Chat to choose breakpoints and replay the captured request. No application code or request definitions have changed.') });
                     } catch (error) {
                         await this.postMessage({ command: 'debugState', busy: false, error: this.getErrorMessage(error) });

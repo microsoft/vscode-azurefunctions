@@ -28,7 +28,7 @@ input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrin
 .comment-label textarea { min-height: 64px; font-family: var(--vscode-font-family); }
 .case-status { color: var(--vscode-descriptionForeground); font-size: 12px; flex-shrink: 0; max-width: 35%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .request-preview fieldset { padding: 0; border: 0; margin: 0; min-width: 0; }
-.blob-request-editor { padding: 0; border: 0; margin: 0; min-width: 0; }
+.blob-request-editor, .timer-request-editor { padding: 0; border: 0; margin: 0; min-width: 0; }
 .blob-file-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .blob-file-name { overflow-wrap: anywhere; }
 .request-field { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: start; gap: 12px; margin-bottom: 14px; }

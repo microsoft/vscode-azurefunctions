@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type CollectionReviewConfiguration, type CollectionReviewMessage, type CollectionReviewResponse, type CollectionReviewState, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
+import { isSupportedInvocationCandidate, type CollectionReviewConfiguration, type CollectionReviewMessage, type CollectionReviewResponse, type CollectionReviewState, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
 import { HttpRequestPreview } from './HttpRequestPreview';
 import { BlobRequestEditor } from './BlobRequestEditor';
+import { TimerRequestEditor } from './TimerRequestEditor';
 import './collectionReview.css';
 
 export function render(_viewName: string, api: { postMessage(message: CollectionReviewMessage): void }): void {
@@ -37,7 +38,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
     selectAllLabel.append(selectAll, document.createTextNode(labels.selectAll));
     const list = document.createElement('div');
     list.className = 'case-list';
-    let rows: { candidate: InvocationCandidate; checkbox: HTMLInputElement; toggle: HTMLButtonElement; comment: HTMLTextAreaElement; status: HTMLElement; preview?: HttpRequestPreview; blob?: BlobRequestEditor; diagnose?: HTMLButtonElement; locked: boolean }[] = [];
+    let rows: { candidate: InvocationCandidate; checkbox: HTMLInputElement; toggle: HTMLButtonElement; comment: HTMLTextAreaElement; status: HTMLElement; preview?: HttpRequestPreview; blob?: BlobRequestEditor; timer?: TimerRequestEditor; diagnose?: HTMLButtonElement; locked: boolean }[] = [];
     const footer = document.createElement('footer');
     const count = document.createElement('span');
     count.setAttribute('role', 'status');
@@ -77,8 +78,8 @@ export function render(_viewName: string, api: { postMessage(message: Collection
     let selectingBlobFile = false;
     let version = -1;
     function setStatus(element: HTMLElement, trigger: InvocationCandidate['trigger'], text?: string): void {
-        element.textContent = text ? `${labels.triggers[trigger]} / ${text}` : labels.triggers[trigger];
-        element.title = element.textContent;
+        element.textContent = labels.triggers[trigger];
+        element.title = text ? `${labels.triggers[trigger]} / ${text}` : labels.triggers[trigger];
     }
     function populate(candidates: InvocationCandidate[], nextVersion: number, selections?: InvocationSelection[]): void {
         if (nextVersion <= version) {
@@ -114,7 +115,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             checkbox.dataset.caseId = candidate.id;
             checkbox.setAttribute('aria-label', candidate.name);
             const selection = selections?.find(selection => selection.id === candidate.id);
-            const supported = candidate.trigger === 'http' || candidate.trigger === 'blob';
+            const supported = isSupportedInvocationCandidate(candidate);
             checkbox.checked = supported && (selection?.selected ?? true);
             checkbox.disabled = !supported;
             checkbox.addEventListener('change', updateSelection);
@@ -149,7 +150,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             const status = document.createElement('span');
             status.className = 'case-status';
             status.setAttribute('role', 'status');
-            setStatus(status, candidate.trigger, candidate.trigger === 'blob' ? labels.blob.manualOnly :
+            setStatus(status, candidate.trigger, candidate.trigger === 'blob' || candidate.trigger === 'timer' ? labels.blob.manualOnly :
                 candidate.trigger === 'http' ? undefined : labels.unsupported);
             const details = document.createElement('div');
             details.className = 'case-details';
@@ -166,6 +167,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             details.append(description);
             let preview: HttpRequestPreview | undefined;
             let blob: BlobRequestEditor | undefined;
+            let timer: TimerRequestEditor | undefined;
             let diagnose: HTMLButtonElement | undefined;
             if (candidate.trigger === 'http') {
                 preview = new HttpRequestPreview(candidate, labels,
@@ -195,6 +197,9 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                     blob.setFileName(file.fileName);
                 }
                 details.append(blob.element);
+            } else if (candidate.trigger === 'timer') {
+                timer = new TimerRequestEditor(selection?.timerRequest ?? candidate.request, labels.timer, updateSelection);
+                details.append(timer.element);
             } else {
                 const endpoint = document.createElement('p');
                 endpoint.className = 'endpoint';
@@ -217,14 +222,14 @@ export function render(_viewName: string, api: { postMessage(message: Collection
             summary.append(checkbox, toggle, status);
             card.append(summary, details);
             group.append(card);
-            return { candidate, checkbox, toggle, comment, status, preview, blob, diagnose, locked: false };
+            return { candidate, checkbox, toggle, comment, status, preview, blob, timer, diagnose, locked: false };
         });
         updateSelection();
     }
 
     function updateSelection(): void {
         const selected = rows.filter(row => row.checkbox.checked);
-        const supported = rows.filter(row => row.preview || row.blob);
+        const supported = rows.filter(row => isSupportedInvocationCandidate(row.candidate));
         count.textContent = `${labels.selected}: ${selected.length}`;
         const feedback = hasFeedback();
         const missingFile = selected.some(row => row.blob && !row.blob.hasFile);
@@ -248,7 +253,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
         confirm.title = selected.length || feedback ? confirm.textContent : labels.selectCases;
     }
     function hasFeedback(): boolean {
-        return !config.updatingSaved && rows.some(row => (row.preview || row.blob) && !!row.comment.value.trim());
+        return !config.updatingSaved && rows.some(row => isSupportedInvocationCandidate(row.candidate) && !!row.comment.value.trim());
     }
     function diagnoseRequests(ids: string[]): void {
         submitting = true;
@@ -279,7 +284,7 @@ export function render(_viewName: string, api: { postMessage(message: Collection
     }
     selectAll.addEventListener('change', () => {
         for (const row of rows) {
-            if (row.preview || row.blob) {
+            if (isSupportedInvocationCandidate(row.candidate)) {
                 row.checkbox.checked = selectAll.checked;
             }
         }
@@ -292,8 +297,8 @@ export function render(_viewName: string, api: { postMessage(message: Collection
         const feedback = hasFeedback();
         api.postMessage({
             command: feedback ? 'requestChanges' : 'confirmCollection',
-            selections: rows.filter(row => (row.preview || row.blob) && (feedback || row.checkbox.checked))
-                .map(row => ({ id: row.candidate.id, comment: row.comment.value, request: row.preview?.request, blobRequest: row.blob?.request, selected: row.checkbox.checked })),
+            selections: rows.filter(row => isSupportedInvocationCandidate(row.candidate) && (feedback || row.checkbox.checked))
+                .map(row => ({ id: row.candidate.id, comment: row.comment.value, request: row.preview?.request, blobRequest: row.blob?.request, timerRequest: row.timer?.request, selected: row.checkbox.checked })),
         });
     });
     cancel.addEventListener('click', () => api.postMessage({ command: 'cancelCollection' }));
@@ -324,6 +329,9 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                     if (selection.blobRequest) {
                         row.blob?.setRequest(selection.blobRequest);
                     }
+                    if (selection.timerRequest) {
+                        row.timer?.setRequest(selection.timerRequest);
+                    }
                     row.locked = true;
                 } else if (state === 'approved' && !selection) {
                     row.checkbox.checked = false;
@@ -332,10 +340,11 @@ export function render(_viewName: string, api: { postMessage(message: Collection
                 if (file) {
                     row.blob?.setFileName(file.fileName);
                 }
-                row.checkbox.disabled = diagnosing || state !== 'reviewing' || (!row.preview && !row.blob);
+                row.checkbox.disabled = diagnosing || state !== 'reviewing' || !isSupportedInvocationCandidate(row.candidate);
                 row.comment.disabled = diagnosing || state !== 'reviewing';
                 row.preview?.setEnabled(!diagnosing && state === 'reviewing');
                 row.blob?.setEnabled(!diagnosing && !selectingBlobFile && state === 'reviewing');
+                row.timer?.setEnabled(!diagnosing && state === 'reviewing');
                 const status = response.statuses.find(status => status.id === row.candidate.id);
                 if (status) {
                     setStatus(row.status, row.candidate.trigger, status.text);

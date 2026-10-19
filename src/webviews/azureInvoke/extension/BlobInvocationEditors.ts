@@ -65,7 +65,7 @@ export class BlobInvocationEditors implements vscode.Disposable {
             save: snapshot => this.provider.saveRequest(snapshot),
             upload: (context, snapshot) => this.upload(context, snapshot),
             cancel: () => this.cancel(invocation.id),
-            debug: context => this.debugInvocation(context, invocation.id),
+            debug: (context, guidance) => this.debugInvocation(context, invocation.id, guidance),
             state: () => this.messages.get(invocation.id),
             onDidChange: this.changeEmitter.event,
         });
@@ -77,24 +77,22 @@ export class BlobInvocationEditors implements vscode.Disposable {
         return controller;
     }
 
-    public async debugInvocation(context: IActionContext, id: string): Promise<void> {
+    public async debugInvocation(context: IActionContext, id: string, guidance = ''): Promise<void> {
+        context.valuesToMask.push(guidance);
+        if (guidance.length > 500) {
+            throw new Error(localize('azureInvoke.breakpointGuidanceTooLong', 'Keep breakpoint guidance within 500 characters.'));
+        }
         const invocation = this.requireInvocation(id);
         if (this.uploads.has(id)) {
             throw new Error(localize('azureInvoke.blobBusy', 'An upload is already in progress. Wait or cancel it first.'));
         }
         const session = await this.debugging.resolveSession(context);
-        const target: BlobDebugTarget = { id: randomUUID(), invocation, session, consumed: false };
+        const target: BlobDebugTarget = {
+            id: randomUUID(), invocation, session, consumed: false,
+            breakpointGuidance: guidance.trim() || undefined,
+        };
         this.debugTarget = target;
         try {
-            const guidance = await context.ui.showInputBox({
-                title: localize('azureInvoke.breakpointGuidanceTitle', 'Breakpoint guidance (optional)'),
-                prompt: localize('azureInvoke.breakpointGuidancePrompt', 'Tell Copilot where to set breakpoints, or leave blank to let it choose. Shared with Copilot for this upload; do not include secrets.'),
-                placeHolder: localize('azureInvoke.breakpointGuidancePlaceholder', 'For example, pause where inventory rows are validated.'),
-                validateInput: value => value.length > 500 ?
-                    localize('azureInvoke.breakpointGuidanceTooLong', 'Keep breakpoint guidance within 500 characters.') : undefined,
-            });
-            context.valuesToMask.push(guidance);
-            target.breakpointGuidance = guidance.trim() || undefined;
             await this.requireDebugTarget(context, id, target.id);
             await this.debugging.openChat(id, target.id);
         } catch (error) {

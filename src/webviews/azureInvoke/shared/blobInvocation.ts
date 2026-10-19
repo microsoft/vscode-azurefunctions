@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type HttpInvocation, isInvocationName } from './httpRequest';
+import { type TimerInvocation } from './timerInvocation';
 
 export interface BlobUploadRequest {
     target: { kind: 'azurite'; url: string };
@@ -33,7 +34,7 @@ export function copyBlobDefinition(request: BlobUploadDefinition): BlobUploadDef
     };
 }
 
-export type Invocation = HttpInvocation | BlobInvocation;
+export type Invocation = HttpInvocation | BlobInvocation | TimerInvocation;
 
 export function isBlobInvocation(value: unknown): value is BlobInvocation {
     return !!value && typeof value === 'object' && 'trigger' in value && value.trigger === 'blob' &&
@@ -117,6 +118,7 @@ export interface BlobViewConfiguration {
 
 export type BlobViewMessage = BlobUploadState
     | { command: 'saved' }
+    | { command: 'focusBreakpointGuidance' }
     | { command: 'fileLoaded'; content: string; fileName: string }
     | { command: 'fileSelectionCancelled' }
     | { command: 'notice'; message: string }

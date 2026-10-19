@@ -10,9 +10,10 @@ import { type AzureInvokeTreeDataProvider } from '../../tree/azureInvoke/AzureIn
 import { type HttpRequestEditors } from '../../webviews/azureInvoke/extension/HttpRequestEditors';
 import { type CollectionReviews } from '../../webviews/azureInvoke/extension/CollectionReviews';
 import { type BlobInvocationEditors } from '../../webviews/azureInvoke/extension/BlobInvocationEditors';
+import { type TimerInvocationEditors } from '../../webviews/azureInvoke/extension/TimerInvocationEditors';
 import { openCollectionFile, saveCollectionFile } from './collectionFiles';
 
-export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, reviews: CollectionReviews, blobs: BlobInvocationEditors): void {
+export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, reviews: CollectionReviews, blobs: BlobInvocationEditors, timers: TimerInvocationEditors): void {
     registerCommand('azureFunctions.azureInvoke.buildWithAI', async (context: IActionContext) => {
         context.telemetry.maskEntireErrorMessage = true;
         context.errorHandling.suppressDisplay = true;
@@ -22,7 +23,7 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
     registerCommand('azureFunctions.azureInvoke.add', async (context: IActionContext) => {
         const triggers = [
             { label: localize('azureInvoke.httpTrigger', 'HTTP trigger'), supported: true, triggerType: 'http' },
-            { label: localize('azureInvoke.timerTrigger', 'Timer trigger'), supported: false },
+            { label: localize('azureInvoke.timerTrigger', 'Timer trigger'), supported: true, triggerType: 'timer' },
             { label: localize('azureInvoke.blobTrigger', 'Azure Blob Storage trigger'), supported: true, triggerType: 'blob' },
             { label: localize('azureInvoke.queueTrigger', 'Azure Queue Storage trigger'), supported: false },
             { label: localize('azureInvoke.serviceBusQueueTrigger', 'Azure Service Bus Queue trigger'), supported: false },
@@ -39,12 +40,14 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         });
 
         if (!trigger.supported) {
-            void vscode.window.showInformationMessage(localize('azureInvoke.supportedTriggers', 'HTTP requests and manual Blob uploads to Azurite are available. Other triggers are not yet supported.'));
+            void vscode.window.showInformationMessage(localize('azureInvoke.supportedTriggers', 'HTTP requests, manual Timer invocations, and manual Blob uploads to Azurite are available. Other triggers are not yet supported.'));
             return;
         }
 
         if (trigger.triggerType === 'blob') {
             blobs.open(provider.createBlobInvocation(), false);
+        } else if (trigger.triggerType === 'timer') {
+            timers.open(provider.createTimerInvocation(), false);
         } else {
             editors.open(provider.createRequest(), false);
         }
@@ -57,6 +60,11 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
             blobs.open(blob, true);
             return;
         }
+        const timer = request && provider.getTimerInvocation(request.id);
+        if (timer) {
+            timers.open(timer, true);
+            return;
+        }
         const invocation = request && provider.getRequest(request.id);
         if (!invocation) {
             throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
@@ -66,10 +74,11 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
 
     registerCommand('azureFunctions.azureInvoke.debugBlob', async (context: IActionContext, invocation?: { id: string }) => {
         context.telemetry.maskEntireErrorMessage = true;
-        if (!invocation || !provider.getBlobInvocation(invocation.id)) {
+        const blob = invocation && provider.getBlobInvocation(invocation.id);
+        if (!blob) {
             throw new Error(localize('azureInvoke.blobNotSaved', 'Save this Blob invocation first, then try again.'));
         }
-        await blobs.debugInvocation(context, invocation.id);
+        await blobs.open(blob, true).focusBreakpointGuidance();
     });
 
     registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: unknown) => {
@@ -77,10 +86,19 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         await saveCollectionFile(context, provider.getInvocations(), target instanceof vscode.Uri ? target : undefined);
     });
 
+    registerCommand('azureFunctions.azureInvoke.debugTimer', async (context: IActionContext, invocation?: { id: string }) => {
+        context.telemetry.maskEntireErrorMessage = true;
+        const timer = invocation && provider.getTimerInvocation(invocation.id);
+        if (!timer) {
+            throw new Error(localize('azureInvoke.timerNotSaved', 'Save this Timer invocation first, then try again.'));
+        }
+        await timers.open(timer, true).focusBreakpointGuidance();
+    });
+
     registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
         const invocations = await openCollectionFile(context, source instanceof vscode.Uri ? source : undefined);
-        if (provider.getInvocations().length || editors.size || blobs.size) {
+        if (provider.getInvocations().length || editors.size || blobs.size || timers.size) {
             await context.ui.showWarningMessage(
                 localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
                 { modal: true, stepName: 'confirmOpenInvocationCollection' },
@@ -89,6 +107,7 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         }
         editors.closeAll();
         blobs.closeAll();
+        timers.closeAll();
         provider.replaceRequests(invocations);
     });
 }

@@ -6,10 +6,12 @@
 #blob-form > label, .blob-fields label { display: grid; gap: 6px; }
 #blob-form > label { margin-bottom: 16px; }
 .blob-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.blob-file-field { display: grid; gap: 6px; }
+.blob-file-field { display: grid; gap: 6px; margin-bottom: 20px; }
 .blob-file-picker { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .blob-file-picker button { flex-shrink: 0; }
 #selected-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#breakpoint-guidance { min-height: 76px; font-family: inherit; }
+#breakpoint-guidance::placeholder { color: var(--vscode-input-placeholderForeground); }
 .blob-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #receipt { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; }
 #receipt dt { color: var(--vscode-descriptionForeground); }

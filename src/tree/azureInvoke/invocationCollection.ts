@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../localize';
-import { getRequestDependencies, isHttpRequest, isInvocationName, type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { getRequestDependencies, isHttpInvocation, isHttpRequest, isInvocationName, type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
 import { copyBlobInvocation, isBlobInvocation, isValidBlobFixture, type Invocation } from '../../webviews/azureInvoke/shared/blobInvocation';
+import { copyTimerInvocation, isTimerInvocation, isValidTimerRequest } from '../../webviews/azureInvoke/shared/timerInvocation';
 
 export function validateInvocation(value: unknown): asserts value is HttpInvocation {
     if (!value || typeof value !== 'object' ||
@@ -73,13 +74,18 @@ export function validateCollectionInvocation(value: unknown): asserts value is I
         if (!isValidBlobFixture(value.request)) {
             throw new Error(localize('azureInvoke.invalidBlobFixture', 'Use a loopback Azurite URL ending in /devstoreaccount1, a lowercase container name of 3 to 63 characters without consecutive hyphens, a blob name of 1 to 1024 characters, a content type, and valid text or Base64 content of at most 5 MB.'));
         }
+    } else if (isTimerInvocation(value)) {
+        if (!isValidTimerRequest(value.request)) {
+            throw new Error(localize('azureInvoke.invalidTimerInvocation', 'Use a loopback Functions host URL without a path, credentials, query, or fragment, a function name of up to 128 letters, digits, underscores, or hyphens starting with a letter, and a schedule of at most 256 characters without line breaks.'));
+        }
     } else {
         validateInvocation(value);
     }
 }
 
 export function copyCollectionInvocation(invocation: Invocation): Invocation {
-    return isBlobInvocation(invocation) ? copyBlobInvocation(invocation) : copyInvocation(invocation);
+    return isBlobInvocation(invocation) ? copyBlobInvocation(invocation) :
+        isTimerInvocation(invocation) ? copyTimerInvocation(invocation) : copyInvocation(invocation);
 }
 
 export function parseInvocationCollection(content: string): Invocation[] {
@@ -90,18 +96,21 @@ export function parseInvocationCollection(content: string): Invocation[] {
         throw new Error(localize('azureInvoke.invalidCollectionJson', 'The collection is not valid JSON.'));
     }
     if (!collection || typeof collection !== 'object' ||
-        !('version' in collection) || (collection.version !== 1 && collection.version !== 2 && collection.version !== 3) ||
+        !('version' in collection) || (collection.version !== 1 && collection.version !== 2 && collection.version !== 3 && collection.version !== 4) ||
         !('invocations' in collection) || !Array.isArray(collection.invocations)) {
-        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with version 1, 2, or 3 and an invocations array.'));
+        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with version 1, 2, 3, or 4 and an invocations array.'));
     }
 
     const ids = new Set<string>();
     const invocations = collection.invocations.map((value: unknown) => {
         validateCollectionInvocation(value);
-        if (isBlobInvocation(value) && collection.version !== 3) {
-            throw new Error(localize('azureInvoke.blobCollectionVersion', 'Collections with manual Blob invocations must use version 3.'));
+        if (isBlobInvocation(value) && collection.version !== 3 && collection.version !== 4) {
+            throw new Error(localize('azureInvoke.blobCollectionVersion', 'Collections with manual Blob invocations must use version 3 or 4.'));
         }
-        if (!isBlobInvocation(value) && collection.version === 1 && getRequestDependencies(value.request).length) {
+        if (isTimerInvocation(value) && collection.version !== 4) {
+            throw new Error(localize('azureInvoke.timerCollectionVersion', 'Collections with manual Timer invocations must use version 4.'));
+        }
+        if (isHttpInvocation(value) && collection.version === 1 && getRequestDependencies(value.request).length) {
             throw new Error(localize('azureInvoke.dependenciesVersion', 'Collections with request dependencies must use version 2.'));
         }
         if (ids.has(value.id)) {
@@ -111,8 +120,8 @@ export function parseInvocationCollection(content: string): Invocation[] {
         return copyCollectionInvocation(value);
     });
     for (const invocation of invocations) {
-        if (!isBlobInvocation(invocation)) {
-            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+        if (isHttpInvocation(invocation)) {
+            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => isHttpInvocation(source) && source.id === id));
         }
     }
     return invocations;
@@ -121,11 +130,11 @@ export function parseInvocationCollection(content: string): Invocation[] {
 export function serializeInvocationCollection(invocations: readonly Invocation[]): string {
     invocations.forEach(validateCollectionInvocation);
     for (const invocation of invocations) {
-        if (!isBlobInvocation(invocation)) {
-            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+        if (isHttpInvocation(invocation)) {
+            planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => isHttpInvocation(source) && source.id === id));
         }
     }
-    const version = invocations.some(isBlobInvocation) ? 3 :
-        invocations.some(invocation => !isBlobInvocation(invocation) && getRequestDependencies(invocation.request).length) ? 2 : 1;
+    const version = invocations.some(isTimerInvocation) ? 4 : invocations.some(isBlobInvocation) ? 3 :
+        invocations.some(invocation => isHttpInvocation(invocation) && getRequestDependencies(invocation.request).length) ? 2 : 1;
     return JSON.stringify({ version, invocations: invocations.map(copyCollectionInvocation) }, undefined, 4) + '\n';
 }

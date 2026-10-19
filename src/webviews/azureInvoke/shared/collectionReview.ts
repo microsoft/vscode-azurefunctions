@@ -5,8 +5,9 @@
 
 import { type DependencyLabels, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from './httpRequest';
 import { type BlobUploadDefinition } from './blobInvocation';
+import { type TimerInvocationRequest } from './timerInvocation';
 
-export const otherInvocationTriggers = ['timer', 'queue', 'serviceBus', 'eventHub', 'eventGrid', 'cosmosDB', 'other'] as const;
+export const otherInvocationTriggers = ['queue', 'serviceBus', 'eventHub', 'eventGrid', 'cosmosDB', 'other'] as const;
 
 interface InvocationCandidateBase {
     id: string;
@@ -26,10 +27,20 @@ export interface BlobInvocationCandidate extends InvocationCandidateBase {
     request: BlobUploadDefinition;
 }
 
-export type InvocationCandidate = HttpInvocationCandidate | BlobInvocationCandidate | InvocationCandidateBase & {
+export interface TimerInvocationCandidate extends InvocationCandidateBase {
+    trigger: 'timer';
+    request: TimerInvocationRequest;
+}
+
+export type SupportedInvocationCandidate = HttpInvocationCandidate | BlobInvocationCandidate | TimerInvocationCandidate;
+export type InvocationCandidate = SupportedInvocationCandidate | InvocationCandidateBase & {
     trigger: typeof otherInvocationTriggers[number];
     endpoint: string;
 };
+
+export function isSupportedInvocationCandidate(candidate: InvocationCandidate): candidate is SupportedInvocationCandidate {
+    return candidate.trigger === 'http' || candidate.trigger === 'blob' || candidate.trigger === 'timer';
+}
 
 export type CollectionReviewState = 'loading' | 'reviewing' | 'revising' | 'approved' | 'cancelled' | 'failed';
 
@@ -38,6 +49,7 @@ export interface InvocationSelection {
     comment: string;
     request?: HttpRequest;
     blobRequest?: BlobUploadDefinition;
+    timerRequest?: TimerInvocationRequest;
     selected?: boolean;
 }
 
@@ -75,6 +87,11 @@ export interface CollectionReviewConfiguration {
             noFile: string;
             hint: string;
             fileRequired: string;
+        };
+        timer: {
+            hostUrl: string;
+            functionName: string;
+            schedule: string;
         };
         confirm: string;
         requestChanges: string;

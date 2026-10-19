@@ -13,6 +13,8 @@ import { registerMcpTool } from '@microsoft/vscode-inproc-mcp/mcp';
 import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
 import { BlobInvocationEditors } from './webviews/azureInvoke/extension/BlobInvocationEditors';
+import { TimerInvocationEditors } from './webviews/azureInvoke/extension/TimerInvocationEditors';
+import { debugTimerInvocationTool, getTimerInvocationDebugContextTool } from './chat/tools/azureInvoke/timerInvocationTools';
 import { getBlobInvocationDebugContextTool, listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/azureInvoke/blobInvocationTools';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
@@ -113,17 +115,19 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
         const azureInvokeBlobs = new BlobInvocationEditors(context, azureInvokeProvider);
+        const azureInvokeTimers = new TimerInvocationEditors(context, azureInvokeProvider);
         const azureInvokeReviews = new CollectionReviews(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
             azureInvokeBlobs,
+            azureInvokeTimers,
             azureInvokeReviews,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
         registerCommands({
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews, blobs: azureInvokeBlobs },
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews, blobs: azureInvokeBlobs, timers: azureInvokeTimers },
             dts: {
                 dataBranchProvider,
                 emulatorClient,
@@ -153,6 +157,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 registerMcpTool(server, selectBlobInvocationFileTool(azureInvokeReviews));
                 registerMcpTool(server, getBlobInvocationDebugContextTool(azureInvokeBlobs));
                 registerMcpTool(server, uploadBlobInvocationTool(azureInvokeBlobs));
+                registerMcpTool(server, getTimerInvocationDebugContextTool(azureInvokeTimers));
+                registerMcpTool(server, debugTimerInvocationTool(azureInvokeTimers));
             },
         };
         registerMcpHttpProvider(context, mcpOptions);

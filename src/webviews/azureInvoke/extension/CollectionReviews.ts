@@ -10,9 +10,10 @@ import { openAzureInvokeChat } from '../../../commands/azureInvoke/openAzureInvo
 import { localize } from '../../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { copyInvocation, planInvocationChain, validateCollectionInvocation, validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
-import { type BlobInvocationCandidate, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
-import { copyBlobDefinition, isBlobInvocation, type BlobUploadDefinition, type Invocation } from '../shared/blobInvocation';
-import { getRequestDependencies, type HttpInvocation, type HttpRequest } from '../shared/httpRequest';
+import { isSupportedInvocationCandidate, type BlobInvocationCandidate, type InvocationCandidate, type InvocationSelection } from '../shared/collectionReview';
+import { copyBlobDefinition, type BlobUploadDefinition, type Invocation } from '../shared/blobInvocation';
+import { getRequestDependencies, isHttpInvocation, type HttpInvocation, type HttpRequest } from '../shared/httpRequest';
+import { copyTimerRequest, type TimerInvocationRequest } from '../shared/timerInvocation';
 import { CollectionReviewController } from './CollectionReviewController';
 
 interface CollectionReview {
@@ -62,11 +63,14 @@ export class CollectionReviews implements vscode.Disposable {
                 validateInvocation(candidate);
             } else if (candidate.trigger === 'blob') {
                 validateBlobCandidate(candidate);
+            } else if (candidate.trigger === 'timer') {
+                validateCollectionInvocation(candidate);
             }
         }
         const copied: InvocationCandidate[] = candidates.map(candidate => candidate.trigger === 'http' ?
             { ...candidate, request: copyInvocation(candidate).request } : candidate.trigger === 'blob' ?
-                { ...candidate, request: copyBlobDefinition(candidate.request) } : { ...candidate });
+                { ...candidate, request: copyBlobDefinition(candidate.request) } : candidate.trigger === 'timer' ?
+                    { ...candidate, request: copyTimerRequest(candidate.request) } : { ...candidate });
         let selections: InvocationSelection[] | undefined;
         if (reviewId) {
             const review = this.current;
@@ -76,16 +80,22 @@ export class CollectionReviews implements vscode.Disposable {
                 throw new Error(localize('azureInvoke.reviewExpired', 'This collection review is no longer active. Propose a new collection or use the current requested revision.'));
             }
             if (review.feedback) {
-                copied.push(...review.candidates.filter(candidate => candidate.trigger !== 'http' && candidate.trigger !== 'blob' && !copied.some(updated => updated.id === candidate.id)));
+                copied.push(...review.candidates.filter(candidate => !isSupportedInvocationCandidate(candidate) && !copied.some(updated => updated.id === candidate.id)));
                 if (copied.length > 100) {
                     throw new Error(localize('azureInvoke.invalidCandidates', 'Provide 1 to 100 proposed cases with unique IDs.'));
                 }
                 selections = copied.flatMap<InvocationSelection>(candidate => {
-                    if (candidate.trigger !== 'http' && candidate.trigger !== 'blob') {
+                    if (!isSupportedInvocationCandidate(candidate)) {
                         return [];
                     }
                     const edited = review.feedback?.find(selection => selection.id === candidate.id);
                     const original = review.candidates.find(original => original.id === candidate.id);
+                    if (candidate.trigger === 'timer') {
+                        const request = original?.trigger === 'timer' && edited?.timerRequest ?
+                            mergeReviewedTimer(original.request, edited.timerRequest, candidate.request) : candidate.request;
+                        validateCollectionInvocation({ ...candidate, request });
+                        return [{ id: candidate.id, comment: '', selected: edited?.selected ?? true, timerRequest: copyTimerRequest(request) }];
+                    }
                     if (candidate.trigger === 'blob') {
                         const request = original?.trigger === 'blob' && edited?.blobRequest ?
                             mergeReviewedBlob(original.request, edited.blobRequest, candidate.request) : candidate.request;
@@ -229,7 +239,7 @@ export class CollectionReviews implements vscode.Disposable {
             state,
             cases: selections.map(selection => {
                 const candidate = review.candidates.find(candidate => candidate.id === selection.id);
-                if (!candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
+                if (!candidate || !isSupportedInvocationCandidate(candidate)) {
                     throw new Error(localize('azureInvoke.caseNotFound', 'This proposed case is no longer available.'));
                 }
                 if (candidate.trigger === 'blob') {
@@ -240,6 +250,15 @@ export class CollectionReviews implements vscode.Disposable {
                         reviewedFields: selection.blobRequest ?
                             fields.filter(field => JSON.stringify(selection.blobRequest?.[field]) !== JSON.stringify(candidate.request[field])) : [],
                         fileSelected: !!this.controller?.hasBlobFile(candidate.id) || review.drafts.has(candidate.id),
+                    };
+                }
+                if (candidate.trigger === 'timer') {
+                    const fields = ['hostUrl', 'functionName', 'schedule'] as const;
+                    return {
+                        ...candidate, request: copyTimerRequest(candidate.request), comment: selection.comment,
+                        selected: selection.selected ?? true, invocationId: review.drafts.get(candidate.id),
+                        reviewedFields: selection.timerRequest ?
+                            fields.filter(field => selection.timerRequest?.[field] !== candidate.request[field]) : [],
                     };
                 }
                 const fields = ['method', 'url', 'headers', 'query', 'body', 'bindings', 'dependsOn'] as const;
@@ -308,7 +327,7 @@ export class CollectionReviews implements vscode.Disposable {
         }
         const invocations: Invocation[] = selections.map(selection => {
             const candidate = review.candidates.find(candidate => candidate.id === selection.id);
-            if (!candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
+            if (!candidate || !isSupportedInvocationCandidate(candidate)) {
                 throw new Error(localize('azureInvoke.caseNotFound', 'This proposed case is no longer available.'));
             }
             if (candidate.trigger === 'blob') {
@@ -318,6 +337,12 @@ export class CollectionReviews implements vscode.Disposable {
                 };
                 validateCollectionInvocation(invocation);
                 return invocation;
+            }
+            if (candidate.trigger === 'timer') {
+                return {
+                    id: candidate.id, name: candidate.name, group: candidate.group, trigger: 'timer',
+                    request: copyTimerRequest(selection.timerRequest ?? candidate.request),
+                };
             }
             return { id: candidate.id, name: candidate.name, group: review.originals ? review.originals.get(candidate.id)?.group : candidate.group, request: selection.request ?? candidate.request };
         });
@@ -332,7 +357,7 @@ export class CollectionReviews implements vscode.Disposable {
             review.selections = selections;
             return selections.map(selection => ({ ...selection }));
         }
-        const httpInvocations = invocations.filter((invocation): invocation is HttpInvocation => !isBlobInvocation(invocation));
+        const httpInvocations = invocations.filter(isHttpInvocation);
         for (const invocation of httpInvocations) {
             planInvocationChain(invocation, id => httpInvocations.find(source => source.id === id));
         }
@@ -344,7 +369,7 @@ export class CollectionReviews implements vscode.Disposable {
             }
             return savedId;
         };
-        this.provider.saveRequests(invocations.map(invocation => isBlobInvocation(invocation) ? {
+        this.provider.saveRequests(invocations.map(invocation => !isHttpInvocation(invocation) ? {
             ...invocation, id: resolve(invocation.id),
         } : {
             ...invocation,
@@ -366,7 +391,7 @@ export class CollectionReviews implements vscode.Disposable {
             throw new Error(localize('azureInvoke.reviewExpired', 'This collection review is no longer active. Propose a new collection.'));
         }
         if (!Array.isArray(input) || !input.length || input.length > review.candidates.length ||
-            (feedback && input.length !== review.candidates.filter(candidate => candidate.trigger === 'http' || candidate.trigger === 'blob').length)) {
+            (feedback && input.length !== review.candidates.filter(isSupportedInvocationCandidate).length)) {
             throw new Error(localize('azureInvoke.selectInvocations', 'Select at least one supported invocation to continue.'));
         }
         const selections: InvocationSelection[] = [];
@@ -375,7 +400,7 @@ export class CollectionReviews implements vscode.Disposable {
             if (!entry || typeof entry !== 'object' || typeof entry.id !== 'string' || typeof entry.comment !== 'string' ||
                 entry.comment.length > 2000 || selections.some(selection => selection.id === entry.id) ||
                 (feedback ? typeof entry.selected !== 'boolean' : entry.selected === false) ||
-                !candidate || (candidate.trigger !== 'http' && candidate.trigger !== 'blob')) {
+                !candidate || !isSupportedInvocationCandidate(candidate)) {
                 throw new Error(localize('azureInvoke.invalidSelection', 'Select supported invocations and keep each comment within 2,000 characters.'));
             }
             const selection: InvocationSelection = { id: entry.id, comment: entry.comment.trim(), ...(feedback ? { selected: entry.selected } : {}) };
@@ -383,6 +408,10 @@ export class CollectionReviews implements vscode.Disposable {
                 const request: BlobUploadDefinition = entry.blobRequest ?? candidate.request;
                 validateBlobCandidate({ ...candidate, request });
                 selection.blobRequest = copyBlobDefinition(request);
+            } else if (candidate.trigger === 'timer') {
+                const request: TimerInvocationRequest = entry.timerRequest ?? candidate.request;
+                validateCollectionInvocation({ ...candidate, request });
+                selection.timerRequest = copyTimerRequest(request);
             } else if (entry.request !== undefined) {
                 const snapshot: unknown = { id: entry.id, name: candidate?.name, request: entry.request };
                 validateInvocation(snapshot);
@@ -409,7 +438,7 @@ export class CollectionReviews implements vscode.Disposable {
                 const invocationId = review.drafts.get(selection.id);
                 return {
                     id: selection.id,
-                    text: review.candidates.find(candidate => candidate.id === selection.id)?.trigger === 'blob' ?
+                    text: review.candidates.find(candidate => candidate.id === selection.id)?.trigger !== 'http' ?
                         localize('azureInvoke.manualOnly', 'Manual only') :
                         invocationId ? this.provider.getRequestStatus(invocationId) : localize('azureInvoke.ready', 'Ready'),
                 };
@@ -444,6 +473,14 @@ function mergeReviewedBlob(original: BlobUploadDefinition, edited: BlobUploadDef
         container: edited.container !== original.container ? edited.container : proposed.container,
         blobName: edited.blobName !== original.blobName ? edited.blobName : proposed.blobName,
         contentType: edited.contentType !== original.contentType ? edited.contentType : proposed.contentType,
+    };
+}
+
+function mergeReviewedTimer(original: TimerInvocationRequest, edited: TimerInvocationRequest, proposed: TimerInvocationRequest): TimerInvocationRequest {
+    return {
+        hostUrl: edited.hostUrl !== original.hostUrl ? edited.hostUrl : proposed.hostUrl,
+        functionName: edited.functionName !== original.functionName ? edited.functionName : proposed.functionName,
+        schedule: edited.schedule !== original.schedule ? edited.schedule : proposed.schedule,
     };
 }
 

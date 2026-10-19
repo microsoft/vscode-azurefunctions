@@ -27,6 +27,7 @@ import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource
 import { type HttpRequestEditors } from '../webviews/azureInvoke/extension/HttpRequestEditors';
 import { type CollectionReviews } from '../webviews/azureInvoke/extension/CollectionReviews';
 import { type BlobInvocationEditors } from '../webviews/azureInvoke/extension/BlobInvocationEditors';
+import { type TimerInvocationEditors } from '../webviews/azureInvoke/extension/TimerInvocationEditors';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
@@ -96,7 +97,8 @@ export function registerCommands(
             provider: AzureInvokeTreeDataProvider,
             editors: HttpRequestEditors,
             reviews: CollectionReviews,
-            blobs: BlobInvocationEditors
+            blobs: BlobInvocationEditors,
+            timers: TimerInvocationEditors
         },
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
@@ -104,7 +106,7 @@ export function registerCommands(
             schedulerClient: DurableTaskSchedulerClient
         }
     }): void {
-    registerAzureInvokeCommands(services.azureInvoke.provider, services.azureInvoke.editors, services.azureInvoke.reviews, services.azureInvoke.blobs);
+    registerAzureInvokeCommands(services.azureInvoke.provider, services.azureInvoke.editors, services.azureInvoke.reviews, services.azureInvoke.blobs, services.azureInvoke.timers);
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);

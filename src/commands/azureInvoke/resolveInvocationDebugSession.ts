@@ -15,7 +15,7 @@ export interface InvocationDebugSession {
 export function resolveInvocationDebugSession(_context: IActionContext): Promise<InvocationDebugSession> {
     const session = vscode.debug.activeDebugSession;
     if (!session) {
-        throw new Error(localize('azureInvoke.debugSessionRequired', 'Start your local application in the VS Code debugger, then select Debug with Copilot again.'));
+        throw new Error(localize('azureInvoke.debugSessionRequired', 'Start your local application in the VS Code debugger, then try the Copilot breakpoint action again.'));
     }
     return Promise.resolve({ id: session.id, workspaceFolder: session.workspaceFolder?.uri.fsPath });
 }

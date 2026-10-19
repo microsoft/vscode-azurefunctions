@@ -22,6 +22,7 @@ import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocati
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from '../src/chat/tools/azureInvoke/savedHttpInvocationTools';
+import { debugTimerInvocationTool, getTimerInvocationDebugContextTool } from '../src/chat/tools/azureInvoke/timerInvocationTools';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
 import { resolveInvocationDebugSession } from '../src/commands/azureInvoke/resolveInvocationDebugSession';
 import { mcpServerId } from '../src/constants';
@@ -30,12 +31,14 @@ import { parseInvocationCollection, serializeInvocationCollection } from '../src
 import { HttpRequestController } from '../src/webviews/azureInvoke/extension/HttpRequestController';
 import { HttpRequestEditors } from '../src/webviews/azureInvoke/extension/HttpRequestEditors';
 import { BlobInvocationEditors } from '../src/webviews/azureInvoke/extension/BlobInvocationEditors';
+import { TimerInvocationEditors } from '../src/webviews/azureInvoke/extension/TimerInvocationEditors';
 import { type BlobInvocation, type BlobUploadState } from '../src/webviews/azureInvoke/shared/blobInvocation';
 import { CollectionReviews } from '../src/webviews/azureInvoke/extension/CollectionReviews';
 import { CollectionReviewController } from '../src/webviews/azureInvoke/extension/CollectionReviewController';
 import { sendHttpRequest } from '../src/webviews/azureInvoke/extension/sendHttpRequest';
 import { type HttpInvocation, type HttpRequest } from '../src/webviews/azureInvoke/shared/httpRequest';
 import { type BlobInvocationCandidate, type HttpInvocationCandidate, type InvocationCandidate } from '../src/webviews/azureInvoke/shared/collectionReview';
+import { type TimerInvocation } from '../src/webviews/azureInvoke/shared/timerInvocation';
 import { formatResponseBody } from '../src/webviews/azureInvoke/views/formatResponseBody';
 import { getTestApi } from './utils/testApiAccess';
 
@@ -45,6 +48,7 @@ suite('Azure Invoke', () => {
     let receivedRequests = 0;
     const accountBodies: string[] = [];
     const debugBodies: string[] = [];
+    const timerRequests: { url: string; method: string; body: string; contentType?: string }[] = [];
     let accountNumber = 0;
     const compactResponseJson = '{"items":[{"id":9007199254740993,"amount":1.2300e+4,"zero":-0}],"message":"<img src=x>","empty":[]}';
     const formattedResponseJson = [
@@ -127,6 +131,18 @@ suite('Azure Invoke', () => {
             const chunks: Buffer[] = [];
             for await (const chunk of request) {
                 chunks.push(Buffer.from(chunk));
+            }
+            if (request.url?.startsWith('/admin/functions/')) {
+                timerRequests.push({
+                    url: request.url, method: request.method ?? '', body: Buffer.concat(chunks).toString(),
+                    contentType: request.headers['content-type'],
+                });
+                if (request.url.endsWith('/SlowTimer')) {
+                    return;
+                }
+                response.writeHead(request.url.endsWith('/MissingTimer') ? 404 : 202);
+                response.end('private-timer-host-body');
+                return;
             }
             response.setHeader('content-type', 'application/json');
             if (request.url?.startsWith('/repairable')) {
@@ -472,7 +488,7 @@ suite('Azure Invoke', () => {
                 'private-value invalid JSON',
                 'null',
                 '[]',
-                JSON.stringify({ version: 4, invocations: [] }),
+                JSON.stringify({ version: 5, invocations: [] }),
                 JSON.stringify({ version: 1, invocations: {} }),
                 JSON.stringify({ version: 1, invocations: [saved, saved] }),
                 JSON.stringify({ version: 1, invocations: [{ ...saved, name: ' ' }] }),
@@ -1712,7 +1728,7 @@ suite('Azure Invoke', () => {
                     bindings: [{ name: 'accountId', sourceId: 'create', pointer: '/body/id' }],
                 }),
             }),
-            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'timer', endpoint: '', description: 'Unsupported timer.' },
+            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'queue', endpoint: '', description: 'Unsupported queue.' },
         ];
         const revisions: number[] = [];
         const readSchema = z.object({
@@ -1960,7 +1976,7 @@ suite('Azure Invoke', () => {
             const candidates: InvocationCandidate[] = [
                 httpCandidate({ id: 'create', name: "Create customer's order", auth: 'required' }),
                 httpCandidate({ id: 'invalid', name: 'Read error response', request: request({ url: `${baseUrl}/error` }) }),
-                { id: 'timer', name: 'Scheduled cleanup', group: 'Maintenance', trigger: 'timer', endpoint: '0 */5 * * * *', description: 'A timer trigger discovered in the project.' },
+                { id: 'timer', name: 'Queued cleanup', group: 'Maintenance', trigger: 'queue', endpoint: 'cleanup', description: 'A queue trigger discovered in the project.' },
             ];
             const proposed = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
                 .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates } }));
@@ -1983,7 +1999,8 @@ suite('Azure Invoke', () => {
                 if (document.querySelectorAll('.case-group').length !== 2) throw new Error('Related requests were not grouped.');
                 if (!document.querySelector('[data-case-id="timer"]').disabled) throw new Error('Unsupported trigger is selectable.');
                 if (document.querySelector('.case[data-id="create"] .case-status').textContent !== 'HTTP Trigger') throw new Error('HTTP trigger description is missing.');
-                if (document.querySelector('.case[data-id="timer"] .case-status').textContent !== 'Timer Trigger / Not yet supported') throw new Error('Unsupported trigger description is missing.');
+                if (document.querySelector('.case[data-id="timer"] .case-status').textContent !== 'Queue Trigger') throw new Error('Unsupported trigger description includes extra status text.');
+                if (document.querySelector('.case[data-id="timer"] .case-status').title !== 'Queue Trigger / Not yet supported') throw new Error('Unsupported status tooltip is missing.');
                 const selected = document.querySelector('[data-case-id="create"]');
                 document.querySelector('[data-case-id="invalid"]').click();
                 document.querySelector('.case-toggle').click();
@@ -2024,7 +2041,8 @@ suite('Azure Invoke', () => {
             assert.strictEqual(editors.size, 0);
             assert.match(provider.getRequestStatus(invocationId), /^200, \d+ ms$/);
             await runEditorScript(controller, `
-                await waitFor(() => document.querySelector('.case-status').textContent.startsWith('HTTP Trigger / 200, '));
+                await waitFor(() => document.querySelector('.case-status').title.startsWith('HTTP Trigger / 200, '));
+                if (document.querySelector('.case-status').textContent !== 'HTTP Trigger') throw new Error('Execution status changed the trigger description.');
                 if (!document.querySelector('[data-case-id="create"]').checked) throw new Error('Approved selection was not restored.');
                 if (document.querySelector('[data-comment-id="create"]').value !== '') throw new Error('Confirmed review gained feedback.');
             `);
@@ -2050,7 +2068,7 @@ suite('Azure Invoke', () => {
         const reviews = new CollectionReviews(context, provider, async () => { throw new Error('Chat must not open for an invalid selection.'); });
         const candidates: InvocationCandidate[] = [
             httpCandidate(),
-            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'timer', endpoint: '', description: 'Unsupported timer.' },
+            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'queue', endpoint: '', description: 'Unsupported queue.' },
         ];
         try {
             const first = await reviews.open(candidates);
@@ -2290,9 +2308,22 @@ suite('Azure Invoke', () => {
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
                 if (!document.querySelector('#debug-response').hidden) throw new Error('Debugging is offered without a result.');
+                if (!document.querySelector('#breakpoint-guidance-field').hidden) throw new Error('Breakpoint guidance is offered without a result.');
                 document.querySelector('#run-chain').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
                 if (document.querySelector('#debug-response').hidden) throw new Error('The response has no debug entry point.');
+                if (document.querySelector('#debug-response').textContent !== 'Run with Copilot breakpoints') throw new Error('The HTTP breakpoint action does not match other triggers.');
+                if (document.querySelector('#breakpoint-guidance-field').hidden) throw new Error('Inline breakpoint guidance is missing.');
+                const guidance = document.querySelector('#breakpoint-guidance');
+                guidance.value = 'x'.repeat(501);
+                guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                if (!document.querySelector('#debug-response').disabled) throw new Error('Oversized guidance is allowed.');
+                window.testApi.postMessage({ command: 'debugRequest', breakpointGuidance: guidance.value });
+                await waitFor(() => document.querySelector('#debug-error').textContent.includes('500 characters'));
+                guidance.value = '  Pause before validation.  ';
+                guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                if (!document.querySelector('#save').disabled) throw new Error('Guidance dirtied the saved request.');
+                if (document.querySelector('#debug-response').disabled) throw new Error('Valid guidance cannot be submitted.');
                 document.querySelector('#url').value = '${baseUrl}/unsaved-debug-url';
                 document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#body').value = 'private-unsaved-debug-body';
@@ -2306,12 +2337,15 @@ suite('Azure Invoke', () => {
             const result = await read.executeMcp(opened[0], extras);
             const evidence = z.object({ structuredContent: z.object({
                 method: z.string(), path: z.string(),
+                breakpointGuidance: z.string(),
                 diagnostic: z.object({ outcome: z.string(), status: z.number(), body: z.string() }),
             }) }).parse(result).structuredContent;
             assert.strictEqual(evidence.method, 'POST');
             assert.strictEqual(evidence.path, '/debug-replay');
             assert.strictEqual(evidence.diagnostic.status, 422);
             assert.strictEqual(evidence.diagnostic.body, '{"error":"inspect the handler"}');
+            assert.strictEqual(evidence.breakpointGuidance, 'Pause before validation.');
+            assert.ok(!serializeInvocationCollection(provider.getInvocations()).includes(evidence.breakpointGuidance), 'Guidance must not be saved or exported.');
             for (const value of ['private-debug-query', 'private-debug-code', 'private-debug-request-key', 'private-debug-cookie', 'private-debug-response-key', 'private-unsaved-debug-body']) {
                 assert.ok(!JSON.stringify(result).includes(value));
             }
@@ -2334,12 +2368,16 @@ suite('Azure Invoke', () => {
             assert.strictEqual(receivedRequests, before + 3);
             await runEditorScript(editor, `
                 await waitFor(() => !document.querySelector('#debug-response').hidden);
+                document.querySelector('#breakpoint-guidance').value = '   ';
+                document.querySelector('#breakpoint-guidance').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
             assert.strictEqual(opened.length, 2);
             assert.notStrictEqual(opened[0].debugId, opened[1].debugId);
-            assert.strictEqual((await editors.getDebugContext(await createTestActionContext(), target.id, opened[1].debugId)).method, 'POST');
+            const nextContext = await editors.getDebugContext(await createTestActionContext(), target.id, opened[1].debugId);
+            assert.strictEqual(nextContext.method, 'POST');
+            assert.strictEqual(nextContext.breakpointGuidance, undefined);
             editors.closeAll();
             await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[1].debugId), /no longer active/);
         } finally {
@@ -3355,7 +3393,7 @@ suite('Azure Invoke', () => {
         const content = await fs.readFile(path.join(context.extensionPath, agent.path), 'utf8');
         assert.match(content, /\nname: Azure Invoke\n/);
         assert.match(content, /\n  - edit\n/, 'The Azure Invoke agent must support workspace edits alongside invocation testing.');
-        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'get_http_invocation_debug_context', 'debug_http_invocation', 'list_http_invocations', 'get_http_invocation_inspection', 'propose_http_invocation_changes', 'run_http_invocation', 'list_blob_invocations', 'get_blob_invocation_debug_context', 'upload_blob_invocation']) {
+        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'get_http_invocation_debug_context', 'debug_http_invocation', 'list_http_invocations', 'get_http_invocation_inspection', 'propose_http_invocation_changes', 'run_http_invocation', 'list_blob_invocations', 'get_blob_invocation_debug_context', 'upload_blob_invocation', 'get_timer_invocation_debug_context', 'debug_timer_invocation']) {
             assert.ok(content.includes(`  - Azure Functions Extension Tools/${name}`));
         }
         assert.ok(!content.includes('  - Azure Functions Extension Tools/create_http_invocation'));
@@ -3525,8 +3563,8 @@ suite('Azure Invoke', () => {
                 await runEditorScript(controller, `
                     const row = document.querySelector('.case[data-id="blob-import"]');
                     if (!row.querySelector('[data-case-id]').checked || row.querySelector('[data-case-id]').disabled) throw new Error('Blob fixture is not supported and selected.');
-                    if (!row.querySelector('.case-status').textContent.includes('Manual only')) throw new Error('Manual status missing.');
-                    if (!row.querySelector('.case-status').textContent.startsWith('Blob Trigger / ')) throw new Error('Blob trigger description is missing.');
+                    if (row.querySelector('.case-status').textContent !== 'Blob Trigger') throw new Error('Blob trigger description includes extra status text.');
+                    if (row.querySelector('.case-status').title !== 'Blob Trigger / Supported / Manual only') throw new Error('Manual status tooltip is missing.');
                     row.querySelector('.case-toggle').click();
                     if (row.querySelector('.send-preview') || row.querySelector('.run-preview-chain')) throw new Error('Blob row can upload a preview.');
                     if (row.querySelector('.blob-container').value !== 'inventory-imports') throw new Error('Binding-derived container was lost.');
@@ -3866,6 +3904,7 @@ suite('Azure Invoke', () => {
                     if (!document.querySelector('#debug').disabled) throw new Error('Unsaved fixture allowed Copilot upload.');
                     if (!document.querySelector('#upload').disabled || !document.querySelector('#save').disabled) throw new Error('A new fixture must require file selection.');
                     if (document.querySelector('#encoding') || document.querySelector('#content')) throw new Error('Manual content controls remain visible.');
+                    if (document.querySelector('[data-label="targetHint"], [data-label="fileHint"], [data-label="uploadHint"], [data-label="debugHint"]')) throw new Error('Removed helper paragraphs remain visible.');
                     document.querySelector('#load-file').click();
                     await waitFor(() => document.querySelector('#selected-file').textContent === 'fixture.bin');
                     if (document.querySelector('#blob-name').value !== 'fixture.bin') throw new Error('File selection did not default the blob name.');
@@ -3974,20 +4013,26 @@ suite('Azure Invoke', () => {
             let prompts = 0;
             const handler = registerOnActionStartHandler(action => {
                 if (action.callbackId === 'azureFunctions.azureInvoke.blobEditor') {
-                    action.ui.showInputBox = async () => { prompts++; return `  ${guidance}  `; };
+                    action.ui.showInputBox = async () => { prompts++; throw new Error('Breakpoint guidance must stay in the webview.'); };
                 }
             });
             provider.saveRequest(blob);
             try {
                 const editor = editors.open(blob, true);
                 await runEditorScript(editor, `
+                    const guidance = document.querySelector('#breakpoint-guidance');
+                    if (!guidance || guidance.maxLength !== 500 || guidance.getBoundingClientRect().height < 60) throw new Error('Inline multiline guidance is missing.');
+                    guidance.value = ${JSON.stringify(`  ${guidance}  `)};
+                    guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (!document.querySelector('#save').disabled || document.querySelector('#debug').disabled) throw new Error('Guidance marked the saved fixture dirty.');
                     document.querySelector('#debug').click();
                     await waitFor(() => !document.querySelector('#notice').hidden);
+                    guidance.value = 'Later guidance must not change the authorized upload.';
                     document.querySelector('#blob-name').value = 'not-authorized.json';
                     document.querySelector('#blob-name').dispatchEvent(new Event('input', { bubbles: true }));
                 `);
                 assert.strictEqual(opened.length, 1);
-                assert.strictEqual(prompts, 1);
+                assert.strictEqual(prompts, 0);
                 assert.strictEqual(uploads.length, 0, 'Opening Copilot must not upload.');
                 const metadata = await getBlobInvocationDebugContextTool(editors).execute(opened[0]);
                 assert.strictEqual(metadata.container, blob.request.container);
@@ -4004,6 +4049,7 @@ suite('Azure Invoke', () => {
                 await assert.rejects(() => Promise.resolve(tool.execute(opened[0])), /authorization expired/);
                 assert.strictEqual(uploads.length, 1, 'Expired authorization must not fall back to ordinary upload.');
                 assert.deepStrictEqual(provider.getBlobInvocation(blob.id), blob);
+                assert.ok(!serializeInvocationCollection(provider.getInvocations()).includes(guidance));
             } finally {
                 handler.dispose();
                 editors.dispose();
@@ -4011,46 +4057,81 @@ suite('Azure Invoke', () => {
             }
         });
 
-        test('optional breakpoint guidance can be skipped or cancelled and rejects fixture or debugger changes during the prompt', async () => {
+        test('inline breakpoint guidance can be skipped and validates length before authorizing the saved fixture', async () => {
             const context = (await getTestApi()).extensionVariables.getContext();
             assert.ok(context);
             const provider = new AzureInvokeTreeDataProvider();
             const blob = fixture();
             const opened: { id: string; debugId: string }[] = [];
             let session = 'blob-guidance-session';
+            let resolving: (() => void) | undefined;
             const editors = new BlobInvocationEditors(context, provider, {
-                resolveSession: async () => ({ id: session }),
+                resolveSession: async () => {
+                    const id = session;
+                    const callback = resolving;
+                    resolving = undefined;
+                    callback?.();
+                    return { id };
+                },
                 openChat: async (id, debugId) => { opened.push({ id, debugId }); },
             });
             const action = await createTestActionContext();
             provider.saveRequest(blob);
             try {
-                action.ui.showInputBox = async () => '   ';
-                await editors.debugInvocation(action, blob.id);
+                action.ui.showInputBox = async () => { throw new Error('Native guidance prompts are not allowed.'); };
+                await editors.debugInvocation(action, blob.id, '   ');
                 const metadata = await getBlobInvocationDebugContextTool(editors).execute(opened[0]);
                 assert.strictEqual(metadata.breakpointGuidance, undefined);
                 assert.strictEqual(opened.length, 1);
                 assert.strictEqual(uploads.length, 0);
-                action.ui.showInputBox = async () => { throw new UserCancelledError(); };
-                await assert.rejects(editors.debugInvocation(action, blob.id), isUserCancelledError);
-                assert.strictEqual(opened.length, 1, 'Cancelling the optional prompt must not open chat or authorize an upload.');
-                await assert.rejects(editors.getDebugContext(action, blob.id, opened[0].debugId), /authorization expired/);
+                await assert.rejects(editors.debugInvocation(action, blob.id, 'x'.repeat(501)), /500 characters/);
+                assert.strictEqual(opened.length, 1, 'Invalid guidance must not open chat.');
 
-                action.ui.showInputBox = async () => {
-                    provider.saveRequest({ ...blob, request: { ...blob.request, blobName: 'changed-during-prompt.json' } });
-                    return 'Pause before reading the file.';
+                resolving = () => {
+                    provider.saveRequest({ ...blob, request: { ...blob.request, blobName: 'changed-during-authorization.json' } });
                 };
-                await assert.rejects(editors.debugInvocation(action, blob.id), /authorization expired/);
+                await assert.rejects(editors.debugInvocation(action, blob.id, 'Pause before reading the file.'), /authorization expired/);
                 provider.saveRequest(blob);
-                action.ui.showInputBox = async () => {
+                resolving = () => {
                     session = 'changed-during-guidance';
-                    return 'Pause at the first row.';
                 };
-                await assert.rejects(editors.debugInvocation(action, blob.id), /debugger changed/);
+                await assert.rejects(editors.debugInvocation(action, blob.id, 'Pause at the first row.'), /debugger changed/);
                 assert.strictEqual(opened.length, 1);
                 assert.strictEqual(uploads.length, 0);
                 assert.deepStrictEqual(provider.getBlobInvocation(blob.id), blob);
                 assert.ok(!serializeInvocationCollection(provider.getInvocations()).includes('breakpointGuidance'));
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('tree-style breakpoint entry focuses inline guidance without authorizing an upload', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const blob = fixture();
+            let opened = 0;
+            const editors = new BlobInvocationEditors(context, provider, {
+                resolveSession: async () => { throw new Error('Focusing guidance must not require a debugger.'); },
+                openChat: async () => { opened++; },
+            });
+            provider.saveRequest(blob);
+            try {
+                const editor = editors.open(blob, true);
+                await editor.focusBreakpointGuidance();
+                await runEditorScript(editor, `
+                    await waitFor(() => document.activeElement === document.querySelector('#breakpoint-guidance'));
+                    if (!document.querySelector('#save').disabled) throw new Error('Opening guidance marked the fixture dirty.');
+                    if (document.querySelector('#debug').disabled) throw new Error('The user cannot authorize a saved fixture.');
+                    document.querySelector('#breakpoint-guidance').value = 'Unsaved guidance';
+                `);
+                assert.strictEqual(opened, 0);
+                assert.strictEqual(uploads.length, 0);
+                editor.dispose();
+                await runEditorScript(editors.open(blob, true), `
+                    if (document.querySelector('#breakpoint-guidance').value) throw new Error('Guidance persisted after closing the editor.');
+                `);
             } finally {
                 editors.dispose();
                 provider.dispose();
@@ -4069,7 +4150,6 @@ suite('Azure Invoke', () => {
                 openChat: async (_id, token) => { debugId = token; },
             });
             const action = await createTestActionContext();
-            action.ui.showInputBox = async () => '';
             provider.saveRequest(blob);
             try {
                 await editors.debugInvocation(action, blob.id);
@@ -4141,7 +4221,261 @@ suite('Azure Invoke', () => {
         });
     });
 
-    test('manual trigger commands open the matching bundled HTTP and Blob editors', async () => {
+    suite('manual Timer invocations', () => {
+        function timerInvocation(functionName = 'CleanupTimer'): TimerInvocation {
+            return {
+                id: 'cleanup-timer', name: "Timer's </script><img src=x>", group: 'Maintenance', trigger: 'timer',
+                request: { hostUrl: baseUrl, functionName, schedule: '0 */5 * * * *' },
+            };
+        }
+
+        test('saves and invokes a Timer once through the local host without creating a scheduler', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation();
+            const before = timerRequests.length;
+            try {
+                await runEditorScript(editors.open(timer, false), `
+                    if (document.querySelector('h1 img')) throw new Error('Timer name was interpreted as HTML.');
+                    if (document.querySelector('.subtitle').textContent !== 'Timer Trigger') throw new Error('Timer trigger description is missing.');
+                    if (document.querySelector('#schedule').textContent !== '0 */5 * * * *' || document.querySelector('input#schedule')) throw new Error('Configured schedule is not read-only reference information.');
+                    if (!document.querySelector('#debug').disabled) throw new Error('Unsaved Timer allowed breakpoint invocation.');
+                    document.querySelector('#save').click();
+                    await waitFor(() => document.querySelector('#save-status').textContent === 'Saved for this session');
+                    document.querySelector('#run').click();
+                    await waitFor(() => !document.querySelector('#receipt').hidden);
+                    if (!document.querySelector('#invocation-status').textContent.includes('function execution not observed')) throw new Error('Host acceptance claimed function success.');
+                    if (document.querySelector('main').textContent.includes('private-timer-host-body')) throw new Error('Host body was displayed.');
+                `);
+                assert.strictEqual(timerRequests.length, before + 1);
+                assert.deepStrictEqual(timerRequests.at(-1), {
+                    url: '/admin/functions/CleanupTimer', method: 'POST', body: '{"input":""}', contentType: 'application/json',
+                });
+                assert.deepStrictEqual(provider.getTimerInvocation(timer.id), timer);
+                assert.deepStrictEqual(provider.getRequests(), []);
+                assert.strictEqual(provider.getTreeItem(timer).description, 'Timer Trigger');
+                assert.strictEqual(provider.getTreeItem(timer).contextValue, 'azureInvoke.timer');
+                assert.strictEqual(provider.getRequestRunStatus(timer.id).statusCode, 202);
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection([timer])), [timer]);
+                assert.strictEqual(JSON.parse(serializeInvocationCollection([timer])).version, 4);
+                assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 3, invocations: [timer] })), /version 4/);
+                const http = invocation();
+                assert.throws(() => provider.saveRequest({
+                    ...http, request: { ...http.request, dependsOn: [timer.id] },
+                }), /prerequisite request is unavailable/);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('Timer proposals preserve private edits and unchecked selections through review without invoking', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider, async () => { });
+            const timer = { ...timerInvocation(), group: 'Maintenance', description: 'Run cleanup manually; the host owns the schedule.' };
+            let controller: CollectionReviewController | undefined;
+            const open = reviews.open.bind(reviews);
+            reviews.open = async (candidates, id, revision) => controller = await open(candidates, id, revision);
+            const mcp = await startInProcHttpServer({
+                id: mcpServerId, serverLabel: 'Timer authoring test', serverVersion: '1.0.0', transport: 'tcp',
+                registerTools: server => {
+                    registerMcpTool(server, proposeInvocationCollectionTool(reviews));
+                    registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
+                },
+            });
+            const rpc = createMcpClient(mcp);
+            const before = receivedRequests;
+            try {
+                await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'timer-authoring', version: '1.0.0' } });
+                await rpc('notifications/initialized', {}, true);
+                const proposed = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
+                    .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates: [httpCandidate(), timer] } }));
+                assert.ok(controller);
+                const reviewId = proposed.result.structuredContent.reviewId;
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="cleanup-timer"]');
+                    if (!row.querySelector('[data-case-id]').checked || row.querySelector('[data-case-id]').disabled) throw new Error('Timer proposal is not selected and supported.');
+                    if (row.querySelector('.case-status').textContent !== 'Timer Trigger') throw new Error('Timer row includes extra description text.');
+                    row.querySelector('.case-toggle').click();
+                    if (row.querySelector('.send-preview, .run-preview-chain')) throw new Error('Timer proposal can execute a preview.');
+                    if (!row.querySelector('.timer-schedule').readOnly) throw new Error('Proposal lets the user change the function schedule.');
+                    row.querySelector('.timer-functionName').value = 'PrivateTimer';
+                    row.querySelector('[data-case-id]').click();
+                    const comment = row.querySelector('[data-comment-id]');
+                    comment.value = 'Keep the timer, but use a clearer name.';
+                    comment.dispatchEvent(new Event('input', { bubbles: true }));
+                    document.querySelector('#confirm-collection').click();
+                    await waitFor(() => !document.querySelector('#review-loading').hidden);
+                `);
+                const feedback = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
+                assert.ok(!JSON.stringify(feedback).includes('PrivateTimer'));
+                const reviewed = reviews.getReview(reviewId);
+                const selected = reviewed.cases.find(candidate => candidate.id === timer.id);
+                assert.ok(selected);
+                assert.strictEqual(selected.selected, false);
+                assert.deepStrictEqual(selected.reviewedFields, ['functionName']);
+                const revised = { ...timer, name: 'Run cleanup timer', request: { ...timer.request, functionName: 'ProposedTimer' } };
+                await reviews.open([httpCandidate(), revised], reviewId, reviewed.revision);
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="cleanup-timer"]');
+                    if (row.querySelector('[data-case-id]').checked) throw new Error('Revision reselected an unchecked Timer.');
+                    if (row.querySelector('.timer-functionName').value !== 'PrivateTimer') throw new Error('Revision overwrote the private function name.');
+                    row.querySelector('[data-case-id]').click();
+                    document.querySelector('#confirm-collection').click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(receivedRequests, before);
+                const saved = provider.getInvocations().find(value => 'trigger' in value && value.trigger === 'timer');
+                assert.ok(saved && 'trigger' in saved && saved.trigger === 'timer');
+                assert.strictEqual(saved.request.functionName, 'PrivateTimer');
+                assert.strictEqual(provider.getRequests().length, 1);
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection(provider.getInvocations())), provider.getInvocations());
+            } finally {
+                mcp.disposable.dispose();
+                reviews.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('Timer breakpoint tools invoke only the authorized saved snapshot once and keep guidance transient', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const timer = timerInvocation();
+            const opened: { id: string; debugId: string }[] = [];
+            const editors = new TimerInvocationEditors(context, provider, {
+                resolveSession: async () => ({ id: 'timer-debugger' }),
+                openChat: async (id, debugId) => { opened.push({ id, debugId }); },
+            });
+            provider.saveRequest(timer);
+            const before = timerRequests.length;
+            try {
+                await runEditorScript(editors.open(timer, true), `
+                    const guidance = document.querySelector('#breakpoint-guidance');
+                    guidance.value = '  Pause before deleting records.  ';
+                    guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (!document.querySelector('#save').disabled || document.querySelector('#debug').disabled) throw new Error('Guidance made the Timer dirty.');
+                    document.querySelector('#debug').click();
+                    await waitFor(() => !document.querySelector('#notice').hidden);
+                    document.querySelector('#function-name').value = 'UnsavedTimer';
+                    document.querySelector('#function-name').dispatchEvent(new Event('input', { bubbles: true }));
+                    if (!document.querySelector('#debug').disabled) throw new Error('Unsaved target permitted a new authorization.');
+                `);
+                assert.strictEqual(opened.length, 1);
+                assert.strictEqual(timerRequests.length, before);
+                const metadata = await getTimerInvocationDebugContextTool(editors).execute(opened[0]);
+                assert.strictEqual(metadata.functionName, timer.request.functionName);
+                assert.strictEqual(metadata.breakpointGuidance, 'Pause before deleting records.');
+                assert.ok(!JSON.stringify(opened).includes('Pause before'));
+                assert.ok(!serializeInvocationCollection(provider.getInvocations()).includes('Pause before'));
+                const tool = debugTimerInvocationTool(editors);
+                assert.strictEqual(tool.annotations?.consentGuidance, ConsentGuidance.AlwaysRequired);
+                assert.deepStrictEqual(await tool.execute(opened[0]), {
+                    status: 202, duration: provider.getRequestRunStatus(timer.id).duration, functionExecution: 'notObserved',
+                });
+                assert.strictEqual(timerRequests.length, before + 1);
+                assert.strictEqual(timerRequests.at(-1)?.url, '/admin/functions/CleanupTimer');
+                await assert.rejects(() => Promise.resolve(tool.execute(opened[0])), /authorization expired/);
+                assert.strictEqual(timerRequests.length, before + 1);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('Timer authorization expires after saved edits, debugger changes, or editor closure', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const timer = timerInvocation();
+            let session = 'timer-session';
+            let debugId = '';
+            const editors = new TimerInvocationEditors(context, provider, {
+                resolveSession: async () => ({ id: session }),
+                openChat: async (_id, token) => { debugId = token; },
+            });
+            const action = await createTestActionContext();
+            provider.saveRequest(timer);
+            const before = receivedRequests;
+            try {
+                await assert.rejects(editors.debugInvocation(action, timer.id, 'x'.repeat(501)), /500 characters/);
+                await editors.debugInvocation(action, timer.id, ' ');
+                assert.strictEqual((await editors.getDebugContext(action, timer.id, debugId)).breakpointGuidance, undefined);
+                provider.saveRequest({ ...timer, request: { ...timer.request, functionName: 'ChangedTimer' } });
+                provider.saveRequest(timer);
+                await assert.rejects(editors.runDebug(action, timer.id, debugId), /authorization expired/);
+                await editors.debugInvocation(action, timer.id, '');
+                session = 'different-session';
+                await assert.rejects(editors.runDebug(action, timer.id, debugId), /debugger changed/);
+                const editor = editors.open(timer, true);
+                await editors.debugInvocation(action, timer.id, '');
+                editor.dispose();
+                await assert.rejects(editors.runDebug(action, timer.id, debugId), /authorization expired/);
+                assert.strictEqual(receivedRequests, before);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('closing a Timer editor cancels an in-flight invocation and host failures are not retried or exposed', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation('SlowTimer');
+            const before = timerRequests.length;
+            try {
+                const editor = editors.open(timer, false);
+                const received = new Promise<void>(resolve => server.once('request', () => resolve()));
+                const pending = editors.run(await createTestActionContext(), timer);
+                const cancelled = assert.rejects(pending, isUserCancelledError);
+                await received;
+                editor.dispose();
+                await cancelled;
+                assert.strictEqual(editors.size, 0);
+                const failed = timerInvocation('MissingTimer');
+                await assert.rejects(editors.run(await createTestActionContext(), failed), (error: unknown) => {
+                    assert.ok(error instanceof Error);
+                    assert.match(error.message, /HTTP 404/);
+                    assert.ok(!error.message.includes('private-timer-host-body'));
+                    return true;
+                });
+                assert.strictEqual(timerRequests.length, before + 2);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('Timer targets reject remote hosts, credentials, paths, and malformed function names before sending', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation();
+            const action = await createTestActionContext();
+            const before = receivedRequests;
+            try {
+                for (const hostUrl of ['https://example.com', `${baseUrl}/api`, `${baseUrl}?code=private`, `${baseUrl}#fragment`, baseUrl.replace('://', '://user:password@')]) {
+                    await assert.rejects(editors.run(action, { ...timer, request: { ...timer.request, hostUrl } }), /loopback Functions host/);
+                }
+                for (const functionName of ['', '../OtherFunction', 'Contains/Slash', 'Contains space']) {
+                    await assert.rejects(editors.run(action, { ...timer, request: { ...timer.request, functionName } }), /function name/);
+                }
+                assert.strictEqual(receivedRequests, before);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+    });
+
+    test('manual trigger commands open the matching bundled HTTP, Blob, and Timer editors', async () => {
         const api = await getTestApi();
         const ui = new TestUserInput(vscode);
         const handler = api.testing.registerOnActionStartHandler(context => {
@@ -4164,6 +4498,15 @@ suite('Azure Invoke', () => {
             const tab = findBlobTab();
             assert.ok(tab);
             await vscode.window.tabGroups.close(tab);
+            await ui.runWithInputs(['Timer trigger'], async () => {
+                await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
+            });
+            const findTimerTab = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab =>
+                tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('azureInvokeTimer'));
+            await waitForTabChange(() => !!findTimerTab());
+            const timerTab = findTimerTab();
+            assert.ok(timerTab);
+            await vscode.window.tabGroups.close(timerTab);
         } finally {
             handler.dispose();
         }
@@ -4203,7 +4546,7 @@ suite('Azure Invoke', () => {
             const discovered = z.object({ result: z.object({ tools: z.array(z.object({ name: z.string() })) }) })
                 .parse(await rpc('tools/list', {}));
             assert.deepStrictEqual(discovered.result.tools.map(tool => tool.name).sort(), [
-                'create_http_invocation', 'debug_http_invocation', 'draft_http_invocation', 'get_blob_invocation_debug_context', 'get_http_invocation_debug_context', 'get_http_invocation_inspection', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_http_invocation_changes', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
+                'create_http_invocation', 'debug_http_invocation', 'debug_timer_invocation', 'draft_http_invocation', 'get_blob_invocation_debug_context', 'get_http_invocation_debug_context', 'get_http_invocation_inspection', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'get_timer_invocation_debug_context', 'list_blob_invocations', 'list_http_invocations', 'propose_http_invocation_changes', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
             ]);
             const listed = z.object({
                 result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), name: z.string(), method: z.string(), dependencyIds: z.array(z.string()) })) }) }),

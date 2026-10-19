@@ -6,8 +6,9 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { localize } from '../../localize';
-import { type HttpInvocation, type HttpRequestStateMessage } from '../../webviews/azureInvoke/shared/httpRequest';
+import { isHttpInvocation, type HttpInvocation, type HttpRequestStateMessage } from '../../webviews/azureInvoke/shared/httpRequest';
 import { copyBlobInvocation, isBlobInvocation, type BlobInvocation, type BlobUploadState, type Invocation } from '../../webviews/azureInvoke/shared/blobInvocation';
+import { copyTimerInvocation, isTimerInvocation, type TimerInvocation, type TimerInvocationState } from '../../webviews/azureInvoke/shared/timerInvocation';
 import { copyCollectionInvocation, copyInvocation, planInvocationChain, validateCollectionInvocation } from './invocationCollection';
 
 export type AzureInvokeTreeElement = Invocation | { readonly group: string };
@@ -41,6 +42,13 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         };
     }
 
+    public createTimerInvocation(): TimerInvocation {
+        return {
+            id: randomUUID(), name: localize('azureInvoke.timerInvocation', 'Timer invocation {0}', ++this.requestNumber), trigger: 'timer',
+            request: { hostUrl: 'http://localhost:7071', functionName: '', schedule: '' },
+        };
+    }
+
     public saveRequest(invocation: Invocation): void {
         this.saveRequests([invocation]);
     }
@@ -54,10 +62,10 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         const combined = new Map(this.requests);
         snapshots.forEach(invocation => combined.set(invocation.id, invocation));
         combined.forEach(invocation => {
-            if (!isBlobInvocation(invocation)) {
+            if (isHttpInvocation(invocation)) {
                 planInvocationChain(invocation, id => {
                     const source = combined.get(id);
-                    return source && !isBlobInvocation(source) ? source : undefined;
+                    return isHttpInvocation(source) ? source : undefined;
                 });
             }
         });
@@ -69,7 +77,7 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
 
     public updateRequestStatus(id: string, message: HttpRequestStateMessage): void {
         const invocation = this.requests.get(id);
-        if (!invocation || isBlobInvocation(invocation)) {
+        if (!isHttpInvocation(invocation)) {
             return;
         }
         const status = message.command === 'requestStarted' ?
@@ -111,12 +119,37 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
 
     public getRequest(id: string): HttpInvocation | undefined {
         const invocation = this.requests.get(id);
-        return invocation && !isBlobInvocation(invocation) ? copyInvocation(invocation) : undefined;
+        return isHttpInvocation(invocation) ? copyInvocation(invocation) : undefined;
     }
 
     public getBlobInvocation(id: string): BlobInvocation | undefined {
         const invocation = this.requests.get(id);
         return isBlobInvocation(invocation) ? copyBlobInvocation(invocation) : undefined;
+    }
+
+    public getTimerInvocation(id: string): TimerInvocation | undefined {
+        const invocation = this.requests.get(id);
+        return isTimerInvocation(invocation) ? copyTimerInvocation(invocation) : undefined;
+    }
+
+    public updateTimerStatus(id: string, message: TimerInvocationState): void {
+        if (!this.getTimerInvocation(id)) {
+            return;
+        }
+        const running = message.command === 'invocationStarted';
+        const accepted = message.command === 'invocationResult';
+        const cancelled = message.command === 'invocationError' && message.cancelled;
+        this.statuses.set(id, {
+            text: running ? localize('azureInvoke.timerInvoking', 'Invoking...') :
+                accepted ? localize('azureInvoke.timerAccepted', 'Invocation accepted; function execution not observed') :
+                    cancelled ? localize('azureInvoke.timerCancelled', 'Cancelled; the function may still run') :
+                        localize('azureInvoke.timerNotConfirmed', 'Invocation not confirmed'),
+            icon: running ? 'loading~spin' : accepted ? 'clock' : cancelled ? 'circle-slash' : 'error',
+            lastRun: running ? new Date() : this.statuses.get(id)?.lastRun ?? new Date(),
+            status: running ? 'running' : accepted ? 'succeeded' : cancelled ? 'cancelled' : 'failed',
+            ...(message.command === 'invocationResult' ? { statusCode: message.result.status, duration: message.result.duration } : {}),
+        });
+        this.changeEmitter.fire();
     }
 
     public getInvocations(): Invocation[] {
@@ -145,8 +178,8 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
     public replaceRequests(invocations: readonly Invocation[]): void {
         invocations.forEach(validateCollectionInvocation);
         for (const invocation of invocations) {
-            if (!isBlobInvocation(invocation)) {
-                planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => !isBlobInvocation(source) && source.id === id));
+            if (isHttpInvocation(invocation)) {
+                planInvocationChain(invocation, id => invocations.find((source): source is HttpInvocation => isHttpInvocation(source) && source.id === id));
             }
         }
         if (new Set(invocations.map(invocation => invocation.id)).size !== invocations.length) {
@@ -161,7 +194,7 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
     }
 
     public getRequests(): HttpInvocation[] {
-        return [...this.requests.values()].filter((invocation): invocation is HttpInvocation => !isBlobInvocation(invocation)).map(copyInvocation);
+        return [...this.requests.values()].filter(isHttpInvocation).map(copyInvocation);
     }
 
     public getChildren(element?: AzureInvokeTreeElement): AzureInvokeTreeElement[] {
@@ -192,15 +225,18 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         item.id = `request:${request.id}`;
         const status = this.statuses.get(request.id);
         const blob = isBlobInvocation(request);
-        item.contextValue = blob ? 'azureInvoke.blob' : 'azureInvoke.http';
-        item.iconPath = blob ? new vscode.ThemeIcon('cloud-upload') :
+        const timer = isTimerInvocation(request);
+        item.contextValue = blob ? 'azureInvoke.blob' : timer ? 'azureInvoke.timer' : 'azureInvoke.http';
+        item.iconPath = blob ? new vscode.ThemeIcon('cloud-upload') : timer ? new vscode.ThemeIcon('clock') :
             status ? new vscode.ThemeIcon(status.icon, status.color ? new vscode.ThemeColor(status.color) : undefined) : new vscode.ThemeIcon('circle-outline');
-        const trigger = blob ? localize('azureInvoke.blobTriggerDescription', 'Blob Trigger') : localize('azureInvoke.httpTriggerDescription', 'HTTP Trigger');
-        item.description = !blob && status ? localize('azureInvoke.triggerLastRun', '{0} ({1})', trigger, status.lastRun.toLocaleTimeString()) : trigger;
+        const trigger = blob ? localize('azureInvoke.blobTriggerDescription', 'Blob Trigger') :
+            timer ? localize('azureInvoke.timerTriggerDescription', 'Timer Trigger') : localize('azureInvoke.httpTriggerDescription', 'HTTP Trigger');
+        item.description = !blob && !timer && status ? localize('azureInvoke.triggerLastRun', '{0} ({1})', trigger, status.lastRun.toLocaleTimeString()) : trigger;
         item.tooltip = status ?
             `${blob ? localize('azureInvoke.lastUpload', 'Last upload attempt: {0}', status.lastRun.toLocaleString()) :
                 localize('azureInvoke.lastRun', 'Last run: {0}', status.lastRun.toLocaleString())}\n${status.text}` :
-            blob ? localize('azureInvoke.blobNotUploaded', 'Not uploaded yet. Manual invocation only; function execution is not observed.') :
+            timer ? localize('azureInvoke.timerNotInvoked', 'Not invoked yet. Manual invocation only; the Functions host owns the schedule.') :
+                blob ? localize('azureInvoke.blobNotUploaded', 'Not uploaded yet. Manual invocation only; function execution is not observed.') :
                 localize('azureInvoke.notRun', 'Not run yet');
         item.command = {
             command: 'azureFunctions.azureInvoke.open',

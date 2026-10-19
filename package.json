@@ -140,6 +140,12 @@
                 "icon": "$(sparkle)"
             },
             {
+                "command": "azureFunctions.azureInvoke.debugTimer",
+                "title": "%azureFunctions.azureInvoke.debugTimer%",
+                "category": "Azure Functions",
+                "icon": "$(sparkle)"
+            },
+            {
                 "command": "azureFunctions.azureInvoke.saveCollection",
                 "title": "%azureFunctions.azureInvoke.saveCollection%",
                 "category": "Azure Functions",
@@ -627,6 +633,16 @@
             ],
             "view/item/context": [
                 {
+                    "command": "azureFunctions.azureInvoke.debugTimer",
+                    "when": "view == azureFunctions.azureInvoke && viewItem == azureInvoke.timer",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.debugTimer",
+                    "when": "view == azureFunctions.azureInvoke && viewItem == azureInvoke.timer",
+                    "group": "1@1"
+                },
+                {
                     "command": "azureFunctions.azureInvoke.debugBlob",
                     "when": "view == azureFunctions.azureInvoke && viewItem == azureInvoke.blob",
                     "group": "inline"
@@ -1045,6 +1061,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.azureInvoke.debugTimer",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.azureInvoke.debugBlob",
                     "when": "never"

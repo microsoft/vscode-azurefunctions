@@ -78,6 +78,10 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 <pre id="response-body" tabindex="0" hidden></pre>
                 <details id="response-headers" hidden><summary data-label="headers"></summary><pre></pre></details>
                 <div class="response-actions">
+                    <label id="breakpoint-guidance-field" class="breakpoint-guidance" hidden>
+                        <span data-label="guidance"></span>
+                        <textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea>
+                    </label>
                     <button id="debug-response" type="button" class="secondary" data-label="debug" hidden></button>
                     <p id="debug-hint" class="hint" data-label="debugHint" hidden></p>
                     <p id="debug-notice" role="status" hidden></p>
@@ -282,6 +286,9 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     const responseBody = getElement('#response-body');
     const responseHeaders = getElement('#response-headers');
     const debug = getElement<HTMLButtonElement>('#debug-response');
+    const guidance = getElement<HTMLTextAreaElement>('#breakpoint-guidance');
+    guidance.placeholder = labels.guidancePlaceholder;
+    guidance.title = labels.guidancePrivacy;
     const debugHint = getElement('#debug-hint');
     const debugNotice = getElement('#debug-notice');
     const debugError = getElement('#debug-error');
@@ -292,15 +299,18 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     function updateDebugControls(): void {
         debug.hidden = !configuration.debugAvailable || savedRevision < 0 || !hasResult || sending;
         debugHint.hidden = debug.hidden;
-        debug.disabled = sending || debugging;
+        getElement('#breakpoint-guidance-field').hidden = debug.hidden;
+        debug.disabled = sending || debugging || guidance.value.length > guidance.maxLength;
+        guidance.disabled = sending || debugging;
     }
+    guidance.addEventListener('input', updateDebugControls);
     debug.title = labels.debugHint;
     debug.addEventListener('click', () => {
         debugging = true;
         debugNotice.hidden = true;
         debugError.hidden = true;
         updateDebugControls();
-        api.postMessage({ command: 'debugRequest' });
+        api.postMessage({ command: 'debugRequest', breakpointGuidance: guidance.value });
     });
     function setSending(value: boolean): void {
         sending = value;

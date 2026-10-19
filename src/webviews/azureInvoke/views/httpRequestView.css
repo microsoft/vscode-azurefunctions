@@ -48,7 +48,7 @@ input, select, textarea {
     padding: 6px 8px;
 }
 
-input::placeholder { color: var(--vscode-input-placeholderForeground); }
+input::placeholder, textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
 select { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
 textarea { resize: vertical; min-height: 150px; font-family: var(--vscode-editor-font-family); }
 
@@ -80,6 +80,9 @@ input:focus, select:focus, textarea:focus, button:focus-visible, pre:focus-visib
 .response-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 output { font-family: var(--vscode-editor-font-family); }
 .response-actions { margin-top: 16px; }
+.breakpoint-guidance { display: grid; gap: 6px; margin-bottom: 12px; }
+.breakpoint-guidance > span { color: var(--vscode-descriptionForeground); }
+#breakpoint-guidance { min-height: 76px; font-family: inherit; }
 #debug-notice { line-height: 1.6; }
 #debug-error { color: var(--vscode-errorForeground); overflow-wrap: anywhere; }
 #error, #save-error, .http-error { color: var(--vscode-errorForeground); }

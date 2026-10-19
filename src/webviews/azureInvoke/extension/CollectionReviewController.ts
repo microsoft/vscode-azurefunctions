@@ -62,7 +62,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 title: updatingSaved ? localize('azureInvoke.reviewFixesTitle', 'Review saved request changes') : localize('azureInvoke.reviewTitle', 'Build your test collection'),
                 introduction: updatingSaved ?
                     localize('azureInvoke.reviewFixesIntroduction', 'Expand each request to review the proposed fields. Prerequisites are included for context. Apply updates selected saved requests in place without sending them or editing application code. Uncheck requests you do not want to update. To ask for a different proposal, return to chat.') :
-                    localize('azureInvoke.reviewIntroduction', 'Review HTTP request templates and manual Blob fixtures. Expand a row to edit values, choose a file, or leave feedback. Confirm saves selected entries without sending requests or uploading blobs.'),
+                    localize('azureInvoke.reviewIntroduction', 'Review HTTP requests and manual Blob and Timer invocations. Expand a row to edit values, choose a file, or leave feedback. Confirm saves selected entries without executing them.'),
                 selectAll: localize('azureInvoke.selectAllInvocations', 'Select all supported invocations'),
                 comment: localize('azureInvoke.reviewComment', 'Feedback for Copilot'),
                 unsupported: localize('azureInvoke.unsupportedTrigger', 'Not yet supported'),
@@ -88,6 +88,11 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                     hint: localize('azureInvoke.blobReviewHint', 'Choose a file of at most 5 MB. Its captured contents stay private. Confirm saves this manual fixture without uploading it. Later uploads overwrite blobs with the same name.'),
                     fileRequired: localize('azureInvoke.blobReviewFileRequired', 'Choose a file for each selected Blob fixture, or uncheck it before confirming.'),
                 },
+                timer: {
+                    hostUrl: localize('azureInvoke.timerHostUrl', 'Functions host URL'),
+                    functionName: localize('azureInvoke.timerFunctionName', 'Function name'),
+                    schedule: localize('azureInvoke.timerSchedule', 'Configured schedule'),
+                },
                 confirm: updatingSaved ? localize('azureInvoke.applyRequestChanges', 'Apply request changes') : localize('azureInvoke.confirmCollection', 'Confirm'),
                 requestChanges: localize('azureInvoke.requestChanges', 'Request changes'),
                 diagnoseRequest: localize('azureInvoke.diagnoseRequest', 'Diagnose with Copilot'),
@@ -97,7 +102,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 selected: localize('azureInvoke.selectedCases', 'Selected'),
                 approved: updatingSaved ?
                     localize('azureInvoke.requestChangesApplied', 'Applied the selected request changes. Existing request tabs keep their fields; close and reopen a tab to load the updated saved request. Ask Copilot to rerun with approval when ready.') :
-                    localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run HTTP requests when ready. Blob uploads remain manual.'),
+                    localize('azureInvoke.reviewApproved', 'Confirmed. Your selected invocations are saved in the Azure Invoke tree. Ask Copilot to run HTTP requests when ready. Blob and Timer invocations remain manual.'),
                 cancelled: updatingSaved ? localize('azureInvoke.requestChangesCancelled', 'Review cancelled. Saved requests are unchanged.') : localize('azureInvoke.reviewCancelled', 'Review cancelled. No additional requests will be drafted from this proposal.'),
                 selectCases: localize('azureInvoke.selectInvocations', 'Select at least one supported invocation to continue.'),
                 loadingTitle: localize('azureInvoke.loadingReview', 'Discovering endpoints'),

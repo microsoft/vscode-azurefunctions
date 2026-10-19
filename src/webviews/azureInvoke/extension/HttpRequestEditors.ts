@@ -27,6 +27,7 @@ export class HttpRequestEditors implements vscode.Disposable {
         invocation: HttpInvocation;
         snapshot: NonNullable<ReturnType<HttpInvocationRunner['getLastRun']>>;
         session: InvocationDebugSession;
+        breakpointGuidance?: string;
     } | undefined;
 
     public constructor(
@@ -67,7 +68,7 @@ export class HttpRequestEditors implements vscode.Disposable {
             runner: this.execution.getRunner(invocation.id),
             sources: this.getSources(invocation.id),
             execute: (context, request, options) => this.execution.send(context, { ...invocation, request }, options),
-            debug: context => this.debugInvocation(context, invocation.id),
+            debug: (context, guidance) => this.debugInvocation(context, invocation.id, guidance),
         });
         this.controllers.set(invocation.id, controller);
         controller.onDisposed(() => {
@@ -133,17 +134,21 @@ export class HttpRequestEditors implements vscode.Disposable {
         return copyInvocation(inspection.invocation);
     }
 
-    private async debugInvocation(context: IActionContext, id: string): Promise<void> {
+    private async debugInvocation(context: IActionContext, id: string, guidance: string): Promise<void> {
+        context.valuesToMask.push(guidance);
+        if (guidance.length > 500) {
+            throw new Error(localize('azureInvoke.breakpointGuidanceTooLong', 'Keep breakpoint guidance within 500 characters.'));
+        }
         const session = await this.debugging.resolveSession(context);
         const invocation = this.provider.getRequest(id);
         const snapshot = this.execution.getLastRun(id);
         if (!invocation || !snapshot) {
-            throw new Error(localize('azureInvoke.debugRunRequired', 'No replayable last execution is available. Send this request, then select Debug with Copilot again.'));
+            throw new Error(localize('azureInvoke.debugRunRequired', 'No replayable last execution is available. Send this request, then select Run with Copilot breakpoints again.'));
         }
         if (!snapshot.run.canShareResponse) {
             throw new Error(localize('azureInvoke.debugLocalOnly', 'This prototype debugs only localhost requests whose prerequisites are also local.'));
         }
-        const target = { id: randomUUID(), invocation: snapshot.run.invocation, snapshot, session };
+        const target = { id: randomUUID(), invocation: snapshot.run.invocation, snapshot, session, breakpointGuidance: guidance.trim() || undefined };
         this.debugTarget = target;
         try {
             await this.debugging.openChat(id, target.id);
@@ -158,7 +163,7 @@ export class HttpRequestEditors implements vscode.Disposable {
     private async getDebugTarget(context: IActionContext, id: string, debugId: string) {
         const target = this.debugTarget;
         if (!target || target.id !== debugId || target.invocation.id !== id) {
-            throw new Error(localize('azureInvoke.debugExpired', 'This debug request is no longer active. Select Debug with Copilot again.'));
+            throw new Error(localize('azureInvoke.debugExpired', 'This debug request is no longer active. Select Run with Copilot breakpoints again.'));
         }
         const session = await this.debugging.resolveSession(context);
         const invocation = this.provider.getRequest(id);
@@ -166,7 +171,7 @@ export class HttpRequestEditors implements vscode.Disposable {
         if (this.debugTarget !== target || session.id !== target.session.id || !invocation ||
             latest?.run !== target.snapshot.run || latest.message !== target.snapshot.message) {
             this.debugTarget = undefined;
-            throw new Error(localize('azureInvoke.debugChanged', 'The last execution or the active debugger changed. Select Debug with Copilot again.'));
+            throw new Error(localize('azureInvoke.debugChanged', 'The last execution or the active debugger changed. Select Run with Copilot breakpoints again.'));
         }
         return target;
     }
@@ -178,6 +183,7 @@ export class HttpRequestEditors implements vscode.Disposable {
         return {
             id, debugId, method: request.method, path: new URL(request.url).pathname,
             workspaceFolder: target.session.workspaceFolder,
+            ...(target.breakpointGuidance ? { breakpointGuidance: target.breakpointGuidance } : {}),
             diagnostic: message.command === 'response' ?
                 { outcome: 'response' as const, ...getShareableHttpResponse(message.response, true) } :
                 { outcome: 'requestError' as const, message: message.message },
