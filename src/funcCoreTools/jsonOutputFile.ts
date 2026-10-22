@@ -23,10 +23,17 @@ export async function getWorkerPidFromJsonOutput(workerPidFile: string | undefin
         if (!await AzExtFsExtra.pathExists(workerPidFile)) {
             return;
         }
-        const content = await AzExtFsExtra.readFile(workerPidFile);
-        const obj = JSON.parse(content) as Record<string, unknown>;
-        if (typeof obj['workerProcessId'] === 'number') {
-            return obj['workerProcessId'];
+        const content = (await AzExtFsExtra.readFile(workerPidFile)).toString().trim();
+        const records = [content, ...content.split(/\r?\n/).reverse()];
+        for (const record of records) {
+            try {
+                const obj = JSON.parse(record) as Record<string, unknown>;
+                if (typeof obj['workerProcessId'] === 'number') {
+                    return obj['workerProcessId'];
+                }
+            } catch {
+                // Core Tools appends line-delimited JSON; skip incomplete or non-JSON records.
+            }
         }
     } catch {
         // file not yet written or invalid JSON - keep waiting
@@ -121,6 +128,9 @@ export function injectJsonOutputFileArgIfNeeded(funcTask: vscode.Task): vscode.T
         newExec = new vscode.ShellExecution(exec.command ?? 'func', [...(exec.args ?? []), jsonOutputFileFlag, jsonOutputFile], exec.options);
     }
 
+    // pickFuncProcess runs the configured build task before reaching this point.
+    // Wrap only the host task so programmatic execution does not stall on the
+    // original dependency after that build has already completed.
     const wrapped = new vscode.Task(
         funcTask.definition,
         funcTask.scope ?? vscode.TaskScope.Workspace,
