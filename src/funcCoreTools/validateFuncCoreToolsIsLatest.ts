@@ -91,7 +91,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                         result = packageManager !== undefined ? await context.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
                             await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            await openUrl('https://aka.ms/azFuncOutdated');
+                            await openUrl('https://learn.microsoft.com/azure/azure-functions/functions-run-local');
                         } else if (result === update) {
                             await updateFuncCoreTools(context, packageManager, versionFromSetting);
                         } else if (result === DialogResponses.dontWarnAgain) {
