@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LocationListStep, ResourceGroupListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, VerifyProvidersStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, createSubscriptionContext, subscriptionExperience, type AzureWizardExecuteStep, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { type MessageItem } from 'vscode';
 import { ConnectionType, SqlProvider, SqlServerResourceType } from '../../../../constants';
@@ -61,7 +61,6 @@ export class SqlConnectionListStep<T extends ISqlDatabaseConnectionWizardContext
                 LocationListStep.addProviderForFiltering(context as unknown as ILocationWizardContext, SqlProvider, SqlServerResourceType);
 
                 promptSteps.push(
-                    new ResourceGroupListStep() as AzureWizardPromptStep<ISqlDatabaseAzureConnectionWizardContext>,
                     new SqlServerListStep(),
                 );
 
