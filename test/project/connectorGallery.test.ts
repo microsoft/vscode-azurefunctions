@@ -96,6 +96,7 @@ suite('Connector Gallery', () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);
             });
             assert.deepStrictEqual(launchOptions, {
+                connectorTriggerDeliveryMode: 'Poll',
                 initialLocation: context.projectPath,
                 initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
             });

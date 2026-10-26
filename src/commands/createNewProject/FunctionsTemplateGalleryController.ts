@@ -22,8 +22,11 @@ import { projectOpenBehaviorSetting } from '../../constants';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+import { ConnectorTriggerDetailsController } from './connectorTriggerDetails/ConnectorTriggerDetailsController';
+import { createPollingConnectorTriggerDetailsViewModel, isConnectorTriggerTemplate } from './connectorTriggerDetails/createConnectorTriggerDetailsViewModel';
 
 export interface TemplateGalleryLaunchOptions {
+    connectorTriggerDeliveryMode?: 'Poll';
     initialLocation?: string;
     initialFilters?: InitialTemplateFilters;
 }
@@ -40,12 +43,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
+    private readonly connectorTriggerDeliveryMode: 'Poll' | undefined;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
 
     private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, options: TemplateGalleryLaunchOptions) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
+        this.connectorTriggerDeliveryMode = options.connectorTriggerDeliveryMode;
         this.initialLocation = options.initialLocation;
         this.initialFilters = options.initialFilters;
 
@@ -66,7 +71,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 (existing.initialLocation === undefined || !isPathEqual(existing.initialLocation, options.initialLocation));
             const hasNewFilters = options.initialFilters !== undefined ||
                 !areInitialFiltersEqual(existing.initialFilters, options.initialFilters);
-            if (hasNewLocation || hasNewFilters) {
+            const hasNewConnectorTriggerDeliveryMode =
+                existing.connectorTriggerDeliveryMode !== options.connectorTriggerDeliveryMode;
+            if (hasNewLocation || hasNewFilters || hasNewConnectorTriggerDeliveryMode) {
                 existing.panel.dispose();
             } else {
                 existing.revealToForeground();
@@ -282,6 +289,21 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     // ── Optional overrides ──
 
+    protected override onTemplateSelected(_templateId: string, sharedTemplate: ISharedProjectTemplate): void {
+        const template = sharedTemplate as unknown as IProjectTemplate;
+        if (!this.connectorTriggerDeliveryMode || !isConnectorTriggerTemplate(template)) {
+            return;
+        }
+
+        const viewColumn = this.panel.viewColumn ?? vscode.ViewColumn.Active;
+        ConnectorTriggerDetailsController.createOrShow(
+            ext.context,
+            createPollingConnectorTriggerDetailsViewModel(template),
+            () => this.revealTemplateSetup(viewColumn),
+            viewColumn,
+        );
+    }
+
     protected override async continueInChat(prompt: string, language: string): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.continueInChat', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.language = language;
@@ -336,6 +358,20 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     // ── Helpers ──
+
+    private revealTemplateSetup(viewColumn: vscode.ViewColumn): void {
+        const current = FunctionsTemplateGalleryController.currentController;
+        if (current && !current.isPanelDisposed) {
+            current.revealToForeground(viewColumn);
+            return;
+        }
+
+        FunctionsTemplateGalleryController.createOrShow(ext.context, {
+            connectorTriggerDeliveryMode: this.connectorTriggerDeliveryMode,
+            initialLocation: this.initialLocation,
+            initialFilters: this.initialFilters,
+        }).revealToForeground(viewColumn);
+    }
 
     /**
      * Dispose the webview panel only if it's still open. Calling

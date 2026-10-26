@@ -29,5 +29,16 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
+configs.connectorTriggerDetails = {
+    bundle: true,
+    entryPoints: ['./src/webview/connectorTriggerDetails/index.ts'],
+    format: 'esm',
+    minify: configs.extension.minify,
+    outfile: './dist/webview/connectorTriggerDetails.js',
+    platform: 'browser',
+    sourcemap: configs.extension.sourcemap,
+    sourcesContent: configs.extension.sourcesContent,
+    target: 'es2022',
+};
 
 await autoEsbuildOrWatch(configs);

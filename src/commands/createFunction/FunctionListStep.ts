@@ -116,6 +116,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else if (result === connectorGallery.id) {
                 const language = nonNullProp(context, 'language');
                 this._showTemplateGallery({
+                    connectorTriggerDeliveryMode: 'Poll',
                     initialLocation: context.projectPath,
                     initialFilters: {
                         language: language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase(),
