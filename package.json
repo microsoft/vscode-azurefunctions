@@ -1299,7 +1299,8 @@
                     "azureFunctions.showProjectWarning": {
                         "type": "boolean",
                         "description": "%azureFunctions.showProjectWarning%",
-                        "default": true
+                        "deprecationMessage": "%azureFunctions.showProjectWarning.deprecationMessage%",
+                        "default": false
                     },
                     "azureFunctions.showPythonVenvWarning": {
                         "type": "boolean",
