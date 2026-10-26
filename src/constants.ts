@@ -203,6 +203,8 @@ export const pythonLearnMoreLink = 'https://aka.ms/AAmlyrc';
 export const stackUpgradeLearnMoreLink = 'https://aka.ms/FunctionsStackUpgrade';
 
 export const webProvider: string = 'Microsoft.Web';
+export const ConnectorNamespaceResourceType: string = 'connectorGateways';
+export const ConnectorNamespaceApiVersion: string = '2026-05-01-preview';
 export const functionFilter = {
     type: 'microsoft.web/sites',
     kind: 'functionapp',
