@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Fixed
+* [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed

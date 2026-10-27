@@ -16,10 +16,12 @@ import { ProjectTemplateProvider } from '../../templates/projectTemplates/Projec
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
+import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { projectOpenBehaviorSetting } from '../../constants';
+import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
+import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 
@@ -204,6 +206,16 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     }
                     await AzExtFsExtra.ensureDir(projectPath);
                     await this.copyDirectory(sourceDir, projectPath);
+                }
+
+                if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
+                    for (const hostFile of await findFiles(projectPath, `**/${hostFileName}`)) {
+                        const functionProjectPath = path.dirname(hostFile.fsPath);
+                        if (await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
+                            this.sendProgress(localize('installingNpmDependencies', 'Installing npm dependencies...'));
+                            await installNodeDependencies(actionContext, functionProjectPath);
+                        }
+                    }
                 }
 
                 this.sendProgress('Initializing git repository...');
