@@ -5,8 +5,12 @@
 
 import * as assert from 'assert';
 import {
+    isConnectorTriggerPickerMessage,
+} from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
+import { escapeWebviewInitialData } from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import {
     getConnectorTriggerOption,
     getConnectorTriggerOptions,
@@ -58,5 +62,35 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
         assert.strictEqual(viewModel.labels.title, 'Choose a connector');
         assert.ok(!serialized.includes('https://'));
+    });
+
+    test('escapes apostrophes in the shared webview initial-data value', () => {
+        const template = "before _initialData: 'don't'\nafter";
+
+        assert.strictEqual(
+            escapeWebviewInitialData(template),
+            "before _initialData: 'don%27t'\nafter",
+        );
+        assert.strictEqual(escapeWebviewInitialData('no initial data'), 'no initial data');
+        assert.throws(
+            () => escapeWebviewInitialData("before _initialData: 'unterminated"),
+            /Unable to locate/,
+        );
+    });
+
+    test('accepts only the picker command contract', () => {
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'close' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'continue',
+            connectorId: 'sharepointonline',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            type: 'continue',
+            connectorId: 'sharepointonline',
+        }), false);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'continue',
+            connectorId: 1,
+        }), false);
     });
 });

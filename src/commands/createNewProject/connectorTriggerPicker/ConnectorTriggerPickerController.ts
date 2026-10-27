@@ -5,21 +5,21 @@
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
-import * as path from 'path';
 import * as vscode from 'vscode';
-import { type ConnectorTriggerPickerViewModel } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import {
+    isConnectorTriggerPickerMessage,
+    type ConnectorTriggerPickerViewModel,
+} from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
+import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
 import { getConnectorTriggerOption, getConnectorTriggerTemplateFilters } from './connectorTriggerCatalog';
+import { escapeWebviewInitialData } from './escapeWebviewInitialData';
 
 export interface ConnectorTriggerPickerLaunchOptions {
     initialLocation?: string;
     initialFilters: InitialTemplateFilters;
 }
-
-type ConnectorTriggerPickerMessage =
-    | { type: 'close' }
-    | { type: 'continue'; connectorId: string };
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
@@ -36,11 +36,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             viewModel,
             vscode.ViewColumn.Active,
             undefined,
-            {
-                distDir: path.join(context.extensionPath, 'dist', 'webview'),
-                scriptFileName: 'connectorTriggerPicker.js',
-                styleFileName: 'connectorTriggerPicker.css',
-            },
+            getConnectorTriggerPickerBundleLocation(context),
         );
 
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
@@ -74,7 +70,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (message.type === 'close') {
+        if (message.command === 'close') {
             this.panel.dispose();
             return;
         }
@@ -99,18 +95,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             initialFilters,
         });
     }
-}
 
-function isConnectorTriggerPickerMessage(message: unknown): message is ConnectorTriggerPickerMessage {
-    if (!message || typeof message !== 'object' || !('type' in message)) {
-        return false;
+    protected override getDocumentTemplate(webview?: vscode.Webview): string {
+        return escapeWebviewInitialData(super.getDocumentTemplate(webview));
     }
-
-    if (message.type === 'close') {
-        return true;
-    }
-
-    return message.type === 'continue' &&
-        'connectorId' in message &&
-        typeof message.connectorId === 'string';
 }

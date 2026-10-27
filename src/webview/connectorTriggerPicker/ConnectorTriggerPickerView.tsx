@@ -5,21 +5,15 @@
 
 /// <reference lib="dom" />
 
-import { useMemo, useState, type JSX } from 'react';
+import { Button, Card } from '@fluentui/react-components';
+import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
+import { useContext, useMemo, useState, type JSX } from 'react';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
 import { type ConnectorTriggerPickerViewModel } from './ConnectorTriggerPickerViewModel';
 
-export interface ConnectorTriggerPickerViewProps {
-    viewModel: ConnectorTriggerPickerViewModel;
-    vscodeApi: {
-        postMessage(message: unknown): void;
-    };
-}
-
-export function ConnectorTriggerPickerView({
-    viewModel,
-    vscodeApi,
-}: ConnectorTriggerPickerViewProps): JSX.Element {
+export function ConnectorTriggerPickerView(): JSX.Element {
+    const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
+    const { vscodeApi } = useContext(WebviewContext);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const selectedConnector = useMemo(
         () => viewModel.connectors.find(connector => connector.id === selectedConnectorId),
@@ -35,14 +29,14 @@ export function ConnectorTriggerPickerView({
                 </div>
             </header>
 
-            <section className="card">
+            <Card className="card" appearance="outline">
                 <ConnectorTilePicker
                     label={viewModel.labels.connectorGroup}
                     options={viewModel.connectors}
                     value={selectedConnectorId}
                     onChange={setSelectedConnectorId}
                 />
-            </section>
+            </Card>
 
             <footer className="footer">
                 <div className="selection" aria-live="polite">
@@ -51,24 +45,22 @@ export function ConnectorTriggerPickerView({
                     }
                 </div>
                 <div className="actions">
-                    <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => vscodeApi.postMessage({ type: 'close' })}
+                    <Button
+                        appearance="secondary"
+                        onClick={() => vscodeApi.postMessage({ command: 'close' })}
                     >
                         {viewModel.labels.close}
-                    </button>
-                    <button
-                        type="button"
-                        className="primary-button"
+                    </Button>
+                    <Button
+                        appearance="primary"
                         disabled={!selectedConnector}
                         onClick={() => selectedConnector && vscodeApi.postMessage({
-                            type: 'continue',
+                            command: 'continue',
                             connectorId: selectedConnector.id,
                         })}
                     >
                         {viewModel.labels.continue}
-                    </button>
+                    </Button>
                 </div>
             </footer>
         </main>

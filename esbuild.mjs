@@ -5,6 +5,7 @@
 
 import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin, createWebviewEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Prefer fresh sibling builds over the cached file: dependency during local development.
 const webviewDist = existsSync('../vscode-azuretools/webview/dist/views.js')
@@ -35,7 +36,16 @@ configs.connectorTriggerPicker = createWebviewEsbuildConfig({
     },
     jsx: 'automatic',
     outdir: './dist/webview',
-    sass: false,
+    plugins: [
+        {
+            name: 'tree-shake-fluent-components',
+            setup(build) {
+                build.onResolve({ filter: /^@fluentui\/react-components$/ }, () => ({
+                    path: resolve('./src/webview/fluentComponents.mjs'),
+                }));
+            },
+        },
+    ],
 });
 
 await autoEsbuildOrWatch(configs);

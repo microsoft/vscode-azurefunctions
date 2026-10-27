@@ -1,0 +1,137 @@
+:root {
+    --connector-picker-radius: 6px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.page {
+    width: min(980px, 100%);
+    margin: 0 auto;
+    padding: 32px;
+}
+
+.header {
+    margin-bottom: 20px;
+
+    h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+    }
+
+    p {
+        margin: 8px 0 0;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+    }
+}
+
+.card {
+    padding: 20px;
+    border-color: var(--vscode-panel-border);
+    border-radius: var(--connector-picker-radius);
+    background: var(--vscode-editor-background);
+}
+
+.connector-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.connector-tile {
+    min-width: 0;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: var(--connector-picker-radius);
+    color: var(--vscode-foreground);
+    background: var(--vscode-input-background);
+    text-align: left;
+    transition: background 0.1s, border-color 0.1s;
+
+    &:hover {
+        background: var(--vscode-list-hoverBackground);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 1px;
+    }
+
+    &.selected {
+        border-color: var(--vscode-focusBorder);
+        color: var(--vscode-list-activeSelectionForeground);
+        background: var(--vscode-list-activeSelectionBackground);
+    }
+}
+
+.connector-tile-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.connector-tile-label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.9em;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.footer {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.selection {
+    min-width: 0;
+    color: var(--vscode-descriptionForeground);
+}
+
+.actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .page {
+        padding: 20px;
+    }
+
+    .connector-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .actions {
+        justify-content: flex-end;
+    }
+}

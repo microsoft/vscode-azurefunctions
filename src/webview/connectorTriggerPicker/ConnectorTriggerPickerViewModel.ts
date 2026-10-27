@@ -21,3 +21,21 @@ export interface ConnectorTriggerPickerViewModel {
         continue: string;
     };
 }
+
+export type ConnectorTriggerPickerMessage =
+    | { command: 'close' }
+    | { command: 'continue'; connectorId: string };
+
+export function isConnectorTriggerPickerMessage(message: unknown): message is ConnectorTriggerPickerMessage {
+    if (!message || typeof message !== 'object' || !('command' in message)) {
+        return false;
+    }
+
+    if (message.command === 'close') {
+        return true;
+    }
+
+    return message.command === 'continue' &&
+        'connectorId' in message &&
+        typeof message.connectorId === 'string';
+}

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Button } from '@fluentui/react-components';
 import { type JSX } from 'react';
 import { type ConnectorTriggerOption } from './ConnectorTriggerPickerViewModel';
 import { ConnectorIcon } from './ConnectorIcon';
@@ -28,11 +29,12 @@ export function ConnectorTilePicker({
             {options.map(option => {
                 const selected = value === option.id;
                 return (
-                    <button
+                    <Button
                         key={option.id}
                         type="button"
                         role="radio"
                         aria-checked={selected}
+                        appearance="subtle"
                         className={`connector-tile${selected ? ' selected' : ''}`}
                         onClick={() => onChange(option.id)}
                     >
@@ -40,7 +42,7 @@ export function ConnectorTilePicker({
                             <ConnectorIcon connector={option.id} label={option.label} />
                         </span>
                         <span className="connector-tile-label">{option.label}</span>
-                    </button>
+                    </Button>
                 );
             })}
         </div>
