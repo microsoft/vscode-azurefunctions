@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Fixed
+* Install Python requirements when creating a virtual environment and migrate legacy Python launch configurations without adding duplicates.
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed

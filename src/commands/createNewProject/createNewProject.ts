@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -22,6 +22,18 @@ import { OpenFolderStep } from './OpenFolderStep';
 import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
 import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
 
+type ProjectCreationExperience = 'classic' | 'templateGallery';
+
+interface ProjectCreationRouteOptions {
+    startFromScratch?: boolean;
+    templateId?: string;
+}
+
+interface ProjectCreationHandlers {
+    createClassicProject(): Promise<void>;
+    showTemplateGallery(): void;
+}
+
 /**
  * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
  */
@@ -36,27 +48,63 @@ export async function createNewProjectFromCommand(
     functionSettings?: { [key: string]: string | undefined },
     options?: { startFromScratch?: boolean }): Promise<void> {
 
-    const galleryEnabled = getWorkspaceSetting<boolean>('enableTemplateGallery') ?? false;
-    context.telemetry.properties.templateGalleryEnabled = String(galleryEnabled);
+    await routeCreateNewProject(context, {
+        startFromScratch: options?.startFromScratch,
+        templateId,
+    }, {
+        createClassicProject: async () => {
+            await createNewProjectInternal(context, {
+                // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
+                folderPath: typeof folderPath === 'string' ? folderPath : undefined,
+                templateId,
+                functionName,
+                functionSettings,
+                suppressOpenFolder: !openFolder,
+                // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
+                language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
+                version: <api.ProjectVersion>version
+            });
+        },
+        showTemplateGallery: () => {
+            FunctionsTemplateGalleryController.createOrShow(ext.context);
+        },
+    });
+}
 
-    // If startFromScratch is explicitly requested, or the template gallery
-    // preview is not opted-in, use the classic wizard flow.
-    if (options?.startFromScratch || templateId || !galleryEnabled) {
-        await createNewProjectInternal(context, {
-            // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
-            folderPath: typeof folderPath === 'string' ? folderPath : undefined,
-            templateId,
-            functionName,
-            functionSettings,
-            suppressOpenFolder: !openFolder,
-            // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
-            language: Array.isArray(language) ? undefined : <api.ProjectLanguage>language,
-            version: <api.ProjectVersion>version
-        });
-    } else {
-        // Template gallery preview is opted-in — show the new webview experience
+export async function routeCreateNewProject(
+    context: IActionContext,
+    options: ProjectCreationRouteOptions,
+    handlers: ProjectCreationHandlers,
+): Promise<void> {
+    if (options.startFromScratch || options.templateId !== undefined) {
+        await handlers.createClassicProject();
+        return;
+    }
+
+    const picks: IAzureQuickPickItem<ProjectCreationExperience>[] = [
+        {
+            label: localize('classicCreate', 'Classic Create'),
+            description: localize('templateFeed', 'Template Feed'),
+            data: 'classic',
+        },
+        {
+            label: localize('newCreate', 'New Create'),
+            description: localize('templateGallery', 'Template Gallery'),
+            data: 'templateGallery',
+        },
+    ];
+    const experience = (await context.ui.showQuickPick(picks, {
+        placeHolder: localize('selectProjectCreationExperience', 'Select a project creation experience'),
+        stepName: 'projectCreationExperience',
+        suppressPersistence: true,
+    })).data;
+
+    context.telemetry.properties.projectCreationExperience = experience;
+    if (experience === 'templateGallery') {
         context.telemetry.properties.flow = 'templateGallery';
-        FunctionsTemplateGalleryController.createOrShow(ext.context);
+        handlers.showTemplateGallery();
+    } else {
+        await handlers.createClassicProject();
     }
 }
 
