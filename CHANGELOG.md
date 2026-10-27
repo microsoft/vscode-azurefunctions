@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+* [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 * [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.
 
 ## 1.22.2 - 2026-09-25
