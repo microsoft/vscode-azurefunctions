@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin } from '@microsoft/vscode-azext-eng/esbuild';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin, createWebviewEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 import { existsSync } from 'node:fs';
 
 // Prefer fresh sibling builds over the cached file: dependency during local development.
@@ -29,16 +29,13 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
-configs.connectorTriggerDetails = {
-    bundle: true,
-    entryPoints: ['./src/webview/connectorTriggerDetails/index.ts'],
-    format: 'esm',
-    minify: configs.extension.minify,
-    outfile: './dist/webview/connectorTriggerDetails.js',
-    platform: 'browser',
-    sourcemap: configs.extension.sourcemap,
-    sourcesContent: configs.extension.sourcesContent,
-    target: 'es2022',
-};
+configs.connectorTriggerPicker = createWebviewEsbuildConfig({
+    entryPoints: {
+        connectorTriggerPicker: './src/webview/connectorTriggerPicker/index.tsx',
+    },
+    jsx: 'automatic',
+    outdir: './dist/webview',
+    sass: false,
+});
 
 await autoEsbuildOrWatch(configs);

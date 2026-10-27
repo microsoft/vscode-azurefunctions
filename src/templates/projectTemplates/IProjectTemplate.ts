@@ -7,8 +7,10 @@ import { type ProjectLanguage } from '../../constants';
 
 /**
  * Subset of the project template manifest schema that this extension reads or
- * produces. Additional fields that are only rendered by the shared gallery
- * continue to flow through unchanged, so they are not duplicated here.
+ * produces. Additional descriptive fields (icon, tags, priority, longDescription,
+ * isNew, isHighlighted, resource, etc.) flow through to the webview unchanged
+ * via the shared `IProjectTemplate` type from `@microsoft/vscode-azext-webview`,
+ * so they are not duplicated here.
  */
 export interface IProjectTemplate {
     /** Unique identifier for the template (used for telemetry). */
@@ -20,17 +22,8 @@ export interface IProjectTemplate {
     /** One-line description. */
     shortDescription: string;
 
-    /** Longer description shown on template and connector detail surfaces. */
-    longDescription?: string;
-
     /** Categories for grouping templates (a template can belong to multiple). */
     categories: TemplateCategory[];
-
-    /** Binding kind represented by the template, such as "trigger". */
-    bindingType?: string;
-
-    /** Resource filter key used by the Template Gallery. */
-    resource?: string;
 
     /** Supported languages for this template. */
     languages: ProjectLanguage[];
@@ -43,9 +36,6 @@ export interface IProjectTemplate {
 
     /** Branch to clone from (default: main). */
     branch?: string;
-
-    /** User-visible summary of files and capabilities supplied by the template. */
-    whatsIncluded?: string[];
 
     /**
      * Folder path within the repository to use as the project root.
