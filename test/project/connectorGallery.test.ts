@@ -107,8 +107,20 @@ suite('Connector Gallery', () => {
         });
     }
 
+    test('offers connector picker when adding a function to an existing project', async () => {
+        const context = await createContext();
+        const step = new FunctionListStep({
+            isProjectWizard: false, templateId: undefined, functionSettings: undefined,
+        });
+        const connectors = (await step['getPicks'](context)).filter(p => p.data === connectorGallery.id);
+
+        assert.strictEqual(connectors.length, 1);
+        assert.strictEqual(connectors[0].label, 'Connector Trigger');
+        assert.strictEqual(connectors[0].description, 'Browse catalog');
+        assert.strictEqual(connectors[0].group, TemplateFilter.Verified);
+    });
+
     for (const [name, overrides, isProjectWizard, templateId] of [
-        ['existing project', {}, false, undefined],
         ['containerized project', { containerizedProject: true }, true, undefined],
         ['specific template', {}, true, 'HttpTrigger'],
         ['Python v1', { languageModel: 1 }, true, undefined],

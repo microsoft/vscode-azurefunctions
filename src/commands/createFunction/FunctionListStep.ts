@@ -153,7 +153,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .sort((a, b) => sortTemplates(a, b))
             .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
 
-        if (this._isProjectWizard && !context.containerizedProject && !this._options.templateId &&
+        if (!context.containerizedProject && !this._options.templateId &&
             (isPythonV2Plus(language, languageModel) ||
                 language === ProjectLanguage.CSharp ||
                 isNodeV4Plus(context))) {
