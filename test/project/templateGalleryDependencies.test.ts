@@ -11,13 +11,17 @@ import * as os from 'os';
 import * as path from 'path';
 import { Uri } from 'vscode';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
+import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { installNodeDependencies } from '../../src/commands/createNewProject/installNodeDependencies';
+import { JavaScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
+import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
 import { ProjectLanguage } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 
-suite('Template Gallery npm dependencies', () => {
+suite('Project npm dependencies', () => {
     const originalExecuteCommand = cpUtils.executeCommand;
     const originalExecuteCommandLine = cpUtils.executeCommandLine;
     let originalOutputChannel: typeof ext.outputChannel;
@@ -65,6 +69,44 @@ suite('Template Gallery npm dependencies', () => {
     }
 
     for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.TypeScript]) {
+        for (const installSucceeds of [true, false]) {
+            test(`Classic ${language} ${installSucceeds ? 'installs dependencies' : 'warns and continues when npm fails'}`, async () => {
+                const context: IProjectWizardContext = {
+                    ...await createTestActionContext(),
+                    projectPath,
+                    workspacePath: projectPath,
+                    workspaceFolder: undefined,
+                    version: FuncVersion.v4,
+                    language,
+                    languageModel: 4,
+                    projectTemplateKey: undefined,
+                };
+                const step = language === ProjectLanguage.JavaScript ? new JavaScriptProjectCreateStep() : new TypeScriptProjectCreateStep();
+                step['getHostContent'] = async () => ({ version: '2.0' });
+                let installs = 0;
+                cpUtils.executeCommand = async (output, cwd, command, args) => {
+                    assert.strictEqual(command, 'npm');
+                    assert.strictEqual(output, ext.outputChannel);
+                    assert.strictEqual(cwd, projectPath);
+                    assert.deepStrictEqual(args, composeArgs(withArg('install'))());
+                    assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'package.json')));
+                    installs++;
+                    if (!installSucceeds) {
+                        throw new Error('npm unavailable');
+                    }
+                    return '';
+                };
+
+                await step.executeCore(context, { report: () => undefined });
+
+                assert.strictEqual(installs, 1);
+                assert.deepStrictEqual(logs, installSucceeds ? [] : ['WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.']);
+                if (language === ProjectLanguage.TypeScript) {
+                    assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'tsconfig.json')));
+                }
+            });
+        }
+
         for (const gitInstalled of [true, false]) {
             test(`installs ${language} dependencies after ${gitInstalled ? 'git' : 'zip'} copy and before opening`, async () => {
                 const events: string[] = [];
@@ -172,7 +214,7 @@ suite('Template Gallery npm dependencies', () => {
         assert.ok(events.includes('open'));
     });
 
-    test('shared installer records success and uses the project directory with spaces', async () => {
+    test('Gallery installer records success and uses the project directory with spaces', async () => {
         const context = await createTestActionContext();
         cpUtils.executeCommand = async (output, cwd, command, args) => {
             assert.strictEqual(output, ext.outputChannel);
@@ -188,7 +230,7 @@ suite('Template Gallery npm dependencies', () => {
         assert.deepStrictEqual(logs, []);
     });
 
-    test('shared installer records optional failure and explains manual recovery', async () => {
+    test('Gallery installer records optional failure and explains manual recovery', async () => {
         const context = await createTestActionContext();
         cpUtils.executeCommand = async () => { throw new Error('npm unavailable'); };
 
