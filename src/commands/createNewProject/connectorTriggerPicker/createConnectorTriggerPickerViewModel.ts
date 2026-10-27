@@ -12,13 +12,8 @@ export function createConnectorTriggerPickerViewModel(): ConnectorTriggerPickerV
         connectors: getConnectorTriggerOptions(),
         labels: {
             panelTitle: localize('connectorTriggerPanelTitle', 'Connector Trigger'),
-            title: localize('connectorTriggerChooseConnector', 'Choose a connector'),
-            description: localize(
-                'connectorTriggerChooseConnectorDescription',
-                'Select the service whose events should trigger your function.',
-            ),
-            connectorGroup: localize('connectorTriggerConnectorGroup', 'Connectors'),
-            selectedConnector: localize('connectorTriggerSelectedConnector', 'Selected connector'),
+            title: localize('connectorTriggerCreateConnection', 'Create New Connection'),
+            connectorGroup: localize('connectorTriggerConnectorGroup', 'Connector'),
             close: localize('connectorTriggerClosePicker', 'Close'),
             continue: localize('connectorTriggerContinuePicker', 'Continue'),
         },

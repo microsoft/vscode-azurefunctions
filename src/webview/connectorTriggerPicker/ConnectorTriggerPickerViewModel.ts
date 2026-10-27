@@ -6,6 +6,7 @@
 export interface ConnectorTriggerOption {
     id: string;
     label: string;
+    iconUrl?: string;
     templateSearch: string;
 }
 
@@ -14,9 +15,7 @@ export interface ConnectorTriggerPickerViewModel {
     labels: {
         panelTitle: string;
         title: string;
-        description: string;
         connectorGroup: string;
-        selectedConnector: string;
         close: string;
         continue: string;
     };

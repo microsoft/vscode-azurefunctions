@@ -13,8 +13,12 @@ import {
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
-import { getConnectorTriggerOption, getConnectorTriggerTemplateFilters } from './connectorTriggerCatalog';
-import { escapeWebviewInitialData } from './escapeWebviewInitialData';
+import {
+    getConnectorTriggerIconSources,
+    getConnectorTriggerOption,
+    getConnectorTriggerTemplateFilters,
+} from './connectorTriggerCatalog';
+import { allowWebviewImageSources, escapeWebviewInitialData } from './escapeWebviewInitialData';
 
 export interface ConnectorTriggerPickerLaunchOptions {
     initialLocation?: string;
@@ -97,6 +101,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     }
 
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
-        return escapeWebviewInitialData(super.getDocumentTemplate(webview));
+        return allowWebviewImageSources(
+            escapeWebviewInitialData(super.getDocumentTemplate(webview)),
+            getConnectorTriggerIconSources(),
+        );
     }
 }

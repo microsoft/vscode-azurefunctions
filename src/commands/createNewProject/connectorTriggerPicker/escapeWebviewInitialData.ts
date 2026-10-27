@@ -25,3 +25,14 @@ export function escapeWebviewInitialData(template: string): string {
     const escapedValue = template.slice(valueStart, valueEnd).replace(/'/g, '%27');
     return template.slice(0, valueStart) + escapedValue + template.slice(valueEnd);
 }
+
+export function allowWebviewImageSources(template: string, sources: readonly string[]): string {
+    if (sources.length === 0) {
+        return template;
+    }
+
+    return template.replace(/img-src ([^;]+);/, (_match, existingSources: string) => {
+        const missingSources = sources.filter(source => !existingSources.includes(source));
+        return `img-src ${existingSources}${missingSources.length ? ` ${missingSources.join(' ')}` : ''};`;
+    });
+}

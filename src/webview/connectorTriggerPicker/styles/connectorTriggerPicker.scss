@@ -17,49 +17,48 @@ body {
 }
 
 .page {
-    width: min(980px, 100%);
+    width: min(1400px, 100%);
     margin: 0 auto;
-    padding: 32px;
+    padding: 0 40px 24px;
 }
 
 .header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 1.4em;
         font-weight: 600;
-    }
-
-    p {
-        margin: 8px 0 0;
-        color: var(--vscode-descriptionForeground);
-        line-height: 1.5;
     }
 }
 
-.card {
-    padding: 20px;
-    border-color: var(--vscode-panel-border);
-    border-radius: var(--connector-picker-radius);
-    background: var(--vscode-editor-background);
+.connector-section {
+    h2 {
+        margin: 0 0 12px;
+        font-size: 1.15em;
+    }
 }
 
 .connector-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
+    margin: 4px 0;
 }
 
 .connector-tile {
+    display: flex;
     min-width: 0;
+    align-items: center;
     justify-content: flex-start;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 6px 8px;
     border: 1px solid var(--vscode-panel-border);
     border-radius: var(--connector-picker-radius);
     color: var(--vscode-foreground);
     background: var(--vscode-input-background);
+    cursor: pointer;
+    font: inherit;
     text-align: left;
     transition: background 0.1s, border-color 0.1s;
 
@@ -86,6 +85,12 @@ body {
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
+
+    img {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+    }
 }
 
 .connector-tile-label {
@@ -101,14 +106,9 @@ body {
     display: flex;
     min-height: 44px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 16px;
     margin-top: 20px;
-}
-
-.selection {
-    min-width: 0;
-    color: var(--vscode-descriptionForeground);
 }
 
 .actions {
@@ -119,7 +119,7 @@ body {
 
 @media (max-width: 640px) {
     .page {
-        padding: 20px;
+        padding: 0 20px 20px;
     }
 
     .connector-grid {

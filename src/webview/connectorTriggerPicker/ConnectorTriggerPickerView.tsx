@@ -5,7 +5,7 @@
 
 /// <reference lib="dom" />
 
-import { Button, Card } from '@fluentui/react-components';
+import { Button } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useContext, useMemo, useState, type JSX } from 'react';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
@@ -23,27 +23,20 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     return (
         <main className="page">
             <header className="header">
-                <div>
-                    <h1>{viewModel.labels.title}</h1>
-                    <p>{viewModel.labels.description}</p>
-                </div>
+                <h1>{viewModel.labels.title}</h1>
             </header>
 
-            <Card className="card" appearance="outline">
+            <section className="connector-section">
+                <h2>{viewModel.labels.connectorGroup}</h2>
                 <ConnectorTilePicker
                     label={viewModel.labels.connectorGroup}
                     options={viewModel.connectors}
                     value={selectedConnectorId}
                     onChange={setSelectedConnectorId}
                 />
-            </Card>
+            </section>
 
             <footer className="footer">
-                <div className="selection" aria-live="polite">
-                    {selectedConnector &&
-                        <><strong>{viewModel.labels.selectedConnector}:</strong> {selectedConnector.label}</>
-                    }
-                </div>
                 <div className="actions">
                     <Button
                         appearance="secondary"

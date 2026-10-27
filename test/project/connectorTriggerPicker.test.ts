@@ -10,8 +10,12 @@ import {
 import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
-import { escapeWebviewInitialData } from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import {
+    allowWebviewImageSources,
+    escapeWebviewInitialData,
+} from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
+import {
+    getConnectorTriggerIconSources,
     getConnectorTriggerOption,
     getConnectorTriggerOptions,
     getConnectorTriggerTemplateFilters,
@@ -34,6 +38,7 @@ suite('Connector trigger picker', () => {
         assert.deepStrictEqual(getConnectorTriggerOption('sharepointonline'), {
             id: 'sharepointonline',
             label: 'SharePoint',
+            iconUrl: 'https://preprod.static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4751/sharepointonline/icon.png',
             templateSearch: 'SharePoint',
         });
         assert.strictEqual(getConnectorTriggerOption('unknown'), undefined);
@@ -55,13 +60,17 @@ suite('Connector trigger picker', () => {
         );
     });
 
-    test('builds a localized picker view model without external icon URLs', () => {
+    test('builds the source picker labels and static icon catalog', () => {
         const viewModel = createConnectorTriggerPickerViewModel();
-        const serialized = JSON.stringify(viewModel);
 
         assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
-        assert.strictEqual(viewModel.labels.title, 'Choose a connector');
-        assert.ok(!serialized.includes('https://'));
+        assert.strictEqual(viewModel.labels.title, 'Create New Connection');
+        assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
+        assert.ok(viewModel.connectors.every(option => option.iconUrl?.startsWith('https://')));
+        assert.deepStrictEqual(getConnectorTriggerIconSources(), [
+            'https://preprod.static.powerapps.com',
+            'https://conn-afd-test-endpoint-ekb7c2aueydtd3bf.b02.azurefd.net',
+        ]);
     });
 
     test('escapes apostrophes in the shared webview initial-data value', () => {
@@ -75,6 +84,23 @@ suite('Connector trigger picker', () => {
         assert.throws(
             () => escapeWebviewInitialData("before _initialData: 'unterminated"),
             /Unable to locate/,
+        );
+    });
+
+    test('adds only connector catalog image hosts to the webview CSP', () => {
+        const template = 'img-src vscode-webview: data: vscode-resource:;';
+        const sources = getConnectorTriggerIconSources();
+
+        assert.strictEqual(
+            allowWebviewImageSources(template, sources),
+            `img-src vscode-webview: data: vscode-resource: ${sources.join(' ')};`,
+        );
+        assert.strictEqual(
+            allowWebviewImageSources(
+                `img-src vscode-webview: ${sources[0]};`,
+                sources,
+            ),
+            `img-src vscode-webview: ${sources.join(' ')};`,
         );
     });
 
