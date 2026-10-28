@@ -237,7 +237,6 @@ function createCatalog(
                 properties?.iconUrl,
                 information?.iconUrl,
             ),
-            templateSearch: label,
         });
     }
 
@@ -271,7 +270,6 @@ function createCatalog(
                 label: connectorLabel,
                 description: api?.description?.trim(),
                 iconUrl: operationIconUrl,
-                templateSearch: connectorLabel,
             });
         } else {
             const label = existingConnector.label === existingConnector.id ?
@@ -282,7 +280,6 @@ function createCatalog(
                 label,
                 description: existingConnector.description || api?.description?.trim(),
                 iconUrl: existingConnector.iconUrl || operationIconUrl,
-                templateSearch: label,
             });
         }
 

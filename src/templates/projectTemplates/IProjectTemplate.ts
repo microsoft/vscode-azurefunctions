@@ -34,6 +34,9 @@ export interface IProjectTemplate {
     /** Git repository URL for cloning. */
     repositoryUrl: string;
 
+    /** Git ref to clone, such as refs/tags/v1.0.0. */
+    gitRef?: string;
+
     /** Branch to clone from (default: main). */
     branch?: string;
 

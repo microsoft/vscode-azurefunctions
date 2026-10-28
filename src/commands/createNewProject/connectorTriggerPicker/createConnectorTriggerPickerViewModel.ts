@@ -52,6 +52,7 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             functionPreview: localize('connectorTriggerFunctionPreview', 'Function'),
             infrastructurePreview: localize('connectorTriggerInfrastructurePreview', 'Infrastructure'),
             useTemplate: localize('connectorTriggerUseTemplate', 'Use Template'),
+            creatingProject: localize('connectorTriggerCreatingProject', 'Creating project...'),
             retry: localize('connectorTriggerRetry', 'Retry'),
         },
     };

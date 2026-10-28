@@ -4,24 +4,33 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, isUserCancelledError, nonNullProp, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, isUserCancelledError, nonNullProp, parseError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
+import { type ProjectLanguage } from '../../../constants';
+import { type IProjectTemplate } from '../../../templates/projectTemplates/IProjectTemplate';
+import { ProjectTemplateProvider } from '../../../templates/projectTemplates/ProjectTemplateProvider';
 import {
     isConnectorTriggerPickerMessage,
     type ConnectorNamespaceOption,
     type ConnectorTriggerPickerResponse,
+    type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { localize } from '../../../localize';
 import { createConnectorNamespace } from '../../createFunction/connectorSteps/createConnectorNamespace';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
+import { ProjectTemplateCreator } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
+import { findConnectorProjectTemplates } from './connectorProjectTemplates';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
 import { allowWebviewImageSources, escapeWebviewInitialData } from './escapeWebviewInitialData';
 
 export interface ConnectorTriggerPickerLaunchOptions {
+    isProjectWizard: boolean;
+    language: ProjectLanguage;
+    languageModel?: number;
     initialLocation?: string;
     initialFilters: InitialTemplateFilters;
 }
@@ -30,6 +39,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private static currentController: ConnectorTriggerPickerController | undefined;
     private readonly namespaces = new Map<string, ConnectorNamespaceOption>();
     private readonly catalogs = new Map<string, ConnectorTriggerCatalog>();
+    private readonly projectCreator: ProjectTemplateCreator;
+    private readonly templateProvider = new ProjectTemplateProvider();
 
     private constructor(
         context: vscode.ExtensionContext,
@@ -59,6 +70,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 ConnectorTriggerPickerController.currentController = undefined;
             }
         }));
+        this.projectCreator = new ProjectTemplateCreator({
+            onProjectCreated: () => this.panel.dispose(),
+            reportProgress: detail => {
+                void this.postMessage({
+                    command: 'projectCreationProgress',
+                    detail,
+                });
+            },
+        });
     }
 
     public static createOrShow(
@@ -135,14 +155,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         actionContext.telemetry.properties.connectorSelected = 'true';
         actionContext.telemetry.properties.triggerSelected = 'true';
         actionContext.telemetry.properties.deliveryMode = message.deliveryMode;
-        this.panel.dispose();
-        FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
-            initialLocation: this.launchOptions.initialLocation,
-            initialFilters: {
-                ...this.launchOptions.initialFilters,
-                search: connector.templateSearch,
-            },
-        });
+        await this.createSelectedProject(actionContext, connector);
     }
 
     private async loadNamespaces(
@@ -267,6 +280,85 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async postMessage(message: ConnectorTriggerPickerResponse): Promise<void> {
         await this.panel.webview.postMessage(message);
+    }
+
+    private async createSelectedProject(
+        actionContext: IActionContext,
+        connector: ConnectorTriggerOption,
+    ): Promise<void> {
+        if (!this.launchOptions.isProjectWizard) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorExistingProjectCreationUnsupported',
+                    'Adding a connector trigger to an existing project is not supported yet.',
+                ),
+            });
+            return;
+        }
+
+        const projectPath = this.launchOptions.initialLocation;
+        if (!projectPath) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorProjectLocationMissing',
+                    'Select a project location before creating the connector project.',
+                ),
+            });
+            return;
+        }
+
+        await this.postMessage({ command: 'projectCreationStarted' });
+        try {
+            const templates = await this.templateProvider.getTemplates(
+                actionContext,
+                this.launchOptions.language,
+                this.launchOptions.languageModel,
+            );
+            const matchingTemplates = findConnectorProjectTemplates(templates, connector);
+            if (matchingTemplates.length === 0) {
+                throw new Error(localize(
+                    'connectorProjectTemplateUnavailable',
+                    'No project template is currently available for connector "{0}" and language "{1}".',
+                    connector.label,
+                    this.launchOptions.language,
+                ));
+            }
+
+            const template = matchingTemplates.length === 1 ?
+                matchingTemplates[0] :
+                await this.pickTemplate(actionContext, matchingTemplates);
+            await this.projectCreator.createProject(
+                actionContext,
+                template,
+                this.launchOptions.language,
+                projectPath,
+                'details',
+            );
+        } catch (error) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: isUserCancelledError(error) ? '' : parseError(error).message,
+            });
+        }
+    }
+
+    private async pickTemplate(
+        actionContext: IActionContext,
+        templates: IProjectTemplate[],
+    ): Promise<IProjectTemplate> {
+        const picks: IAzureQuickPickItem<IProjectTemplate>[] = templates.map(template => ({
+            label: template.displayName,
+            description: template.shortDescription,
+            data: template,
+        }));
+        return (await actionContext.ui.showQuickPick(picks, {
+            placeHolder: localize(
+                'selectConnectorProjectTemplate',
+                'Select a connector project template',
+            ),
+        })).data;
     }
 
     protected override getDocumentTemplate(webview?: vscode.Webview): string {

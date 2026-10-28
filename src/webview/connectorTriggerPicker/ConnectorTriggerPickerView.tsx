@@ -42,6 +42,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [deliveryMode, setDeliveryMode] = useState<ConnectorDeliveryMode>('Polling');
+    const [projectCreating, setProjectCreating] = useState(false);
+    const [projectCreationDetail, setProjectCreationDetail] = useState('');
+    const [projectCreationError, setProjectCreationError] = useState('');
     const [loadError, setLoadError] = useState<{
         scope: 'namespaces' | 'catalog';
         message: string;
@@ -83,6 +86,16 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogNamespaceId(message.namespaceId);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
+            } else if (message.command === 'projectCreationStarted') {
+                setProjectCreating(true);
+                setProjectCreationDetail(viewModel.labels.creatingProject);
+                setProjectCreationError('');
+            } else if (message.command === 'projectCreationProgress') {
+                setProjectCreationDetail(message.detail);
+            } else if (message.command === 'projectCreationFailed') {
+                setProjectCreating(false);
+                setProjectCreationDetail('');
+                setProjectCreationError(message.message);
             } else {
                 if (message.scope === 'catalog' &&
                     message.namespaceId !== selectedNamespaceIdRef.current) {
@@ -98,7 +111,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         window.addEventListener('message', listener);
         loadNamespaces();
         return () => window.removeEventListener('message', listener);
-    }, [loadNamespaces]);
+    }, [loadNamespaces, viewModel.labels.creatingProject]);
 
     useEffect(() => {
         selectedNamespaceIdRef.current = selectedNamespaceId;
@@ -106,6 +119,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setSelectedConnectorId('');
         setSelectedOperationId('');
         setDeliveryMode('Polling');
+        setProjectCreating(false);
+        setProjectCreationDetail('');
+        setProjectCreationError('');
         setConnectorSearch('');
         setConnectorLimit(connectorPageSize);
         setConnectors([]);
@@ -150,6 +166,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         if (connectorId !== selectedConnectorId) {
             setSelectedOperationId('');
             setDeliveryMode('Polling');
+            setProjectCreationError('');
         }
         setSelectedConnectorId(connectorId);
         setActiveStep(2);
@@ -167,7 +184,25 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
         setSelectedOperationId(operationId);
         setDeliveryMode('Polling');
+        setProjectCreationError('');
         setActiveStep(3);
+    };
+
+    const useTemplate = () => {
+        if (projectCreating || !selectedNamespace || !selectedConnector || !selectedOperation) {
+            return;
+        }
+
+        setProjectCreating(true);
+        setProjectCreationDetail(viewModel.labels.creatingProject);
+        setProjectCreationError('');
+        vscodeApi.postMessage({
+            command: 'continue',
+            namespaceId: selectedNamespace.id,
+            connectorId: selectedConnector.id,
+            operationId: selectedOperation.id,
+            deliveryMode,
+        });
     };
 
     return (
@@ -306,15 +341,12 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     language={viewModel.language}
                     namespace={selectedNamespace}
                     operation={selectedOperation}
+                    projectCreating={projectCreating}
+                    projectCreationDetail={projectCreationDetail}
+                    projectCreationError={projectCreationError}
                     onChangeDeliveryMode={setDeliveryMode}
                     onChangeEvent={() => setActiveStep(2)}
-                    onUseTemplate={() => vscodeApi.postMessage({
-                        command: 'continue',
-                        namespaceId: selectedNamespace.id,
-                        connectorId: selectedConnector.id,
-                        operationId: selectedOperation.id,
-                        deliveryMode,
-                    })}
+                    onUseTemplate={useTemplate}
                 />
             }
         </main>

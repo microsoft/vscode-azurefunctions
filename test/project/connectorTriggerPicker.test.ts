@@ -3,13 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import {
+    ConnectorTriggerPickerController,
+    type ConnectorTriggerPickerLaunchOptions,
+} from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import {
     ConnectorTriggerDataClient,
     type ConnectorArmClient,
+    type ConnectorTriggerCatalog,
     type ConnectorSubscription,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
+import { findConnectorProjectTemplates } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorProjectTemplates';
 import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
@@ -17,12 +23,19 @@ import {
     allowWebviewImageSources,
     escapeWebviewInitialData,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
+import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
+import { ProjectTemplateCreator } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
     isConnectorTriggerPickerMessage,
     isConnectorTriggerPickerResponse,
     type ConnectorNamespaceOption,
+    type ConnectorTriggerPickerResponse,
+    type ConnectorTriggerOption,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { getDeliverySupport } from '../../src/webview/connectorTriggerPicker/ConnectorConfigureStep';
+import { ProjectLanguage } from '../../src/constants';
+import { type IProjectTemplate, type TemplateCategory } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { type ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
 
 suite('Connector trigger picker', () => {
     test('lists Connector Namespaces across subscriptions with paging and partial failure', async () => {
@@ -193,14 +206,12 @@ suite('Connector trigger picker', () => {
                 label: 'Office 365 Outlook',
                 description: 'Office mail and calendar.',
                 iconUrl: 'https://connectoricons-prod.azureedge.net/office365/icon.png',
-                templateSearch: 'Office 365 Outlook',
             },
             {
                 id: 'sharepointonline',
                 label: 'SharePoint',
                 description: undefined,
                 iconUrl: 'https://connectoricons-prod.azureedge.net/sharepoint/icon.svg',
-                templateSearch: 'SharePoint',
             },
         ]);
         assert.deepStrictEqual(catalog.operations, [
@@ -295,6 +306,196 @@ suite('Connector trigger picker', () => {
         );
     });
 
+    test('resolves existing gallery templates by connector metadata and label', () => {
+        const templates: IProjectTemplate[] = [
+            createProjectTemplate(
+                'office365-connector-trigger-python',
+                'Office 365 Outlook Connector Triggers',
+            ),
+            createProjectTemplate(
+                'sharepoint-connector-trigger-python',
+                'SharePoint Online Connector Triggers',
+            ),
+            createProjectTemplate('http-python', 'HTTP Trigger', 'http'),
+        ];
+
+        assert.deepStrictEqual(
+            findConnectorProjectTemplates(templates, {
+                id: 'office365',
+                label: 'Office 365 Outlook',
+            }).map(template => template.id),
+            ['office365-connector-trigger-python'],
+        );
+        assert.deepStrictEqual(
+            findConnectorProjectTemplates(templates, {
+                id: 'sharepointonline',
+                label: 'SharePoint',
+            }).map(template => template.id),
+            ['sharepoint-connector-trigger-python'],
+        );
+        assert.deepStrictEqual(
+            findConnectorProjectTemplates(templates, {
+                id: 'unknown',
+                label: 'Unknown Connector',
+            }),
+            [],
+        );
+    });
+
+    test('uses the manifest git ref when creating a connector project', () => {
+        const creator = new ProjectTemplateCreator() as unknown as {
+            buildZipUrl(repositoryUrl: string, archiveRef: string): string;
+            resolveGitReference(
+                template: Pick<IProjectTemplate, 'branch' | 'gitRef'>,
+            ): { archiveRef: string; cloneRef: string };
+        };
+        const tag = creator.resolveGitReference({ gitRef: 'refs/tags/v1.0.2' });
+        const branch = creator.resolveGitReference({ branch: 'feature/connectors' });
+
+        assert.deepStrictEqual(tag, {
+            archiveRef: 'refs/tags/v1.0.2',
+            cloneRef: 'v1.0.2',
+        });
+        assert.deepStrictEqual(branch, {
+            archiveRef: 'refs/heads/feature/connectors',
+            cloneRef: 'feature/connectors',
+        });
+        assert.strictEqual(
+            creator.buildZipUrl('https://github.com/Azure-Samples/functions-connectors-python', tag.archiveRef),
+            'https://github.com/Azure-Samples/functions-connectors-python/archive/refs/tags/v1.0.2.zip',
+        );
+    });
+
+    test('creates the selected connector project directly without reopening the gallery', async () => {
+        const namespace = createNamespace();
+        const connector: ConnectorTriggerOption = {
+            id: 'office365',
+            label: 'Office 365 Outlook',
+        };
+        const catalog: ConnectorTriggerCatalog = {
+            connectors: [connector],
+            operations: [{
+                id: 'OnNewEmail',
+                connectorId: connector.id,
+                label: 'When a new email arrives',
+                isWebhook: false,
+                isNotification: false,
+            }],
+        };
+        const template = createProjectTemplate(
+            'office365-connector-trigger-python',
+            'Office 365 Outlook Connector Triggers',
+        );
+        const createdProjects: {
+            template: IProjectTemplate;
+            language: string;
+            location: string;
+            entryPoint: string | undefined;
+        }[] = [];
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        interface TestableConnectorTriggerPickerController {
+            launchOptions: ConnectorTriggerPickerLaunchOptions;
+            namespaces: Map<string, ConnectorNamespaceOption>;
+            catalogs: Map<string, ConnectorTriggerCatalog>;
+            templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
+            projectCreator: Pick<ProjectTemplateCreator, 'createProject'>;
+            postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
+            createSelectedProject(
+                context: IActionContext,
+                selectedConnector: ConnectorTriggerOption,
+            ): Promise<void>;
+        }
+        const controllerMethods = ConnectorTriggerPickerController.prototype as unknown as {
+            handleMessage(
+                this: TestableConnectorTriggerPickerController,
+                message: unknown,
+                context: IActionContext,
+            ): Promise<void>;
+            createSelectedProject(
+                this: TestableConnectorTriggerPickerController,
+                context: IActionContext,
+                selectedConnector: ConnectorTriggerOption,
+            ): Promise<void>;
+        };
+        const testableController: TestableConnectorTriggerPickerController = {
+            launchOptions: {
+                isProjectWizard: true,
+                language: ProjectLanguage.Python,
+                initialLocation: 'C:\\connector-project',
+                initialFilters: {
+                    language: 'python',
+                    resource: 'connector',
+                    useCase: 'connector',
+                },
+            },
+            namespaces: new Map([[namespace.id, namespace]]),
+            catalogs: new Map([[namespace.id, catalog]]),
+            templateProvider: {
+                getTemplates: async () => [template],
+            },
+            projectCreator: {
+                createProject: async (_context, selectedTemplate, language, location, entryPoint) => {
+                    createdProjects.push({
+                        template: selectedTemplate,
+                        language,
+                        location,
+                        entryPoint,
+                    });
+                },
+            },
+            postMessage: async response => {
+                responses.push(response);
+            },
+            createSelectedProject(context, selectedConnector) {
+                return controllerMethods.createSelectedProject.call(
+                    this,
+                    context,
+                    selectedConnector,
+                );
+            },
+        };
+
+        const originalCreateOrShow = FunctionsTemplateGalleryController.createOrShow;
+        FunctionsTemplateGalleryController.createOrShow = () => {
+            throw new Error('Template Gallery should not be opened.');
+        };
+        try {
+            await controllerMethods.handleMessage.call(testableController, {
+                command: 'continue',
+                namespaceId: namespace.id,
+                connectorId: connector.id,
+                operationId: catalog.operations[0].id,
+                deliveryMode: 'Polling',
+            }, await createTestActionContext());
+        } finally {
+            FunctionsTemplateGalleryController.createOrShow = originalCreateOrShow;
+        }
+
+        assert.deepStrictEqual(responses, [{ command: 'projectCreationStarted' }]);
+        assert.deepStrictEqual(createdProjects, [{
+            template,
+            language: ProjectLanguage.Python,
+            location: 'C:\\connector-project',
+            entryPoint: 'details',
+        }]);
+
+        responses.length = 0;
+        testableController.launchOptions = {
+            ...testableController.launchOptions,
+            isProjectWizard: false,
+        };
+        await controllerMethods.createSelectedProject.call(
+            testableController,
+            await createTestActionContext(),
+            connector,
+        );
+        assert.deepStrictEqual(responses, [{
+            command: 'projectCreationFailed',
+            message: 'Adding a connector trigger to an existing project is not supported yet.',
+        }]);
+        assert.strictEqual(createdProjects.length, 1);
+    });
+
     test('escapes initial data and allows HTTPS API-provided icons', () => {
         const template = "before _initialData: 'don't'\nafter";
 
@@ -351,6 +552,17 @@ suite('Connector trigger picker', () => {
             command: 'namespaceCreationCancelled',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'projectCreationStarted',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'projectCreationProgress',
+            detail: 'Cloning template...',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'projectCreationFailed',
+            message: 'No template found.',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'loadFailed',
             scope: 'catalog',
             namespaceId: 'namespace-id',
@@ -386,4 +598,20 @@ function createNamespace(): ConnectorNamespaceOption {
         subscriptionId: 'sub-one',
         subscriptionName: 'Subscription One',
     };
+}
+
+function createProjectTemplate(
+    id: string,
+    displayName: string,
+    resource: string = 'connector',
+): IProjectTemplate {
+    return {
+        id,
+        displayName,
+        shortDescription: displayName,
+        categories: ['connectors' as TemplateCategory],
+        languages: ['Python' as ProjectLanguage],
+        repositoryUrl: 'https://example.invalid/template',
+        resource,
+    } as IProjectTemplate;
 }

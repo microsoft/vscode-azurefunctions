@@ -18,7 +18,6 @@ export interface ConnectorTriggerOption {
     label: string;
     description?: string;
     iconUrl?: string;
-    templateSearch: string;
 }
 
 export interface ConnectorTriggerOperationOption {
@@ -75,6 +74,7 @@ export interface ConnectorTriggerPickerViewModel {
         functionPreview: string;
         infrastructurePreview: string;
         useTemplate: string;
+        creatingProject: string;
         retry: string;
     };
 }
@@ -110,6 +110,17 @@ export type ConnectorTriggerPickerResponse =
     }
     | {
         command: 'namespaceCreationCancelled';
+    }
+    | {
+        command: 'projectCreationStarted';
+    }
+    | {
+        command: 'projectCreationProgress';
+        detail: string;
+    }
+    | {
+        command: 'projectCreationFailed';
+        message: string;
     }
     | {
         command: 'loadFailed';
@@ -167,6 +178,18 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
 
     if (message.command === 'namespaceCreationCancelled') {
         return true;
+    }
+
+    if (message.command === 'projectCreationStarted') {
+        return true;
+    }
+
+    if (message.command === 'projectCreationProgress') {
+        return 'detail' in message && typeof message.detail === 'string';
+    }
+
+    if (message.command === 'projectCreationFailed') {
+        return 'message' in message && typeof message.message === 'string';
     }
 
     return message.command === 'loadFailed' &&

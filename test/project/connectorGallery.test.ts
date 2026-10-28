@@ -96,6 +96,9 @@ suite('Connector Gallery', () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);
             });
             assert.deepStrictEqual(launchOptions, {
+                isProjectWizard: true,
+                language,
+                languageModel,
                 initialLocation: context.projectPath,
                 initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
             });
@@ -109,15 +112,26 @@ suite('Connector Gallery', () => {
 
     test('offers connector picker when adding a function to an existing project', async () => {
         const context = await createContext();
+        let launchOptions: ConnectorTriggerPickerLaunchOptions | undefined;
         const step = new FunctionListStep({
             isProjectWizard: false, templateId: undefined, functionSettings: undefined,
-        });
+        }, options => { launchOptions = options; });
         const connectors = (await step['getPicks'](context)).filter(p => p.data === connectorGallery.id);
 
         assert.strictEqual(connectors.length, 1);
         assert.strictEqual(connectors[0].label, 'Connector Trigger');
         assert.strictEqual(connectors[0].description, 'Browse catalog');
         assert.strictEqual(connectors[0].group, TemplateFilter.Verified);
+        await context.ui.runWithInputs(['Connector Trigger'], async () => {
+            await assert.rejects(step.prompt(context), UserCancelledError);
+        });
+        assert.deepStrictEqual(launchOptions, {
+            isProjectWizard: false,
+            language: ProjectLanguage.Python,
+            languageModel: 2,
+            initialLocation: context.projectPath,
+            initialFilters: { language: 'python', useCase: 'connectors', resource: 'connector' },
+        });
     });
 
     for (const [name, overrides, isProjectWizard, templateId] of [

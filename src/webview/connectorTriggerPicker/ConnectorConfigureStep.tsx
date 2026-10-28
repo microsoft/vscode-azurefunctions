@@ -21,6 +21,9 @@ interface ConnectorConfigureStepProps {
     language?: string;
     namespace: ConnectorNamespaceOption;
     operation: ConnectorTriggerOperationOption;
+    projectCreating: boolean;
+    projectCreationDetail: string;
+    projectCreationError: string;
     onChangeDeliveryMode: (deliveryMode: ConnectorDeliveryMode) => void;
     onChangeEvent: () => void;
     onUseTemplate: () => void;
@@ -33,6 +36,9 @@ export function ConnectorConfigureStep({
     language,
     namespace,
     operation,
+    projectCreating,
+    projectCreationDetail,
+    projectCreationError,
     onChangeDeliveryMode,
     onChangeEvent,
     onUseTemplate,
@@ -128,9 +134,17 @@ export function ConnectorConfigureStep({
                     </button>
                 </div>
                 <pre>{previewTab === 'function' ? functionPreview : infrastructurePreview}</pre>
+                {projectCreationError &&
+                    <p className="project-creation-error" role="alert">{projectCreationError}</p>
+                }
                 <div className="use-template-row">
-                    <Button appearance="primary" onClick={onUseTemplate}>
-                        {labels.useTemplate}
+                    {projectCreating && <span>{projectCreationDetail || labels.creatingProject}</span>}
+                    <Button
+                        appearance="primary"
+                        disabled={projectCreating}
+                        onClick={onUseTemplate}
+                    >
+                        {projectCreating ? labels.creatingProject : labels.useTemplate}
                     </Button>
                 </div>
             </div>

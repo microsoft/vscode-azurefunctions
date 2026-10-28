@@ -439,8 +439,19 @@ pre {
 
 .use-template-row {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 12px;
     margin-top: 12px;
+
+    > span {
+        color: var(--vscode-descriptionForeground);
+    }
+}
+
+.project-creation-error {
+    margin: 12px 0 0;
+    color: var(--vscode-errorForeground);
 }
 
 @media (max-width: 840px) {
