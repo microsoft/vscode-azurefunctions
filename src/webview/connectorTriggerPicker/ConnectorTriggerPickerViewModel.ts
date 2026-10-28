@@ -69,6 +69,7 @@ export type ConnectorTriggerPickerResponse =
     | {
         command: 'namespacesLoaded';
         namespaces: ConnectorNamespaceOption[];
+        selectedNamespaceId?: string;
         warning?: string;
     }
     | {
@@ -76,10 +77,6 @@ export type ConnectorTriggerPickerResponse =
         namespaceId: string;
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
-    }
-    | {
-        command: 'namespaceCreated';
-        namespace: ConnectorNamespaceOption;
     }
     | {
         command: 'namespaceCreationCancelled';
@@ -121,7 +118,9 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
     }
 
     if (message.command === 'namespacesLoaded') {
-        return 'namespaces' in message && Array.isArray(message.namespaces);
+        return 'namespaces' in message &&
+            Array.isArray(message.namespaces) &&
+            (!('selectedNamespaceId' in message) || typeof message.selectedNamespaceId === 'string');
     }
 
     if (message.command === 'catalogLoaded') {
@@ -131,12 +130,6 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             Array.isArray(message.connectors) &&
             'operations' in message &&
             Array.isArray(message.operations);
-    }
-
-    if (message.command === 'namespaceCreated') {
-        return 'namespace' in message &&
-            !!message.namespace &&
-            typeof message.namespace === 'object';
     }
 
     if (message.command === 'namespaceCreationCancelled') {

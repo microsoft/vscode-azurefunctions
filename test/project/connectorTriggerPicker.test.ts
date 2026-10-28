@@ -105,7 +105,7 @@ suite('Connector trigger picker', () => {
                                 api: {
                                     name: 'sharepointonline',
                                     displayName: 'SharePoint',
-                                    iconUri: 'https://example.com/sharepoint.png',
+                                    iconUri: 'connectoricons-prod.azureedge.net/sharepoint/icon.svg',
                                 },
                             },
                         }],
@@ -154,11 +154,9 @@ suite('Connector trigger picker', () => {
                         value: [{
                             name: 'office365',
                             properties: {
-                                generalInformation: {
-                                    displayName: 'Office 365 Outlook',
-                                    description: 'Office mail and calendar.',
-                                    iconUri: 'https://example.com/office365.png',
-                                },
+                                displayName: 'Office 365 Outlook',
+                                description: 'Office mail and calendar.',
+                                iconUri: 'connectoricons-prod.azureedge.net/office365/icon.png',
                             },
                         }],
                         nextLink: 'https://management.azure.com/managed-api-page-2',
@@ -183,14 +181,14 @@ suite('Connector trigger picker', () => {
                 id: 'office365',
                 label: 'Office 365 Outlook',
                 description: 'Office mail and calendar.',
-                iconUrl: 'https://example.com/office365.png',
+                iconUrl: 'https://connectoricons-prod.azureedge.net/office365/icon.png',
                 templateSearch: 'Office 365 Outlook',
             },
             {
                 id: 'sharepointonline',
                 label: 'SharePoint',
                 description: undefined,
-                iconUrl: 'https://example.com/sharepoint.png',
+                iconUrl: 'https://connectoricons-prod.azureedge.net/sharepoint/icon.svg',
                 templateSearch: 'SharePoint',
             },
         ]);
@@ -264,7 +262,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
         assert.strictEqual(viewModel.labels.title, 'Create New Connection');
         assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
-        assert.strictEqual(viewModel.labels.createNamespace, 'Create new Connector Namespace...');
+        assert.strictEqual(viewModel.labels.createNamespace, '+ Create new Connector Namespace...');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.triggerGroup, 'Trigger');
     });
@@ -307,16 +305,13 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'namespacesLoaded',
             namespaces: [],
+            selectedNamespaceId: 'namespace-id',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'catalogLoaded',
             namespaceId: 'namespace-id',
             connectors: [],
             operations: [],
-        }), true);
-        assert.strictEqual(isConnectorTriggerPickerResponse({
-            command: 'namespaceCreated',
-            namespace: createNamespace(),
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'namespaceCreationCancelled',

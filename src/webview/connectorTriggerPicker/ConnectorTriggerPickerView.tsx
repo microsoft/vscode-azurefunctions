@@ -54,22 +54,16 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             const message = event.data;
             if (message.command === 'namespacesLoaded') {
                 setNamespacesLoading(false);
+                setCreatingNamespace(false);
                 setNamespaces(message.namespaces);
                 setNamespaceWarning(message.warning);
                 setSelectedNamespaceId(current =>
-                    message.namespaces.some(namespace => namespace.id === current) ?
+                    message.selectedNamespaceId &&
+                        message.namespaces.some(namespace => namespace.id === message.selectedNamespaceId) ?
+                        message.selectedNamespaceId :
+                        message.namespaces.some(namespace => namespace.id === current) ?
                         current :
                         message.namespaces.length === 1 ? message.namespaces[0].id : '');
-            } else if (message.command === 'namespaceCreated') {
-                setCreatingNamespace(false);
-                setNamespaces(current => {
-                    const namespacesById = new Map(current.map(namespace => [namespace.id, namespace]));
-                    namespacesById.set(message.namespace.id, message.namespace);
-                    return [...namespacesById.values()].sort((left, right) =>
-                        left.name.localeCompare(right.name) ||
-                        left.subscriptionName.localeCompare(right.subscriptionName));
-                });
-                setSelectedNamespaceId(message.namespace.id);
             } else if (message.command === 'namespaceCreationCancelled') {
                 setCreatingNamespace(false);
             } else if (message.command === 'catalogLoaded') {
@@ -158,12 +152,12 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         }}
                     >
                         <option value="">{viewModel.labels.selectNamespace}</option>
+                        <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
                         {namespaces.map(namespace =>
                             <option key={namespace.id} value={namespace.id}>
                                 {formatNamespaceLabel(namespace)}
                             </option>
                         )}
-                        <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
                     </select>
                 }
                 {!namespacesLoading && namespaces.length === 0 &&

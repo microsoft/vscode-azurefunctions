@@ -121,17 +121,29 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         });
     }
 
-    private async loadNamespaces(actionContext: IActionContext): Promise<void> {
+    private async loadNamespaces(
+        actionContext: IActionContext,
+        selectedNamespaceId?: string,
+        createdNamespace?: ConnectorNamespaceOption,
+    ): Promise<void> {
         try {
             const result = await this.dataClient.listNamespaces(actionContext);
+            const refreshedNamespaces = new Map(
+                result.namespaces.map(namespace => [namespace.id, namespace]),
+            );
+            if (createdNamespace) {
+                refreshedNamespaces.set(createdNamespace.id, createdNamespace);
+            }
+
             this.namespaces.clear();
-            for (const namespace of result.namespaces) {
+            for (const namespace of refreshedNamespaces.values()) {
                 this.namespaces.set(namespace.id, namespace);
             }
 
             await this.postMessage({
                 command: 'namespacesLoaded',
-                namespaces: result.namespaces,
+                namespaces: sortNamespaces([...this.namespaces.values()]),
+                selectedNamespaceId,
                 warning: result.failedSubscriptionCount > 0 ?
                     localize(
                         'connectorNamespacesPartialLoad',
@@ -141,6 +153,21 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     undefined,
             });
         } catch (error) {
+            if (createdNamespace) {
+                this.namespaces.set(createdNamespace.id, createdNamespace);
+                actionContext.telemetry.properties.connectorNamespaceRefresh = 'Failed';
+                await this.postMessage({
+                    command: 'namespacesLoaded',
+                    namespaces: sortNamespaces([...this.namespaces.values()]),
+                    selectedNamespaceId: createdNamespace.id,
+                    warning: localize(
+                        'connectorNamespaceCreatedRefreshFailed',
+                        'The Connector Namespace was created, but the namespace list could not be refreshed.',
+                    ),
+                });
+                return;
+            }
+
             actionContext.telemetry.properties.connectorPickerLoad = 'namespaces';
             actionContext.telemetry.properties.result = 'Failed';
             await this.postMessage({
@@ -198,11 +225,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 subscriptionId: wizardContext.subscriptionId,
                 subscriptionName: wizardContext.subscriptionDisplayName,
             };
-            this.namespaces.set(namespace.id, namespace);
-            await this.postMessage({
-                command: 'namespaceCreated',
-                namespace,
-            });
+            await this.loadNamespaces(actionContext, namespace.id, namespace);
         } catch (error) {
             if (isUserCancelledError(error)) {
                 await this.postMessage({ command: 'namespaceCreationCancelled' });
@@ -232,4 +255,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
 function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function sortNamespaces(namespaces: ConnectorNamespaceOption[]): ConnectorNamespaceOption[] {
+    return namespaces.sort((left, right) =>
+        left.name.localeCompare(right.name) ||
+        left.subscriptionName.localeCompare(right.subscriptionName));
 }

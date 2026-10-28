@@ -13,7 +13,7 @@ export function createConnectorTriggerPickerViewModel(): ConnectorTriggerPickerV
             title: localize('connectorTriggerCreateConnection', 'Create New Connection'),
             namespaceGroup: localize('connectorTriggerNamespaceGroup', 'Connector Namespace'),
             selectNamespace: localize('connectorTriggerSelectNamespace', 'Select a Connector Namespace'),
-            createNamespace: localize('connectorTriggerCreateNamespaceOption', 'Create new Connector Namespace...'),
+            createNamespace: localize('connectorTriggerCreateNamespaceOption', '+ Create new Connector Namespace...'),
             creatingNamespace: localize('connectorTriggerCreatingNamespace', 'Creating Connector Namespace...'),
             loadingNamespaces: localize('connectorTriggerLoadingNamespaces', 'Loading Connector Namespaces...'),
             noNamespaces: localize('connectorTriggerNoNamespaces', 'No Connector Namespaces were found in your Azure subscriptions.'),

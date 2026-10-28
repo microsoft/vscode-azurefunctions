@@ -56,10 +56,15 @@ interface ConnectorGatewayDefinition {
 interface ManagedApiDefinition {
     name?: string;
     properties?: {
+        displayName?: string;
+        description?: string;
+        iconUri?: string;
+        iconUrl?: string;
         generalInformation?: {
             displayName?: string;
             description?: string;
             iconUri?: string;
+            iconUrl?: string;
         };
     };
 }
@@ -216,13 +221,22 @@ function createCatalog(
             continue;
         }
 
-        const information = api.properties?.generalInformation;
-        const label = information?.displayName?.trim() || id;
+        const properties = api.properties;
+        const information = properties?.generalInformation;
+        const label = properties?.displayName?.trim() ||
+            information?.displayName?.trim() ||
+            id;
         connectors.set(id.toLowerCase(), {
             id,
             label,
-            description: information?.description?.trim(),
-            iconUrl: getHttpsUrl(information?.iconUri),
+            description: properties?.description?.trim() ||
+                information?.description?.trim(),
+            iconUrl: getConnectorIconUrl(
+                properties?.iconUri,
+                information?.iconUri,
+                properties?.iconUrl,
+                information?.iconUrl,
+            ),
             templateSearch: label,
         });
     }
@@ -242,13 +256,26 @@ function createCatalog(
 
         const connectorKey = connectorId.toLowerCase();
         const connectorLabel = api?.displayName?.trim() || connectorId;
-        if (!connectors.has(connectorKey)) {
+        const operationIconUrl = getConnectorIconUrl(api?.iconUri);
+        const existingConnector = connectors.get(connectorKey);
+        if (!existingConnector) {
             connectors.set(connectorKey, {
                 id: connectorId,
                 label: connectorLabel,
                 description: api?.description?.trim(),
-                iconUrl: getHttpsUrl(api?.iconUri),
+                iconUrl: operationIconUrl,
                 templateSearch: connectorLabel,
+            });
+        } else {
+            const label = existingConnector.label === existingConnector.id ?
+                connectorLabel :
+                existingConnector.label;
+            connectors.set(connectorKey, {
+                ...existingConnector,
+                label,
+                description: existingConnector.description || api?.description?.trim(),
+                iconUrl: existingConnector.iconUrl || operationIconUrl,
+                templateSearch: label,
             });
         }
 
@@ -306,13 +333,28 @@ function getResourceManagerEndpoint(context: ISubscriptionContext): string {
     return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
 }
 
-function getHttpsUrl(value: string | undefined): string | undefined {
-    if (!value) {
+function getConnectorIconUrl(...values: (string | undefined)[]): string | undefined {
+    for (const value of values) {
+        const normalized = normalizeIconUrl(value);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return undefined;
+}
+
+function normalizeIconUrl(value: string | undefined): string | undefined {
+    const trimmedValue = value?.trim();
+    if (!trimmedValue) {
         return undefined;
     }
 
+    const candidate = /^[a-z][a-z\d+.-]*:/i.test(trimmedValue) ?
+        trimmedValue :
+        `https://${trimmedValue.replace(/^\/\//, '')}`;
     try {
-        const url = new URL(value);
+        const url = new URL(candidate);
         return url.protocol === 'https:' ? url.toString() : undefined;
     } catch {
         return undefined;
