@@ -47,7 +47,7 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             polling: localize('connectorTriggerPolling', 'Polling'),
             webhook: localize('connectorTriggerWebhook', 'Webhook'),
             pollingDescription: localize('connectorTriggerPollingDescription', 'Check for changes on a schedule.'),
-            webhookDescription: localize('connectorTriggerWebhookDescription', 'Receive events when the connector sends a notification.'),
+            webhookDescription: localize('connectorTriggerWebhookDescription', 'Webhook delivery is not available in VS Code yet.'),
             selectionPreview: localize('connectorTriggerSelectionPreview', 'Selection preview'),
             functionPreview: localize('connectorTriggerFunctionPreview', 'Function'),
             infrastructurePreview: localize('connectorTriggerInfrastructurePreview', 'Infrastructure'),

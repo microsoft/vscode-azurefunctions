@@ -128,8 +128,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         const supportsWebhook = operation.isWebhook || operation.isNotification;
         const supportsPolling = !supportsWebhook;
-        if ((message.deliveryMode === 'Polling' && !supportsPolling) ||
-            (message.deliveryMode === 'Webhook' && !supportsWebhook)) {
+        if (message.deliveryMode !== 'Polling' || !supportsPolling) {
             return;
         }
 

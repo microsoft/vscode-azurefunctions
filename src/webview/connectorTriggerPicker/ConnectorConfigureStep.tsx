@@ -87,6 +87,7 @@ export function ConnectorConfigureStep({
                     <Button
                         appearance={deliveryMode === 'Webhook' ? 'primary' : 'secondary'}
                         disabled={!support.webhook}
+                        title={labels.webhookDescription}
                         onClick={() => onChangeDeliveryMode('Webhook')}
                     >
                         {labels.webhook}
@@ -140,9 +141,9 @@ export function ConnectorConfigureStep({
 export function getDeliverySupport(
     operation: Pick<ConnectorTriggerOperationOption, 'isNotification' | 'isWebhook'>,
 ): { polling: boolean; webhook: boolean } {
-    const webhook = operation.isWebhook || operation.isNotification;
+    const polling = !operation.isWebhook && !operation.isNotification;
     return {
-        polling: !webhook,
-        webhook,
+        polling,
+        webhook: false,
     };
 }

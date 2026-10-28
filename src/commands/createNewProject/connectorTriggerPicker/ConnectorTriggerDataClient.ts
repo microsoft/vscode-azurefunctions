@@ -250,7 +250,14 @@ function createCatalog(
         const api = operation.properties?.api;
         const connectorId = api?.name?.trim();
         const visibility = operation.properties?.visibility?.toLowerCase();
-        if (!id || !connectorId || visibility === 'internal' || visibility === 'hideinui') {
+        const isWebhook = operation.properties?.isWebhook === true;
+        const isNotification = operation.properties?.isNotification === true;
+        if (!id ||
+            !connectorId ||
+            visibility === 'internal' ||
+            visibility === 'hideinui' ||
+            isWebhook ||
+            isNotification) {
             continue;
         }
 
@@ -285,8 +292,8 @@ function createCatalog(
             label: operation.properties?.summary?.trim() || id,
             description: operation.properties?.triggerHint?.trim() ||
                 operation.properties?.description?.trim(),
-            isWebhook: operation.properties?.isWebhook === true,
-            isNotification: operation.properties?.isNotification === true,
+            isWebhook,
+            isNotification,
         };
         const family = operation.properties?.annotation?.family?.trim().toLowerCase();
         const key = `${connectorKey}:${family || id.toLowerCase()}`;

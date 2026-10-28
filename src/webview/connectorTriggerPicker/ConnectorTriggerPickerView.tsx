@@ -162,8 +162,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
 
         const support = getDeliverySupport(operation);
+        if (!support.polling) {
+            return;
+        }
         setSelectedOperationId(operationId);
-        setDeliveryMode(support.polling ? 'Polling' : 'Webhook');
+        setDeliveryMode('Polling');
         setActiveStep(3);
     };
 

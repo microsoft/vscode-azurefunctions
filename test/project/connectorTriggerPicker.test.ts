@@ -102,11 +102,21 @@ suite('Connector trigger picker', () => {
                             name: 'OnNewFile',
                             properties: {
                                 summary: 'When a file is created',
-                                isWebhook: true,
+                                isWebhook: false,
                                 api: {
                                     name: 'sharepointonline',
                                     displayName: 'SharePoint',
                                     iconUri: 'connectoricons-prod.azureedge.net/sharepoint/icon.svg',
+                                },
+                            },
+                        }, {
+                            name: 'WebhookOnly',
+                            properties: {
+                                summary: 'Webhook-only event',
+                                isWebhook: true,
+                                api: {
+                                    name: 'sharepointonline',
+                                    displayName: 'SharePoint',
                                 },
                             },
                         }],
@@ -207,7 +217,7 @@ suite('Connector trigger picker', () => {
                 connectorId: 'sharepointonline',
                 label: 'When a file is created',
                 description: undefined,
-                isWebhook: true,
+                isWebhook: false,
                 isNotification: false,
             },
         ]);
@@ -277,11 +287,11 @@ suite('Connector trigger picker', () => {
         );
         assert.deepStrictEqual(
             getDeliverySupport({ isWebhook: true, isNotification: false }),
-            { polling: false, webhook: true },
+            { polling: false, webhook: false },
         );
         assert.deepStrictEqual(
             getDeliverySupport({ isWebhook: false, isNotification: true }),
-            { polling: false, webhook: true },
+            { polling: false, webhook: false },
         );
     });
 
