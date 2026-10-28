@@ -232,12 +232,39 @@ suite('Connector trigger picker', () => {
         );
     });
 
+    test('registers a newly selected subscription for immediate catalog loading', async () => {
+        let requested = false;
+        const subscription = createSubscription('new-sub', 'New Subscription');
+        const client = new ConnectorTriggerDataClient(
+            async () => [],
+            async context => {
+                assert.strictEqual(context.subscriptionId, 'new-sub');
+                return {
+                    async get(_url: string): Promise<unknown> {
+                        requested = true;
+                        return { value: [] };
+                    },
+                };
+            },
+        );
+        client.registerSubscription(subscription.context);
+
+        await client.listCatalog(await createTestActionContext(), {
+            ...createNamespace(),
+            subscriptionId: 'new-sub',
+            subscriptionName: 'New Subscription',
+        });
+
+        assert.strictEqual(requested, true);
+    });
+
     test('builds localized live-data picker labels', () => {
         const viewModel = createConnectorTriggerPickerViewModel();
 
         assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
         assert.strictEqual(viewModel.labels.title, 'Create New Connection');
         assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
+        assert.strictEqual(viewModel.labels.createNamespace, 'Create new Connector Namespace...');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.triggerGroup, 'Trigger');
     });
@@ -261,6 +288,7 @@ suite('Connector trigger picker', () => {
 
     test('accepts only the live picker request and response contracts', () => {
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'loadNamespaces' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'createNamespace' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'loadCatalog',
             namespaceId: 'namespace-id',
@@ -285,6 +313,13 @@ suite('Connector trigger picker', () => {
             namespaceId: 'namespace-id',
             connectors: [],
             operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'namespaceCreated',
+            namespace: createNamespace(),
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'namespaceCreationCancelled',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'loadFailed',

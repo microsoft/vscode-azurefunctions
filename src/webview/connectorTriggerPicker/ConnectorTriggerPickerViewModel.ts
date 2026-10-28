@@ -36,6 +36,8 @@ export interface ConnectorTriggerPickerViewModel {
         title: string;
         namespaceGroup: string;
         selectNamespace: string;
+        createNamespace: string;
+        creatingNamespace: string;
         loadingNamespaces: string;
         noNamespaces: string;
         connectorGroup: string;
@@ -54,6 +56,7 @@ export interface ConnectorTriggerPickerViewModel {
 export type ConnectorTriggerPickerMessage =
     | { command: 'close' }
     | { command: 'loadNamespaces' }
+    | { command: 'createNamespace' }
     | { command: 'loadCatalog'; namespaceId: string }
     | {
         command: 'continue';
@@ -75,6 +78,13 @@ export type ConnectorTriggerPickerResponse =
         operations: ConnectorTriggerOperationOption[];
     }
     | {
+        command: 'namespaceCreated';
+        namespace: ConnectorNamespaceOption;
+    }
+    | {
+        command: 'namespaceCreationCancelled';
+    }
+    | {
         command: 'loadFailed';
         scope: 'namespaces' | 'catalog';
         namespaceId?: string;
@@ -86,7 +96,9 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return false;
     }
 
-    if (message.command === 'close' || message.command === 'loadNamespaces') {
+    if (message.command === 'close' ||
+        message.command === 'loadNamespaces' ||
+        message.command === 'createNamespace') {
         return true;
     }
 
@@ -119,6 +131,16 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             Array.isArray(message.connectors) &&
             'operations' in message &&
             Array.isArray(message.operations);
+    }
+
+    if (message.command === 'namespaceCreated') {
+        return 'namespace' in message &&
+            !!message.namespace &&
+            typeof message.namespace === 'object';
+    }
+
+    if (message.command === 'namespaceCreationCancelled') {
+        return true;
     }
 
     return message.command === 'loadFailed' &&

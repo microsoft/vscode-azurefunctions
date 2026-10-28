@@ -186,6 +186,19 @@ export class ConnectorTriggerDataClient {
         return createCatalog(managedApis, managedApiOperations);
     }
 
+    public registerSubscription(context: ISubscriptionContext): void {
+        const subscription: ConnectorSubscription = {
+            subscriptionId: context.subscriptionId,
+            subscriptionDisplayName: context.subscriptionDisplayName,
+            context,
+        };
+        const subscriptions = this._subscriptions ?? [];
+        this._subscriptions = [
+            ...subscriptions.filter(item => item.subscriptionId !== context.subscriptionId),
+            subscription,
+        ];
+    }
+
     private async getSubscriptions(): Promise<ConnectorSubscription[]> {
         this._subscriptions ??= await this.subscriptionsProvider();
         return this._subscriptions;

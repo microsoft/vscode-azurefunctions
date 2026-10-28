@@ -17,11 +17,14 @@ import {
     type ConnectorTriggerPickerViewModel,
 } from './ConnectorTriggerPickerViewModel';
 
+const createNamespaceOption = '__createConnectorNamespace__';
+
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
     const [namespaces, setNamespaces] = useState<ConnectorNamespaceOption[]>([]);
     const [namespacesLoading, setNamespacesLoading] = useState(true);
+    const [creatingNamespace, setCreatingNamespace] = useState(false);
     const [namespaceWarning, setNamespaceWarning] = useState<string>();
     const [selectedNamespaceId, setSelectedNamespaceId] = useState('');
     const [catalogNamespaceId, setCatalogNamespaceId] = useState('');
@@ -57,6 +60,18 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     message.namespaces.some(namespace => namespace.id === current) ?
                         current :
                         message.namespaces.length === 1 ? message.namespaces[0].id : '');
+            } else if (message.command === 'namespaceCreated') {
+                setCreatingNamespace(false);
+                setNamespaces(current => {
+                    const namespacesById = new Map(current.map(namespace => [namespace.id, namespace]));
+                    namespacesById.set(message.namespace.id, message.namespace);
+                    return [...namespacesById.values()].sort((left, right) =>
+                        left.name.localeCompare(right.name) ||
+                        left.subscriptionName.localeCompare(right.subscriptionName));
+                });
+                setSelectedNamespaceId(message.namespace.id);
+            } else if (message.command === 'namespaceCreationCancelled') {
+                setCreatingNamespace(false);
             } else if (message.command === 'catalogLoaded') {
                 if (message.namespaceId !== selectedNamespaceIdRef.current) {
                     return;
@@ -72,6 +87,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 }
                 setNamespacesLoading(current => message.scope === 'namespaces' ? false : current);
                 setCatalogLoading(current => message.scope === 'catalog' ? false : current);
+                setCreatingNamespace(false);
                 setLoadError({ scope: message.scope, message: message.message });
             }
         };
@@ -126,20 +142,35 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 <label htmlFor="connector-namespace">{viewModel.labels.namespaceGroup}</label>
                 {namespacesLoading ?
                     <p className="status-text">{viewModel.labels.loadingNamespaces}</p> :
-                    namespaces.length === 0 ?
-                        <p className="status-text">{viewModel.labels.noNamespaces}</p> :
-                        <select
-                            id="connector-namespace"
-                            value={selectedNamespaceId}
-                            onChange={event => setSelectedNamespaceId(event.target.value)}
-                        >
-                            <option value="">{viewModel.labels.selectNamespace}</option>
-                            {namespaces.map(namespace =>
-                                <option key={namespace.id} value={namespace.id}>
-                                    {formatNamespaceLabel(namespace)}
-                                </option>
-                            )}
-                        </select>
+                    <select
+                        id="connector-namespace"
+                        value={selectedNamespaceId}
+                        disabled={creatingNamespace}
+                        onChange={event => {
+                            const value = event.target.value;
+                            if (value === createNamespaceOption) {
+                                setCreatingNamespace(true);
+                                setLoadError(undefined);
+                                vscodeApi.postMessage({ command: 'createNamespace' });
+                            } else {
+                                setSelectedNamespaceId(value);
+                            }
+                        }}
+                    >
+                        <option value="">{viewModel.labels.selectNamespace}</option>
+                        {namespaces.map(namespace =>
+                            <option key={namespace.id} value={namespace.id}>
+                                {formatNamespaceLabel(namespace)}
+                            </option>
+                        )}
+                        <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
+                    </select>
+                }
+                {!namespacesLoading && namespaces.length === 0 &&
+                    <p className="status-text">{viewModel.labels.noNamespaces}</p>
+                }
+                {creatingNamespace &&
+                    <p className="status-text">{viewModel.labels.creatingNamespace}</p>
                 }
                 {namespaceWarning && <p className="warning-text">{namespaceWarning}</p>}
                 {loadError?.scope === 'namespaces' &&

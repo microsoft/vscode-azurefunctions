@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
+import { callWithTelemetryAndErrorHandling, isUserCancelledError, nonNullProp, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
 import {
@@ -13,6 +14,7 @@ import {
     type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { localize } from '../../../localize';
+import { createConnectorNamespace } from '../../createFunction/connectorSteps/createConnectorNamespace';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ConnectorTriggerDataClient, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
@@ -84,6 +86,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         if (message.command === 'loadNamespaces') {
             await this.loadNamespaces(actionContext);
+            return;
+        }
+
+        if (message.command === 'createNamespace') {
+            await this.createNamespace(actionContext);
             return;
         }
 
@@ -170,6 +177,42 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 command: 'loadFailed',
                 scope: 'catalog',
                 namespaceId,
+                message: parseError(error).message,
+            });
+        }
+    }
+
+    private async createNamespace(actionContext: IActionContext): Promise<void> {
+        try {
+            const wizardContext = await createConnectorNamespace(actionContext);
+            const resource = nonNullProp(wizardContext, 'connectorNamespace');
+            const id = nonNullProp(resource, 'id');
+            const name = nonNullProp(resource, 'name');
+            this.dataClient.registerSubscription(wizardContext);
+            const namespace: ConnectorNamespaceOption = {
+                id,
+                name,
+                label: name,
+                location: resource.location ?? '',
+                resourceGroup: parseAzureResourceId(id).resourceGroup,
+                subscriptionId: wizardContext.subscriptionId,
+                subscriptionName: wizardContext.subscriptionDisplayName,
+            };
+            this.namespaces.set(namespace.id, namespace);
+            await this.postMessage({
+                command: 'namespaceCreated',
+                namespace,
+            });
+        } catch (error) {
+            if (isUserCancelledError(error)) {
+                await this.postMessage({ command: 'namespaceCreationCancelled' });
+                return;
+            }
+
+            actionContext.telemetry.properties.connectorNamespaceCreate = 'Failed';
+            await this.postMessage({
+                command: 'loadFailed',
+                scope: 'namespaces',
                 message: parseError(error).message,
             });
         }
