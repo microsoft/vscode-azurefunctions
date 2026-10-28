@@ -32,7 +32,8 @@ export function allowWebviewImageSources(template: string, sources: readonly str
     }
 
     return template.replace(/img-src ([^;]+);/, (_match, existingSources: string) => {
-        const missingSources = sources.filter(source => !existingSources.includes(source));
+        const existingSourceSet = new Set(existingSources.trim().split(/\s+/));
+        const missingSources = sources.filter(source => !existingSourceSet.has(source));
         return `img-src ${existingSources}${missingSources.length ? ` ${missingSources.join(' ')}` : ''};`;
     });
 }

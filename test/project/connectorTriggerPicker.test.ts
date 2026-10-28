@@ -275,8 +275,11 @@ suite('Connector trigger picker', () => {
             "before _initialData: 'don%27t'\nafter",
         );
         assert.strictEqual(
-            allowWebviewImageSources('img-src vscode-webview: data:;', ['https:']),
-            'img-src vscode-webview: data: https:;',
+            allowWebviewImageSources(
+                'img-src vscode-webview: https://*.vscode-cdn.net data:;',
+                ['https:'],
+            ),
+            'img-src vscode-webview: https://*.vscode-cdn.net data: https:;',
         );
         assert.throws(
             () => escapeWebviewInitialData("before _initialData: 'unterminated"),
