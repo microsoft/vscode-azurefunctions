@@ -8,9 +8,13 @@
 import { Button } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { ConnectorConfigureStep, getDeliverySupport } from './ConnectorConfigureStep';
+import { ConnectorEventStep } from './ConnectorEventStep';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
+import { ConnectorTriggerShell, type ConnectorTriggerStep } from './ConnectorTriggerShell';
 import {
     isConnectorTriggerPickerResponse,
+    type ConnectorDeliveryMode,
     type ConnectorNamespaceOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
@@ -18,10 +22,12 @@ import {
 } from './ConnectorTriggerPickerViewModel';
 
 const createNamespaceOption = '__createConnectorNamespace__';
+const connectorPageSize = 60;
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
+    const [activeStep, setActiveStep] = useState<ConnectorTriggerStep>(1);
     const [namespaces, setNamespaces] = useState<ConnectorNamespaceOption[]>([]);
     const [namespacesLoading, setNamespacesLoading] = useState(true);
     const [creatingNamespace, setCreatingNamespace] = useState(false);
@@ -31,8 +37,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [connectors, setConnectors] = useState<ConnectorTriggerOption[]>([]);
     const [operations, setOperations] = useState<ConnectorTriggerOperationOption[]>([]);
     const [catalogLoading, setCatalogLoading] = useState(false);
+    const [connectorSearch, setConnectorSearch] = useState('');
+    const [connectorLimit, setConnectorLimit] = useState(connectorPageSize);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
+    const [deliveryMode, setDeliveryMode] = useState<ConnectorDeliveryMode>('Polling');
     const [loadError, setLoadError] = useState<{
         scope: 'namespaces' | 'catalog';
         message: string;
@@ -62,8 +71,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         message.namespaces.some(namespace => namespace.id === message.selectedNamespaceId) ?
                         message.selectedNamespaceId :
                         message.namespaces.some(namespace => namespace.id === current) ?
-                        current :
-                        message.namespaces.length === 1 ? message.namespaces[0].id : '');
+                            current :
+                            message.namespaces.length === 1 ? message.namespaces[0].id : '');
             } else if (message.command === 'namespaceCreationCancelled') {
                 setCreatingNamespace(false);
             } else if (message.command === 'catalogLoaded') {
@@ -93,8 +102,12 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     useEffect(() => {
         selectedNamespaceIdRef.current = selectedNamespaceId;
+        setActiveStep(1);
         setSelectedConnectorId('');
         setSelectedOperationId('');
+        setDeliveryMode('Polling');
+        setConnectorSearch('');
+        setConnectorLimit(connectorPageSize);
         setConnectors([]);
         setOperations([]);
         setCatalogNamespaceId('');
@@ -111,149 +124,196 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
     }, [selectedNamespaceId, vscodeApi]);
 
+    useEffect(() => {
+        setConnectorLimit(connectorPageSize);
+    }, [connectorSearch]);
+
     const visibleConnectors = catalogNamespaceId === selectedNamespaceId ? connectors : [];
-    const selectedConnector = useMemo(
-        () => visibleConnectors.find(connector => connector.id === selectedConnectorId),
-        [selectedConnectorId, visibleConnectors],
-    );
-    const visibleOperations = useMemo(
-        () => operations.filter(operation =>
-            operation.connectorId.localeCompare(
-                selectedConnectorId,
-                undefined,
-                { sensitivity: 'accent' },
-            ) === 0),
-        [operations, selectedConnectorId],
-    );
+    const selectedNamespace = namespaces.find(namespace => namespace.id === selectedNamespaceId);
+    const selectedConnector = visibleConnectors.find(connector => connector.id === selectedConnectorId);
+    const connectorOperations = operations.filter(operation =>
+        equalsIgnoreCase(operation.connectorId, selectedConnectorId));
+    const selectedOperation = connectorOperations.find(operation => operation.id === selectedOperationId);
+    const filteredConnectors = useMemo(() => {
+        const query = connectorSearch.trim().toLocaleLowerCase();
+        if (!query) {
+            return visibleConnectors;
+        }
+
+        return visibleConnectors.filter(connector =>
+            connector.label.toLocaleLowerCase().includes(query) ||
+            connector.description?.toLocaleLowerCase().includes(query));
+    }, [connectorSearch, visibleConnectors]);
+    const displayedConnectors = filteredConnectors.slice(0, connectorLimit);
+
+    const selectConnector = (connectorId: string) => {
+        if (connectorId !== selectedConnectorId) {
+            setSelectedOperationId('');
+            setDeliveryMode('Polling');
+        }
+        setSelectedConnectorId(connectorId);
+        setActiveStep(2);
+    };
+
+    const selectOperation = (operationId: string) => {
+        const operation = connectorOperations.find(item => item.id === operationId);
+        if (!operation) {
+            return;
+        }
+
+        const support = getDeliverySupport(operation);
+        setSelectedOperationId(operationId);
+        setDeliveryMode(support.polling ? 'Polling' : 'Webhook');
+        setActiveStep(3);
+    };
 
     return (
         <main className="page">
-            <header className="header">
-                <h1>{viewModel.labels.title}</h1>
-            </header>
+            <ConnectorTriggerShell
+                activeStep={activeStep}
+                canOpenEvent={!!selectedConnector}
+                canOpenConfigure={!!selectedOperation}
+                labels={viewModel.labels}
+                onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates' })}
+                onOpenCopilot={() => vscodeApi.postMessage({ command: 'openCopilot' })}
+                onStepChange={setActiveStep}
+            />
 
-            <section className="form-section">
-                <label htmlFor="connector-namespace">{viewModel.labels.namespaceGroup}</label>
-                {namespacesLoading ?
-                    <p className="status-text">{viewModel.labels.loadingNamespaces}</p> :
-                    <select
-                        id="connector-namespace"
-                        value={selectedNamespaceId}
-                        disabled={creatingNamespace}
-                        onChange={event => {
-                            const value = event.target.value;
-                            if (value === createNamespaceOption) {
-                                setCreatingNamespace(true);
-                                setLoadError(undefined);
-                                vscodeApi.postMessage({ command: 'createNamespace' });
-                            } else {
-                                setSelectedNamespaceId(value);
-                            }
-                        }}
-                    >
-                        <option value="">{viewModel.labels.selectNamespace}</option>
-                        <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
-                        {namespaces.map(namespace =>
-                            <option key={namespace.id} value={namespace.id}>
-                                {formatNamespaceLabel(namespace)}
-                            </option>
-                        )}
-                    </select>
-                }
-                {!namespacesLoading && namespaces.length === 0 &&
-                    <p className="status-text">{viewModel.labels.noNamespaces}</p>
-                }
-                {creatingNamespace &&
-                    <p className="status-text">{viewModel.labels.creatingNamespace}</p>
-                }
-                {namespaceWarning && <p className="warning-text">{namespaceWarning}</p>}
-                {loadError?.scope === 'namespaces' &&
-                    <LoadError
-                        message={loadError.message}
-                        retryLabel={viewModel.labels.retry}
-                        onRetry={loadNamespaces}
-                    />
-                }
-            </section>
+            {activeStep === 1 &&
+                <section className="step-page connector-page">
+                    <h2>{viewModel.labels.connectorPageTitle}</h2>
+                    <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
 
-            {selectedNamespaceId &&
-                <section className="connector-section">
-                    <h2>{viewModel.labels.connectorGroup}</h2>
-                    {catalogLoading ?
-                        <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
-                        loadError?.scope === 'catalog' ?
-                            <LoadError
-                                message={loadError.message}
-                                retryLabel={viewModel.labels.retry}
-                                onRetry={() => {
-                                    setLoadError(undefined);
-                                    setCatalogLoading(true);
-                                    vscodeApi.postMessage({
-                                        command: 'loadCatalog',
-                                        namespaceId: selectedNamespaceId,
-                                    });
-                                }}
-                            /> :
-                            visibleConnectors.length === 0 ?
-                                <p className="status-text">{viewModel.labels.noConnectors}</p> :
-                                <ConnectorTilePicker
-                                    label={viewModel.labels.connectorGroup}
-                                    options={visibleConnectors}
-                                    value={selectedConnectorId}
-                                    onChange={connectorId => {
-                                        setSelectedConnectorId(connectorId);
-                                        setSelectedOperationId('');
-                                    }}
-                                />
-                    }
-                </section>
-            }
-
-            {selectedConnector &&
-                <section className="form-section trigger-section">
-                    <label htmlFor="connector-trigger">{viewModel.labels.triggerGroup}</label>
-                    {catalogLoading ?
-                        <p className="status-text">{viewModel.labels.loadingTriggers}</p> :
-                        visibleOperations.length === 0 ?
-                            <p className="status-text">{viewModel.labels.noTriggers}</p> :
+                    <div className="namespace-field">
+                        <label htmlFor="connector-namespace">{viewModel.labels.namespaceGroup}</label>
+                        {namespacesLoading ?
+                            <p className="status-text">{viewModel.labels.loadingNamespaces}</p> :
                             <select
-                                id="connector-trigger"
-                                value={selectedOperationId}
-                                onChange={event => setSelectedOperationId(event.target.value)}
+                                id="connector-namespace"
+                                value={selectedNamespaceId}
+                                disabled={creatingNamespace}
+                                onChange={event => {
+                                    const value = event.target.value;
+                                    if (value === createNamespaceOption) {
+                                        setCreatingNamespace(true);
+                                        setLoadError(undefined);
+                                        vscodeApi.postMessage({ command: 'createNamespace' });
+                                    } else {
+                                        setSelectedNamespaceId(value);
+                                    }
+                                }}
                             >
-                                <option value="">{viewModel.labels.selectTrigger}</option>
-                                {visibleOperations.map(operation =>
-                                    <option key={operation.id} value={operation.id}>
-                                        {operation.label}
+                                <option value="">{viewModel.labels.selectNamespace}</option>
+                                <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
+                                {namespaces.map(namespace =>
+                                    <option key={namespace.id} value={namespace.id}>
+                                        {formatNamespaceLabel(namespace)}
                                     </option>
                                 )}
                             </select>
+                        }
+                        {!namespacesLoading && namespaces.length === 0 &&
+                            <p className="status-text">{viewModel.labels.noNamespaces}</p>
+                        }
+                        {creatingNamespace &&
+                            <p className="status-text">{viewModel.labels.creatingNamespace}</p>
+                        }
+                        {namespaceWarning && <p className="warning-text">{namespaceWarning}</p>}
+                        {loadError?.scope === 'namespaces' &&
+                            <LoadError
+                                message={loadError.message}
+                                retryLabel={viewModel.labels.retry}
+                                onRetry={loadNamespaces}
+                            />
+                        }
+                    </div>
+
+                    {selectedNamespaceId &&
+                        <>
+                            {catalogLoading ?
+                                <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
+                                loadError?.scope === 'catalog' ?
+                                    <LoadError
+                                        message={loadError.message}
+                                        retryLabel={viewModel.labels.retry}
+                                        onRetry={() => {
+                                            setLoadError(undefined);
+                                            setCatalogLoading(true);
+                                            vscodeApi.postMessage({
+                                                command: 'loadCatalog',
+                                                namespaceId: selectedNamespaceId,
+                                            });
+                                        }}
+                                    /> :
+                                    visibleConnectors.length === 0 ?
+                                        <p className="status-text">{viewModel.labels.noConnectors}</p> :
+                                        <>
+                                            <label className="search-field">
+                                                <span className="codicon codicon-search" aria-hidden="true" />
+                                                <input
+                                                    value={connectorSearch}
+                                                    placeholder={viewModel.labels.connectorSearchPlaceholder}
+                                                    onChange={event => setConnectorSearch(event.target.value)}
+                                                />
+                                            </label>
+                                            <p className="result-count">
+                                                {format(
+                                                    viewModel.labels.connectorCount,
+                                                    filteredConnectors.length.toString(),
+                                                )}
+                                            </p>
+                                            <ConnectorTilePicker
+                                                label={viewModel.labels.connectorGroup}
+                                                options={displayedConnectors}
+                                                value={selectedConnectorId}
+                                                onChange={selectConnector}
+                                            />
+                                            {displayedConnectors.length < filteredConnectors.length &&
+                                                <Button
+                                                    appearance="secondary"
+                                                    className="show-more"
+                                                    onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}
+                                                >
+                                                    {viewModel.labels.showMoreConnectors}
+                                                </Button>
+                                            }
+                                        </>
+                            }
+                        </>
                     }
                 </section>
             }
 
-            <footer className="footer">
-                <div className="actions">
-                    <Button
-                        appearance="secondary"
-                        onClick={() => vscodeApi.postMessage({ command: 'close' })}
-                    >
-                        {viewModel.labels.close}
-                    </Button>
-                    <Button
-                        appearance="primary"
-                        disabled={!selectedConnector || !selectedOperationId}
-                        onClick={() => selectedConnector && selectedOperationId && vscodeApi.postMessage({
-                            command: 'continue',
-                            namespaceId: selectedNamespaceId,
-                            connectorId: selectedConnector.id,
-                            operationId: selectedOperationId,
-                        })}
-                    >
-                        {viewModel.labels.continue}
-                    </Button>
-                </div>
-            </footer>
+            {activeStep === 2 && selectedConnector &&
+                <ConnectorEventStep
+                    connector={selectedConnector}
+                    labels={viewModel.labels}
+                    operations={connectorOperations}
+                    selectedOperationId={selectedOperationId}
+                    onChangeConnector={() => setActiveStep(1)}
+                    onSelectOperation={selectOperation}
+                />
+            }
+
+            {activeStep === 3 && selectedNamespace && selectedConnector && selectedOperation &&
+                <ConnectorConfigureStep
+                    connector={selectedConnector}
+                    deliveryMode={deliveryMode}
+                    labels={viewModel.labels}
+                    language={viewModel.language}
+                    namespace={selectedNamespace}
+                    operation={selectedOperation}
+                    onChangeDeliveryMode={setDeliveryMode}
+                    onChangeEvent={() => setActiveStep(2)}
+                    onUseTemplate={() => vscodeApi.postMessage({
+                        command: 'continue',
+                        namespaceId: selectedNamespace.id,
+                        connectorId: selectedConnector.id,
+                        operationId: selectedOperation.id,
+                        deliveryMode,
+                    })}
+                />
+            }
         </main>
     );
 }
@@ -261,6 +321,17 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 function formatNamespaceLabel(namespace: ConnectorNamespaceOption): string {
     const context = [namespace.subscriptionName, namespace.location].filter(Boolean).join(' - ');
     return context ? `${namespace.label} (${context})` : namespace.label;
+}
+
+function equalsIgnoreCase(left: string, right: string): boolean {
+    return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function format(template: string, ...values: string[]): string {
+    return values.reduce(
+        (result, value, index) => result.replace(`{${index}}`, value),
+        template,
+    );
 }
 
 function LoadError({

@@ -22,6 +22,7 @@ import {
     isConnectorTriggerPickerResponse,
     type ConnectorNamespaceOption,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import { getDeliverySupport } from '../../src/webview/connectorTriggerPicker/ConnectorConfigureStep';
 
 suite('Connector trigger picker', () => {
     test('lists Connector Namespaces across subscriptions with paging and partial failure', async () => {
@@ -259,12 +260,29 @@ suite('Connector trigger picker', () => {
     test('builds localized live-data picker labels', () => {
         const viewModel = createConnectorTriggerPickerViewModel();
 
-        assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
-        assert.strictEqual(viewModel.labels.title, 'Create New Connection');
+        assert.strictEqual(viewModel.labels.panelTitle, 'Template Gallery');
+        assert.strictEqual(viewModel.labels.galleryTitle, 'Template Gallery');
+        assert.strictEqual(viewModel.labels.connectorPageTitle, 'Choose a connector');
+        assert.strictEqual(viewModel.labels.eventPageTitle, 'Choose an event');
+        assert.strictEqual(viewModel.labels.configurePageTitle, 'Configure & preview');
         assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
         assert.strictEqual(viewModel.labels.createNamespace, '+ Create new Connector Namespace...');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
-        assert.strictEqual(viewModel.labels.triggerGroup, 'Trigger');
+    });
+
+    test('derives allowed delivery modes from live trigger metadata', () => {
+        assert.deepStrictEqual(
+            getDeliverySupport({ isWebhook: false, isNotification: false }),
+            { polling: true, webhook: false },
+        );
+        assert.deepStrictEqual(
+            getDeliverySupport({ isWebhook: true, isNotification: false }),
+            { polling: false, webhook: true },
+        );
+        assert.deepStrictEqual(
+            getDeliverySupport({ isWebhook: false, isNotification: true }),
+            { polling: false, webhook: true },
+        );
     });
 
     test('escapes initial data and allows HTTPS API-provided icons', () => {
@@ -290,6 +308,8 @@ suite('Connector trigger picker', () => {
     test('accepts only the live picker request and response contracts', () => {
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'loadNamespaces' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'createNamespace' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'openCopilot' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'loadCatalog',
             namespaceId: 'namespace-id',
@@ -299,6 +319,7 @@ suite('Connector trigger picker', () => {
             namespaceId: 'namespace-id',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
+            deliveryMode: 'Webhook',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',

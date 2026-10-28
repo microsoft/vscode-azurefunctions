@@ -31,9 +31,17 @@ export interface ConnectorTriggerOperationOption {
 }
 
 export interface ConnectorTriggerPickerViewModel {
+    language?: string;
     labels: {
         panelTitle: string;
-        title: string;
+        galleryTitle: string;
+        gallerySubtitle: string;
+        browseTemplates: string;
+        connectorTriggers: string;
+        buildWithCopilotChat: string;
+        connectorStep: string;
+        eventStep: string;
+        configureStep: string;
         namespaceGroup: string;
         selectNamespace: string;
         createNamespace: string;
@@ -41,20 +49,41 @@ export interface ConnectorTriggerPickerViewModel {
         loadingNamespaces: string;
         noNamespaces: string;
         connectorGroup: string;
+        connectorPageTitle: string;
+        connectorPageDescription: string;
+        connectorSearchPlaceholder: string;
+        connectorCount: string;
+        showMoreConnectors: string;
         loadingConnectors: string;
         noConnectors: string;
-        triggerGroup: string;
-        selectTrigger: string;
-        loadingTriggers: string;
+        eventPageTitle: string;
+        eventPageDescription: string;
+        eventSearchPlaceholder: string;
+        eventCount: string;
+        eventSelected: string;
+        changeConnector: string;
         noTriggers: string;
+        configurePageTitle: string;
+        configurePageDescription: string;
+        changeEvent: string;
+        deliveryQuestion: string;
+        polling: string;
+        webhook: string;
+        pollingDescription: string;
+        webhookDescription: string;
+        selectionPreview: string;
+        functionPreview: string;
+        infrastructurePreview: string;
+        useTemplate: string;
         retry: string;
-        close: string;
-        continue: string;
     };
 }
 
+export type ConnectorDeliveryMode = 'Polling' | 'Webhook';
+
 export type ConnectorTriggerPickerMessage =
-    | { command: 'close' }
+    | { command: 'browseTemplates' }
+    | { command: 'openCopilot' }
     | { command: 'loadNamespaces' }
     | { command: 'createNamespace' }
     | { command: 'loadCatalog'; namespaceId: string }
@@ -63,6 +92,7 @@ export type ConnectorTriggerPickerMessage =
         namespaceId: string;
         connectorId: string;
         operationId: string;
+        deliveryMode: ConnectorDeliveryMode;
     };
 
 export type ConnectorTriggerPickerResponse =
@@ -93,7 +123,8 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return false;
     }
 
-    if (message.command === 'close' ||
+    if (message.command === 'browseTemplates' ||
+        message.command === 'openCopilot' ||
         message.command === 'loadNamespaces' ||
         message.command === 'createNamespace') {
         return true;
@@ -109,7 +140,9 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         'connectorId' in message &&
         typeof message.connectorId === 'string' &&
         'operationId' in message &&
-        typeof message.operationId === 'string';
+        typeof message.operationId === 'string' &&
+        'deliveryMode' in message &&
+        (message.deliveryMode === 'Polling' || message.deliveryMode === 'Webhook');
 }
 
 export function isConnectorTriggerPickerResponse(message: unknown): message is ConnectorTriggerPickerResponse {

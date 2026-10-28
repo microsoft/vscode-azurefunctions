@@ -36,7 +36,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         private readonly launchOptions: ConnectorTriggerPickerLaunchOptions,
         private readonly dataClient: ConnectorTriggerDataClient,
     ) {
-        const viewModel = createConnectorTriggerPickerViewModel();
+        const viewModel = createConnectorTriggerPickerViewModel(
+            launchOptions.initialFilters.language,
+        );
         super(
             context,
             viewModel.labels.panelTitle,
@@ -79,8 +81,23 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (message.command === 'close') {
+        if (message.command === 'browseTemplates') {
             this.panel.dispose();
+            FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
+                initialLocation: this.launchOptions.initialLocation,
+            });
+            return;
+        }
+
+        if (message.command === 'openCopilot') {
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                query: localize(
+                    'connectorTriggerCopilotPrompt',
+                    'Help me build an Azure Functions connector trigger.',
+                ),
+                isPartialQuery: true,
+                newSession: true,
+            });
             return;
         }
 
@@ -109,8 +126,16 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
+        const supportsWebhook = operation.isWebhook || operation.isNotification;
+        const supportsPolling = !supportsWebhook;
+        if ((message.deliveryMode === 'Polling' && !supportsPolling) ||
+            (message.deliveryMode === 'Webhook' && !supportsWebhook)) {
+            return;
+        }
+
         actionContext.telemetry.properties.connectorSelected = 'true';
         actionContext.telemetry.properties.triggerSelected = 'true';
+        actionContext.telemetry.properties.deliveryMode = message.deliveryMode;
         this.panel.dispose();
         FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
             initialLocation: this.launchOptions.initialLocation,
