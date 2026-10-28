@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { createTestActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import {
-    isConnectorTriggerPickerMessage,
-} from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+    ConnectorTriggerDataClient,
+    type ConnectorArmClient,
+    type ConnectorSubscription,
+} from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
@@ -15,108 +18,308 @@ import {
     escapeWebviewInitialData,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import {
-    getConnectorTriggerIconSources,
-    getConnectorTriggerOption,
-    getConnectorTriggerOptions,
-    getConnectorTriggerTemplateFilters,
-} from '../../src/commands/createNewProject/connectorTriggerPicker/connectorTriggerCatalog';
+    isConnectorTriggerPickerMessage,
+    isConnectorTriggerPickerResponse,
+    type ConnectorNamespaceOption,
+} from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
 suite('Connector trigger picker', () => {
-    test('imports the Connector Namespace connector catalog order', () => {
-        const options = getConnectorTriggerOptions();
+    test('lists Connector Namespaces across subscriptions with paging and partial failure', async () => {
+        const requests: string[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [
+                createSubscription('sub-one', 'Subscription One'),
+                createSubscription('sub-two', 'Subscription Two'),
+            ],
+            async context => {
+                if (context.subscriptionId === 'sub-two') {
+                    throw new Error('Subscription unavailable');
+                }
 
-        assert.strictEqual(options.length, 21);
-        assert.deepStrictEqual(options.slice(0, 4).map(option => [option.id, option.label]), [
-            ['office365', 'Office 365 Outlook'],
-            ['sharepointonline', 'SharePoint'],
-            ['onedriveforbusiness', 'OneDrive for Business'],
-            ['teams', 'Microsoft Teams'],
-        ]);
-    });
+                return {
+                    async get(url: string): Promise<unknown> {
+                        requests.push(url);
+                        if (url.endsWith('/next-namespaces')) {
+                            return {
+                                value: [{
+                                    id: '/subscriptions/sub-one/resourceGroups/rg-two/providers/Microsoft.Web/connectorGateways/zeta',
+                                    name: 'zeta',
+                                    location: 'westus',
+                                }],
+                            };
+                        }
 
-    test('uses the selected connector label to filter the existing template gallery', () => {
-        assert.deepStrictEqual(getConnectorTriggerOption('sharepointonline'), {
-            id: 'sharepointonline',
-            label: 'SharePoint',
-            iconUrl: 'https://preprod.static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4751/sharepointonline/icon.png',
-            templateSearch: 'SharePoint',
-        });
-        assert.strictEqual(getConnectorTriggerOption('unknown'), undefined);
-        assert.deepStrictEqual(
-            getConnectorTriggerTemplateFilters(
-                { language: 'python', useCase: 'connectors', resource: 'connector' },
-                'sharepointonline',
-            ),
-            {
-                language: 'python',
-                useCase: 'connectors',
-                resource: 'connector',
-                search: 'SharePoint',
+                        return {
+                            value: [{
+                                id: '/subscriptions/sub-one/resourceGroups/rg-one/providers/Microsoft.Web/connectorGateways/alpha',
+                                name: 'alpha',
+                                location: 'eastus2',
+                            }],
+                            nextLink: 'https://management.azure.com/next-namespaces',
+                        };
+                    },
+                };
             },
         );
-        assert.strictEqual(
-            getConnectorTriggerTemplateFilters({}, 'unknown'),
-            undefined,
+
+        const result = await client.listNamespaces(await createTestActionContext());
+
+        assert.strictEqual(result.failedSubscriptionCount, 1);
+        assert.deepStrictEqual(result.namespaces.map(namespace => ({
+            name: namespace.name,
+            resourceGroup: namespace.resourceGroup,
+            subscriptionName: namespace.subscriptionName,
+        })), [
+            { name: 'alpha', resourceGroup: 'rg-one', subscriptionName: 'Subscription One' },
+            { name: 'zeta', resourceGroup: 'rg-two', subscriptionName: 'Subscription One' },
+        ]);
+        assert.ok(requests[0].includes('/subscriptions/sub-one/providers/Microsoft.Web/connectorGateways'));
+        assert.ok(requests[0].includes('api-version=2026-05-01-preview'));
+        assert.strictEqual(requests[1], 'https://management.azure.com/next-namespaces');
+    });
+
+    test('loads live connectors and paged trigger operations from the namespace API', async () => {
+        const requests: string[] = [];
+        const armClient: ConnectorArmClient = {
+            async get(url: string): Promise<unknown> {
+                requests.push(url);
+                if (url === 'https://management.azure.com/managed-api-page-2') {
+                    return {
+                        value: [{
+                            name: 'unused',
+                            properties: {
+                                generalInformation: {
+                                    displayName: 'No Triggers',
+                                    iconUri: 'http://example.com/not-allowed.png',
+                                },
+                            },
+                        }],
+                    };
+                } else if (url === 'https://management.azure.com/operation-page-2') {
+                    return {
+                        value: [{
+                            name: 'OnNewFile',
+                            properties: {
+                                summary: 'When a file is created',
+                                isWebhook: true,
+                                api: {
+                                    name: 'sharepointonline',
+                                    displayName: 'SharePoint',
+                                    iconUri: 'https://example.com/sharepoint.png',
+                                },
+                            },
+                        }],
+                    };
+                } else if (url.includes('/managedApiOperations?')) {
+                    return {
+                        value: [
+                            {
+                                name: 'OnNewEmailV1',
+                                properties: {
+                                    summary: 'When an email arrives (old)',
+                                    annotation: { family: 'new-email', revision: 1 },
+                                    api: {
+                                        name: 'office365',
+                                        displayName: 'Office 365 Outlook',
+                                    },
+                                },
+                            },
+                            {
+                                name: 'OnNewEmail',
+                                properties: {
+                                    summary: 'When a new email arrives',
+                                    triggerHint: 'Fires for new email.',
+                                    annotation: { family: 'new-email', revision: 2 },
+                                    api: {
+                                        name: 'office365',
+                                        displayName: 'Office 365 Outlook',
+                                    },
+                                },
+                            },
+                            {
+                                name: 'InternalTrigger',
+                                properties: {
+                                    visibility: 'internal',
+                                    api: {
+                                        name: 'office365',
+                                        displayName: 'Office 365 Outlook',
+                                    },
+                                },
+                            },
+                        ],
+                        nextLink: 'https://management.azure.com/operation-page-2',
+                    };
+                } else if (url.includes('/managedApis?')) {
+                    return {
+                        value: [{
+                            name: 'office365',
+                            properties: {
+                                generalInformation: {
+                                    displayName: 'Office 365 Outlook',
+                                    description: 'Office mail and calendar.',
+                                    iconUri: 'https://example.com/office365.png',
+                                },
+                            },
+                        }],
+                        nextLink: 'https://management.azure.com/managed-api-page-2',
+                    };
+                }
+
+                assert.fail(`Unexpected URL: ${url}`);
+            },
+        };
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription('sub-one', 'Subscription One')],
+            async () => armClient,
+        );
+
+        const catalog = await client.listCatalog(
+            await createTestActionContext(),
+            createNamespace(),
+        );
+
+        assert.deepStrictEqual(catalog.connectors, [
+            {
+                id: 'office365',
+                label: 'Office 365 Outlook',
+                description: 'Office mail and calendar.',
+                iconUrl: 'https://example.com/office365.png',
+                templateSearch: 'Office 365 Outlook',
+            },
+            {
+                id: 'sharepointonline',
+                label: 'SharePoint',
+                description: undefined,
+                iconUrl: 'https://example.com/sharepoint.png',
+                templateSearch: 'SharePoint',
+            },
+        ]);
+        assert.deepStrictEqual(catalog.operations, [
+            {
+                id: 'OnNewEmail',
+                connectorId: 'office365',
+                label: 'When a new email arrives',
+                description: 'Fires for new email.',
+                isWebhook: false,
+                isNotification: false,
+            },
+            {
+                id: 'OnNewFile',
+                connectorId: 'sharepointonline',
+                label: 'When a file is created',
+                description: undefined,
+                isWebhook: true,
+                isNotification: false,
+            },
+        ]);
+
+        const operationsRequest = new URL(requests.find(url => url.includes('/managedApiOperations?')) as string);
+        assert.strictEqual(operationsRequest.searchParams.get('$filter'), "operationRole eq 'Trigger'");
+        assert.strictEqual(operationsRequest.searchParams.get('$top'), '250');
+        assert.ok(requests.includes('https://management.azure.com/operation-page-2'));
+        assert.ok(requests.includes('https://management.azure.com/managed-api-page-2'));
+    });
+
+    test('fails explicitly when every subscription namespace request fails', async () => {
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription('sub-one', 'Subscription One')],
+            async () => { throw new Error('Unavailable'); },
+        );
+
+        await assert.rejects(
+            client.listNamespaces(await createTestActionContext()),
+            /Unable to load Connector Namespaces/,
         );
     });
 
-    test('builds the source picker labels and static icon catalog', () => {
+    test('builds localized live-data picker labels', () => {
         const viewModel = createConnectorTriggerPickerViewModel();
 
         assert.strictEqual(viewModel.labels.panelTitle, 'Connector Trigger');
         assert.strictEqual(viewModel.labels.title, 'Create New Connection');
+        assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
-        assert.ok(viewModel.connectors.every(option => option.iconUrl?.startsWith('https://')));
-        assert.deepStrictEqual(getConnectorTriggerIconSources(), [
-            'https://preprod.static.powerapps.com',
-            'https://conn-afd-test-endpoint-ekb7c2aueydtd3bf.b02.azurefd.net',
-        ]);
+        assert.strictEqual(viewModel.labels.triggerGroup, 'Trigger');
     });
 
-    test('escapes apostrophes in the shared webview initial-data value', () => {
+    test('escapes initial data and allows HTTPS API-provided icons', () => {
         const template = "before _initialData: 'don't'\nafter";
 
         assert.strictEqual(
             escapeWebviewInitialData(template),
             "before _initialData: 'don%27t'\nafter",
         );
-        assert.strictEqual(escapeWebviewInitialData('no initial data'), 'no initial data');
+        assert.strictEqual(
+            allowWebviewImageSources('img-src vscode-webview: data:;', ['https:']),
+            'img-src vscode-webview: data: https:;',
+        );
         assert.throws(
             () => escapeWebviewInitialData("before _initialData: 'unterminated"),
             /Unable to locate/,
         );
     });
 
-    test('adds only connector catalog image hosts to the webview CSP', () => {
-        const template = 'img-src vscode-webview: data: vscode-resource:;';
-        const sources = getConnectorTriggerIconSources();
-
-        assert.strictEqual(
-            allowWebviewImageSources(template, sources),
-            `img-src vscode-webview: data: vscode-resource: ${sources.join(' ')};`,
-        );
-        assert.strictEqual(
-            allowWebviewImageSources(
-                `img-src vscode-webview: ${sources[0]};`,
-                sources,
-            ),
-            `img-src vscode-webview: ${sources.join(' ')};`,
-        );
-    });
-
-    test('accepts only the picker command contract', () => {
-        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'close' }), true);
+    test('accepts only the live picker request and response contracts', () => {
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'loadNamespaces' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
-            command: 'continue',
-            connectorId: 'sharepointonline',
+            command: 'loadCatalog',
+            namespaceId: 'namespace-id',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
-            type: 'continue',
+            command: 'continue',
+            namespaceId: 'namespace-id',
             connectorId: 'sharepointonline',
-        }), false);
+            operationId: 'OnNewFile',
+        }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
-            connectorId: 1,
+            connectorId: 'sharepointonline',
         }), false);
+
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'namespacesLoaded',
+            namespaces: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'catalogLoaded',
+            namespaceId: 'namespace-id',
+            connectors: [],
+            operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'loadFailed',
+            scope: 'catalog',
+            namespaceId: 'namespace-id',
+            message: 'Failed',
+        }), true);
     });
 });
+
+function createSubscription(
+    subscriptionId: string,
+    subscriptionDisplayName: string,
+): ConnectorSubscription {
+    return {
+        subscriptionId,
+        subscriptionDisplayName,
+        context: {
+            subscriptionId,
+            subscriptionDisplayName,
+            environment: {
+                resourceManagerEndpointUrl: 'https://management.azure.com',
+            },
+        } as ISubscriptionContext,
+    };
+}
+
+function createNamespace(): ConnectorNamespaceOption {
+    return {
+        id: '/subscriptions/sub-one/resourceGroups/rg-one/providers/Microsoft.Web/connectorGateways/gateway-one',
+        name: 'gateway-one',
+        label: 'gateway-one',
+        location: 'eastus2',
+        resourceGroup: 'rg-one',
+        subscriptionId: 'sub-one',
+        subscriptionName: 'Subscription One',
+    };
+}
