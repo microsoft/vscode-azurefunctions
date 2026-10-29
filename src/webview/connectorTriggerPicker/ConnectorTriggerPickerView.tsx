@@ -11,6 +11,10 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import { ConnectorConfigureStep, getDeliverySupport } from './ConnectorConfigureStep';
 import { ConnectorEventStep } from './ConnectorEventStep';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
+import {
+    partitionConnectorOptions,
+    shouldExpandOtherConnectors,
+} from './connectorTriggerGroups';
 import { ConnectorTriggerShell, type ConnectorTriggerStep } from './ConnectorTriggerShell';
 import {
     isConnectorTriggerPickerResponse,
@@ -39,6 +43,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [catalogLoading, setCatalogLoading] = useState(false);
     const [connectorSearch, setConnectorSearch] = useState('');
     const [connectorLimit, setConnectorLimit] = useState(connectorPageSize);
+    const [otherConnectorsExpanded, setOtherConnectorsExpanded] = useState(false);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [deliveryMode, setDeliveryMode] = useState<ConnectorDeliveryMode>('Polling');
@@ -158,6 +163,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setProjectCreationError('');
         setConnectorSearch('');
         setConnectorLimit(connectorPageSize);
+        setOtherConnectorsExpanded(false);
         setConnectors([]);
         setOperations([]);
         setCatalogNamespaceId('');
@@ -194,7 +200,17 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             connector.label.toLocaleLowerCase().includes(query) ||
             connector.description?.toLocaleLowerCase().includes(query));
     }, [connectorSearch, visibleConnectors]);
-    const displayedConnectors = filteredConnectors.slice(0, connectorLimit);
+    const connectorGroups = useMemo(
+        () => partitionConnectorOptions(filteredConnectors),
+        [filteredConnectors],
+    );
+    const otherConnectorsVisible = shouldExpandOtherConnectors(
+        connectorSearch,
+        otherConnectorsExpanded,
+    );
+    const displayedOtherConnectors = connectorSearch.trim() ?
+        connectorGroups.other :
+        connectorGroups.other.slice(0, connectorLimit);
 
     const requestOperationInputs = useCallback((force = false) => {
         if (!selectedNamespaceId || !selectedConnectorId || !selectedOperationId) {
@@ -393,20 +409,59 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                                     filteredConnectors.length.toString(),
                                                 )}
                                             </p>
-                                            <ConnectorTilePicker
-                                                label={viewModel.labels.connectorGroup}
-                                                options={displayedConnectors}
-                                                value={selectedConnectorId}
-                                                onChange={selectConnector}
-                                            />
-                                            {displayedConnectors.length < filteredConnectors.length &&
-                                                <Button
-                                                    appearance="secondary"
-                                                    className="show-more"
-                                                    onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}
-                                                >
-                                                    {viewModel.labels.showMoreConnectors}
-                                                </Button>
+                                            {connectorGroups.featured.length > 0 &&
+                                                <section className="featured-connectors">
+                                                    <h3>{viewModel.labels.featuredConnectors}</h3>
+                                                    <ConnectorTilePicker
+                                                        label={viewModel.labels.featuredConnectors}
+                                                        options={connectorGroups.featured}
+                                                        value={selectedConnectorId}
+                                                        onChange={selectConnector}
+                                                    />
+                                                </section>
+                                            }
+                                            {connectorGroups.other.length > 0 &&
+                                                <section className="other-connectors">
+                                                    <button
+                                                        type="button"
+                                                        className="other-connectors-toggle"
+                                                        aria-controls="other-connectors-grid"
+                                                        aria-expanded={otherConnectorsVisible}
+                                                        aria-label={otherConnectorsVisible ?
+                                                            viewModel.labels.hideOtherConnectors :
+                                                            viewModel.labels.showOtherConnectors}
+                                                        disabled={!!connectorSearch.trim()}
+                                                        onClick={() => setOtherConnectorsExpanded(expanded => !expanded)}
+                                                    >
+                                                        <span
+                                                            className={`codicon codicon-chevron-${otherConnectorsVisible ? 'down' : 'right'}`}
+                                                            aria-hidden="true"
+                                                        />
+                                                        {format(
+                                                            viewModel.labels.otherConnectors,
+                                                            connectorGroups.other.length.toString(),
+                                                        )}
+                                                    </button>
+                                                    {otherConnectorsVisible &&
+                                                        <div id="other-connectors-grid">
+                                                            <ConnectorTilePicker
+                                                                label={viewModel.labels.connectorGroup}
+                                                                options={displayedOtherConnectors}
+                                                                value={selectedConnectorId}
+                                                                onChange={selectConnector}
+                                                            />
+                                                            {displayedOtherConnectors.length < connectorGroups.other.length &&
+                                                                <Button
+                                                                    appearance="secondary"
+                                                                    className="show-more"
+                                                                    onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}
+                                                                >
+                                                                    {viewModel.labels.showMoreConnectors}
+                                                                </Button>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </section>
                                             }
                                         </>
                             }

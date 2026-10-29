@@ -75,6 +75,10 @@ export interface ConnectorTriggerPickerViewModel {
         loadingNamespaces: string;
         noNamespaces: string;
         connectorGroup: string;
+        featuredConnectors: string;
+        otherConnectors: string;
+        showOtherConnectors: string;
+        hideOtherConnectors: string;
         connectorPageTitle: string;
         connectorPageDescription: string;
         connectorSearchPlaceholder: string;

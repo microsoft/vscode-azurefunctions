@@ -216,6 +216,49 @@ select {
     font-size: 0.92em;
 }
 
+.featured-connectors {
+    h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+    }
+}
+
+.other-connectors {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid var(--connector-picker-border);
+}
+
+.other-connectors-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    padding: 3px 0;
+    border: 0;
+    color: var(--vscode-foreground);
+    background: transparent;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover:not(:disabled) {
+        color: var(--vscode-textLink-foreground);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 1;
+        cursor: default;
+    }
+}
+
 .connector-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

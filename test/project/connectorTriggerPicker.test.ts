@@ -26,6 +26,10 @@ import {
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
+    partitionConnectorOptions,
+    shouldExpandOtherConnectors,
+} from '../../src/webview/connectorTriggerPicker/connectorTriggerGroups';
+import {
     isConnectorTriggerPickerMessage,
     isConnectorTriggerPickerResponse,
     type ConnectorNamespaceOption,
@@ -499,11 +503,48 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
         assert.strictEqual(viewModel.labels.createNamespace, '+ Create new Connector Namespace...');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
+        assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
+        assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
         assert.strictEqual(viewModel.labels.eventParameters, 'Event parameters');
         assert.strictEqual(
             viewModel.labels.eventParametersDescription,
             'Configure the inputs defined by the selected connector event.',
         );
+    });
+
+    test('groups featured connectors in the configured order and expands search results', () => {
+        const connectors: ConnectorTriggerOption[] = [
+            { id: 'salesforce', label: 'Salesforce' },
+            { id: 'custom-office-helper', label: 'Office 365 helper' },
+            { id: 'dataflows', label: 'Power Query Dataflows' },
+            { id: 'teams', label: 'Microsoft Teams' },
+            { id: 'OFFICE365', label: 'OFFICE 365 OUTLOOK' },
+            { id: 'github', label: 'GitHub' },
+            { id: 'sharepointonline', label: 'SharePoint' },
+            { id: 'visualstudio-team-services', label: 'Azure DevOps' },
+            { id: 'planner', label: 'Planner' },
+            { id: 'onedriveforbusiness', label: 'OneDrive for Business' },
+        ];
+
+        const groups = partitionConnectorOptions(connectors);
+
+        assert.deepStrictEqual(groups.featured.map(connector => connector.id), [
+            'OFFICE365',
+            'sharepointonline',
+            'onedriveforbusiness',
+            'teams',
+            'planner',
+            'salesforce',
+            'visualstudio-team-services',
+            'dataflows',
+        ]);
+        assert.deepStrictEqual(groups.other.map(connector => connector.id), [
+            'custom-office-helper',
+            'github',
+        ]);
+        assert.strictEqual(shouldExpandOtherConnectors('', false), false);
+        assert.strictEqual(shouldExpandOtherConnectors('', true), true);
+        assert.strictEqual(shouldExpandOtherConnectors('github', false), true);
     });
 
     test('derives allowed delivery modes from live trigger metadata', () => {
