@@ -136,6 +136,16 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
+        if (message.command === 'loadOperationInputs') {
+            await this.loadOperationInputs(
+                actionContext,
+                message.namespaceId,
+                message.connectorId,
+                message.operationId,
+            );
+            return;
+        }
+
         const namespace = this.namespaces.get(message.namespaceId);
         const catalog = this.catalogs.get(message.namespaceId);
         const connector = catalog?.connectors.find(item => item.id === message.connectorId);
@@ -273,6 +283,62 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             await this.postMessage({
                 command: 'loadFailed',
                 scope: 'namespaces',
+                message: parseError(error).message,
+            });
+        }
+    }
+
+    private async loadOperationInputs(
+        actionContext: IActionContext,
+        namespaceId: string,
+        connectorId: string,
+        operationId: string,
+    ): Promise<void> {
+        const namespace = this.namespaces.get(namespaceId);
+        const catalog = this.catalogs.get(namespaceId);
+        const operation = catalog?.operations.find(item =>
+            equalsIgnoreCase(item.connectorId, connectorId) &&
+            equalsIgnoreCase(item.id, operationId));
+        if (!namespace || !catalog || !operation) {
+            return;
+        }
+
+        if (operation.inputDefinitions !== undefined) {
+            await this.postMessage({
+                command: 'operationInputsLoaded',
+                namespaceId,
+                connectorId,
+                operationId,
+                inputDefinitions: operation.inputDefinitions,
+            });
+            return;
+        }
+
+        try {
+            const inputDefinitions = await this.dataClient.listOperationInputs(
+                actionContext,
+                namespace,
+                connectorId,
+                operationId,
+            );
+            const updatedOperation = { ...operation, inputDefinitions };
+            catalog.operations = catalog.operations.map(item =>
+                item === operation ? updatedOperation : item);
+            await this.postMessage({
+                command: 'operationInputsLoaded',
+                namespaceId,
+                connectorId,
+                operationId,
+                inputDefinitions,
+            });
+        } catch (error) {
+            actionContext.telemetry.properties.connectorPickerLoad = 'operationInputs';
+            actionContext.telemetry.properties.result = 'Failed';
+            await this.postMessage({
+                command: 'operationInputsFailed',
+                namespaceId,
+                connectorId,
+                operationId,
                 message: parseError(error).message,
             });
         }

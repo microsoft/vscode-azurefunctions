@@ -20,6 +20,32 @@ export interface ConnectorTriggerOption {
     iconUrl?: string;
 }
 
+export type ConnectorTriggerInputType =
+    'array' |
+    'boolean' |
+    'integer' |
+    'number' |
+    'object' |
+    'string';
+
+export interface ConnectorTriggerInputOption {
+    label: string;
+    value: string;
+}
+
+export interface ConnectorTriggerInputDefinition {
+    name: string;
+    label: string;
+    description?: string;
+    type: ConnectorTriggerInputType;
+    format?: string;
+    required: boolean;
+    defaultValue?: string | number | boolean;
+    options?: ConnectorTriggerInputOption[];
+    dynamic: boolean;
+    sensitive: boolean;
+}
+
 export interface ConnectorTriggerOperationOption {
     id: string;
     connectorId: string;
@@ -27,6 +53,7 @@ export interface ConnectorTriggerOperationOption {
     description?: string;
     isWebhook: boolean;
     isNotification: boolean;
+    inputDefinitions?: ConnectorTriggerInputDefinition[];
 }
 
 export interface ConnectorTriggerPickerViewModel {
@@ -70,6 +97,12 @@ export interface ConnectorTriggerPickerViewModel {
         webhook: string;
         pollingDescription: string;
         webhookDescription: string;
+        eventParameters: string;
+        eventParametersDescription: string;
+        loadingEventParameters: string;
+        noEventParameters: string;
+        dynamicParameterDescription: string;
+        requiredParameter: string;
         selectionPreview: string;
         functionPreview: string;
         infrastructurePreview: string;
@@ -87,6 +120,12 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'loadNamespaces' }
     | { command: 'createNamespace' }
     | { command: 'loadCatalog'; namespaceId: string }
+    | {
+        command: 'loadOperationInputs';
+        namespaceId: string;
+        connectorId: string;
+        operationId: string;
+    }
     | {
         command: 'continue';
         namespaceId: string;
@@ -107,6 +146,20 @@ export type ConnectorTriggerPickerResponse =
         namespaceId: string;
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
+    }
+    | {
+        command: 'operationInputsLoaded';
+        namespaceId: string;
+        connectorId: string;
+        operationId: string;
+        inputDefinitions: ConnectorTriggerInputDefinition[];
+    }
+    | {
+        command: 'operationInputsFailed';
+        namespaceId: string;
+        connectorId: string;
+        operationId: string;
+        message: string;
     }
     | {
         command: 'namespaceCreationCancelled';
@@ -145,6 +198,15 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return 'namespaceId' in message && typeof message.namespaceId === 'string';
     }
 
+    if (message.command === 'loadOperationInputs') {
+        return 'namespaceId' in message &&
+            typeof message.namespaceId === 'string' &&
+            'connectorId' in message &&
+            typeof message.connectorId === 'string' &&
+            'operationId' in message &&
+            typeof message.operationId === 'string';
+    }
+
     return message.command === 'continue' &&
         'namespaceId' in message &&
         typeof message.namespaceId === 'string' &&
@@ -174,6 +236,28 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             Array.isArray(message.connectors) &&
             'operations' in message &&
             Array.isArray(message.operations);
+    }
+
+    if (message.command === 'operationInputsLoaded') {
+        return 'namespaceId' in message &&
+            typeof message.namespaceId === 'string' &&
+            'connectorId' in message &&
+            typeof message.connectorId === 'string' &&
+            'operationId' in message &&
+            typeof message.operationId === 'string' &&
+            'inputDefinitions' in message &&
+            Array.isArray(message.inputDefinitions);
+    }
+
+    if (message.command === 'operationInputsFailed') {
+        return 'namespaceId' in message &&
+            typeof message.namespaceId === 'string' &&
+            'connectorId' in message &&
+            typeof message.connectorId === 'string' &&
+            'operationId' in message &&
+            typeof message.operationId === 'string' &&
+            'message' in message &&
+            typeof message.message === 'string';
     }
 
     if (message.command === 'namespaceCreationCancelled') {

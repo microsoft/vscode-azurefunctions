@@ -42,6 +42,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [deliveryMode, setDeliveryMode] = useState<ConnectorDeliveryMode>('Polling');
+    const [operationInputsLoading, setOperationInputsLoading] = useState(false);
+    const [operationInputsError, setOperationInputsError] = useState('');
     const [projectCreating, setProjectCreating] = useState(false);
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
@@ -50,6 +52,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         message: string;
     }>();
     const selectedNamespaceIdRef = useRef('');
+    const selectedOperationKeyRef = useRef('');
+    const operationInputRequestKeyRef = useRef('');
 
     const loadNamespaces = useCallback(() => {
         setNamespacesLoading(true);
@@ -86,6 +90,32 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogNamespaceId(message.namespaceId);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
+            } else if (message.command === 'operationInputsLoaded') {
+                if (message.namespaceId !== selectedNamespaceIdRef.current) {
+                    return;
+                }
+                setOperations(current => current.map(operation =>
+                    equalsIgnoreCase(operation.connectorId, message.connectorId) &&
+                        equalsIgnoreCase(operation.id, message.operationId) ?
+                        { ...operation, inputDefinitions: message.inputDefinitions } :
+                        operation));
+                if (getOperationKey(
+                    message.namespaceId,
+                    message.connectorId,
+                    message.operationId,
+                ) === selectedOperationKeyRef.current) {
+                    setOperationInputsLoading(false);
+                    setOperationInputsError('');
+                }
+            } else if (message.command === 'operationInputsFailed') {
+                if (getOperationKey(
+                    message.namespaceId,
+                    message.connectorId,
+                    message.operationId,
+                ) === selectedOperationKeyRef.current) {
+                    setOperationInputsLoading(false);
+                    setOperationInputsError(message.message);
+                }
             } else if (message.command === 'projectCreationStarted') {
                 setProjectCreating(true);
                 setProjectCreationDetail(viewModel.labels.creatingProject);
@@ -119,6 +149,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setSelectedConnectorId('');
         setSelectedOperationId('');
         setDeliveryMode('Polling');
+        setOperationInputsLoading(false);
+        setOperationInputsError('');
+        selectedOperationKeyRef.current = '';
+        operationInputRequestKeyRef.current = '';
         setProjectCreating(false);
         setProjectCreationDetail('');
         setProjectCreationError('');
@@ -162,10 +196,67 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     }, [connectorSearch, visibleConnectors]);
     const displayedConnectors = filteredConnectors.slice(0, connectorLimit);
 
+    const requestOperationInputs = useCallback((force = false) => {
+        if (!selectedNamespaceId || !selectedConnectorId || !selectedOperationId) {
+            return;
+        }
+
+        const key = getOperationKey(
+            selectedNamespaceId,
+            selectedConnectorId,
+            selectedOperationId,
+        );
+        if (!force && operationInputRequestKeyRef.current === key) {
+            return;
+        }
+
+        operationInputRequestKeyRef.current = key;
+        setOperationInputsLoading(true);
+        setOperationInputsError('');
+        vscodeApi.postMessage({
+            command: 'loadOperationInputs',
+            namespaceId: selectedNamespaceId,
+            connectorId: selectedConnectorId,
+            operationId: selectedOperationId,
+        });
+    }, [
+        selectedConnectorId,
+        selectedNamespaceId,
+        selectedOperationId,
+        vscodeApi,
+    ]);
+
+    useEffect(() => {
+        selectedOperationKeyRef.current = getOperationKey(
+            selectedNamespaceId,
+            selectedConnectorId,
+            selectedOperationId,
+        );
+        if (activeStep !== 3 || !selectedOperation) {
+            return;
+        }
+
+        if (selectedOperation.inputDefinitions === undefined) {
+            requestOperationInputs();
+        } else {
+            setOperationInputsLoading(false);
+            setOperationInputsError('');
+        }
+    }, [
+        activeStep,
+        requestOperationInputs,
+        selectedConnectorId,
+        selectedNamespaceId,
+        selectedOperation,
+        selectedOperationId,
+    ]);
+
     const selectConnector = (connectorId: string) => {
         if (connectorId !== selectedConnectorId) {
             setSelectedOperationId('');
             setDeliveryMode('Polling');
+            setOperationInputsLoading(false);
+            setOperationInputsError('');
             setProjectCreationError('');
         }
         setSelectedConnectorId(connectorId);
@@ -184,6 +275,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
         setSelectedOperationId(operationId);
         setDeliveryMode('Polling');
+        setOperationInputsLoading(false);
+        setOperationInputsError('');
         setProjectCreationError('');
         setActiveStep(3);
     };
@@ -341,11 +434,14 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     language={viewModel.language}
                     namespace={selectedNamespace}
                     operation={selectedOperation}
+                    operationInputsError={operationInputsError}
+                    operationInputsLoading={operationInputsLoading}
                     projectCreating={projectCreating}
                     projectCreationDetail={projectCreationDetail}
                     projectCreationError={projectCreationError}
                     onChangeDeliveryMode={setDeliveryMode}
                     onChangeEvent={() => setActiveStep(2)}
+                    onRetryOperationInputs={() => requestOperationInputs(true)}
                     onUseTemplate={useTemplate}
                 />
             }
@@ -360,6 +456,14 @@ function formatNamespaceLabel(namespace: ConnectorNamespaceOption): string {
 
 function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function getOperationKey(
+    namespaceId: string,
+    connectorId: string,
+    operationId: string,
+): string {
+    return `${namespaceId}\n${connectorId.toLowerCase()}\n${operationId.toLowerCase()}`;
 }
 
 function format(template: string, ...values: string[]): string {

@@ -384,6 +384,77 @@ select {
     }
 }
 
+.event-parameters {
+    margin-bottom: 16px;
+    padding: 14px;
+    border: 1px solid var(--connector-picker-border);
+    border-radius: var(--connector-picker-radius);
+
+    h3 {
+        margin: 0;
+        font-size: 14px;
+    }
+
+    > p {
+        margin: 6px 0 14px;
+        color: var(--vscode-descriptionForeground);
+    }
+}
+
+.event-parameter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+}
+
+.event-parameter {
+    min-width: 0;
+
+    > label,
+    > span {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+
+    input:not([type='checkbox']),
+    select,
+    textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 30px;
+        padding: 5px 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 2px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        font: inherit;
+
+        &:focus {
+            border-color: var(--vscode-focusBorder);
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: -1px;
+        }
+    }
+
+    textarea {
+        min-height: 72px;
+        resize: vertical;
+    }
+
+    > small {
+        display: block;
+        margin-top: 5px;
+        color: var(--vscode-descriptionForeground);
+    }
+}
+
+.boolean-parameter {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
 .preview-panel {
     padding: 14px;
     border: 1px solid var(--connector-picker-border);
@@ -470,6 +541,10 @@ pre {
             width: 100%;
             margin: 10px 0 0;
         }
+    }
+
+    .event-parameter-grid {
+        grid-template-columns: 1fr;
     }
 }
 

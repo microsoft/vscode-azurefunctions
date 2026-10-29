@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button } from '@fluentui/react-components';
-import { useMemo, useState, type JSX } from 'react';
+import { useEffect, useMemo, useState, type JSX } from 'react';
 import { ConnectorBrandIcon } from './ConnectorBrandIcon';
 import {
     type ConnectorDeliveryMode,
     type ConnectorNamespaceOption,
+    type ConnectorTriggerInputDefinition,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
@@ -21,11 +22,14 @@ interface ConnectorConfigureStepProps {
     language?: string;
     namespace: ConnectorNamespaceOption;
     operation: ConnectorTriggerOperationOption;
+    operationInputsError: string;
+    operationInputsLoading: boolean;
     projectCreating: boolean;
     projectCreationDetail: string;
     projectCreationError: string;
     onChangeDeliveryMode: (deliveryMode: ConnectorDeliveryMode) => void;
     onChangeEvent: () => void;
+    onRetryOperationInputs: () => void;
     onUseTemplate: () => void;
 }
 
@@ -36,15 +40,20 @@ export function ConnectorConfigureStep({
     language,
     namespace,
     operation,
+    operationInputsError,
+    operationInputsLoading,
     projectCreating,
     projectCreationDetail,
     projectCreationError,
     onChangeDeliveryMode,
     onChangeEvent,
+    onRetryOperationInputs,
     onUseTemplate,
 }: ConnectorConfigureStepProps): JSX.Element {
     const [previewTab, setPreviewTab] = useState<'function' | 'infrastructure'>('function');
+    const [inputValues, setInputValues] = useState<Record<string, string | boolean>>({});
     const support = getDeliverySupport(operation);
+    const inputDefinitions = operation.inputDefinitions;
     const functionPreview = useMemo(() => JSON.stringify({
         language: language || 'selected project language',
         connectorNamespace: namespace.name,
@@ -58,6 +67,18 @@ export function ConnectorConfigureStep({
         location: namespace.location,
         connectorNamespace: namespace.name,
     }, null, 2), [namespace]);
+
+    useEffect(() => {
+        const initialValues: Record<string, string | boolean> = {};
+        for (const input of inputDefinitions ?? []) {
+            if (input.defaultValue !== undefined && !input.sensitive) {
+                initialValues[input.name] = typeof input.defaultValue === 'boolean' ?
+                    input.defaultValue :
+                    String(input.defaultValue);
+            }
+        }
+        setInputValues(initialValues);
+    }, [inputDefinitions, operation.id]);
 
     return (
         <section className="step-page configure-page">
@@ -106,6 +127,39 @@ export function ConnectorConfigureStep({
                 </div>
             </div>
 
+            <div className="event-parameters">
+                <h3>{labels.eventParameters}</h3>
+                <p>{labels.eventParametersDescription}</p>
+                {operationInputsLoading ||
+                    inputDefinitions === undefined && !operationInputsError ?
+                    <p className="status-text">{labels.loadingEventParameters}</p> :
+                    operationInputsError ?
+                        <div className="load-error" role="alert">
+                            <p>{operationInputsError}</p>
+                            <Button appearance="secondary" onClick={onRetryOperationInputs}>
+                                {labels.retry}
+                            </Button>
+                        </div> :
+                        inputDefinitions?.length === 0 ?
+                            <p className="status-text">{labels.noEventParameters}</p> :
+                            <div className="event-parameter-grid">
+                                {inputDefinitions?.map((input, index) =>
+                                    <EventParameterField
+                                        key={input.name}
+                                        id={`connector-event-parameter-${index}`}
+                                        input={input}
+                                        labels={labels}
+                                        value={inputValues[input.name]}
+                                        onChange={value => setInputValues(current => ({
+                                            ...current,
+                                            [input.name]: value,
+                                        }))}
+                                    />
+                                )}
+                            </div>
+                }
+            </div>
+
             <div className="preview-panel">
                 <div className="preview-callout">
                     <strong>{labels.selectionPreview}</strong>
@@ -149,6 +203,96 @@ export function ConnectorConfigureStep({
                 </div>
             </div>
         </section>
+    );
+}
+
+function EventParameterField({
+    id,
+    input,
+    labels,
+    value,
+    onChange,
+}: {
+    id: string;
+    input: ConnectorTriggerInputDefinition;
+    labels: ConnectorTriggerPickerViewModel['labels'];
+    value: string | boolean | undefined;
+    onChange: (value: string | boolean) => void;
+}): JSX.Element {
+    const label = (
+        <span>
+            {input.label}
+            {input.required && <small> ({labels.requiredParameter})</small>}
+        </span>
+    );
+    let control: JSX.Element;
+    if (input.type === 'boolean') {
+        control = (
+            <label className="boolean-parameter" htmlFor={id}>
+                <input
+                    id={id}
+                    type="checkbox"
+                    required={input.required}
+                    checked={value === true}
+                    onChange={event => onChange(event.target.checked)}
+                />
+                {label}
+            </label>
+        );
+    } else if (input.options?.length) {
+        control = (
+            <>
+                <label htmlFor={id}>{label}</label>
+                <select
+                    id={id}
+                    required={input.required}
+                    value={typeof value === 'string' ? value : ''}
+                    onChange={event => onChange(event.target.value)}
+                >
+                    <option value="" />
+                    {input.options.map(option =>
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                    )}
+                </select>
+            </>
+        );
+    } else if (input.type === 'array' || input.type === 'object') {
+        control = (
+            <>
+                <label htmlFor={id}>{label}</label>
+                <textarea
+                    id={id}
+                    required={input.required}
+                    value={typeof value === 'string' ? value : ''}
+                    onChange={event => onChange(event.target.value)}
+                />
+            </>
+        );
+    } else {
+        control = (
+            <>
+                <label htmlFor={id}>{label}</label>
+                <input
+                    id={id}
+                    type={input.sensitive ?
+                        'password' :
+                        input.type === 'integer' || input.type === 'number' ?
+                            'number' :
+                            'text'}
+                    required={input.required}
+                    value={typeof value === 'string' ? value : ''}
+                    onChange={event => onChange(event.target.value)}
+                />
+            </>
+        );
+    }
+
+    return (
+        <div className="event-parameter">
+            {control}
+            {input.description && <small>{input.description}</small>}
+            {input.dynamic && <small>{labels.dynamicParameterDescription}</small>}
+        </div>
     );
 }
 

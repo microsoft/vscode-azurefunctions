@@ -12,10 +12,17 @@ import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
     type ConnectorNamespaceOption,
+    type ConnectorTriggerInputDefinition,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { requestUtils } from '../../../utils/requestUtils';
+import {
+    parseConnectorInputsDefinition,
+    parseConnectorSwaggerInputs,
+} from './connectorTriggerInputs';
+
+const managedApiSwaggerApiVersion = '2022-09-01-preview';
 
 export interface ConnectorTriggerCatalog {
     connectors: ConnectorTriggerOption[];
@@ -88,6 +95,7 @@ interface ManagedApiOperation {
             family?: string;
             revision?: number;
         };
+        inputsDefinition?: unknown;
     };
 }
 
@@ -204,6 +212,52 @@ export class ConnectorTriggerDataClient {
         ];
     }
 
+    public async listOperationInputs(
+        context: IActionContext,
+        namespace: ConnectorNamespaceOption,
+        connectorId: string,
+        operationId: string,
+    ): Promise<ConnectorTriggerInputDefinition[]> {
+        const subscription = (await this.getSubscriptions())
+            .find(item => item.subscriptionId === namespace.subscriptionId);
+        if (!subscription) {
+            throw new Error(localize(
+                'connectorSubscriptionUnavailable',
+                'The subscription for Connector Namespace "{0}" is no longer available.',
+                namespace.name,
+            ));
+        }
+
+        const location = namespace.location.replace(/\s+/g, '').toLowerCase();
+        if (!location) {
+            throw new Error(localize(
+                'connectorNamespaceLocationUnavailable',
+                'The Connector Namespace location is unavailable.',
+            ));
+        }
+
+        const clientContext = Object.assign({}, context, subscription.context);
+        const client = await this.armClientFactory(clientContext);
+        const endpoint = getResourceManagerEndpoint(subscription.context);
+        const url = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Web/locations/${location}/managedApis/${encodeURIComponent(connectorId)}`,
+            {
+                'api-version': managedApiSwaggerApiVersion,
+                export: 'true',
+            },
+        );
+        const swagger = await client.get(url);
+        const inputDefinitions = parseConnectorSwaggerInputs(swagger, operationId);
+        if (!inputDefinitions) {
+            throw new Error(localize(
+                'connectorOperationInputsUnavailable',
+                'The selected connector event input schema could not be loaded.',
+            ));
+        }
+
+        return inputDefinitions;
+    }
+
     private async getSubscriptions(): Promise<ConnectorSubscription[]> {
         this._subscriptions ??= await this.subscriptionsProvider();
         return this._subscriptions;
@@ -291,6 +345,11 @@ function createCatalog(
                 operation.properties?.description?.trim(),
             isWebhook,
             isNotification,
+            ...(operation.properties?.inputsDefinition === undefined ? {} : {
+                inputDefinitions: parseConnectorInputsDefinition(
+                    operation.properties.inputsDefinition,
+                ),
+            }),
         };
         const family = operation.properties?.annotation?.family?.trim().toLowerCase();
         const key = `${connectorKey}:${family || id.toLowerCase()}`;

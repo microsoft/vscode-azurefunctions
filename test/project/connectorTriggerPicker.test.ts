@@ -97,7 +97,81 @@ suite('Connector trigger picker', () => {
         const armClient: ConnectorArmClient = {
             async get(url: string): Promise<unknown> {
                 requests.push(url);
-                if (url === 'https://management.azure.com/managed-api-page-2') {
+                if (url.includes('/locations/eastus2/managedApis/office365')) {
+                    return {
+                        parameters: {
+                            folderPathParameter: {
+                                name: 'folderPath',
+                                in: 'query',
+                                type: 'string',
+                                required: true,
+                                'x-ms-summary': 'Folder',
+                                'x-ms-dynamic-values': {
+                                    operationId: 'ListFolders',
+                                },
+                            },
+                        },
+                        definitions: {
+                            AdvancedFilters: {
+                                type: 'object',
+                                required: ['threshold'],
+                                properties: {
+                                    threshold: {
+                                        type: 'integer',
+                                        description: 'Minimum score.',
+                                    },
+                                },
+                            },
+                        },
+                        paths: {
+                            '/emails': {
+                                get: {
+                                    operationId: 'OnNewEmail',
+                                    'x-ms-trigger': 'batch',
+                                    parameters: [
+                                        { name: 'connectionId', in: 'path', type: 'string' },
+                                        { $ref: '#/parameters/folderPathParameter' },
+                                        {
+                                            name: 'importance',
+                                            in: 'query',
+                                            type: 'string',
+                                            enum: ['any', 'high'],
+                                            'x-ms-enum-values': [
+                                                { value: 'any', displayName: 'Any' },
+                                                { value: 'high', displayName: 'High' },
+                                            ],
+                                        },
+                                        {
+                                            name: 'includeAttachments',
+                                            in: 'query',
+                                            type: 'boolean',
+                                            default: false,
+                                        },
+                                        {
+                                            name: 'filters',
+                                            in: 'body',
+                                            required: true,
+                                            schema: {
+                                                type: 'object',
+                                                required: ['advanced'],
+                                                properties: {
+                                                    advanced: {
+                                                        $ref: '#/definitions/AdvancedFilters',
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        {
+                                            name: 'x-ms-operation-context',
+                                            in: 'header',
+                                            type: 'string',
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    };
+                } else if (url === 'https://management.azure.com/managed-api-page-2') {
                     return {
                         value: [{
                             name: 'unused',
@@ -154,6 +228,28 @@ suite('Connector trigger picker', () => {
                                     summary: 'When a new email arrives',
                                     triggerHint: 'Fires for new email.',
                                     annotation: { family: 'new-email', revision: 2 },
+                                    inputsDefinition: {
+                                        type: 'object',
+                                        required: ['folderPath'],
+                                        properties: {
+                                            folderPath: {
+                                                type: 'string',
+                                                description: 'Mail folder to monitor.',
+                                                'x-ms-summary': 'Folder',
+                                                'x-ms-dynamic-values': {
+                                                    operationId: 'ListFolders',
+                                                },
+                                            },
+                                            importance: {
+                                                type: 'string',
+                                                enum: ['any', 'high'],
+                                            },
+                                            includeAttachments: {
+                                                type: 'boolean',
+                                                default: false,
+                                            },
+                                        },
+                                    },
                                     api: {
                                         name: 'office365',
                                         displayName: 'Office 365 Outlook',
@@ -222,6 +318,47 @@ suite('Connector trigger picker', () => {
                 description: 'Fires for new email.',
                 isWebhook: false,
                 isNotification: false,
+                inputDefinitions: [
+                    {
+                        name: 'folderPath',
+                        label: 'Folder',
+                        description: 'Mail folder to monitor.',
+                        type: 'string',
+                        format: undefined,
+                        required: true,
+                        defaultValue: undefined,
+                        options: undefined,
+                        dynamic: true,
+                        sensitive: false,
+                    },
+                    {
+                        name: 'importance',
+                        label: 'Importance',
+                        description: undefined,
+                        type: 'string',
+                        format: undefined,
+                        required: false,
+                        defaultValue: undefined,
+                        options: [
+                            { label: 'any', value: 'any' },
+                            { label: 'high', value: 'high' },
+                        ],
+                        dynamic: false,
+                        sensitive: false,
+                    },
+                    {
+                        name: 'includeAttachments',
+                        label: 'Include Attachments',
+                        description: undefined,
+                        type: 'boolean',
+                        format: undefined,
+                        required: false,
+                        defaultValue: false,
+                        options: undefined,
+                        dynamic: false,
+                        sensitive: false,
+                    },
+                ],
             },
             {
                 id: 'OnNewFile',
@@ -238,6 +375,79 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(operationsRequest.searchParams.get('$top'), '250');
         assert.ok(requests.includes('https://management.azure.com/operation-page-2'));
         assert.ok(requests.includes('https://management.azure.com/managed-api-page-2'));
+
+        const inputs = await client.listOperationInputs(
+            await createTestActionContext(),
+            createNamespace(),
+            'office365',
+            'OnNewEmail',
+        );
+        assert.deepStrictEqual(inputs, [
+            {
+                name: 'folderPath',
+                label: 'Folder',
+                description: undefined,
+                type: 'string',
+                format: undefined,
+                required: true,
+                defaultValue: undefined,
+                options: undefined,
+                dynamic: true,
+                sensitive: false,
+            },
+            {
+                name: 'importance',
+                label: 'Importance',
+                description: undefined,
+                type: 'string',
+                format: undefined,
+                required: false,
+                defaultValue: undefined,
+                options: [
+                    { label: 'Any', value: 'any' },
+                    { label: 'High', value: 'high' },
+                ],
+                dynamic: false,
+                sensitive: false,
+            },
+            {
+                name: 'includeAttachments',
+                label: 'Include Attachments',
+                description: undefined,
+                type: 'boolean',
+                format: undefined,
+                required: false,
+                defaultValue: false,
+                options: undefined,
+                dynamic: false,
+                sensitive: false,
+            },
+            {
+                name: 'advanced.threshold',
+                label: 'Threshold',
+                description: 'Minimum score.',
+                type: 'integer',
+                format: undefined,
+                required: true,
+                defaultValue: undefined,
+                options: undefined,
+                dynamic: false,
+                sensitive: false,
+            },
+        ]);
+        const swaggerRequest = new URL(requests.find(url =>
+            url.includes('/locations/eastus2/managedApis/office365')) as string);
+        assert.strictEqual(swaggerRequest.searchParams.get('api-version'), '2022-09-01-preview');
+        assert.strictEqual(swaggerRequest.searchParams.get('export'), 'true');
+        await assert.rejects(
+            client.listOperationInputs(
+                await createTestActionContext(),
+                createNamespace(),
+                'office365',
+                'MissingOperation',
+            ),
+            /input schema could not be loaded/,
+        );
     });
 
     test('fails explicitly when every subscription namespace request fails', async () => {
@@ -289,6 +499,11 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
         assert.strictEqual(viewModel.labels.createNamespace, '+ Create new Connector Namespace...');
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
+        assert.strictEqual(viewModel.labels.eventParameters, 'Event parameters');
+        assert.strictEqual(
+            viewModel.labels.eventParametersDescription,
+            'Configure the inputs defined by the selected connector event.',
+        );
     });
 
     test('derives allowed delivery modes from live trigger metadata', () => {
@@ -541,6 +756,12 @@ suite('Connector trigger picker', () => {
             namespaceId: 'namespace-id',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'loadOperationInputs',
+            namespaceId: 'namespace-id',
+            connectorId: 'sharepointonline',
+            operationId: 'OnNewFile',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
             namespaceId: 'namespace-id',
             connectorId: 'sharepointonline',
@@ -562,6 +783,20 @@ suite('Connector trigger picker', () => {
             namespaceId: 'namespace-id',
             connectors: [],
             operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'operationInputsLoaded',
+            namespaceId: 'namespace-id',
+            connectorId: 'sharepointonline',
+            operationId: 'OnNewFile',
+            inputDefinitions: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'operationInputsFailed',
+            namespaceId: 'namespace-id',
+            connectorId: 'sharepointonline',
+            operationId: 'OnNewFile',
+            message: 'Failed',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'namespaceCreationCancelled',
