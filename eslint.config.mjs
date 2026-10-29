@@ -12,6 +12,16 @@ export default defineConfig([
     },
     ...azExtEslintRecommended,
     {
+        files: ['src/webview/fluentComponents.mjs'],
+        languageOptions: {
+            parserOptions: {
+                projectService: {
+                    allowDefaultProject: ['src/webview/fluentComponents.mjs'],
+                },
+            },
+        },
+    },
+    {
         rules: {
             '@typescript-eslint/no-namespace': 'off',
             'no-useless-escape': 'off',

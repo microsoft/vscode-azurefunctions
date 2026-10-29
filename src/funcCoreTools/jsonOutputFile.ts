@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, randomUtils } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -94,47 +94,66 @@ export function generateJsonOutputFilePath(): string {
 }
 
 /**
- * If the user's func task is configured for dotnet-isolated debugging with JSON output but does not
- * already specify a `--json-output-file`, returns a wrapper task with that flag injected so func
- * core tools writes the worker PID directly to a file we control.
+ * Deterministic path that func core tools writes the .NET isolated worker PID to.
+ *
+ * Deterministic rather than unique-per-run so that a file left behind by a previous session lands at
+ * the same path we delete before starting, and so temp files don't accumulate. `key` should identify
+ * the func task, i.e. its workspace folder plus its configured command and args.
  */
-export function injectJsonOutputFileArgIfNeeded(funcTask: vscode.Task): vscode.Task {
-    const exec = funcTask.execution;
-    if (!(exec instanceof vscode.ShellExecution)) {
-        return funcTask;
+export async function getWorkerPidFilePath(key: string): Promise<string> {
+    const hash: string = (await randomUtils.getPseudononymousStringHash(key)).slice(0, 16);
+    return path.join(os.tmpdir(), `azfunc-worker-pid-${hash}.json`);
+}
+
+/**
+ * The extra args that make func core tools write the .NET isolated worker PID to `workerPidFile`.
+ *
+ * Only applies to a dotnet-isolated debug task that already opted into JSON output and doesn't
+ * already name an output file. `--enable-json-output` changes what func prints to the terminal, so
+ * a task that leaves it off is treated as a deliberate choice and is left alone - the picker falls
+ * back to the host status endpoint for those, exactly as it did before. A `--json-output-file` the
+ * user configured themselves always wins.
+ *
+ * These get added while the task is still being resolved (see `FuncTaskProvider.createTask`) rather
+ * than rebuilt onto an already-resolved task. Rebuilding drops the task's `dependsOn` chain, because
+ * `dependsOn` only exists in tasks.json and VS Code only honors it for tasks it resolved itself,
+ * which silently skipped the clean/build tasks a .NET project depends on.
+ */
+export function getWorkerPidFileArgs(existingArgs: readonly string[], workerPidFile: string): string[] {
+    if (!existingArgs.includes(dotnetIsolatedDebugFlag) || !existingArgs.includes(enableJsonOutputFlag)) {
+        return [];
+    }
+    if (existingArgs.some(a => a === jsonOutputFileFlag || a.startsWith(`${jsonOutputFileFlag}=`))) {
+        return [];
     }
 
-    const flatArgs = getFlatShellArgs(exec);
-    const hasDebugFlag = flatArgs.includes(dotnetIsolatedDebugFlag);
-    const hasEnableJsonOutput = flatArgs.includes(enableJsonOutputFlag);
-    const alreadyHasOutputFile = flatArgs.includes(jsonOutputFileFlag) || flatArgs.some(a => a.startsWith(`${jsonOutputFileFlag}=`));
-    if (!hasDebugFlag || !hasEnableJsonOutput || alreadyHasOutputFile) {
-        return funcTask;
+    return [jsonOutputFileFlag, workerPidFile];
+}
+
+/**
+ * Removes a worker PID file left behind by a previous debug session, so a stale PID from that
+ * session can't be mistaken for the worker we're about to start.
+ */
+export async function deleteWorkerPidFile(workerPidFile: string | undefined): Promise<void> {
+    if (!workerPidFile) {
+        return;
     }
 
-    const jsonOutputFile = generateJsonOutputFilePath();
-    let newExec: vscode.ShellExecution;
-    if (exec.commandLine !== undefined) {
-        newExec = new vscode.ShellExecution(`${exec.commandLine} ${jsonOutputFileFlag} "${jsonOutputFile}"`, exec.options);
-    } else {
-        // When constructed with command + args, both are defined; defensively coalesce to satisfy the API types.
-        newExec = new vscode.ShellExecution(exec.command ?? 'func', [...(exec.args ?? []), jsonOutputFileFlag, jsonOutputFile], exec.options);
+    try {
+        if (!await AzExtFsExtra.pathExists(workerPidFile)) {
+            return;
+        }
+        await AzExtFsExtra.deleteResource(workerPidFile);
+        return;
+    } catch {
+        // fall through and try to blank the file instead
     }
 
-    const wrapped = new vscode.Task(
-        funcTask.definition,
-        funcTask.scope ?? vscode.TaskScope.Workspace,
-        funcTask.name,
-        funcTask.source,
-        newExec,
-        funcTask.problemMatchers,
-    );
-    wrapped.isBackground = funcTask.isBackground;
-    wrapped.presentationOptions = funcTask.presentationOptions;
-    wrapped.group = funcTask.group;
-    wrapped.runOptions = funcTask.runOptions;
-    wrapped.detail = funcTask.detail;
-    return wrapped;
+    try {
+        await AzExtFsExtra.writeFile(workerPidFile, '{}');
+    } catch {
+        // Best effort - func core tools overwrites the file once the worker starts.
+    }
 }
 
 function parseJsonOutputFileFromString(commandLine: string): string | undefined {
