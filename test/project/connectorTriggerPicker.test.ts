@@ -306,33 +306,48 @@ suite('Connector trigger picker', () => {
         );
     });
 
-    test('resolves existing gallery templates by connector metadata and label', () => {
+    test('resolves Outlook and SharePoint templates for every supported language', () => {
+        const supportedLanguages = [
+            [ProjectLanguage.CSharp, 'csharp'],
+            [ProjectLanguage.TypeScript, 'typescript'],
+            [ProjectLanguage.Python, 'python'],
+        ] as const;
         const templates: IProjectTemplate[] = [
-            createProjectTemplate(
-                'office365-connector-trigger-python',
-                'Office 365 Outlook Connector Triggers',
-            ),
-            createProjectTemplate(
-                'sharepoint-connector-trigger-python',
-                'SharePoint Online Connector Triggers',
-            ),
+            ...supportedLanguages.flatMap(([language, slug]) => [
+                createProjectTemplate(
+                    `office365-connector-trigger-${slug}`,
+                    'Office 365 Outlook Connector Triggers',
+                    'connector',
+                    language,
+                ),
+                createProjectTemplate(
+                    `sharepoint-connector-trigger-${slug}`,
+                    'SharePoint Online Connector Triggers',
+                    'connector',
+                    language,
+                ),
+            ]),
             createProjectTemplate('http-python', 'HTTP Trigger', 'http'),
         ];
 
-        assert.deepStrictEqual(
-            findConnectorProjectTemplates(templates, {
-                id: 'office365',
-                label: 'Office 365 Outlook',
-            }).map(template => template.id),
-            ['office365-connector-trigger-python'],
-        );
-        assert.deepStrictEqual(
-            findConnectorProjectTemplates(templates, {
-                id: 'sharepointonline',
-                label: 'SharePoint',
-            }).map(template => template.id),
-            ['sharepoint-connector-trigger-python'],
-        );
+        for (const [language, slug] of supportedLanguages) {
+            const languageTemplates = templates.filter(template =>
+                template.languages.includes(language));
+            assert.deepStrictEqual(
+                findConnectorProjectTemplates(languageTemplates, {
+                    id: 'office365',
+                    label: 'Office 365 Outlook',
+                }).map(template => template.id),
+                [`office365-connector-trigger-${slug}`],
+            );
+            assert.deepStrictEqual(
+                findConnectorProjectTemplates(languageTemplates, {
+                    id: 'sharepointonline',
+                    label: 'SharePoint',
+                }).map(template => template.id),
+                [`sharepoint-connector-trigger-${slug}`],
+            );
+        }
         assert.deepStrictEqual(
             findConnectorProjectTemplates(templates, {
                 id: 'unknown',
@@ -604,13 +619,14 @@ function createProjectTemplate(
     id: string,
     displayName: string,
     resource: string = 'connector',
+    language: ProjectLanguage = ProjectLanguage.Python,
 ): IProjectTemplate {
     return {
         id,
         displayName,
         shortDescription: displayName,
         categories: ['connectors' as TemplateCategory],
-        languages: ['Python' as ProjectLanguage],
+        languages: [language],
         repositoryUrl: 'https://example.invalid/template',
         resource,
     } as IProjectTemplate;

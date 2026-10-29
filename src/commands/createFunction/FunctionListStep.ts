@@ -159,7 +159,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         if (!context.containerizedProject && !this._options.templateId &&
             (isPythonV2Plus(language, languageModel) ||
                 language === ProjectLanguage.CSharp ||
-                isNodeV4Plus(context))) {
+                (language === ProjectLanguage.TypeScript && isNodeV4Plus(context)))) {
             const label = localize('connectorTrigger', 'Connector Trigger');
             const index = picks.findIndex(p => typeof p.data === 'object' &&
                 sortTemplates(p.data, { id: connectorGallery.id, name: label }) > 0);

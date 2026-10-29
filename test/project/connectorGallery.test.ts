@@ -77,7 +77,6 @@ suite('Connector Gallery', () => {
 
     for (const [language, languageModel, filterLanguage] of [
         [ProjectLanguage.Python, 2, 'python'],
-        [ProjectLanguage.JavaScript, 4, 'javascript'],
         [ProjectLanguage.TypeScript, 4, 'typescript'],
         [ProjectLanguage.CSharp, undefined, 'dotnet'],
     ] as const) {
@@ -138,7 +137,7 @@ suite('Connector Gallery', () => {
         ['containerized project', { containerizedProject: true }, true, undefined],
         ['specific template', {}, true, 'HttpTrigger'],
         ['Python v1', { languageModel: 1 }, true, undefined],
-        ['JavaScript v3', { language: ProjectLanguage.JavaScript, languageModel: 3 }, true, undefined],
+        ['JavaScript v4', { language: ProjectLanguage.JavaScript, languageModel: 4 }, true, undefined],
         ['TypeScript v3', { language: ProjectLanguage.TypeScript, languageModel: 3 }, true, undefined],
         ['PowerShell', { language: ProjectLanguage.PowerShell, languageModel: undefined }, true, undefined],
     ] as const) {
@@ -149,18 +148,21 @@ suite('Connector Gallery', () => {
         });
     }
 
-    for (const language of [ProjectLanguage.CSharp, ProjectLanguage.JavaScript, ProjectLanguage.PowerShell]) {
+    for (const [language, languageModel, shouldOfferConnector] of [
+        [ProjectLanguage.CSharp, undefined, true],
+        [ProjectLanguage.TypeScript, 4, true],
+        [ProjectLanguage.JavaScript, 4, false],
+        [ProjectLanguage.PowerShell, undefined, false],
+    ] as const) {
         test(`empty classic templates show the warning for ${language}`, async () => {
             const originalGetTemplates = provider.getFunctionTemplates;
             provider.getFunctionTemplates = async () => [];
             try {
-                const context = await createContext({
-                    language, languageModel: language === ProjectLanguage.JavaScript ? 4 : undefined,
-                });
+                const context = await createContext({ language, languageModel });
                 const step = new FunctionListStep({ isProjectWizard: true, templateId: undefined, functionSettings: undefined });
                 const picks = await step['getPicks'](context);
                 assert.deepStrictEqual(picks.map(p => p.label), [
-                    ...(language !== ProjectLanguage.PowerShell ? ['Connector Trigger'] : []),
+                    ...(shouldOfferConnector ? ['Connector Trigger'] : []),
                     '$(warning) No templates found',
                     '$(clock) Skip for now',
                 ]);
