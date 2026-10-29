@@ -24,9 +24,9 @@ function materialize(template: IRawTemplate, functionName: string): string {
     return sources[0].replace(/%functionName%/g, functionName);
 }
 
-function compile(template: IRawTemplate, sdk: string): readonly ts.Diagnostic[] {
+function compile(template: IRawTemplate, sdk: string, functionName = 'chosenFunction'): readonly ts.Diagnostic[] {
     const filename = path.join(projectRoot, 'test', 'mcpTemplate.ts');
-    const source = materialize(template, 'chosenFunction');
+    const source = materialize(template, functionName);
     const options: ts.CompilerOptions = {
         strict: true,
         noEmit: true,
@@ -63,7 +63,9 @@ suite('Node v4 MCP templates', () => {
                 arg: { string: () => ({ describe: () => ({}) }) },
                 promptArg: { describe: () => ({ isRequired: () => ({}) }) }
             };
-            const names = ['firstFunction', 'secondFunction'];
+            const names = template.metadata?.triggerType === 'mcpPromptTrigger'
+                ? ['firstFunction', 'secondFunction']
+                : ['firstFunction', 'secondFunction', 'hello-world', 'app', 'arg', 'class'];
             for (const name of names) {
                 const source = materialize(template, name);
                 assert.ok(!source.includes('%functionName%'));
@@ -81,7 +83,8 @@ suite('Node v4 MCP templates', () => {
             assert.deepStrictEqual(registrations.map(registration => registration.name), names);
             for (const [index, registration] of registrations.entries()) {
                 const name = names[index];
-                assert.strictEqual(registration.options.handler.name, name);
+                const handlerName = registration.kind === 'mcpTool' ? 'mcpToolHello' : registration.kind === 'mcpResource' ? 'mcpResourceHello' : name;
+                assert.strictEqual(registration.options.handler.name, handlerName);
                 const identity = registration.options.toolName ?? registration.options.promptName ?? registration.options.resourceName;
                 assert.strictEqual(identity, name);
                 if (registration.kind === 'mcpResource') {
@@ -89,6 +92,20 @@ suite('Node v4 MCP templates', () => {
                 }
             }
         });
+    }
+
+    for (const template of typescriptTemplates.filter(template => template.metadata?.triggerType !== 'mcpPromptTrigger')) {
+        for (const name of ['hello-world', 'app', 'arg', 'class']) {
+            test(`${template.id} compiles with accepted name ${name}`, () => {
+                const sdk = template.metadata?.triggerType === 'mcpToolTrigger' ? '@azure/functions-4-11' : '@azure/functions-4-12';
+                const diagnostics = compile(template, sdk, name);
+                assert.strictEqual(diagnostics.length, 0, ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+                    getCurrentDirectory: () => projectRoot,
+                    getCanonicalFileName: filename => filename,
+                    getNewLine: () => '\n'
+                }));
+            });
+        }
     }
 
     for (const sdk of ['@azure/functions-4-11', '@azure/functions-4-12', '@azure/functions-4-13', '@azure/functions-4-14']) {
