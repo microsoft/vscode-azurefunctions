@@ -11,9 +11,13 @@ import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { type IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
+import { verifyNodeV4McpDependency } from './verifyNodeV4McpDependency';
 
 export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
+        const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        await verifyNodeV4McpDependency(context.projectPath, template.triggerType);
+
         const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
         const functionPath = path.join(context.projectPath, functionSubpath);
         await AzExtFsExtra.ensureDir(functionPath);
@@ -22,7 +26,6 @@ export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         const fileExt = getFileExtensionFromLanguage(context.language);
         const fileName = `${functionName}${fileExt}`;
 
-        const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
         await Promise.all(Object.keys(template.templateFiles).map(async f => {
             let contents = template.templateFiles[f];
             contents = contents.replace(/%functionName%/g, functionName);

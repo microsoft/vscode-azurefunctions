@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+* Install Python requirements when creating a virtual environment and migrate legacy Python launch configurations without adding duplicates.
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 * [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238), [5239](https://github.com/microsoft/vscode-azurefunctions/pull/5239)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.
 

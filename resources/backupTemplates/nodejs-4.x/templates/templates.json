@@ -27,7 +27,7 @@
         "id": "BlobTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\r\n\r\nexport async function %functionName%(blob: Buffer, context: InvocationContext): Promise<void> {\r\n    context.log(`Storage blob function processed blob \"${context.triggerMetadata.name}\" with size ${blob.length} bytes`);\r\n}\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    connection: '%connection%',\r\n    handler: %functionName%\r\n});\r\n"
+            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\r\n\r\nexport async function %functionName%(blob: Buffer, context: InvocationContext): Promise<void> {\r\n    context.log(`Storage blob function processed blob \"${context.triggerMetadata?.name ?? '(name unavailable)'}\" with size ${blob.length} bytes`);\r\n}\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    connection: '%connection%',\r\n    handler: %functionName%\r\n});\r\n"
         },
         "metadata": {
             "defaultFunctionName": "storageBlobTrigger",
@@ -103,7 +103,7 @@
         "id": "DurableFunctionsEntity-JavaScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.js": "const { app, HttpResponse } = require('@azure/functions');\r\nconst df = require('durable-functions');\r\n\r\nconst entityName = '%functionName%';\r\n\r\ndf.app.entity(entityName, (context) => {\r\n    const currentValue = context.df.getState(() => 0);\r\n    switch (context.df.operationName) {\r\n        case 'add':\r\n            const amount = context.df.getInput();\r\n            context.df.setState(currentValue + amount);\r\n            break;\r\n        case 'reset':\r\n            context.df.setState(0);\r\n            break;\r\n        case 'get':\r\n            context.df.return(currentValue);\r\n            break;\r\n    }\r\n});\r\n\r\napp.http('%functionName%HttpStart', {\r\n    route: `${entityName}/{id}`,\r\n    extraInputs: [df.input.durableClient()],\r\n    handler: async (req, context) => {\r\n        const id = req.params.id;\r\n        const entityId = new df.EntityId(entityName, id);\r\n        const client = df.getClient(context);\r\n\r\n        if (req.method === 'POST') {\r\n            // increment value\r\n            await client.signalEntity(entityId, 'add', 1);\r\n        } else {\r\n            // read current state of entity\r\n            const stateResponse = await client.readEntityState(entityId);\r\n            return new HttpResponse({\r\n                jsonBody: stateResponse.entityState,\r\n            });\r\n        }\r\n    },\r\n});\r\n"
+            "%functionName%.js": "const { app, HttpResponse } = require('@azure/functions');\r\nconst df = require('durable-functions');\r\n\r\nconst entityName = '%functionName%';\r\n\r\ndf.app.entity(entityName, (context) => {\r\n    const currentValue = context.df.getState(() => 0);\r\n    if (currentValue === undefined) {\r\n        throw new Error('Counter state is unavailable.');\r\n    }\r\n    switch (context.df.operationName) {\r\n        case 'add':\r\n            const amount = context.df.getInput();\r\n            if (typeof amount !== 'number' || !Number.isFinite(amount)) {\r\n                throw new TypeError('The add operation requires a finite number.');\r\n            }\r\n            context.df.setState(currentValue + amount);\r\n            break;\r\n        case 'reset':\r\n            context.df.setState(0);\r\n            break;\r\n        case 'get':\r\n            context.df.return(currentValue);\r\n            break;\r\n    }\r\n});\r\n\r\napp.http('%functionName%HttpStart', {\r\n    route: `${entityName}/{id}`,\r\n    extraInputs: [df.input.durableClient()],\r\n    handler: async (req, context) => {\r\n        const id = req.params.id;\r\n        const entityId = new df.EntityId(entityName, id);\r\n        const client = df.getClient(context);\r\n\r\n        if (req.method === 'POST') {\r\n            // increment value\r\n            await client.signalEntity(entityId, 'add', 1);\r\n            return new HttpResponse({ status: 202 });\r\n        } else {\r\n            // read current state of entity\r\n            const stateResponse = await client.readEntityState(entityId);\r\n            return new HttpResponse({\r\n                jsonBody: stateResponse.entityState,\r\n            });\r\n        }\r\n    },\r\n});\r\n"
         },
         "metadata": {
             "defaultFunctionName": "counter",
@@ -124,7 +124,7 @@
         "id": "DurableFunctionsEntity-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts": "import { app, HttpHandler, HttpRequest, HttpResponse, InvocationContext } from '@azure/functions';\r\nimport * as df from 'durable-functions';\r\nimport { EntityContext, EntityHandler } from 'durable-functions';\r\n\r\nconst entityName = '%functionName%';\r\n\r\nconst %functionName%: EntityHandler<number> = (context: EntityContext<number>) => {\r\n    const currentValue: number = context.df.getState(() => 0);\r\n    switch (context.df.operationName) {\r\n        case 'add':\r\n            const amount: number = context.df.getInput();\r\n            context.df.setState(currentValue + amount);\r\n            break;\r\n        case 'reset':\r\n            context.df.setState(0);\r\n            break;\r\n        case 'get':\r\n            context.df.return(currentValue);\r\n            break;\r\n    }\r\n};\r\ndf.app.entity(entityName, %functionName%);\r\n\r\nconst %functionName%HttpStart: HttpHandler = async (req: HttpRequest, context: InvocationContext): Promise<HttpResponse> => {\r\n    const id: string = req.params.id;\r\n    const entityId = new df.EntityId(entityName, id);\r\n    const client = df.getClient(context);\r\n\r\n    if (req.method === 'POST') {\r\n        // increment value\r\n        await client.signalEntity(entityId, 'add', 1);\r\n    } else {\r\n        // read current state of entity\r\n        const stateResponse = await client.readEntityState(entityId);\r\n        return new HttpResponse({\r\n            jsonBody: stateResponse.entityState,\r\n        });\r\n    }\r\n};\r\napp.http('%functionName%HttpStart', {\r\n    route: `${entityName}/{id}`,\r\n    extraInputs: [df.input.durableClient()],\r\n    handler: %functionName%HttpStart,\r\n});\r\n"
+            "%functionName%.ts": "import { app, HttpHandler, HttpRequest, HttpResponse, InvocationContext } from '@azure/functions';\r\nimport * as df from 'durable-functions';\r\nimport { EntityContext, EntityHandler } from 'durable-functions';\r\n\r\nconst entityName = '%functionName%';\r\n\r\nconst %functionName%: EntityHandler<number> = (context: EntityContext<number>) => {\r\n    const currentValue = context.df.getState(() => 0);\r\n    if (currentValue === undefined) {\r\n        throw new Error('Counter state is unavailable.');\r\n    }\r\n    switch (context.df.operationName) {\r\n        case 'add':\r\n            const amount = context.df.getInput<unknown>();\r\n            if (typeof amount !== 'number' || !Number.isFinite(amount)) {\r\n                throw new TypeError('The add operation requires a finite number.');\r\n            }\r\n            context.df.setState(currentValue + amount);\r\n            break;\r\n        case 'reset':\r\n            context.df.setState(0);\r\n            break;\r\n        case 'get':\r\n            context.df.return(currentValue);\r\n            break;\r\n    }\r\n};\r\ndf.app.entity(entityName, %functionName%);\r\n\r\nconst %functionName%HttpStart: HttpHandler = async (req: HttpRequest, context: InvocationContext): Promise<HttpResponse> => {\r\n    const id: string = req.params.id;\r\n    const entityId = new df.EntityId(entityName, id);\r\n    const client = df.getClient(context);\r\n\r\n    if (req.method === 'POST') {\r\n        // increment value\r\n        await client.signalEntity(entityId, 'add', 1);\r\n        return new HttpResponse({ status: 202 });\r\n    } else {\r\n        // read current state of entity\r\n        const stateResponse = await client.readEntityState(entityId);\r\n        return new HttpResponse({\r\n            jsonBody: stateResponse.entityState,\r\n        });\r\n    }\r\n};\r\napp.http('%functionName%HttpStart', {\r\n    route: `${entityName}/{id}`,\r\n    extraInputs: [df.input.durableClient()],\r\n    handler: %functionName%HttpStart,\r\n});\r\n"
         },
         "metadata": {
             "defaultFunctionName": "counter",
@@ -211,7 +211,7 @@
         "id": "EventGridBlobTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\r\n\r\nexport async function %functionName%(blob: Buffer, context: InvocationContext): Promise<void> {\r\n    context.log(`Storage blob function processed blob \"${context.triggerMetadata.name}\" with size ${blob.length} bytes`);\r\n}\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    source: 'EventGrid',\r\n    connection: '%connection%',\r\n    handler: %functionName%\r\n});\r\n"
+            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\r\n\r\nexport async function %functionName%(blob: Buffer, context: InvocationContext): Promise<void> {\r\n    context.log(`Storage blob function processed blob \"${context.triggerMetadata?.name ?? '(name unavailable)'}\" with size ${blob.length} bytes`);\r\n}\r\n\r\napp.storageBlob('%functionName%', {\r\n    path: '%path%',\r\n    source: 'EventGrid',\r\n    connection: '%connection%',\r\n    handler: %functionName%\r\n});\r\n"
         },
         "metadata": {
             "defaultFunctionName": "eventGridBlobTrigger",
@@ -277,7 +277,7 @@
         "id": "EventHubTrigger-JavaScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.js": "const { app } = require('@azure/functions');\r\n\r\napp.eventHub('%functionName%', {\r\n    connection: '',\r\n    eventHubName: '%eventHubName%',\r\n    cardinality: 'many',\r\n    handler: (messages, context) => {\r\n        if (Array.isArray(messages)) {\r\n            context.log(`Event hub function processed ${messages.length} messages`);\r\n            for (const message of messages) {\r\n                context.log('Event hub message:', message);\r\n            }\r\n        } else {\r\n            context.log('Event hub function processed message:', messages);\r\n        }\r\n    }\r\n});\r\n"
+            "%functionName%.js": "const { app } = require('@azure/functions');\r\n\r\napp.eventHub('%functionName%', {\r\n    connection: '%connection%',\r\n    eventHubName: '%eventHubName%',\r\n    cardinality: 'many',\r\n    handler: (messages, context) => {\r\n        if (Array.isArray(messages)) {\r\n            context.log(`Event hub function processed ${messages.length} messages`);\r\n            for (const message of messages) {\r\n                context.log('Event hub message:', message);\r\n            }\r\n        } else {\r\n            context.log('Event hub function processed message:', messages);\r\n        }\r\n    }\r\n});\r\n"
         },
         "metadata": {
             "defaultFunctionName": "eventHubTrigger",
@@ -292,6 +292,7 @@
             "categoryStyle": "eventHub",
             "enabledInTryMode": false,
             "userPrompt": [
+                "connection",
                 "eventHubName"
             ]
         }
@@ -315,6 +316,7 @@
             "categoryStyle": "eventHub",
             "enabledInTryMode": false,
             "userPrompt": [
+                "connection",
                 "eventHubName"
             ]
         }
@@ -557,7 +559,7 @@
         "id": "McpToolTrigger-JavaScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.js": "const { app, arg } = require('@azure/functions');\n\nfunction mcpToolHello(_toolArguments, context) {\n    const mcptoolargs = context.triggerMetadata.mcptoolargs || {};\n    const name = mcptoolargs.name;\n    console.info(`Hello ${name}, I am MCP Tool!`);\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties:{\n        name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
+            "%functionName%.js": "const { app, arg } = require('@azure/functions');\n\nfunction mcpToolHello(_toolArguments, context) {\n    const mcptoolargs = context.triggerMetadata.mcptoolargs || {};\n    const name = mcptoolargs.name;\n    console.info(`Hello ${name}, I am MCP Tool!`);\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('%functionName%', {\n    toolName: '%functionName%',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties:{\n        name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
@@ -578,7 +580,7 @@
         "id": "McpToolTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts": "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('hello', {\n    toolName: 'hello',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
+            "%functionName%.ts": "import { app, InvocationContext, arg } from \"@azure/functions\";\n\nexport async function mcpToolHello(_toolArguments: any, context: InvocationContext): Promise<string> {\n    const mcptoolargs = _toolArguments.arguments as {\n        name?: string;\n    };\n    const name = mcptoolargs?.name;\n\n    console.info(`Hello ${name}, I am MCP Tool!`);\n\n    return `Hello ${name}, I am MCP Tool!`;\n}\n\napp.mcpTool('%functionName%', {\n    toolName: '%functionName%',\n    description: 'Simple hello world MCP Tool that responses with a hello message.',\n    toolProperties: {\n      name: arg.string().describe('Name to greet'),\n    },\n    handler: mcpToolHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpToolTrigger",
@@ -641,7 +643,7 @@
         "id": "McpResourceTrigger-JavaScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.js": "const { app } = require('@azure/functions');\n\n// Handler returns the content for the MCP resource when a client reads it.\nasync function mcpResourceHello(_resourceContext, context) {\n    context.log('MCP Resource trigger function processed a request.');\n    return 'Hello from MCP Resource!';\n}\n\n// Register a file-style MCP resource clients can discover and read.\napp.mcpResource('mcpFileResource', {\n    uri: 'file://mcpFileResource.txt',\n    resourceName: 'mcpFileResource',\n    description: 'Simple MCP Resource that returns text content.',\n    mimeType: 'text/plain',\n    handler: mcpResourceHello\n});"
+            "%functionName%.js": "const { app } = require('@azure/functions');\n\n// Handler returns the content for the MCP resource when a client reads it.\nasync function mcpResourceHello(_resourceContext, context) {\n    context.log('MCP Resource trigger function processed a request.');\n    return 'Hello from MCP Resource!';\n}\n\n// Register a file-style MCP resource clients can discover and read.\napp.mcpResource('%functionName%', {\n    uri: 'file://%functionName%.txt',\n    resourceName: '%functionName%',\n    description: 'Simple MCP Resource that returns text content.',\n    mimeType: 'text/plain',\n    handler: mcpResourceHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpResourceTrigger",
@@ -662,7 +664,7 @@
         "id": "McpResourceTrigger-TypeScript-4.x",
         "runtime": "2",
         "files": {
-            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\n\n// Handler returns the content for the MCP resource when a client reads it.\nexport async function mcpResourceHello(_resourceContext: unknown, context: InvocationContext): Promise<string> {\n    context.log('MCP Resource trigger function processed a request.');\n    return 'Hello from MCP Resource!';\n}\n\n// Register a file-style MCP resource clients can discover and read.\napp.mcpResource('mcpFileResource', {\n    uri: 'file://mcpFileResource.txt',\n    resourceName: 'mcpFileResource',\n    description: 'Simple MCP Resource that returns text content.',\n    mimeType: 'text/plain',\n    handler: mcpResourceHello\n});"
+            "%functionName%.ts": "import { app, InvocationContext } from \"@azure/functions\";\n\n// Handler returns the content for the MCP resource when a client reads it.\nexport async function mcpResourceHello(_resourceContext: unknown, context: InvocationContext): Promise<string> {\n    context.log('MCP Resource trigger function processed a request.');\n    return 'Hello from MCP Resource!';\n}\n\n// Register a file-style MCP resource clients can discover and read.\napp.mcpResource('%functionName%', {\n    uri: 'file://%functionName%.txt',\n    resourceName: '%functionName%',\n    description: 'Simple MCP Resource that returns text content.',\n    mimeType: 'text/plain',\n    handler: mcpResourceHello\n});"
         },
         "metadata": {
             "defaultFunctionName": "mcpResourceTrigger",
