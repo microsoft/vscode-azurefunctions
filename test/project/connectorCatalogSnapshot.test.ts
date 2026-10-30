@@ -137,6 +137,18 @@ suite('Connector catalog snapshot', () => {
                             visibility: 'important',
                         },
                     }, {
+                        name: 'RoleTrigger',
+                        properties: {
+                            summary: 'When a role trigger occurs',
+                            operationRole: 'Trigger',
+                        },
+                    }, {
+                        name: 'NotificationOnly',
+                        properties: {
+                            summary: 'When a notification occurs',
+                            isNotification: true,
+                        },
+                    }, {
                         name: 'InternalEvent',
                         properties: {
                             summary: 'Internal event',
@@ -174,6 +186,18 @@ suite('Connector catalog snapshot', () => {
                                 }],
                             },
                         },
+                        '/role-trigger': {
+                            get: {
+                                operationId: 'RoleTrigger',
+                                parameters: [],
+                            },
+                        },
+                        '/notification': {
+                            get: {
+                                operationId: 'NotificationOnly',
+                                parameters: [],
+                            },
+                        },
                     },
                 },
             },
@@ -189,6 +213,8 @@ suite('Connector catalog snapshot', () => {
         assert.deepStrictEqual(catalog.operations.map(operation => operation.id), [
             'SecondEvent',
             'OnEvent',
+            'RoleTrigger',
+            'NotificationOnly',
         ]);
         assert.deepStrictEqual(catalog.operations[0].inputs, []);
         assert.strictEqual(catalog.operations[1].delivery, 'notification');
@@ -207,6 +233,9 @@ suite('Connector catalog snapshot', () => {
             dynamic: false,
             sensitive: true,
         }]);
+        assert.deepStrictEqual(catalog.operations[2].inputs, []);
+        assert.strictEqual(catalog.operations[3].delivery, 'notification');
+        assert.deepStrictEqual(catalog.operations[3].inputs, []);
         const serialized = JSON.stringify(catalog);
         assert.ok(!serialized.includes('ListFolders'));
         assert.ok(!serialized.includes('must-not-be-copied'));

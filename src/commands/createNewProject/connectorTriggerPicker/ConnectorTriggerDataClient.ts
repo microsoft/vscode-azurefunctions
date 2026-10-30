@@ -119,6 +119,8 @@ interface ManagedApiOperation {
 
 export class ConnectorTriggerDataClient {
     private _subscriptions: ConnectorSubscription[] | undefined;
+    private subscriptionsGeneration = 0;
+    private subscriptionsPromise: Promise<ConnectorSubscription[]> | undefined;
 
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
@@ -386,6 +388,8 @@ export class ConnectorTriggerDataClient {
     }
 
     public registerSubscription(context: ISubscriptionContext): void {
+        this.subscriptionsGeneration += 1;
+        this.subscriptionsPromise = undefined;
         const subscription: ConnectorSubscription = {
             subscriptionId: context.subscriptionId,
             subscriptionDisplayName: context.subscriptionDisplayName,
@@ -396,6 +400,12 @@ export class ConnectorTriggerDataClient {
             ...subscriptions.filter(item => item.subscriptionId !== context.subscriptionId),
             subscription,
         ];
+    }
+
+    public invalidateSubscriptions(): void {
+        this.subscriptionsGeneration += 1;
+        this._subscriptions = undefined;
+        this.subscriptionsPromise = undefined;
     }
 
     public async listOperationInputs(
@@ -445,8 +455,28 @@ export class ConnectorTriggerDataClient {
     }
 
     private async getSubscriptions(): Promise<ConnectorSubscription[]> {
-        this._subscriptions ??= await this.subscriptionsProvider();
-        return this._subscriptions;
+        if (this._subscriptions) {
+            return this._subscriptions;
+        }
+
+        const generation = this.subscriptionsGeneration;
+        const promise = this.subscriptionsPromise ??= this.subscriptionsProvider();
+        try {
+            const subscriptions = await promise;
+            if (generation !== this.subscriptionsGeneration) {
+                return await this.getSubscriptions();
+            }
+
+            this._subscriptions = subscriptions;
+            this.subscriptionsPromise = undefined;
+            return subscriptions;
+        } catch (error) {
+            if (generation === this.subscriptionsGeneration &&
+                this.subscriptionsPromise === promise) {
+                this.subscriptionsPromise = undefined;
+            }
+            throw error;
+        }
     }
 }
 
@@ -519,6 +549,9 @@ function createCatalog(
             });
         }
 
+        const inputDefinitions = operation.properties?.inputsDefinition === undefined ?
+            undefined :
+            parseConnectorInputsDefinition(operation.properties.inputsDefinition);
         operations.push({
             id,
             connectorId,
@@ -527,11 +560,7 @@ function createCatalog(
                 operation.properties?.description?.trim(),
             isWebhook,
             isNotification,
-            ...(operation.properties?.inputsDefinition === undefined ? {} : {
-                inputDefinitions: parseConnectorInputsDefinition(
-                    operation.properties.inputsDefinition,
-                ),
-            }),
+            ...(inputDefinitions === undefined ? {} : { inputDefinitions }),
         });
     }
 

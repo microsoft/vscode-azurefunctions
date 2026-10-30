@@ -17,6 +17,7 @@ import {
     type ConnectorSubscription,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import { findConnectorProjectTemplates } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorProjectTemplates';
+import { parseConnectorInputsDefinition } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
 import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
@@ -591,6 +592,16 @@ suite('Connector trigger picker', () => {
         );
     });
 
+    test('distinguishes unavailable input schemas from confirmed empty schemas', () => {
+        assert.strictEqual(parseConnectorInputsDefinition(undefined), undefined);
+        assert.strictEqual(parseConnectorInputsDefinition(null), undefined);
+        assert.strictEqual(parseConnectorInputsDefinition({ type: 'string' }), undefined);
+        assert.deepStrictEqual(
+            parseConnectorInputsDefinition({ type: 'object', properties: {} }),
+            [],
+        );
+    });
+
     test('resolves Outlook and SharePoint templates for every supported language', () => {
         const supportedLanguages = [
             [ProjectLanguage.CSharp, 'csharp'],
@@ -696,6 +707,7 @@ suite('Connector trigger picker', () => {
             launchOptions: ConnectorTriggerPickerLaunchOptions;
             namespaces: Map<string, ConnectorNamespaceOption>;
             catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
+            catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
             templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
             projectCreator: Pick<ProjectTemplateCreator, 'createProject'>;
             postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
@@ -728,6 +740,7 @@ suite('Connector trigger picker', () => {
                 },
             },
             namespaces: new Map(),
+            catalogLoadRequests: new Map(),
             catalogs: new Map([['', {
                 catalog,
                 source: 'bundled',
@@ -788,7 +801,10 @@ suite('Connector trigger picker', () => {
             deliveryMode: 'Polling',
         }, await createTestActionContext());
         assert.strictEqual(createdProjects.length, 1);
-        assert.strictEqual(responses.length, 1);
+        assert.deepStrictEqual(responses[1], {
+            command: 'projectCreationFailed',
+            message: 'The selected connector or event is no longer available. Choose another selection.',
+        });
         connector.availability = undefined;
 
         responses.length = 0;

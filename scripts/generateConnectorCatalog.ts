@@ -139,6 +139,12 @@ export function validateConnectorCatalog(value: unknown): string[] {
 
     const connectors = requireArray(catalog.connectors, 'connectorCatalog.connectors', errors);
     const operations = requireArray(catalog.operations, 'connectorCatalog.operations', errors);
+    if (connectors?.length === 0) {
+        errors.push('connectorCatalog.connectors must contain at least one connector.');
+    }
+    if (operations?.length === 0) {
+        errors.push('connectorCatalog.operations must contain at least one operation.');
+    }
     const connectorStates = new Map<string, string>();
     if (connectors) {
         connectors.forEach((value, index) => {
@@ -268,7 +274,7 @@ function createOperations(
         const operation = asRecord(value);
         const properties = asRecord(operation?.properties);
         const id = readString(operation?.name);
-        if (!operation || !properties || !id || !readString(properties.trigger)) {
+        if (!operation || !properties || !id || !isTriggerOperation(properties)) {
             continue;
         }
 
@@ -313,6 +319,14 @@ function toCatalogInput(
         sensitive: input.sensitive,
         visibility: input.visibility,
     });
+}
+
+function isTriggerOperation(properties: JsonRecord): boolean {
+    return properties.isTrigger === true ||
+        readString(properties.operationRole)?.toLowerCase() === 'trigger' ||
+        properties.trigger !== undefined ||
+        properties.isWebhook === true ||
+        properties.isNotification === true;
 }
 
 function getDelivery(properties: JsonRecord): ConnectorCatalogDelivery {

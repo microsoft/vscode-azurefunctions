@@ -15,10 +15,10 @@ const operationMethods = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
 export function parseConnectorInputsDefinition(
     inputsDefinition: unknown,
-): ConnectorTriggerInputDefinition[] {
+): ConnectorTriggerInputDefinition[] | undefined {
     const definition = asRecord(inputsDefinition);
     if (!definition) {
-        return [];
+        return undefined;
     }
 
     if (Array.isArray(definition.parameters)) {
@@ -28,10 +28,13 @@ export function parseConnectorInputsDefinition(
     const definitions = asRecord(definition.definitions) ?? {};
     const resolved = resolveSchemaRef(definition, definitions);
     if (!resolved) {
-        return [];
+        return undefined;
     }
 
     const parameterContainer = getSingleParameterContainer(resolved, definitions);
+    if (!asRecord(parameterContainer.properties)) {
+        return undefined;
+    }
     return flattenSchema(parameterContainer, definitions);
 }
 

@@ -142,6 +142,9 @@ export function convertConnectorCatalogManifest(
         .map(([, connector]) => connector)
         .sort(compareConnectors);
     const normalizedOperations = [...operations.values()].sort(compareOperations);
+    if (normalizedConnectors.length === 0 || normalizedOperations.length === 0) {
+        return { status: 'invalid' };
+    }
 
     return {
         status: 'valid',

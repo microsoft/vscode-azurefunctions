@@ -94,6 +94,47 @@ suite('Connector trigger data client', () => {
             'Succeeded',
         );
     });
+
+    test('invalidates in-flight subscriptions when the signed-in account changes', async () => {
+        let subscriptionRequestCount = 0;
+        let resolveFirstRequest: ((value: ConnectorSubscription[]) => void) | undefined;
+        const firstRequest = new Promise<ConnectorSubscription[]>(resolve => {
+            resolveFirstRequest = resolve;
+        });
+        const client = new ConnectorTriggerDataClient(
+            async () => {
+                subscriptionRequestCount += 1;
+                return subscriptionRequestCount === 1 ?
+                    await firstRequest :
+                    [createSubscription()];
+            },
+            async () => createArmClient([]),
+            new BaselineForwardingCatalogProvider(
+                createBaseline('AzureUSGovernment', 'US Gov Virginia'),
+            ),
+            async () => true,
+        );
+        const context = await createTestActionContext();
+
+        const staleLoad = client.getCatalog(context);
+        while (subscriptionRequestCount === 0) {
+            await Promise.resolve();
+        }
+        client.invalidateSubscriptions();
+        const refreshedLoad = client.getCatalog(context);
+        resolveFirstRequest?.([createSubscription(
+            'AzureCloud',
+            'https://management.azure.com/',
+        )]);
+
+        const [staleResult, refreshedResult] = await Promise.all([
+            staleLoad,
+            refreshedLoad,
+        ]);
+        assert.strictEqual(subscriptionRequestCount, 2);
+        assert.strictEqual(staleResult.source, 'live');
+        assert.strictEqual(refreshedResult.source, 'live');
+    });
 });
 
 class BaselineForwardingCatalogProvider implements IConnectorTriggerCatalogProvider {
@@ -208,11 +249,14 @@ function createArmClient(requests: string[]): ConnectorArmClient {
     };
 }
 
-function createSubscription(): ConnectorSubscription {
+function createSubscription(
+    environmentName = 'AzureUSGovernment',
+    resourceManagerEndpointUrl = 'https://management.usgovcloudapi.net/',
+): ConnectorSubscription {
     const context = {
         environment: {
-            name: 'AzureUSGovernment',
-            resourceManagerEndpointUrl: 'https://management.usgovcloudapi.net/',
+            name: environmentName,
+            resourceManagerEndpointUrl,
         },
         subscriptionDisplayName: 'Subscription One',
         subscriptionId: 'sub-one',

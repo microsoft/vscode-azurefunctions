@@ -84,6 +84,24 @@ suite('Connector trigger catalog provider', () => {
         );
     });
 
+    test('falls back to the bundled snapshot when the remote catalog is empty', async () => {
+        const provider = new ConnectorTriggerCatalogProvider(new TestCatalogCache(
+            createManifestResult(createManifest({
+                ...createSnapshotCatalog(),
+                connectors: [],
+                operations: [],
+            }), 'remote'),
+            createManifest(createSnapshotCatalog()),
+        ));
+
+        const result = await provider.getCatalog(await createTestActionContext());
+
+        assert.strictEqual(result.source, 'bundled');
+        assert.deepStrictEqual(result.errors, [
+            ConnectorCatalogError.RemoteCatalogInvalid,
+        ]);
+    });
+
     test('reports the shared manifest cache as a remote cache source', async () => {
         const provider = new ConnectorTriggerCatalogProvider(new TestCatalogCache(
             createManifestResult(

@@ -85,6 +85,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }));
         this.registerDisposable(vscode.authentication.onDidChangeSessions(() => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.refreshCatalog', async actionContext => {
+                this.dataClient.invalidateSubscriptions();
                 await this.loadCatalog(actionContext, undefined, true);
             });
         }));
@@ -175,7 +176,18 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        const catalog = this.catalogs.get(getCatalogKey(message.namespaceId))?.catalog;
+        const catalogKey = getCatalogKey(message.namespaceId);
+        const pendingCatalog = this.catalogLoadRequests.get(catalogKey);
+        if (pendingCatalog) {
+            try {
+                await pendingCatalog;
+            } catch {
+                // The catalog load reports its own error; continue so project creation
+                // can clear its busy state with an unavailable-selection response.
+            }
+        }
+
+        const catalog = this.catalogs.get(catalogKey)?.catalog;
         const connector = catalog?.connectors.find(item => item.id === message.connectorId);
         const operation = catalog?.operations.find(item =>
             item.id === message.operationId &&
@@ -184,10 +196,24 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             !operation ||
             connector.availability === 'unavailable' ||
             operation.availability === 'unavailable') {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorTriggerSelectionUnavailableForCreation',
+                    'The selected connector or event is no longer available. Choose another selection.',
+                ),
+            });
             return;
         }
 
         if (message.deliveryMode !== 'Polling' || operation.isWebhook) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorTriggerDeliveryUnavailableForCreation',
+                    'The selected delivery mode is not available.',
+                ),
+            });
             return;
         }
 

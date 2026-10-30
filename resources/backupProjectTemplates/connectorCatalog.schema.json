@@ -57,12 +57,14 @@
     },
     "connectors": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/connector"
       }
     },
     "operations": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/operation"
       }
