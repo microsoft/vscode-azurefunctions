@@ -90,8 +90,25 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setSelectedOperationId('');
                 setActiveStep(1);
             } else if (message.command === 'azureContextSelectionCancelled') {
+                setAzureContext(undefined);
                 setAzureContextLoading(false);
                 setAzureContextError(message.message);
+                setCatalogSource(undefined);
+                setCatalogWarning(undefined);
+                setSelectionUnavailable(false);
+                setConnectors([]);
+                setOperations([]);
+                setCatalogLoading(false);
+                setConnectorSearch('');
+                setConnectorLimit(connectorPageSize);
+                setOtherConnectorsExpanded(false);
+                setSelectedConnectorId('');
+                setSelectedOperationId('');
+                setProjectCreating(false);
+                setProjectCreationDetail('');
+                setProjectCreationError('');
+                setLoadError(undefined);
+                setActiveStep(1);
             } else if (message.command === 'catalogLoaded') {
                 setCatalogLoading(false);
                 setCatalogSource(message.source);
