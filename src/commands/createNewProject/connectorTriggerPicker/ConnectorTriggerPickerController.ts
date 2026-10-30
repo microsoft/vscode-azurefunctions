@@ -22,7 +22,11 @@ import { localize } from '../../../localize';
 import { createConnectorNamespace } from '../../createFunction/connectorSteps/createConnectorNamespace';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator } from '../ProjectTemplateCreator';
-import { ConnectorTriggerDataClient, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
+import {
+    ConnectorTriggerDataClient,
+    type ConnectorTriggerCatalog,
+    type ConnectorTriggerCatalogResult,
+} from './ConnectorTriggerDataClient';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
@@ -46,20 +50,6 @@ export type ConnectorTriggerCatalogLoader = (
     context: IActionContext,
     namespace?: ConnectorNamespaceOption,
 ) => Promise<ConnectorTriggerCatalogLoadResult>;
-
-interface ConnectorTriggerCatalogProviderResult {
-    catalog: ConnectorTriggerCatalog;
-    source: 'remote' | 'remoteCache' | 'bundled' | 'live';
-    liveRefresh: 'notRequested' | 'succeeded' | 'failed';
-    errors: readonly unknown[];
-}
-
-interface ConnectorTriggerCatalogProviderClient {
-    getCatalog(
-        context: IActionContext,
-        namespace?: ConnectorNamespaceOption,
-    ): Promise<ConnectorTriggerCatalogProviderResult>;
-}
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
@@ -528,37 +518,17 @@ function createCatalogLoader(
     dataClient: ConnectorTriggerDataClient,
 ): ConnectorTriggerCatalogLoader {
     return async (context, namespace) => {
-        if (hasCatalogProvider(dataClient)) {
-            const result = await dataClient.getCatalog(context, namespace);
-            return {
-                catalog: result.catalog,
-                source: result.source === 'remoteCache' ? 'remote' : result.source,
-                warning: getCatalogWarning(result),
-            };
-        }
-
-        if (namespace) {
-            return {
-                catalog: await dataClient.listCatalog(context, namespace),
-                source: 'live',
-            };
-        }
-
-        throw new Error(localize(
-            'connectorCatalogProviderUnavailable',
-            'The Microsoft connector catalog could not be loaded.',
-        ));
+        const result = await dataClient.getCatalog(context, namespace);
+        return {
+            catalog: result.catalog,
+            source: result.source === 'remoteCache' ? 'remote' : result.source,
+            warning: getCatalogWarning(result),
+        };
     };
 }
 
-function hasCatalogProvider(
-    dataClient: ConnectorTriggerDataClient,
-): dataClient is ConnectorTriggerDataClient & ConnectorTriggerCatalogProviderClient {
-    return typeof (dataClient as Partial<ConnectorTriggerCatalogProviderClient>).getCatalog === 'function';
-}
-
 function getCatalogWarning(
-    result: ConnectorTriggerCatalogProviderResult,
+    result: ConnectorTriggerCatalogResult,
 ): string | undefined {
     if (result.liveRefresh === 'failed') {
         return localize(

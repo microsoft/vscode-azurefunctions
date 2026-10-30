@@ -288,7 +288,7 @@ suite('Connector trigger catalog provider', () => {
             async getManifest(actionContext: IActionContext): Promise<ITemplateManifest> {
                 callCount += 1;
                 actionContext.telemetry.properties.manifestSource = 'cache';
-                return createManifest(createSnapshotCatalog());
+                return createManifest(createSnapshotCatalog()) as unknown as ITemplateManifest;
             },
         });
 
@@ -322,7 +322,7 @@ function createManifestResult(
 
 function createManifest(
     connectorCatalog?: unknown,
-): ITemplateManifest & { connectorCatalog?: unknown } {
+): Record<string, unknown> {
     return {
         generatedAt: '2026-10-30T00:00:00Z',
         version: '1.0',
