@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Azure Functions Connector Catalog Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generatedAt",
+    "source",
+    "connectors",
+    "operations"
+  ],
+  "properties": {
+    "version": {
+      "const": "1.0.0"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "cloud",
+        "region",
+        "catalogApiVersion",
+        "operationsApiVersion",
+        "swaggerApiVersion"
+      ],
+      "properties": {
+        "kind": {
+          "const": "azure-managed-connectors"
+        },
+        "cloud": {
+          "type": "string",
+          "minLength": 1
+        },
+        "region": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalogApiVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operationsApiVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "swaggerApiVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "connectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/connector"
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    }
+  },
+  "$defs": {
+    "connector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "metadataState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "iconUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "visibility": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metadataState": {
+          "enum": [
+            "catalogOnly",
+            "complete",
+            "partial"
+          ]
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "connectorId",
+        "name",
+        "delivery"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "connectorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visibility": {
+          "type": "string",
+          "minLength": 1
+        },
+        "delivery": {
+          "enum": [
+            "notification",
+            "polling",
+            "webhook"
+          ]
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "label",
+        "type",
+        "required",
+        "dynamic",
+        "sensitive"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "array",
+            "boolean",
+            "integer",
+            "number",
+            "object",
+            "string"
+          ]
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "defaultValue": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inputOption"
+          }
+        },
+        "dynamic": {
+          "type": "boolean"
+        },
+        "sensitive": {
+          "type": "boolean"
+        },
+        "visibility": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "sensitive": {
+                "const": true
+              }
+            },
+            "required": [
+              "sensitive"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "defaultValue"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "inputOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "value"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

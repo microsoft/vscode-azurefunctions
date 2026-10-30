@@ -3,17 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createSubscriptionContext, AzureWizard, type AzureWizardExecuteStep, type AzureWizardPromptStep, type IActionContext, subscriptionExperience } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { addConnectorNamespaceCreateSteps } from '../../commands/createFunction/connectorSteps/addConnectorNamespaceCreateSteps';
-import { type IConnectorNamespaceWizardContext } from '../../commands/createFunction/connectorSteps/IConnectorNamespaceWizardContext';
+import { createConnectorNamespace } from '../../commands/createFunction/connectorSteps/createConnectorNamespace';
 import { localSettingsFileName } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { createActivityContext } from '../../utils/activityUtils';
 import { parseJson } from '../../utils/parseJson';
 
 const pollingEndpointSuffix = '__pollingEndpoint';
@@ -53,23 +50,7 @@ export async function validateConnectorNamespacePreDebug(context: IActionContext
         return;
     }
 
-    const wizardContext: IConnectorNamespaceWizardContext = {
-        ...context,
-        ...createSubscriptionContext(await subscriptionExperience(context, ext.rgApiV2.resources.azureResourceTreeDataProvider)),
-        ...await createActivityContext(),
-    };
-    const promptSteps: AzureWizardPromptStep<IConnectorNamespaceWizardContext>[] = [];
-    const executeSteps: AzureWizardExecuteStep<IConnectorNamespaceWizardContext>[] = [];
-    addConnectorNamespaceCreateSteps(wizardContext, promptSteps, executeSteps);
-
-    const wizard = new AzureWizard(wizardContext, {
-        title: localize('createConnectorNamespace', 'Create Connector Namespace'),
-        promptSteps,
-        executeSteps,
-        showLoadingPrompt: true,
-    });
-    await wizard.prompt();
-    await wizard.execute();
+    await createConnectorNamespace(context);
 }
 
 export async function findPollingConnectorConnectionPrefixes(projectPath: string): Promise<Set<string>> {

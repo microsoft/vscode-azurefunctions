@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ProjectLanguage } from '../../constants';
+import { type IConnectorCatalogManifest } from './IConnectorCatalogManifest';
 
 /**
  * Subset of the project template manifest schema that this extension reads or
@@ -33,6 +34,9 @@ export interface IProjectTemplate {
 
     /** Git repository URL for cloning. */
     repositoryUrl: string;
+
+    /** Git ref to clone, such as refs/tags/v1.0.0. */
+    gitRef?: string;
 
     /** Branch to clone from (default: main). */
     branch?: string;
@@ -64,6 +68,9 @@ export interface ITemplateManifest {
 
     /** Array of project templates. */
     templates: IProjectTemplate[];
+
+    /** Optional anonymous connector catalog used when live Azure metadata is unavailable. */
+    connectorCatalog?: IConnectorCatalogManifest;
 }
 
 /**
@@ -79,4 +86,3 @@ export enum TemplateCategory {
     Workflows = 'workflows',
     Other = 'other'
 }
-
