@@ -13,6 +13,7 @@ import {
     writeConnectorTriggerProjectHandoff,
     type ConnectorTriggerProjectHandoff,
 } from '../../connectorTrigger/connectorTriggerProjectHandoff';
+import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
@@ -133,6 +134,7 @@ export class ProjectTemplateCreator {
             }
 
             if (options.connectorTriggerHandoff) {
+                await ensureConnectorTriggerPollProject(projectPath, language);
                 await writeConnectorTriggerProjectHandoff(
                     projectPath,
                     options.connectorTriggerHandoff,

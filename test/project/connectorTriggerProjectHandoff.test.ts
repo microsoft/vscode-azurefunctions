@@ -112,6 +112,12 @@ suite('Connector trigger project handoff', () => {
         );
 
         assert.strictEqual(projectCreated, true);
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+            ),
+            true,
+        );
         assert.deepStrictEqual(
             await readConnectorTriggerProjectHandoff(projectPath),
             handoff,
