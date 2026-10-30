@@ -6,12 +6,11 @@
 import { type JSX } from 'react';
 import { type ConnectorTriggerPickerViewModel } from './ConnectorTriggerPickerViewModel';
 
-export type ConnectorTriggerStep = 1 | 2 | 3;
+export type ConnectorTriggerStep = 1 | 2;
 
 interface ConnectorTriggerShellProps {
     activeStep: ConnectorTriggerStep;
     canOpenEvent: boolean;
-    canOpenConfigure: boolean;
     labels: ConnectorTriggerPickerViewModel['labels'];
     onBrowseTemplates: () => void;
     onOpenCopilot: () => void;
@@ -21,7 +20,6 @@ interface ConnectorTriggerShellProps {
 export function ConnectorTriggerShell({
     activeStep,
     canOpenEvent,
-    canOpenConfigure,
     labels,
     onBrowseTemplates,
     onOpenCopilot,
@@ -61,17 +59,9 @@ export function ConnectorTriggerShell({
                     number={2}
                     label={labels.eventStep}
                     active={activeStep === 2}
-                    complete={activeStep > 2}
+                    complete={false}
                     enabled={canOpenEvent}
                     onClick={() => onStepChange(2)}
-                />
-                <StepButton
-                    number={3}
-                    label={labels.configureStep}
-                    active={activeStep === 3}
-                    complete={false}
-                    enabled={canOpenConfigure}
-                    onClick={() => onStepChange(3)}
                 />
             </nav>
         </>

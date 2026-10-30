@@ -16,18 +16,28 @@ interface ConnectorEventStepProps {
     connector: ConnectorTriggerOption;
     labels: ConnectorTriggerPickerViewModel['labels'];
     operations: ConnectorTriggerOperationOption[];
+    projectCreating: boolean;
+    projectCreationDetail: string;
+    projectCreationError: string;
     selectedOperationId: string;
+    templateUnavailable: boolean;
     onChangeConnector: () => void;
     onSelectOperation: (operationId: string) => void;
+    onUseTemplate: () => void;
 }
 
 export function ConnectorEventStep({
     connector,
     labels,
     operations,
+    projectCreating,
+    projectCreationDetail,
+    projectCreationError,
     selectedOperationId,
+    templateUnavailable,
     onChangeConnector,
     onSelectOperation,
+    onUseTemplate,
 }: ConnectorEventStepProps): JSX.Element {
     const [search, setSearch] = useState('');
     const filteredOperations = useMemo(() => {
@@ -95,6 +105,37 @@ export function ConnectorEventStep({
                             <span className="codicon codicon-chevron-right" aria-hidden="true" />
                         </button>
                     )}
+                </div>
+            }
+
+            {selectedOperation &&
+                <div className="event-selection-actions">
+                    <span>
+                        {projectCreationError &&
+                            <small className="project-creation-error" role="alert">
+                                {projectCreationError}
+                            </small>
+                        }
+                        {templateUnavailable &&
+                            <small className="warning-text" role="status">
+                                {labels.selectionUnavailable}
+                            </small>
+                        }
+                        {projectCreating &&
+                            <small>{projectCreationDetail || labels.creatingProject}</small>
+                        }
+                    </span>
+                    <Button
+                        appearance="primary"
+                        disabled={projectCreating || templateUnavailable}
+                        onClick={onUseTemplate}
+                    >
+                        {projectCreating ?
+                            labels.creatingProject :
+                            templateUnavailable ?
+                                labels.unavailable :
+                                labels.useTemplate}
+                    </Button>
                 </div>
             }
         </section>

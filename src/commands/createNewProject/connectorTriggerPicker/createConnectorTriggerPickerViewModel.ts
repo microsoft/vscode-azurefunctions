@@ -18,10 +18,25 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             buildWithCopilotChat: localize('connectorTriggerBuildWithCopilot', 'Build with Copilot Chat'),
             connectorStep: localize('connectorTriggerConnectorStep', 'Connector'),
             eventStep: localize('connectorTriggerEventStep', 'Event'),
-            configureStep: localize('connectorTriggerConfigureStep', 'Configure & preview'),
+            selectingAzureContext: localize(
+                'connectorTriggerSelectingAzureContext',
+                'Select an Azure subscription and region to browse Connector Triggers.',
+            ),
+            azureContextRequired: localize(
+                'connectorTriggerAzureContextRequired',
+                'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+            ),
+            selectedAzureContext: localize(
+                'connectorTriggerSelectedAzureContext',
+                'Azure context: {0} · {1}',
+            ),
+            selectAzureContext: localize(
+                'connectorTriggerSelectAzureContext',
+                'Select Azure context',
+            ),
             bundledCatalogSource: localize(
                 'connectorTriggerBundledCatalogSource',
-                'Browsing the bundled Microsoft connector catalog snapshot.',
+                'Live Azure availability could not be loaded. Browsing the bundled Microsoft connector catalog snapshot.',
             ),
             remoteCatalogSource: localize(
                 'connectorTriggerRemoteCatalogSource',
@@ -37,7 +52,7 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             ),
             catalogSetupDeferred: localize(
                 'connectorTriggerCatalogSetupDeferred',
-                'Create the local project now. Connector Namespace and connection setup will be requested when you debug, deploy, or configure the trigger.',
+                'No Azure resources are created now. The selected subscription and region will be used when you configure the trigger during debugging.',
             ),
             selectionUnavailable: localize(
                 'connectorTriggerSelectionUnavailable',
@@ -66,46 +81,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             eventSelected: localize('connectorTriggerEventSelected', 'Selected: {0}'),
             changeConnector: localize('connectorTriggerChangeConnector', 'Change connector'),
             noTriggers: localize('connectorTriggerNoTriggers', 'No triggers are available for this connector.'),
-            configurePageTitle: localize('connectorTriggerConfigurePreview', 'Configure & preview'),
-            configurePageDescription: localize('connectorTriggerConfigurePreviewDescription', 'Choose how your function receives events and preview the selected template configuration.'),
-            changeEvent: localize('connectorTriggerChangeEvent', 'Change event'),
-            deliveryQuestion: localize('connectorTriggerDeliveryQuestion', 'How should your function receive events?'),
-            polling: localize('connectorTriggerPolling', 'Polling'),
-            webhook: localize('connectorTriggerWebhook', 'Webhook'),
-            pollingDescription: localize('connectorTriggerPollingDescription', 'Check for changes on a schedule.'),
-            webhookDescription: localize('connectorTriggerWebhookDescription', 'Webhook delivery is not available in VS Code yet.'),
-            eventParameters: localize('connectorTriggerEventParameters', 'Event parameters'),
-            eventParametersDescription: localize(
-                'connectorTriggerEventParametersDescription',
-                'Configure the inputs defined by the selected connector event.',
-            ),
-            loadingEventParameters: localize(
-                'connectorTriggerLoadingEventParameters',
-                'Loading event parameters...',
-            ),
-            noEventParameters: localize(
-                'connectorTriggerNoEventParameters',
-                'This event has no configurable parameters.',
-            ),
-            eventParametersDeferred: localize(
-                'connectorTriggerEventParametersDeferred',
-                'Parameter details will be completed when you configure the trigger during debug or deployment.',
-            ),
-            dynamicParameterDescription: localize(
-                'connectorTriggerDynamicParameterDescription',
-                'Connection-dependent values for this field will be resolved during trigger setup.',
-            ),
-            requiredParameter: localize('connectorTriggerRequiredParameter', 'required'),
-            optionalParameters: localize('connectorTriggerOptionalParameters', 'Optional parameters ({0})'),
-            showOptionalParameters: localize('connectorTriggerShowOptionalParameters', 'Show optional parameters'),
-            hideOptionalParameters: localize('connectorTriggerHideOptionalParameters', 'Hide optional parameters'),
-            selectionPreview: localize('connectorTriggerSelectionPreview', 'Selection preview'),
-            triggerMetadataPreview: localize('connectorTriggerTriggerMetadata', 'Trigger metadata'),
-            resourceMetadataPreview: localize('connectorTriggerResourceMetadata', 'Resource metadata'),
-            resourceSetupDeferred: localize(
-                'connectorTriggerResourceSetupDeferred',
-                'Azure resources are not required to create this project. Namespace, connection, and trigger configuration are deferred until debug or deployment.',
-            ),
             useTemplate: localize('connectorTriggerUseTemplate', 'Use Template'),
             creatingProject: localize('connectorTriggerCreatingProject', 'Creating project...'),
             retry: localize('connectorTriggerRetry', 'Retry'),
