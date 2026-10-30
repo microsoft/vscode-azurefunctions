@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type GenericResource } from '@azure/arm-resources';
-import { type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { type Progress } from 'vscode';
@@ -14,6 +13,7 @@ import {
     type ConnectorNamespaceClient,
     type ConnectorNamespaceResourcesClient,
 } from '../../src/commands/createFunction/connectorSteps/ConnectorNamespaceClient';
+import { type ConnectorGatewayClientContext } from '../../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import { ConnectorNamespaceCreateStep } from '../../src/commands/createFunction/connectorSteps/ConnectorNamespaceCreateStep';
 import {
     ConnectorNamespaceNameStep,
@@ -102,7 +102,7 @@ suite('Connector Namespace wizard steps', () => {
             },
         } as unknown as ConnectorNamespaceResourcesClient;
         const client = new AzureConnectorNamespaceClient(async () => resourcesClient);
-        const context = {} as AzExtClientContext;
+        const context = { valuesToMask: [] } as unknown as ConnectorGatewayClientContext;
 
         assert.strictEqual(await client.isNameAvailable(context, 'rg', 'test-namespace'), false);
         assert.deepStrictEqual(getArguments, [
@@ -118,9 +118,19 @@ suite('Connector Namespace wizard steps', () => {
         assert.strictEqual(await client.isNameAvailable(context, 'rg', 'test-namespace'), true);
 
         getStatusCode = 500;
-        await assert.rejects(client.isNameAvailable(context, 'rg', 'test-namespace'), /Request failed/);
+        await assert.rejects(
+            client.isNameAvailable(context, 'rg', 'test-namespace'),
+            /Unable to check Connector Namespace name availability/,
+        );
 
-        assert.strictEqual(await client.create(context, 'rg', 'test-namespace', 'eastus'), createdResource);
+        assert.deepStrictEqual(await client.create(context, 'rg', 'test-namespace', 'eastus'), {
+            ...createdResource,
+            identity: undefined,
+            managedBy: undefined,
+            properties: undefined,
+            tags: undefined,
+            type: undefined,
+        });
         assert.deepStrictEqual(createArguments, [
             'rg',
             webProvider,
