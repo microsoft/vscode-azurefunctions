@@ -23,7 +23,7 @@ import {
 type JsonRecord = Record<string, unknown>;
 
 interface DynamicInvocationSpec {
-    method: string;
+    method: ConnectorTriggerDynamicInvokeRequest['request']['method'];
     path: string;
     parameterLiterals?: Record<string, string>;
     parameterMap?: Record<string, string>;
@@ -275,15 +275,19 @@ function parseParameterMappings(parameters: JsonRecord | undefined): {
 function findOperation(
     swagger: JsonRecord,
     operationId: string,
-): { method: string; path: string; operation: JsonRecord } | undefined {
+): {
+    method: ConnectorTriggerDynamicInvokeRequest['request']['method'];
+    path: string;
+    operation: JsonRecord;
+} | undefined {
     const paths = asRecord(swagger.paths);
     for (const [path, pathItemValue] of Object.entries(paths ?? {})) {
         const pathItem = asRecord(pathItemValue);
-        for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+        for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
             const operation = asRecord(pathItem?.[method]);
             if (equalsIgnoreCase(readString(operation?.operationId), operationId)) {
                 return {
-                    method: method.toUpperCase(),
+                    method: method.toUpperCase() as Uppercase<typeof method>,
                     path,
                     operation: operation ?? {},
                 };

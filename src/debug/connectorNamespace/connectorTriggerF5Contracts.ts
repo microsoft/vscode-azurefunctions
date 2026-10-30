@@ -188,7 +188,7 @@ export interface ConnectorTriggerConnectionAccessPolicy {
 
 export interface ConnectorTriggerDynamicInvokeRequest {
     request: {
-        method: string;
+        method: 'DELETE' | 'GET' | 'HEAD' | 'OPTIONS' | 'PATCH' | 'POST' | 'PUT';
         path: string;
         queries?: Record<string, string>;
         headers?: Record<string, string>;
