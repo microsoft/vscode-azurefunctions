@@ -50,7 +50,7 @@ export function ConnectorConfigureStep({
     onRetryOperationInputs,
     onUseTemplate,
 }: ConnectorConfigureStepProps): JSX.Element {
-    const [previewTab, setPreviewTab] = useState<'function' | 'infrastructure'>('function');
+    const [previewTab, setPreviewTab] = useState<'trigger' | 'resources'>('trigger');
     const [inputValues, setInputValues] = useState<Record<string, string | boolean>>({});
     const [optionalParametersExpanded, setOptionalParametersExpanded] = useState(false);
     const support = getDeliverySupport(operation);
@@ -59,14 +59,14 @@ export function ConnectorConfigureStep({
         () => partitionEventParameters(inputDefinitions ?? []),
         [inputDefinitions],
     );
-    const functionPreview = useMemo(() => JSON.stringify({
+    const triggerMetadata = useMemo(() => JSON.stringify({
         language: language || 'selected project language',
         connectorNamespace: namespace.name,
         connector: connector.id,
         trigger: operation.id,
         deliveryMode,
     }, null, 2), [connector.id, deliveryMode, language, namespace.name, operation.id]);
-    const infrastructurePreview = useMemo(() => JSON.stringify({
+    const resourceMetadata = useMemo(() => JSON.stringify({
         subscription: namespace.subscriptionName,
         resourceGroup: namespace.resourceGroup,
         location: namespace.location,
@@ -211,25 +211,25 @@ export function ConnectorConfigureStep({
                     <button
                         type="button"
                         role="tab"
-                        aria-selected={previewTab === 'function'}
-                        className={previewTab === 'function' ? 'active' : ''}
-                        onClick={() => setPreviewTab('function')}
+                        aria-selected={previewTab === 'trigger'}
+                        className={previewTab === 'trigger' ? 'active' : ''}
+                        onClick={() => setPreviewTab('trigger')}
                     >
-                        <span className="codicon codicon-code" aria-hidden="true" />
-                        {labels.functionPreview}
+                        <span className="codicon codicon-symbol-property" aria-hidden="true" />
+                        {labels.triggerMetadataPreview}
                     </button>
                     <button
                         type="button"
                         role="tab"
-                        aria-selected={previewTab === 'infrastructure'}
-                        className={previewTab === 'infrastructure' ? 'active' : ''}
-                        onClick={() => setPreviewTab('infrastructure')}
+                        aria-selected={previewTab === 'resources'}
+                        className={previewTab === 'resources' ? 'active' : ''}
+                        onClick={() => setPreviewTab('resources')}
                     >
-                        <span className="codicon codicon-file-code" aria-hidden="true" />
-                        {labels.infrastructurePreview}
+                        <span className="codicon codicon-server-environment" aria-hidden="true" />
+                        {labels.resourceMetadataPreview}
                     </button>
                 </div>
-                <pre>{previewTab === 'function' ? functionPreview : infrastructurePreview}</pre>
+                <pre>{previewTab === 'trigger' ? triggerMetadata : resourceMetadata}</pre>
                 {projectCreationError &&
                     <p className="project-creation-error" role="alert">{projectCreationError}</p>
                 }

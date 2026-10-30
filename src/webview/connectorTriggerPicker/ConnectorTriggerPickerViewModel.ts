@@ -112,8 +112,8 @@ export interface ConnectorTriggerPickerViewModel {
         showOptionalParameters: string;
         hideOptionalParameters: string;
         selectionPreview: string;
-        functionPreview: string;
-        infrastructurePreview: string;
+        triggerMetadataPreview: string;
+        resourceMetadataPreview: string;
         useTemplate: string;
         creatingProject: string;
         retry: string;

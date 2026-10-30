@@ -534,6 +534,8 @@ suite('Connector trigger picker', () => {
             'Configure the inputs defined by the selected connector event.',
         );
         assert.strictEqual(viewModel.labels.optionalParameters, 'Optional parameters ({0})');
+        assert.strictEqual(viewModel.labels.triggerMetadataPreview, 'Trigger metadata');
+        assert.strictEqual(viewModel.labels.resourceMetadataPreview, 'Resource metadata');
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {
