@@ -84,6 +84,10 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Troubleshooting
 
+### Node.js MCP template SDK requirements
+
+The Node.js v4 MCP Resource template requires `@azure/functions` 4.12.0 or later, and the MCP Prompt template requires 4.14.0 or later, for both JavaScript and TypeScript. Function creation checks the SDK installed in the project, not just the version range in `package.json`. If the SDK is missing or too old, creation stops before writing the function and displays the required version and an `npm install` command. Run that command in the project folder and retry. The extension does not upgrade dependencies automatically.
+
 ### "unable to get local issuer certificate" on a corporate network
 
 If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), Azure operations may fail with errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain`. This happens because the extension's Azure calls run in the Node.js extension host, which does not use the operating system certificate store by default.
