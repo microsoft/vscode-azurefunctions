@@ -36,7 +36,10 @@ import {
     type ConnectorTriggerPickerResponse,
     type ConnectorTriggerOption,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { getDeliverySupport } from '../../src/webview/connectorTriggerPicker/ConnectorConfigureStep';
+import {
+    getDeliverySupport,
+    partitionEventParameters,
+} from '../../src/webview/connectorTriggerPicker/ConnectorConfigureStep';
 import { ProjectLanguage } from '../../src/constants';
 import { type IProjectTemplate, type TemplateCategory } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { type ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
@@ -108,7 +111,7 @@ suite('Connector trigger picker', () => {
                                 name: 'folderPath',
                                 in: 'query',
                                 type: 'string',
-                                required: true,
+                                required: false,
                                 'x-ms-summary': 'Folder',
                                 'x-ms-dynamic-values': {
                                     operationId: 'ListFolders',
@@ -140,6 +143,7 @@ suite('Connector trigger picker', () => {
                                             in: 'query',
                                             type: 'string',
                                             enum: ['any', 'high'],
+                                            'x-ms-visibility': 'important',
                                             'x-ms-enum-values': [
                                                 { value: 'any', displayName: 'Any' },
                                                 { value: 'high', displayName: 'High' },
@@ -402,7 +406,7 @@ suite('Connector trigger picker', () => {
                 description: undefined,
                 type: 'string',
                 format: undefined,
-                required: true,
+                required: false,
                 defaultValue: undefined,
                 options: undefined,
                 dynamic: true,
@@ -422,6 +426,7 @@ suite('Connector trigger picker', () => {
                 ],
                 dynamic: false,
                 sensitive: false,
+                visibility: 'important',
             },
             {
                 name: 'includeAttachments',
@@ -452,6 +457,15 @@ suite('Connector trigger picker', () => {
             url.includes('/locations/eastus2/managedApis/office365')) as string);
         assert.strictEqual(swaggerRequest.searchParams.get('api-version'), '2022-09-01-preview');
         assert.strictEqual(swaggerRequest.searchParams.get('export'), 'true');
+        const inputGroups = partitionEventParameters(inputs);
+        assert.deepStrictEqual(
+            inputGroups.primary.map(input => input.name),
+            ['folderPath', 'importance', 'advanced.threshold'],
+        );
+        assert.deepStrictEqual(
+            inputGroups.optional.map(input => input.name),
+            ['includeAttachments'],
+        );
         await assert.rejects(
             client.listOperationInputs(
                 await createTestActionContext(),
@@ -519,6 +533,7 @@ suite('Connector trigger picker', () => {
             viewModel.labels.eventParametersDescription,
             'Configure the inputs defined by the selected connector event.',
         );
+        assert.strictEqual(viewModel.labels.optionalParameters, 'Optional parameters ({0})');
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {

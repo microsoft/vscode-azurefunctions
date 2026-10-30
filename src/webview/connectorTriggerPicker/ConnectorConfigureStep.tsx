@@ -52,8 +52,13 @@ export function ConnectorConfigureStep({
 }: ConnectorConfigureStepProps): JSX.Element {
     const [previewTab, setPreviewTab] = useState<'function' | 'infrastructure'>('function');
     const [inputValues, setInputValues] = useState<Record<string, string | boolean>>({});
+    const [optionalParametersExpanded, setOptionalParametersExpanded] = useState(false);
     const support = getDeliverySupport(operation);
     const inputDefinitions = operation.inputDefinitions;
+    const parameterGroups = useMemo(
+        () => partitionEventParameters(inputDefinitions ?? []),
+        [inputDefinitions],
+    );
     const functionPreview = useMemo(() => JSON.stringify({
         language: language || 'selected project language',
         connectorNamespace: namespace.name,
@@ -78,6 +83,7 @@ export function ConnectorConfigureStep({
             }
         }
         setInputValues(initialValues);
+        setOptionalParametersExpanded(false);
     }, [inputDefinitions, operation.id]);
 
     return (
@@ -142,21 +148,57 @@ export function ConnectorConfigureStep({
                         </div> :
                         inputDefinitions?.length === 0 ?
                             <p className="status-text">{labels.noEventParameters}</p> :
-                            <div className="event-parameter-grid">
-                                {inputDefinitions?.map((input, index) =>
-                                    <EventParameterField
-                                        key={input.name}
-                                        id={`connector-event-parameter-${index}`}
-                                        input={input}
+                            <>
+                                {parameterGroups.primary.length > 0 &&
+                                    <EventParameterGrid
+                                        idPrefix="connector-event-parameter"
+                                        inputs={parameterGroups.primary}
+                                        inputValues={inputValues}
                                         labels={labels}
-                                        value={inputValues[input.name]}
-                                        onChange={value => setInputValues(current => ({
+                                        setInputValue={(name, value) => setInputValues(current => ({
                                             ...current,
-                                            [input.name]: value,
+                                            [name]: value,
                                         }))}
                                     />
-                                )}
-                            </div>
+                                }
+                                {parameterGroups.optional.length > 0 &&
+                                    <div className="optional-event-parameters">
+                                        <button
+                                            type="button"
+                                            className="optional-event-parameters-toggle"
+                                            aria-controls="optional-event-parameters-grid"
+                                            aria-expanded={optionalParametersExpanded}
+                                            aria-label={optionalParametersExpanded ?
+                                                labels.hideOptionalParameters :
+                                                labels.showOptionalParameters}
+                                            onClick={() => setOptionalParametersExpanded(expanded => !expanded)}
+                                        >
+                                            <span
+                                                className={`codicon codicon-chevron-${optionalParametersExpanded ? 'down' : 'right'}`}
+                                                aria-hidden="true"
+                                            />
+                                            {format(
+                                                labels.optionalParameters,
+                                                parameterGroups.optional.length.toString(),
+                                            )}
+                                        </button>
+                                        {optionalParametersExpanded &&
+                                            <div id="optional-event-parameters-grid">
+                                                <EventParameterGrid
+                                                    idPrefix="connector-optional-event-parameter"
+                                                    inputs={parameterGroups.optional}
+                                                    inputValues={inputValues}
+                                                    labels={labels}
+                                                    setInputValue={(name, value) => setInputValues(current => ({
+                                                        ...current,
+                                                        [name]: value,
+                                                    }))}
+                                                />
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </>
                 }
             </div>
 
@@ -203,6 +245,35 @@ export function ConnectorConfigureStep({
                 </div>
             </div>
         </section>
+    );
+}
+
+function EventParameterGrid({
+    idPrefix,
+    inputs,
+    inputValues,
+    labels,
+    setInputValue,
+}: {
+    idPrefix: string;
+    inputs: readonly ConnectorTriggerInputDefinition[];
+    inputValues: Record<string, string | boolean>;
+    labels: ConnectorTriggerPickerViewModel['labels'];
+    setInputValue: (name: string, value: string | boolean) => void;
+}): JSX.Element {
+    return (
+        <div className="event-parameter-grid">
+            {inputs.map((input, index) =>
+                <EventParameterField
+                    key={input.name}
+                    id={`${idPrefix}-${index}`}
+                    input={input}
+                    labels={labels}
+                    value={inputValues[input.name]}
+                    onChange={value => setInputValue(input.name, value)}
+                />
+            )}
+        </div>
     );
 }
 
@@ -303,4 +374,29 @@ export function getDeliverySupport(
         polling: !operation.isWebhook,
         webhook: false,
     };
+}
+
+export function partitionEventParameters(
+    inputDefinitions: readonly ConnectorTriggerInputDefinition[],
+): {
+    primary: ConnectorTriggerInputDefinition[];
+    optional: ConnectorTriggerInputDefinition[];
+} {
+    const primary: ConnectorTriggerInputDefinition[] = [];
+    const optional: ConnectorTriggerInputDefinition[] = [];
+    for (const input of inputDefinitions) {
+        if (input.required ||
+            input.dynamic ||
+            input.visibility?.toLowerCase() === 'important') {
+            primary.push(input);
+        } else {
+            optional.push(input);
+        }
+    }
+
+    return { primary, optional };
+}
+
+function format(template: string, value: string): string {
+    return template.replace('{0}', value);
 }

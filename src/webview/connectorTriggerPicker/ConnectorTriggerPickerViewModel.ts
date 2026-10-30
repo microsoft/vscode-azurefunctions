@@ -44,6 +44,7 @@ export interface ConnectorTriggerInputDefinition {
     options?: ConnectorTriggerInputOption[];
     dynamic: boolean;
     sensitive: boolean;
+    visibility?: string;
 }
 
 export interface ConnectorTriggerOperationOption {
@@ -107,6 +108,9 @@ export interface ConnectorTriggerPickerViewModel {
         noEventParameters: string;
         dynamicParameterDescription: string;
         requiredParameter: string;
+        optionalParameters: string;
+        showOptionalParameters: string;
+        hideOptionalParameters: string;
         selectionPreview: string;
         functionPreview: string;
         infrastructurePreview: string;

@@ -134,6 +134,7 @@ function flattenSchema(
     prefix = '',
     parentRequired = true,
     parentDynamic = false,
+    parentVisibility?: string,
 ): ConnectorTriggerInputDefinition[] {
     const properties = asRecord(schema.properties);
     if (!properties) {
@@ -151,6 +152,10 @@ function flattenSchema(
         const name = prefix ? `${prefix}.${propertyName}` : propertyName;
         const isRequired = parentRequired && required.has(propertyName);
         const isDynamic = parentDynamic || hasDynamicMetadata(property);
+        const visibility = combineVisibility(
+            readVisibility(property),
+            parentVisibility,
+        );
         if (normalizeType(property.type) === 'object' && asRecord(property.properties)) {
             result.push(...flattenSchema(
                 property,
@@ -158,6 +163,7 @@ function flattenSchema(
                 name,
                 isRequired,
                 isDynamic,
+                visibility,
             ));
         } else {
             result.push(createInputDefinition(
@@ -166,6 +172,7 @@ function flattenSchema(
                 isRequired,
                 undefined,
                 isDynamic,
+                visibility,
             ));
         }
     }
@@ -179,9 +186,14 @@ function createInputDefinition(
     required: boolean,
     parameter?: JsonRecord,
     dynamic = false,
+    inheritedVisibility?: string,
 ): ConnectorTriggerInputDefinition {
     const sensitive = isSensitive(schema) || !!parameter && isSensitive(parameter);
     const options = parseOptions(schema, parameter);
+    const visibility = combineVisibility(
+        readVisibility(parameter),
+        combineVisibility(readVisibility(schema), inheritedVisibility),
+    );
     const defaultValue = sensitive ?
         undefined :
         readPrimitive(schema.default) ?? readPrimitive(parameter?.default);
@@ -200,6 +212,7 @@ function createInputDefinition(
         options,
         dynamic: dynamic || hasDynamicMetadata(parameter) || hasDynamicMetadata(schema),
         sensitive,
+        ...(visibility ? { visibility } : {}),
     };
 }
 
@@ -286,15 +299,28 @@ function resolveSchemaRef(
 }
 
 function shouldHide(value: JsonRecord): boolean {
-    const visibility = (
-        readString(value['x-ms-visibility']) ||
-        readString(value['x-ms-visiblity']) ||
-        ''
-    ).toLowerCase();
+    const visibility = readVisibility(value)?.toLowerCase() ?? '';
     return value.hideInUI === true ||
         visibility === 'internal' ||
         visibility === 'hideinui' ||
         value.readOnly === true;
+}
+
+function readVisibility(value: JsonRecord | undefined): string | undefined {
+    return readString(value?.['x-ms-visibility']) ||
+        readString(value?.['x-ms-visiblity']);
+}
+
+function combineVisibility(
+    visibility: string | undefined,
+    inheritedVisibility: string | undefined,
+): string | undefined {
+    if (visibility?.toLowerCase() === 'important' ||
+        inheritedVisibility?.toLowerCase() === 'important') {
+        return 'important';
+    }
+
+    return visibility || inheritedVisibility;
 }
 
 function hasDynamicMetadata(value: JsonRecord | undefined): boolean {

@@ -498,6 +498,39 @@ select {
     gap: 8px;
 }
 
+.optional-event-parameters {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--connector-picker-border);
+}
+
+.optional-event-parameters-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 3px 0;
+    border: 0;
+    color: var(--vscode-foreground);
+    background: transparent;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--vscode-textLink-foreground);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+    }
+}
+
+#optional-event-parameters-grid {
+    margin-top: 10px;
+}
+
 .preview-panel {
     padding: 14px;
     border: 1px solid var(--connector-picker-border);
