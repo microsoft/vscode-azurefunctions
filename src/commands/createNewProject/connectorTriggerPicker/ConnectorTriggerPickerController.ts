@@ -80,6 +80,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private readonly templateProvider = new ProjectTemplateProvider();
     private azureContext: ConnectorTriggerAzureContext | undefined;
     private azureContextRequest: Promise<void> | undefined;
+    private azureContextSelectionPending = false;
     private subscriptionContext: ISubscriptionContext | undefined;
 
     private constructor(
@@ -105,6 +106,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.handleMessage', async actionContext => {
                 await this.handleMessage(message, actionContext);
+            });
+        }));
+        this.registerDisposable(vscode.authentication.onDidChangeSessions(() => {
+            void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.authenticationChanged', async () => {
+                await this.handleAuthenticationChange();
             });
         }));
         this.registerDisposable(this.onDisposed(() => {
@@ -278,27 +284,46 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
     }
 
+    private async handleAuthenticationChange(): Promise<void> {
+        this.dataClient.invalidateSubscriptions();
+        if (this.azureContextSelectionPending) {
+            return;
+        }
+
+        this.azureContext = undefined;
+        this.subscriptionContext = undefined;
+        this.catalogs.clear();
+        this.catalogLoadRequests.clear();
+        await this.postMessage({
+            command: 'azureContextSelectionCancelled',
+            message: getAzureContextRequiredMessage(),
+        });
+    }
+
     private async selectAzureContext(actionContext: IActionContext): Promise<void> {
         try {
-            const selection = await this.azureContextProvider(actionContext);
-            this.dataClient.registerSubscription(selection.subscriptionContext);
-            this.azureContext = selection.azureContext;
-            this.subscriptionContext = selection.subscriptionContext;
-            this.catalogs.clear();
-            this.catalogLoadRequests.clear();
-            await this.postMessage({
-                command: 'azureContextSelected',
-                azureContext: getAzureContextDisplay(selection.azureContext),
-            });
+            this.azureContextSelectionPending = true;
+            let selection: ConnectorTriggerAzureContextSelection;
+            try {
+                selection = await this.azureContextProvider(actionContext);
+                this.dataClient.registerSubscription(selection.subscriptionContext);
+                this.azureContext = selection.azureContext;
+                this.subscriptionContext = selection.subscriptionContext;
+                this.catalogs.clear();
+                this.catalogLoadRequests.clear();
+                await this.postMessage({
+                    command: 'azureContextSelected',
+                    azureContext: getAzureContextDisplay(selection.azureContext),
+                });
+            } finally {
+                this.azureContextSelectionPending = false;
+            }
             await this.loadCatalog(actionContext, selection.azureContext);
         } catch (error) {
             if (isUserCancelledError(error)) {
                 await this.postMessage({
                     command: 'azureContextSelectionCancelled',
-                    message: localize(
-                        'connectorTriggerAzureContextRequired',
-                        'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
-                    ),
+                    message: getAzureContextRequiredMessage(),
                 });
                 return;
             }
@@ -435,6 +460,13 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             const template = matchingTemplates.length === 1 ?
                 matchingTemplates[0] :
                 await this.pickTemplate(actionContext, matchingTemplates);
+            if (this.azureContext !== selection.azureContext ||
+                this.subscriptionContext !== subscriptionContext) {
+                throw new Error(localize(
+                    'connectorTriggerAzureContextExpired',
+                    'The selected Azure context is no longer available. Select the Connector Trigger again.',
+                ));
+            }
             await this.projectCreator.createProject(
                 actionContext,
                 template,
@@ -483,6 +515,13 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
 function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function getAzureContextRequiredMessage(): string {
+    return localize(
+        'connectorTriggerAzureContextRequired',
+        'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+    );
 }
 
 function getCatalogKey(azureContext: ConnectorTriggerAzureContext): string {

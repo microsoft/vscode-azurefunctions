@@ -223,17 +223,96 @@ suite('Connector trigger picker Azure context UX', () => {
             message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
         }]);
     });
+
+    test('requires Azure-context reselection after authentication changes', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        let invalidationCount = 0;
+        const controller = createTestController(
+            responses,
+            async () => assert.fail('The catalog must not load.'),
+            async () => assert.fail('Azure context must not be selected.'),
+            undefined,
+            () => {
+                invalidationCount += 1;
+            },
+        );
+        controller.azureContext = createAzureContext();
+        controller.subscriptionContext = createSubscriptionContext();
+        controller.azureContextRequest = new Promise<void>(() => undefined);
+        controller.catalogs.set('stale', {
+            catalog: {
+                connectors: [connector],
+                operations: [operation],
+            },
+            source: 'live',
+        });
+        controller.catalogLoadRequests.set('stale', Promise.resolve({
+            catalog: {
+                connectors: [connector],
+                operations: [operation],
+            },
+            source: 'live',
+        }));
+
+        await callHandleAuthenticationChange(controller);
+
+        assert.strictEqual(invalidationCount, 1);
+        assert.strictEqual(controller.azureContext, undefined);
+        assert.strictEqual(controller.subscriptionContext, undefined);
+        assert.strictEqual(controller.catalogs.size, 0);
+        assert.strictEqual(controller.catalogLoadRequests.size, 0);
+        await callHandleMessage(controller, {
+            command: 'continue',
+            connectorId: connector.id,
+            operationId: operation.id,
+        });
+        assert.deepStrictEqual(responses, [{
+            command: 'azureContextSelectionCancelled',
+            message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+        }, {
+            command: 'projectCreationFailed',
+            message: 'Select an Azure subscription and region before creating the project.',
+        }]);
+    });
+
+    test('does not race an in-flight initial sign-in', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        let invalidationCount = 0;
+        const controller = createTestController(
+            responses,
+            async () => assert.fail('The catalog must not load.'),
+            async () => assert.fail('Azure context must not be selected.'),
+            undefined,
+            () => {
+                invalidationCount += 1;
+            },
+        );
+        controller.azureContextSelectionPending = true;
+
+        await callHandleAuthenticationChange(controller);
+
+        assert.strictEqual(invalidationCount, 1);
+        assert.strictEqual(controller.azureContext, undefined);
+        assert.strictEqual(controller.subscriptionContext, undefined);
+        assert.strictEqual(controller.catalogs.size, 0);
+        assert.deepStrictEqual(responses, []);
+    });
 });
 
 interface TestableConnectorTriggerPickerController {
     azureContext: ConnectorTriggerAzureContext | undefined;
     azureContextRequest: Promise<void> | undefined;
+    azureContextSelectionPending: boolean;
     azureContextProvider: ConnectorTriggerAzureContextProvider;
     catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
     catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
     catalogLoader: ConnectorTriggerCatalogLoader;
-    dataClient: Pick<ConnectorTriggerDataClient, 'registerSubscription'>;
+    dataClient: Pick<
+        ConnectorTriggerDataClient,
+        'invalidateSubscriptions' | 'registerSubscription'
+    >;
     postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
+    subscriptionContext: ISubscriptionContext | undefined;
 }
 
 function createTestController(
@@ -241,18 +320,21 @@ function createTestController(
     catalogLoader: ConnectorTriggerCatalogLoader,
     azureContextProvider: ConnectorTriggerAzureContextProvider,
     registerSubscription: (context: ISubscriptionContext) => void = () => undefined,
+    invalidateSubscriptions: () => void = () => undefined,
 ): TestableConnectorTriggerPickerController {
     return Object.assign(Object.create(ConnectorTriggerPickerController.prototype), {
         azureContext: undefined,
         azureContextRequest: undefined,
+        azureContextSelectionPending: false,
         azureContextProvider,
         catalogs: new Map(),
         catalogLoadRequests: new Map(),
         catalogLoader,
-        dataClient: { registerSubscription },
+        dataClient: { invalidateSubscriptions, registerSubscription },
         postMessage: async (message: ConnectorTriggerPickerResponse) => {
             responses.push(message);
         },
+        subscriptionContext: undefined,
     }) as TestableConnectorTriggerPickerController;
 }
 
@@ -272,6 +354,17 @@ async function callHandleMessage(
         message,
         await createTestActionContext(),
     );
+}
+
+async function callHandleAuthenticationChange(
+    controller: TestableConnectorTriggerPickerController,
+): Promise<void> {
+    const controllerMethods = ConnectorTriggerPickerController.prototype as unknown as {
+        handleAuthenticationChange(
+            this: TestableConnectorTriggerPickerController,
+        ): Promise<void>;
+    };
+    await controllerMethods.handleAuthenticationChange.call(controller);
 }
 
 function createAzureContext(): ConnectorTriggerAzureContext {
