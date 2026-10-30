@@ -9,6 +9,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import {
+    writeConnectorTriggerProjectHandoff,
+    type ConnectorTriggerProjectHandoff,
+} from '../../connectorTrigger/connectorTriggerProjectHandoff';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
@@ -27,6 +31,10 @@ export interface ProjectTemplateCreatorCallbacks {
     reportProgress?(detail: string): void;
 }
 
+export interface ProjectTemplateCreationOptions {
+    connectorTriggerHandoff?: ConnectorTriggerProjectHandoff;
+}
+
 export class ProjectTemplateCreator {
     public constructor(
         private readonly callbacks: ProjectTemplateCreatorCallbacks = {},
@@ -38,6 +46,7 @@ export class ProjectTemplateCreator {
         language: string,
         projectPath: string,
         entryPoint?: ProjectCreationEntryPoint,
+        options: ProjectTemplateCreationOptions = {},
     ): Promise<void> {
         actionContext.telemetry.properties.templateId = template.id;
         actionContext.telemetry.properties.templateName = template.displayName;
@@ -121,6 +130,13 @@ export class ProjectTemplateCreator {
                 await cpUtils.executeCommandLine(undefined, projectPath, 'git init');
             } catch {
                 // git init is optional.
+            }
+
+            if (options.connectorTriggerHandoff) {
+                await writeConnectorTriggerProjectHandoff(
+                    projectPath,
+                    options.connectorTriggerHandoff,
+                );
             }
 
             actionContext.telemetry.properties.result = 'Succeeded';
