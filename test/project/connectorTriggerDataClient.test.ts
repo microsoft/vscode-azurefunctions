@@ -12,6 +12,7 @@ import * as assert from 'assert';
 import {
     ConnectorTriggerDataClient,
     type ConnectorArmClient,
+    type ConnectorTriggerAzureContext,
     type ConnectorSubscription,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import {
@@ -23,7 +24,7 @@ import {
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerCatalogProvider';
 
 suite('Connector trigger data client', () => {
-    test('keeps signed-out catalog loading prompt-free', async () => {
+    test('keeps public catalog loading prompt-free without selected Azure context', async () => {
         let subscriptionRequestCount = 0;
         const baseline = createBaseline();
         const client = new ConnectorTriggerDataClient(
@@ -33,7 +34,6 @@ suite('Connector trigger data client', () => {
             },
             async () => assert.fail('An ARM client must not be created.'),
             new BaselineForwardingCatalogProvider(baseline),
-            async () => false,
         );
 
         const result = await client.getCatalog(await createTestActionContext());
@@ -43,18 +43,17 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(subscriptionRequestCount, 0);
     });
 
-    test('refreshes signed-in snapshot connectors through location APIs in a custom cloud', async () => {
+    test('refreshes the selected region through location APIs in a custom cloud', async () => {
         const requests: string[] = [];
         const context = await createTestActionContext();
-        const baseline = createBaseline('AzureUSGovernment', 'US Gov Virginia');
+        const baseline = createBaseline();
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
             async () => createArmClient(requests),
             new BaselineForwardingCatalogProvider(baseline),
-            async () => true,
         );
 
-        const result = await client.getCatalog(context);
+        const result = await client.getCatalog(context, createAzureContext());
 
         assert.strictEqual(result.source, 'live');
         assert.deepStrictEqual(
@@ -65,10 +64,7 @@ suite('Connector trigger data client', () => {
             result.catalog.operations.map(operation => operation.id),
             ['OnNewEmail', 'OnNewFile'],
         );
-        assert.strictEqual(
-            result.catalog.operations[0].inputDefinitions?.[0].name,
-            'folderPath',
-        );
+        assert.strictEqual(result.catalog.operations[0].inputDefinitions, undefined);
         assert.ok(requests.every(request =>
             request.startsWith('https://management.usgovcloudapi.net/'),
         ));
@@ -80,10 +76,7 @@ suite('Connector trigger data client', () => {
             request.includes('/managedApis/office365/apiOperations?') &&
             new URL(request).searchParams.get('api-version') === '2016-06-01',
         ));
-        assert.ok(requests.some(request =>
-            request.includes('/managedApis/office365?') &&
-            new URL(request).searchParams.get('api-version') ===
-                '2022-09-01-preview' &&
+        assert.ok(!requests.some(request =>
             new URL(request).searchParams.get('export') === 'true',
         ));
         assert.ok(requests.includes(
@@ -91,7 +84,7 @@ suite('Connector trigger data client', () => {
         ));
         assert.strictEqual(
             context.telemetry.properties.connectorCatalogSwaggerRefresh,
-            'Succeeded',
+            undefined,
         );
     });
 
@@ -110,18 +103,18 @@ suite('Connector trigger data client', () => {
             },
             async () => createArmClient([]),
             new BaselineForwardingCatalogProvider(
-                createBaseline('AzureUSGovernment', 'US Gov Virginia'),
+                createBaseline(),
             ),
-            async () => true,
         );
         const context = await createTestActionContext();
+        const azureContext = createAzureContext();
 
-        const staleLoad = client.getCatalog(context);
+        const staleLoad = client.getCatalog(context, azureContext);
         while (subscriptionRequestCount === 0) {
             await Promise.resolve();
         }
         client.invalidateSubscriptions();
-        const refreshedLoad = client.getCatalog(context);
+        const refreshedLoad = client.getCatalog(context, azureContext);
         resolveFirstRequest?.([createSubscription(
             'AzureCloud',
             'https://management.azure.com/',
@@ -198,38 +191,6 @@ function createArmClient(requests: string[]): ConnectorArmClient {
                         },
                     ],
                 };
-            } else if (url.includes('/managedApis/office365?')) {
-                return {
-                    paths: {
-                        '/emails': {
-                            get: {
-                                operationId: 'OnNewEmail',
-                                parameters: [
-                                    {
-                                        in: 'query',
-                                        name: 'folderPath',
-                                        required: true,
-                                        type: 'string',
-                                        'x-ms-summary': 'Folder',
-                                    },
-                                ],
-                                'x-ms-trigger': 'batch',
-                            },
-                        },
-                    },
-                };
-            } else if (url.includes('/managedApis/sharepointonline?')) {
-                return {
-                    paths: {
-                        '/files': {
-                            get: {
-                                operationId: 'OnNewFile',
-                                parameters: [],
-                                'x-ms-trigger': 'batch',
-                            },
-                        },
-                    },
-                };
             } else if (url.includes('/locations/usgovvirginia/managedApis?')) {
                 return {
                     nextLink: 'https://management.usgovcloudapi.net/managed-api-page-2',
@@ -265,6 +226,15 @@ function createSubscription(
         context,
         subscriptionDisplayName: context.subscriptionDisplayName,
         subscriptionId: context.subscriptionId,
+    };
+}
+
+function createAzureContext(): ConnectorTriggerAzureContext {
+    return {
+        subscriptionId: 'sub-one',
+        subscriptionName: 'Subscription One',
+        region: 'US Gov Virginia',
+        regionDisplayName: 'US Gov Virginia',
     };
 }
 

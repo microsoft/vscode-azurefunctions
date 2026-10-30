@@ -3,27 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, isUserCancelledError, nonNullProp, parseError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { LocationListStep, type ILocationWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizard, callWithTelemetryAndErrorHandling, createSubscriptionContext, isUserCancelledError, nonNullProp, parseError, subscriptionExperience, type AzureWizardPromptStep, type IActionContext, type IAzureQuickPickItem, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
-import { type ProjectLanguage } from '../../../constants';
+import {
+    connectorTriggerProjectHandoffVersion,
+    type ConnectorTriggerProjectHandoff,
+} from '../../../connectorTrigger/connectorTriggerProjectHandoff';
+import { ConnectorNamespaceResourceType, type ProjectLanguage, webProvider } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { type IProjectTemplate } from '../../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../../templates/projectTemplates/ProjectTemplateProvider';
 import {
     isConnectorTriggerPickerMessage,
-    type ConnectorNamespaceOption,
     type ConnectorTriggerCatalogSource,
+    type ConnectorTriggerOperationOption,
     type ConnectorTriggerPickerResponse,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { localize } from '../../../localize';
-import { createConnectorNamespace } from '../../createFunction/connectorSteps/createConnectorNamespace';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator } from '../ProjectTemplateCreator';
 import {
     ConnectorTriggerDataClient,
+    type ConnectorTriggerAzureContext,
     type ConnectorTriggerCatalog,
     type ConnectorTriggerCatalogResult,
 } from './ConnectorTriggerDataClient';
@@ -46,24 +51,43 @@ export interface ConnectorTriggerCatalogLoadResult {
     warning?: string;
 }
 
+export interface ConnectorTriggerProjectSelection {
+    azureContext: ConnectorTriggerAzureContext;
+    catalogSource: ConnectorTriggerCatalogSource;
+    connector: ConnectorTriggerOption;
+    operation: ConnectorTriggerOperationOption;
+}
+
+export interface ConnectorTriggerAzureContextSelection {
+    azureContext: ConnectorTriggerAzureContext;
+    subscriptionContext: ISubscriptionContext;
+}
+
+export type ConnectorTriggerAzureContextProvider = (
+    context: IActionContext,
+) => Promise<ConnectorTriggerAzureContextSelection>;
+
 export type ConnectorTriggerCatalogLoader = (
     context: IActionContext,
-    namespace?: ConnectorNamespaceOption,
+    azureContext: ConnectorTriggerAzureContext,
 ) => Promise<ConnectorTriggerCatalogLoadResult>;
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
-    private readonly namespaces = new Map<string, ConnectorNamespaceOption>();
     private readonly catalogs = new Map<string, ConnectorTriggerCatalogLoadResult>();
     private readonly catalogLoadRequests = new Map<string, Promise<ConnectorTriggerCatalogLoadResult>>();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly templateProvider = new ProjectTemplateProvider();
+    private azureContext: ConnectorTriggerAzureContext | undefined;
+    private azureContextRequest: Promise<void> | undefined;
+    private subscriptionContext: ISubscriptionContext | undefined;
 
     private constructor(
         context: vscode.ExtensionContext,
         private readonly launchOptions: ConnectorTriggerPickerLaunchOptions,
         private readonly dataClient: ConnectorTriggerDataClient,
         private readonly catalogLoader: ConnectorTriggerCatalogLoader,
+        private readonly azureContextProvider: ConnectorTriggerAzureContextProvider,
     ) {
         const viewModel = createConnectorTriggerPickerViewModel(
             launchOptions.initialFilters.language,
@@ -81,12 +105,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.handleMessage', async actionContext => {
                 await this.handleMessage(message, actionContext);
-            });
-        }));
-        this.registerDisposable(vscode.authentication.onDidChangeSessions(() => {
-            void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.refreshCatalog', async actionContext => {
-                this.dataClient.invalidateSubscriptions();
-                await this.loadCatalog(actionContext, undefined, true);
             });
         }));
         this.registerDisposable(this.onDisposed(() => {
@@ -110,6 +128,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         launchOptions: ConnectorTriggerPickerLaunchOptions,
         dataClient: ConnectorTriggerDataClient = new ConnectorTriggerDataClient(),
         catalogLoader: ConnectorTriggerCatalogLoader = createCatalogLoader(dataClient),
+        azureContextProvider: ConnectorTriggerAzureContextProvider =
+            selectConnectorTriggerAzureContext,
     ): ConnectorTriggerPickerController {
         const existing = ConnectorTriggerPickerController.currentController;
         if (existing && !existing.isDisposed) {
@@ -121,6 +141,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             launchOptions,
             dataClient,
             catalogLoader,
+            azureContextProvider,
         );
         ConnectorTriggerPickerController.currentController = controller;
         return controller;
@@ -151,32 +172,33 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (message.command === 'loadNamespaces') {
-            await this.loadNamespaces(actionContext);
-            return;
-        }
-
-        if (message.command === 'createNamespace') {
-            await this.createNamespace(actionContext);
+        if (message.command === 'initialize') {
+            await this.initialize(actionContext);
             return;
         }
 
         if (message.command === 'loadCatalog') {
-            await this.loadCatalog(actionContext, message.namespaceId);
+            if (this.azureContext) {
+                await this.loadCatalog(actionContext, this.azureContext, true);
+            } else {
+                await this.initialize(actionContext);
+            }
             return;
         }
 
-        if (message.command === 'loadOperationInputs') {
-            await this.loadOperationInputs(
-                actionContext,
-                message.namespaceId,
-                message.connectorId,
-                message.operationId,
-            );
+        const azureContext = this.azureContext;
+        if (!azureContext) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorTriggerAzureContextMissing',
+                    'Select an Azure subscription and region before creating the project.',
+                ),
+            });
             return;
         }
 
-        const catalogKey = getCatalogKey(message.namespaceId);
+        const catalogKey = getCatalogKey(azureContext);
         const pendingCatalog = this.catalogLoadRequests.get(catalogKey);
         if (pendingCatalog) {
             try {
@@ -187,12 +209,14 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             }
         }
 
-        const catalog = this.catalogs.get(catalogKey)?.catalog;
+        const catalogResult = this.catalogs.get(catalogKey);
+        const catalog = catalogResult?.catalog;
         const connector = catalog?.connectors.find(item => item.id === message.connectorId);
         const operation = catalog?.operations.find(item =>
             item.id === message.operationId &&
             equalsIgnoreCase(item.connectorId, message.connectorId));
-        if (!connector ||
+        if (!catalogResult ||
+            !connector ||
             !operation ||
             connector.availability === 'unavailable' ||
             operation.availability === 'unavailable') {
@@ -206,7 +230,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (message.deliveryMode !== 'Polling' || operation.isWebhook) {
+        if (operation.isWebhook) {
             await this.postMessage({
                 command: 'projectCreationFailed',
                 message: localize(
@@ -219,62 +243,71 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         actionContext.telemetry.properties.connectorSelected = 'true';
         actionContext.telemetry.properties.triggerSelected = 'true';
-        actionContext.telemetry.properties.deliveryMode = message.deliveryMode;
-        await this.createSelectedProject(actionContext, connector);
+        actionContext.telemetry.properties.deliveryMode = 'Polling';
+        await this.createSelectedProject(actionContext, {
+            azureContext,
+            catalogSource: catalogResult.source,
+            connector,
+            operation,
+        });
     }
 
-    private async loadNamespaces(
-        actionContext: IActionContext,
-        selectedNamespaceId?: string,
-        createdNamespace?: ConnectorNamespaceOption,
-    ): Promise<void> {
-        try {
-            const result = await this.dataClient.listNamespaces(actionContext);
-            const refreshedNamespaces = new Map(
-                result.namespaces.map(namespace => [namespace.id, namespace]),
-            );
-            if (createdNamespace) {
-                refreshedNamespaces.set(createdNamespace.id, createdNamespace);
-            }
-
-            this.namespaces.clear();
-            for (const namespace of refreshedNamespaces.values()) {
-                this.namespaces.set(namespace.id, namespace);
-            }
-
+    private async initialize(actionContext: IActionContext): Promise<void> {
+        if (this.azureContext) {
             await this.postMessage({
-                command: 'namespacesLoaded',
-                namespaces: sortNamespaces([...this.namespaces.values()]),
-                selectedNamespaceId,
-                warning: result.failedSubscriptionCount > 0 ?
-                    localize(
-                        'connectorNamespacesPartialLoad',
-                        'Connector Namespaces could not be loaded from {0} subscription(s).',
-                        result.failedSubscriptionCount.toString(),
-                    ) :
-                    undefined,
+                command: 'azureContextSelected',
+                azureContext: getAzureContextDisplay(this.azureContext),
             });
+            await this.loadCatalog(actionContext, this.azureContext);
+            return;
+        }
+
+        if (this.azureContextRequest) {
+            await this.azureContextRequest;
+            return;
+        }
+
+        const request = this.selectAzureContext(actionContext);
+        this.azureContextRequest = request;
+        try {
+            await request;
+        } finally {
+            if (this.azureContextRequest === request) {
+                this.azureContextRequest = undefined;
+            }
+        }
+    }
+
+    private async selectAzureContext(actionContext: IActionContext): Promise<void> {
+        try {
+            const selection = await this.azureContextProvider(actionContext);
+            this.dataClient.registerSubscription(selection.subscriptionContext);
+            this.azureContext = selection.azureContext;
+            this.subscriptionContext = selection.subscriptionContext;
+            this.catalogs.clear();
+            this.catalogLoadRequests.clear();
+            await this.postMessage({
+                command: 'azureContextSelected',
+                azureContext: getAzureContextDisplay(selection.azureContext),
+            });
+            await this.loadCatalog(actionContext, selection.azureContext);
         } catch (error) {
-            if (createdNamespace) {
-                this.namespaces.set(createdNamespace.id, createdNamespace);
-                actionContext.telemetry.properties.connectorNamespaceRefresh = 'Failed';
+            if (isUserCancelledError(error)) {
                 await this.postMessage({
-                    command: 'namespacesLoaded',
-                    namespaces: sortNamespaces([...this.namespaces.values()]),
-                    selectedNamespaceId: createdNamespace.id,
-                    warning: localize(
-                        'connectorNamespaceCreatedRefreshFailed',
-                        'The Connector Namespace was created, but the namespace list could not be refreshed.',
+                    command: 'azureContextSelectionCancelled',
+                    message: localize(
+                        'connectorTriggerAzureContextRequired',
+                        'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
                     ),
                 });
                 return;
             }
 
-            actionContext.telemetry.properties.connectorPickerLoad = 'namespaces';
+            actionContext.telemetry.properties.connectorPickerLoad = 'azureContext';
             actionContext.telemetry.properties.result = 'Failed';
             await this.postMessage({
                 command: 'loadFailed',
-                scope: 'namespaces',
+                scope: 'azureContext',
                 message: parseError(error).message,
             });
         }
@@ -282,20 +315,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async loadCatalog(
         actionContext: IActionContext,
-        namespaceId?: string,
+        azureContext: ConnectorTriggerAzureContext,
         forceRefresh = false,
     ): Promise<void> {
-        const namespace = namespaceId ? this.namespaces.get(namespaceId) : undefined;
-        if (namespaceId && !namespace) {
-            return;
-        }
-
-        const catalogKey = getCatalogKey(namespaceId);
+        const catalogKey = getCatalogKey(azureContext);
         let request: Promise<ConnectorTriggerCatalogLoadResult> | undefined;
         try {
             const cachedResult = this.catalogs.get(catalogKey);
             if (cachedResult && !forceRefresh) {
-                await this.postCatalogLoaded(namespaceId, cachedResult);
+                await this.postCatalogLoaded(cachedResult);
                 return;
             }
 
@@ -303,7 +331,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 return;
             }
 
-            request = this.catalogLoader(actionContext, namespace);
+            request = this.catalogLoader(actionContext, azureContext);
             this.catalogLoadRequests.set(catalogKey, request);
             const result = await request;
             if (this.catalogLoadRequests.get(catalogKey) !== request) {
@@ -312,7 +340,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
             this.catalogs.set(catalogKey, result);
             this.catalogLoadRequests.delete(catalogKey);
-            await this.postCatalogLoaded(namespaceId, result);
+            await this.postCatalogLoaded(result);
         } catch (error) {
             if (request && this.catalogLoadRequests.get(catalogKey) !== request) {
                 return;
@@ -323,116 +351,21 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             await this.postMessage({
                 command: 'loadFailed',
                 scope: 'catalog',
-                ...(namespaceId ? { namespaceId } : {}),
                 message: parseError(error).message,
             });
         }
     }
 
     private async postCatalogLoaded(
-        namespaceId: string | undefined,
         result: ConnectorTriggerCatalogLoadResult,
     ): Promise<void> {
         await this.postMessage({
             command: 'catalogLoaded',
-            ...(namespaceId ? { namespaceId } : {}),
             source: result.source,
             connectors: result.catalog.connectors,
-            operations: result.catalog.operations,
-            warning: result.warning,
+            operations: result.catalog.operations.map(removeOperationInputs),
+            ...(result.warning ? { warning: result.warning } : {}),
         });
-    }
-
-    private async createNamespace(actionContext: IActionContext): Promise<void> {
-        try {
-            const wizardContext = await createConnectorNamespace(actionContext);
-            const resource = nonNullProp(wizardContext, 'connectorNamespace');
-            const id = nonNullProp(resource, 'id');
-            const name = nonNullProp(resource, 'name');
-            this.dataClient.registerSubscription(wizardContext);
-            const namespace: ConnectorNamespaceOption = {
-                id,
-                name,
-                label: name,
-                location: resource.location ?? '',
-                resourceGroup: parseAzureResourceId(id).resourceGroup,
-                subscriptionId: wizardContext.subscriptionId,
-                subscriptionName: wizardContext.subscriptionDisplayName,
-            };
-            await this.loadNamespaces(actionContext, namespace.id, namespace);
-        } catch (error) {
-            if (isUserCancelledError(error)) {
-                await this.postMessage({ command: 'namespaceCreationCancelled' });
-                return;
-            }
-
-            actionContext.telemetry.properties.connectorNamespaceCreate = 'Failed';
-            await this.postMessage({
-                command: 'loadFailed',
-                scope: 'namespaces',
-                message: parseError(error).message,
-            });
-        }
-    }
-
-    private async loadOperationInputs(
-        actionContext: IActionContext,
-        namespaceId: string | undefined,
-        connectorId: string,
-        operationId: string,
-    ): Promise<void> {
-        const namespace = namespaceId ? this.namespaces.get(namespaceId) : undefined;
-        const catalog = this.catalogs.get(getCatalogKey(namespaceId))?.catalog;
-        const operation = catalog?.operations.find(item =>
-            equalsIgnoreCase(item.connectorId, connectorId) &&
-            equalsIgnoreCase(item.id, operationId));
-        if (!catalog || !operation) {
-            return;
-        }
-
-        if (operation.inputDefinitions !== undefined) {
-            await this.postMessage({
-                command: 'operationInputsLoaded',
-                ...(namespaceId ? { namespaceId } : {}),
-                connectorId,
-                operationId,
-                inputDefinitions: operation.inputDefinitions,
-            });
-            return;
-        }
-
-        if (!namespace) {
-            return;
-        }
-
-        try {
-            const inputDefinitions = await this.dataClient.listOperationInputs(
-                actionContext,
-                namespace,
-                connectorId,
-                operationId,
-            );
-            const updatedOperation = { ...operation, inputDefinitions };
-            catalog.operations = catalog.operations.map(item =>
-                item === operation ? updatedOperation : item);
-            await this.postMessage({
-                command: 'operationInputsLoaded',
-                ...(namespaceId ? { namespaceId } : {}),
-                connectorId,
-                operationId,
-                inputDefinitions,
-            });
-        } catch (error) {
-            actionContext.telemetry.properties.connectorPickerLoad = 'operationInputs';
-            actionContext.telemetry.properties.result = 'Failed';
-            await this.postMessage({
-                command: 'operationInputsFailed',
-                ...(namespaceId ? { namespaceId } : {}),
-                connectorId,
-                operationId,
-                message: parseError(error).message,
-            });
-        }
     }
 
     private async postMessage(message: ConnectorTriggerPickerResponse): Promise<void> {
@@ -441,7 +374,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async createSelectedProject(
         actionContext: IActionContext,
-        connector: ConnectorTriggerOption,
+        selection: ConnectorTriggerProjectSelection,
     ): Promise<void> {
         if (!this.launchOptions.isProjectWizard) {
             await this.postMessage({
@@ -466,6 +399,19 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
+        const subscriptionContext = this.subscriptionContext;
+        if (!subscriptionContext ||
+            subscriptionContext.subscriptionId !== selection.azureContext.subscriptionId) {
+            await this.postMessage({
+                command: 'projectCreationFailed',
+                message: localize(
+                    'connectorTriggerAzureContextExpired',
+                    'The selected Azure context is no longer available. Select the Connector Trigger again.',
+                ),
+            });
+            return;
+        }
+
         await this.postMessage({ command: 'projectCreationStarted' });
         try {
             const templates = await this.templateProvider.getTemplates(
@@ -473,12 +419,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 this.launchOptions.language,
                 this.launchOptions.languageModel,
             );
-            const matchingTemplates = findConnectorProjectTemplates(templates, connector);
+            const matchingTemplates = findConnectorProjectTemplates(
+                templates,
+                selection.connector,
+            );
             if (matchingTemplates.length === 0) {
                 throw new Error(localize(
                     'connectorProjectTemplateUnavailable',
                     'No project template is currently available for connector "{0}" and language "{1}".',
-                    connector.label,
+                    selection.connector.label,
                     this.launchOptions.language,
                 ));
             }
@@ -492,6 +441,12 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 this.launchOptions.language,
                 projectPath,
                 'details',
+                {
+                    connectorTriggerHandoff: createProjectHandoff(
+                        selection,
+                        subscriptionContext,
+                    ),
+                },
             );
         } catch (error) {
             await this.postMessage({
@@ -530,21 +485,56 @@ function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }
 
-function sortNamespaces(namespaces: ConnectorNamespaceOption[]): ConnectorNamespaceOption[] {
-    return namespaces.sort((left, right) =>
-        left.name.localeCompare(right.name) ||
-        left.subscriptionName.localeCompare(right.subscriptionName));
+function getCatalogKey(azureContext: ConnectorTriggerAzureContext): string {
+    return `${azureContext.subscriptionId}:${azureContext.region.replace(/\s+/g, '').toLowerCase()}`;
 }
 
-function getCatalogKey(namespaceId: string | undefined): string {
-    return namespaceId ?? '';
+function getAzureContextDisplay(
+    azureContext: ConnectorTriggerAzureContext,
+): { subscriptionName: string; regionDisplayName: string } {
+    return {
+        subscriptionName: azureContext.subscriptionName,
+        regionDisplayName: azureContext.regionDisplayName,
+    };
+}
+
+function removeOperationInputs(
+    operation: ConnectorTriggerOperationOption,
+): ConnectorTriggerOperationOption {
+    const pickerOperation = { ...operation };
+    delete pickerOperation.inputDefinitions;
+    return pickerOperation;
+}
+
+function createProjectHandoff(
+    selection: ConnectorTriggerProjectSelection,
+    subscriptionContext: ISubscriptionContext,
+): ConnectorTriggerProjectHandoff {
+    return {
+        version: connectorTriggerProjectHandoffVersion,
+        subscription: {
+            id: subscriptionContext.subscriptionId,
+            tenantId: subscriptionContext.tenantId,
+            environment: {
+                name: subscriptionContext.environment.name,
+                resourceManagerEndpointUrl:
+                    subscriptionContext.environment.resourceManagerEndpointUrl,
+            },
+        },
+        region: selection.azureContext.region,
+        connectorId: selection.connector.id,
+        operationId: selection.operation.id,
+        catalog: {
+            source: selection.catalogSource,
+        },
+    };
 }
 
 function createCatalogLoader(
     dataClient: ConnectorTriggerDataClient,
 ): ConnectorTriggerCatalogLoader {
-    return async (context, namespace) => {
-        const result = await dataClient.getCatalog(context, namespace);
+    return async (context, azureContext) => {
+        const result = await dataClient.getCatalog(context, azureContext);
         return {
             catalog: result.catalog,
             source: result.source === 'remoteCache' ? 'remote' : result.source,
@@ -571,4 +561,57 @@ function getCatalogWarning(
     }
 
     return undefined;
+}
+
+interface ConnectorTriggerAzureContextWizardContext extends
+    ISubscriptionActionContext,
+    ILocationWizardContext { }
+
+export async function selectConnectorTriggerAzureContext(
+    context: IActionContext,
+): Promise<ConnectorTriggerAzureContextSelection> {
+    const subscriptionContext = createSubscriptionContext(
+        await subscriptionExperience(
+            context,
+            ext.rgApiV2.resources.azureResourceTreeDataProvider,
+        ),
+    );
+    const wizardContext: ConnectorTriggerAzureContextWizardContext = {
+        ...context,
+        ...subscriptionContext,
+    };
+    const promptSteps: AzureWizardPromptStep<ConnectorTriggerAzureContextWizardContext>[] = [];
+    LocationListStep.addProviderForFiltering(
+        wizardContext,
+        webProvider,
+        ConnectorNamespaceResourceType,
+    );
+    LocationListStep.addStep(wizardContext, promptSteps, {
+        placeHolder: localize(
+            'selectConnectorTriggerRegion',
+            'Select a region for Connector Trigger resources',
+        ),
+    });
+
+    const wizard = new AzureWizard(wizardContext, {
+        title: localize(
+            'selectConnectorTriggerAzureContext',
+            'Select Connector Trigger Azure Context',
+        ),
+        promptSteps,
+        showLoadingPrompt: true,
+        hideStepCount: true,
+    });
+    await wizard.prompt();
+    const location = await LocationListStep.getLocation(wizardContext, webProvider);
+    const locationName = nonNullProp(location, 'name');
+    return {
+        azureContext: {
+            subscriptionId: subscriptionContext.subscriptionId,
+            subscriptionName: subscriptionContext.subscriptionDisplayName,
+            region: locationName,
+            regionDisplayName: location.displayName,
+        },
+        subscriptionContext,
+    };
 }
