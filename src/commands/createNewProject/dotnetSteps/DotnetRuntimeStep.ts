@@ -6,6 +6,7 @@
 import { AzureWizardPromptStep, type IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { FuncVersion, promptForFuncVersion } from "../../../FuncVersion";
 import { hiddenStacksSetting } from "../../../constants";
+import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cliFeedUtils } from "../../../utils/cliFeedUtils";
 import { dotnetUtils } from "../../../utils/dotnetUtils";
@@ -96,7 +97,25 @@ async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils
 
 async function getReleaseRuntimes(release: cliFeedUtils.IRelease): Promise<cliFeedUtils.IWorkerRuntime[]> {
     const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
-    const runtimes = Object.values(release.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
+    const now = Date.now();
+    const runtimes = Object.values(release.workerRuntimes.dotnet).filter(r => {
+        if (r.displayInfo.hidden && !showHiddenStacks) {
+            return false;
+        }
+
+        const endOfLifeDate = r.displayInfo.endOfLifeDate;
+        if (endOfLifeDate === undefined) {
+            return true;
+        }
+
+        const endOfLife = Date.parse(endOfLifeDate);
+        if (Number.isNaN(endOfLife)) {
+            ext.outputChannel.appendLog(localize('invalidRuntimeEndOfLifeDate', 'WARNING: Invalid end-of-support date for .NET runtime "{0}": "{1}". Keeping this runtime available.', r.displayInfo.displayName, endOfLifeDate));
+            return true;
+        }
+
+        return endOfLife > now;
+    });
     return runtimes;
 }
 
