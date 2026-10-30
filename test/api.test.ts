@@ -93,7 +93,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /6/i, 'Company.Function', 'Anonymous'], bundleRegisterHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /8.*isolated/i, 'Company.Function', 'Anonymous'], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -102,18 +102,18 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionSettings: {
                     authLevel: 'anonymous'
                 },
-                targetFramework: ['net8.0', 'net7.0', 'net6.0']
+                targetFramework: ['net8.0', 'net9.0', 'net10.0']
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net6.0', FuncVersion.v4, 1, projectSubpath, workspaceFolder);
+        const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net8.0', FuncVersion.v4, 1, projectSubpath, workspaceFolder);
         // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
         validateOptions.excludedPaths?.push('.git');
         await validateProject(folderPath, validateOptions);
     });
 
-    // Intentionally pass a version (8) that hasn't been specified in targetFramework (6 & 7) to verify it isn't a possible pick. In the correct case (when 8 isn't a pick) we throw an error. api.createFunction swallows the error and returns undefined.
-    // In the incorrect case (when 8 is a pick) the test fails since the 2 provided test inputs have already been used, but there are more prompts.
+    // Intentionally select a version (10) not specified in targetFramework (8 & 9) to verify it isn't a possible pick. When 10 isn't a pick, api.createFunction handles the selection error and returns undefined.
+    // If 10 is incorrectly offered, subsequent prompts fail because both test inputs have already been used.
     test('createFunction with language not in targetFramework', async function () {
         this.timeout(2 * 60 * 1000);
         const functionName: string = 'endpoint1';
@@ -122,14 +122,14 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /8/i], bundleRegisterHandler, async () => {
+        await runWithInputs('api.createFunction', [language, /10/i], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
                 templateId: 'HttpTrigger',
                 languageFilter: /^C\#$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                targetFramework: ['net7.0', 'net6.0']
+                targetFramework: ['net8.0', 'net9.0']
             });
         });
     });
