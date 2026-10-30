@@ -2583,5 +2583,3018 @@
       ],
       "isHighlighted": true
     }
-  ]
+  ],
+  "connectorCatalog": {
+    "version": "1.0.0",
+    "generatedAt": "2026-10-30T19:22:40Z",
+    "source": {
+      "kind": "azure-managed-connectors",
+      "cloud": "AzureCloud",
+      "region": "westcentralus",
+      "catalogApiVersion": "2022-09-01-preview",
+      "operationsApiVersion": "2016-06-01",
+      "swaggerApiVersion": "2022-09-01-preview"
+    },
+    "connectors": [
+      {
+        "id": "office365",
+        "name": "Office 365 Outlook",
+        "description": "Microsoft Office 365 is a cloud-based service that is designed to help meet your organization's needs for robust security, reliability, and user productivity.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5113/office365/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "sharepointonline",
+        "name": "SharePoint",
+        "description": "SharePoint helps organizations share and collaborate with colleagues, partners, and customers. You can connect to SharePoint Online or to an on-premises SharePoint 2016 or 2019 farm using the On-Premises Data Gateway to manage documents and list items.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/2026-10-23/1.2.3948.2/sharepointonline/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "onedriveforbusiness",
+        "name": "OneDrive for Business",
+        "description": "OneDrive for Business is a cloud storage, file hosting service that allows users to sync files and later access them from a web browser or mobile device. Connect to OneDrive for Business to manage your files. You can perform various actions such as upload, update, get, and delete files.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4902/onedriveforbusiness/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "teams",
+        "name": "Microsoft Teams",
+        "description": "Microsoft Teams enables you to get all your content, tools and conversations in the team workspace with Microsoft 365.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1835/1.0.1835.5120/teams/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "planner",
+        "name": "Planner",
+        "description": "Microsoft Planner lets you easily bring together teams, tasks, documents, and conversations for better results.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1825/1.0.1825.4855/planner/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "salesforce",
+        "name": "Salesforce",
+        "description": "The Salesforce Connector provides an API to work with Salesforce objects.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1818/1.0.1818.4788/salesforce/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "visualstudioteamservices",
+        "name": "Azure DevOps",
+        "description": "Azure DevOps provides services for teams to share code, track work, and ship software - for any language, all in a single package. It's the perfect complement to your IDE.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1832/1.0.1832.5103/visualstudioteamservices/icon.png",
+        "metadataState": "complete"
+      },
+      {
+        "id": "dataflows",
+        "name": "Power Query Dataflows",
+        "description": "Dataflows are a self-service, cloud-based, data preparation technology that allows you to ingest, transform and load data into Common Data Service environments, Power BI workspaces or your organization's Azure Data Lake Gen2 account.",
+        "iconUrl": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4902/dataflows/icon.png",
+        "metadataState": "complete"
+      }
+    ],
+    "operations": [
+      {
+        "id": "OnNewEmailV3",
+        "connectorId": "office365",
+        "name": "When a new email arrives (V3)",
+        "description": "To see it work now, send a new email in your inbox.",
+        "visibility": "important",
+        "delivery": "notification",
+        "inputs": [
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Mail folder to check for new emails.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Inbox",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "to",
+            "label": "To",
+            "description": "Recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "cc",
+            "label": "CC",
+            "description": "CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "toOrCc",
+            "label": "To or CC",
+            "description": "To or CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "from",
+            "label": "From",
+            "description": "Sender email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "importance",
+            "label": "Importance",
+            "description": "Importance of the email (Any, High, Normal, Low).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Any",
+            "options": [
+              {
+                "label": "Any",
+                "value": "Any"
+              },
+              {
+                "label": "Low",
+                "value": "Low"
+              },
+              {
+                "label": "Normal",
+                "value": "Normal"
+              },
+              {
+                "label": "High",
+                "value": "High"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "fetchOnlyWithAttachment",
+            "label": "Only with Attachments",
+            "description": "If set to true, only emails with an attachment will be retrieved. Emails without any attachments will be skipped. If set to false, all emails will be retrieved.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "includeAttachments",
+            "label": "Include Attachments",
+            "description": "Should the response of the trigger include the attachments content.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "subjectFilter",
+            "label": "Subject Filter",
+            "description": "String to look for in the subject line.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnFlaggedEmailV3",
+        "connectorId": "office365",
+        "name": "When an email is flagged (V3)",
+        "description": "To see it work now, flag an email in your inbox.",
+        "visibility": "important",
+        "delivery": "notification",
+        "inputs": [
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Mail folder to check for new emails.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Inbox",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "to",
+            "label": "To",
+            "description": "Recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "cc",
+            "label": "CC",
+            "description": "CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "toOrCc",
+            "label": "To or CC",
+            "description": "To or CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "from",
+            "label": "From",
+            "description": "Sender email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "importance",
+            "label": "Importance",
+            "description": "Importance of the email (Any, High, Normal, Low).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Any",
+            "options": [
+              {
+                "label": "Any",
+                "value": "Any"
+              },
+              {
+                "label": "Low",
+                "value": "Low"
+              },
+              {
+                "label": "Normal",
+                "value": "Normal"
+              },
+              {
+                "label": "High",
+                "value": "High"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "fetchOnlyWithAttachment",
+            "label": "Only with Attachments",
+            "description": "If set to true, only emails with an attachment will be retrieved. Emails without any attachments will be skipped. If set to false, all emails will be retrieved.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "includeAttachments",
+            "label": "Include Attachments",
+            "description": "Should the response of the trigger include the attachments content.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "subjectFilter",
+            "label": "Subject Filter",
+            "description": "String to look for in the subject line.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnFlaggedEmailV4",
+        "connectorId": "office365",
+        "name": "When an email is flagged (V4)",
+        "description": "To see it work now, flag an email in your inbox.",
+        "visibility": "important",
+        "delivery": "notification",
+        "inputs": [
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Mail folder to check for new emails.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Inbox",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "to",
+            "label": "To",
+            "description": "Recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "cc",
+            "label": "CC",
+            "description": "CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "toOrCc",
+            "label": "To or CC",
+            "description": "To or CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "from",
+            "label": "From",
+            "description": "Sender email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "importance",
+            "label": "Importance",
+            "description": "Importance of the email (Any, High, Normal, Low).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Any",
+            "options": [
+              {
+                "label": "Any",
+                "value": "Any"
+              },
+              {
+                "label": "Low",
+                "value": "Low"
+              },
+              {
+                "label": "Normal",
+                "value": "Normal"
+              },
+              {
+                "label": "High",
+                "value": "High"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "fetchOnlyWithAttachment",
+            "label": "Only with Attachments",
+            "description": "If set to true, only emails with an attachment will be retrieved. Emails without any attachments will be skipped. If set to false, all emails will be retrieved.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "includeAttachments",
+            "label": "Include Attachments",
+            "description": "Should the response of the trigger include the attachments content.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "subjectFilter",
+            "label": "Subject Filter",
+            "description": "String to look for in the subject line.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "SharedMailboxOnNewEmailV2",
+        "connectorId": "office365",
+        "name": "When a new email arrives in a shared mailbox (V2)",
+        "description": "To see it work now, send a new email in your inbox.",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "mailboxAddress",
+            "label": "Original Mailbox Address",
+            "description": "Address of the shared mailbox.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderId",
+            "label": "Folder",
+            "description": "Mail folder to check for new emails.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Inbox",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "to",
+            "label": "To",
+            "description": "Recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "cc",
+            "label": "CC",
+            "description": "CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "toOrCc",
+            "label": "To or CC",
+            "description": "To or CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "from",
+            "label": "From",
+            "description": "Sender email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "importance",
+            "label": "Importance",
+            "description": "Importance of the email (Any, High, Normal, Low).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Any",
+            "options": [
+              {
+                "label": "Any",
+                "value": "Any"
+              },
+              {
+                "label": "Low",
+                "value": "Low"
+              },
+              {
+                "label": "Normal",
+                "value": "Normal"
+              },
+              {
+                "label": "High",
+                "value": "High"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "hasAttachments",
+            "label": "Only with Attachments",
+            "description": "If set to true, only emails with an attachment will be retrieved. Emails without any attachments will be skipped. If set to false, all emails will be retrieved.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "includeAttachments",
+            "label": "Include Attachments",
+            "description": "Should the response of the trigger include the attachments content.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "subjectFilter",
+            "label": "Subject Filter",
+            "description": "String to look for in the subject line.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnNewMentionMeEmailV3",
+        "connectorId": "office365",
+        "name": "When a new email mentioning me arrives (V3)",
+        "description": "To see it work now, send a new email to your inbox which mentions you.",
+        "delivery": "notification",
+        "inputs": [
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Mail folder to check for new emails.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "to",
+            "label": "To",
+            "description": "Recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "cc",
+            "label": "CC",
+            "description": "CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "toOrCc",
+            "label": "To or CC",
+            "description": "To or CC recipient email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "from",
+            "label": "From",
+            "description": "Sender email addresses separated by semicolons (If any match, the trigger will run).",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "importance",
+            "label": "Importance",
+            "description": "Importance of the email (Any, High, Normal, Low).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Any",
+            "options": [
+              {
+                "label": "Any",
+                "value": "Any"
+              },
+              {
+                "label": "Low",
+                "value": "Low"
+              },
+              {
+                "label": "Normal",
+                "value": "Normal"
+              },
+              {
+                "label": "High",
+                "value": "High"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "fetchOnlyWithAttachment",
+            "label": "Only with Attachments",
+            "description": "If set to true, only emails with an attachment will be retrieved. Emails without any attachments will be skipped. If set to false, all emails will be retrieved.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "includeAttachments",
+            "label": "Include Attachments",
+            "description": "Should the response of the trigger include the attachments content.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "subjectFilter",
+            "label": "Subject Filter",
+            "description": "String to look for in the subject line.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "CalendarGetOnNewItemsV3",
+        "connectorId": "office365",
+        "name": "When a new event is created (V3)",
+        "description": "To see it work now, create a new calendar item.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Calendar id",
+            "description": "Select a calendar",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "$orderby",
+            "label": "Order By",
+            "description": "An ODATA orderBy query for specifying the order of entries.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$top",
+            "label": "Top Count",
+            "description": "Total number of entries to retrieve (default = all).",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$skip",
+            "label": "Skip Count",
+            "description": "The number of entries to skip (default = 0).",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "CalendarGetOnChangedItemsV3",
+        "connectorId": "office365",
+        "name": "When an event is added, updated or deleted (V3)",
+        "description": "To see it work now, add, update or delete a calendar item.",
+        "visibility": "advanced",
+        "delivery": "notification",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Calendar id",
+            "description": "Select a calendar",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "incomingDays",
+            "label": "Incoming Days Tracked",
+            "description": "Number of incoming days in calendar to be tracked",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "defaultValue": 300,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "pastDays",
+            "label": "Past Days Tracked",
+            "description": "Number of past days in calendar to be tracked",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "defaultValue": 50,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "CalendarGetOnUpdatedItemsV3",
+        "connectorId": "office365",
+        "name": "When an event is modified (V3)",
+        "description": "To see it work now, update a calendar item.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Calendar id",
+            "description": "Select a calendar",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "$orderby",
+            "label": "Order By",
+            "description": "An ODATA orderBy query for specifying the order of entries.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$top",
+            "label": "Top Count",
+            "description": "Total number of entries to retrieve (default = all).",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$skip",
+            "label": "Skip Count",
+            "description": "The number of entries to skip (default = 0).",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnUpcomingEventsV3",
+        "connectorId": "office365",
+        "name": "When an upcoming event is starting soon (V3)",
+        "description": "To see it work now, create a calendar item that is starting soon.",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Calendar Id",
+            "description": "Unique identifier of the calendar.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "lookAheadTimeInMinutes",
+            "label": "Look-Ahead Time",
+            "description": "Time (in minutes) to look ahead for upcoming events.",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "defaultValue": 15,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnRecurrenceDigest",
+        "connectorId": "sharepointonline",
+        "name": "Recurring digest of updates (preview)",
+        "description": "Recurring digest of updates for a list or library.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List or Library Name",
+            "description": "SharePoint list or library name.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "update",
+            "label": "Include edits",
+            "description": "Include item updates in the digest.",
+            "type": "boolean",
+            "required": true,
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "add",
+            "label": "Include new items or files",
+            "description": "Include new items and files in the digest.",
+            "type": "boolean",
+            "required": true,
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "runSchedule",
+            "label": "When to run",
+            "description": "When to run.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Folder path within the list or document library.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "startTime",
+            "label": "Start Time",
+            "description": "Start time for the recurrence.",
+            "type": "string",
+            "format": "date-time",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnUpdatedFileClassifiedTimes",
+        "connectorId": "sharepointonline",
+        "name": "When a file is classified by a Microsoft Syntex model",
+        "description": "Triggers a flow when Microsoft Syntex changes the classification date of any file in the library. The date changes when a document processing model classifies or extracts information.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "Library Name",
+            "description": "SharePoint library name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Select a folder, or leave blank for the whole library",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnNewFileItems",
+        "connectorId": "sharepointonline",
+        "name": "When a file is created (properties only)",
+        "description": "Triggers when an item is created in a library. Returns only the properties stored in the library columns.\r\n            You can add a \"Get file content\" step and use the \"File identifier\" property returned by this action to get to the contents of the file.\r\n            When using this with the On-Premises Data Gateway, the name of the library to connect to may need to be entered manually.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "Library Name",
+            "description": "SharePoint library name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Select a folder, or leave blank for the whole library",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnUpdatedFileItems",
+        "connectorId": "sharepointonline",
+        "name": "When a file is created or modified (properties only)",
+        "description": "Triggers when an item is created, or modified in a library. Returns only the properties stored in the library columns.\r\n            You can add a \"Get file content\" step and use the \"File identifier\" property returned by this action to get to the contents of the file.\r\n            When using this with the On-Premises Data Gateway, the name of the library to connect to may need to be entered manually.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "Library Name",
+            "description": "SharePoint library name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Select a folder, or leave blank for the whole library",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnDeletedFileItems",
+        "connectorId": "sharepointonline",
+        "name": "When a file is deleted",
+        "description": "Triggers when a file is deleted in a library. You can optionally specify a folder to watch as well. When a folder is deleted, the trigger will fire only once for the deleted folder. This can only be used by site collection admins of the site where the list is located.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "Library Name",
+            "description": "SharePoint library name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Select a folder, or leave blank for the whole library",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "GetOnNewItemsFromForm",
+        "connectorId": "sharepointonline",
+        "name": "When a form is submitted (preview)",
+        "description": "This operation triggers a flow when a list, document generation, or file upload form is submitted. Document generation forms is a part of AI in SharePoint Public Preview. For more info on getting started, see:https://learn.microsoft.com/en-us/sharepoint/ai-in-sharepoint-structured-document-generation",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List or Library Name",
+            "description": "SharePoint list or library name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "form",
+            "label": "Form Name",
+            "description": "Form identifier",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnNewItems",
+        "connectorId": "sharepointonline",
+        "name": "When an item is created",
+        "description": "To see it work now, add a new list item to the SharePoint folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List Name",
+            "description": "SharePoint list name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnUpdatedItems",
+        "connectorId": "sharepointonline",
+        "name": "When an item is created or modified",
+        "description": "To see it work now, modify a list item in the SharePoint folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List Name",
+            "description": "SharePoint list name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnDeletedItems",
+        "connectorId": "sharepointonline",
+        "name": "When an item is deleted",
+        "description": "Triggers when an item is deleted in a list. This can only be used by site collection admins of the site where the list is located.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List Name",
+            "description": "SharePoint list name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "GetOnChangedItems",
+        "connectorId": "sharepointonline",
+        "name": "When an item or a file is modified",
+        "description": "To see it work now, modify a list item in the SharePoint folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "table",
+            "label": "List or Library Name",
+            "description": "SharePoint list name",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderPath",
+            "label": "Folder",
+            "description": "Select a folder, or leave blank for the whole library",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "view",
+            "label": "Limit Columns by View",
+            "description": "Avoid column threshold issues by only using columns defined in a view",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnNewFile",
+        "connectorId": "sharepointonline",
+        "name": "When a file is created in a folder (deprecated)",
+        "description": "To see it work now, add a file to the SharePoint folder you selected.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderId",
+            "label": "Folder Id",
+            "description": "Select a folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "inferContentType",
+            "label": "Infer content type",
+            "description": "Infer content-type based on extension.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnUpdatedFile",
+        "connectorId": "sharepointonline",
+        "name": "When a file is created or modified in a folder (deprecated)",
+        "description": "To see it work now, modify a file in the SharePoint folder you selected.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "dataset",
+            "label": "Site Address",
+            "description": "Example: https://contoso.sharepoint.com/sites/sitename.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "folderId",
+            "label": "Folder Id",
+            "description": "Select a folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "inferContentType",
+            "label": "Infer content type",
+            "description": "Infer content-type based on extension.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnNewFileV2",
+        "connectorId": "onedriveforbusiness",
+        "name": "When a file is created",
+        "description": "To see it work now, add a file to the OneDrive folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "folderId",
+            "label": "Folder",
+            "description": "The unique identifier of the folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "includeSubfolders",
+            "label": "Include subfolders",
+            "description": "Include items in subfolders",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "inferContentType",
+            "label": "Infer Content Type",
+            "description": "A boolean value (true, false) to infer content-type based on extension.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnNewFilesV2",
+        "connectorId": "onedriveforbusiness",
+        "name": "When a file is created (properties only)",
+        "description": "To see it work now, add a file to the OneDrive folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "folderId",
+            "label": "Folder",
+            "description": "The unique identifier of the folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "includeSubfolders",
+            "label": "Include subfolders",
+            "description": "Include items in subfolders",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "maxFileCount",
+            "label": "Number of files to return",
+            "description": "Maximum number of files to return by single trigger run (1-100). Note that 'Split On' setting can force trigger to process each item individually.",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "defaultValue": 10,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnUpdatedFilesV2",
+        "connectorId": "onedriveforbusiness",
+        "name": "When a file is modified (properties only)",
+        "description": "To see it work now, modify a file in the OneDrive folder you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "folderId",
+            "label": "Folder",
+            "description": "The unique identifier of the folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "includeSubfolders",
+            "label": "Include subfolders",
+            "description": "Include items in subfolders",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "maxFileCount",
+            "label": "Number of files to return",
+            "description": "Maximum number of files to return by single trigger run (1-100). Note that 'Split On' setting can force trigger to process each item individually.",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "defaultValue": 10,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnUpdatedFileV2",
+        "connectorId": "onedriveforbusiness",
+        "name": "When a file is modified",
+        "description": "To see it work now, modify a file in the OneDrive folder you selected.",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "folderId",
+            "label": "Folder",
+            "description": "The unique identifier of the folder.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "includeSubfolders",
+            "label": "Include subfolders",
+            "description": "Include items in subfolders",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "inferContentType",
+            "label": "Infer Content Type",
+            "description": "A boolean value (true, false) to infer content-type based on extension.",
+            "type": "boolean",
+            "required": false,
+            "defaultValue": true,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnNewChannelMessage",
+        "connectorId": "teams",
+        "name": "When a new channel message is added",
+        "description": "To see it work now, add a message to the channel.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Team",
+            "description": "Select team",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "channelId",
+            "label": "Channel",
+            "description": "Channel ID",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "OnNewChannelMessageMentioningMe",
+        "connectorId": "teams",
+        "name": "When I am mentioned in a channel message",
+        "description": "To see it work, get @mentioned in one of the specified channels.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Team",
+            "description": "Select team",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "channelId",
+            "label": "Channel",
+            "description": "Channel ID",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "WebhookChatMessageTrigger",
+        "connectorId": "teams",
+        "name": "When a new chat message is added",
+        "description": "To see it work, send a message in any chat.",
+        "delivery": "webhook",
+        "inputs": []
+      },
+      {
+        "id": "WebhookNewMessageTrigger",
+        "connectorId": "teams",
+        "name": "When a new message is added to a chat or channel",
+        "description": "To see it work, post a message in one of the specified chats or channels.",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "threadType",
+            "label": "Message type",
+            "description": "Choose message type",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Group chat",
+                "value": "groupchat"
+              },
+              {
+                "label": "Channel",
+                "value": "channel"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "OnGroupMembershipAdd",
+        "connectorId": "teams",
+        "name": "When a new team member is added",
+        "description": "To see it work now, add a member to the team.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Team",
+            "description": "Select team",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "OnGroupMembershipRemoval",
+        "connectorId": "teams",
+        "name": "When a new team member is removed",
+        "description": "To see it work now, remove a member from the team.",
+        "visibility": "advanced",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Team",
+            "description": "Select team",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "RecordingTrigger",
+        "connectorId": "teams",
+        "name": "When a recording is available",
+        "description": "To see it work, start a recorded meeting.",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "scopeType",
+            "label": "Scope",
+            "description": "The scope of recordings to monitor",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Meetings that you organized",
+                "value": "user"
+              },
+              {
+                "label": "A specific meeting you organized",
+                "value": "meeting"
+              },
+              {
+                "label": "Ad-hoc calls you're in",
+                "value": "adhocCallUser"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "scope",
+            "label": "Scope",
+            "type": "object",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "TranscriptTrigger",
+        "connectorId": "teams",
+        "name": "When a transcript is available",
+        "description": "To see it work, start a transcribed meeting.",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "scopeType",
+            "label": "Scope",
+            "description": "The scope of transcripts to monitor",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Meetings that you organized",
+                "value": "user"
+              },
+              {
+                "label": "A specific meeting you organized",
+                "value": "meeting"
+              },
+              {
+                "label": "Ad-hoc calls you're in",
+                "value": "adhocCallUser"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "scope",
+            "label": "Scope",
+            "type": "object",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "WebhookAtMentionTrigger",
+        "connectorId": "teams",
+        "name": "When I'm @mentioned",
+        "description": "To see it work, get @mentioned in one of the specified chats or channels.",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "threadType",
+            "label": "Message type",
+            "description": "Choose message type",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Group chat",
+                "value": "groupchat"
+              },
+              {
+                "label": "Channel",
+                "value": "channel"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "WebhookKeywordTrigger",
+        "connectorId": "teams",
+        "name": "When keywords are mentioned",
+        "description": "To see it work, use the keywords in one of the specified chats or channels.",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "threadType",
+            "label": "Message type",
+            "description": "Choose message type",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Group chat",
+                "value": "groupchat"
+              },
+              {
+                "label": "Channel",
+                "value": "channel"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "$search",
+            "label": "Keywords to search for",
+            "description": "A comma separated list of keywords to search for",
+            "type": "string",
+            "required": true,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "important"
+          }
+        ]
+      },
+      {
+        "id": "WebhookMessageReactionTrigger",
+        "connectorId": "teams",
+        "name": "When someone reacted to a message in chat",
+        "description": "To see it work, react a message in the specified chat(s).",
+        "delivery": "webhook",
+        "inputs": [
+          {
+            "name": "reactionKey",
+            "label": "Emoji to Track",
+            "description": "Choose emoji to monitor for message reactions",
+            "type": "string",
+            "required": true,
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "frequency",
+            "label": "Trigger Frequency",
+            "description": "Whether the flow should be triggered by every reaction or only the first reaction on a particular message",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Every reaction (multiple)",
+                "value": "Multiple"
+              },
+              {
+                "label": "First reaction only (once)",
+                "value": "Once"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "runningPolicy",
+            "label": "Who can trigger?",
+            "description": "Specify who can trigger this workflow",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Myself",
+                "value": "Myself"
+              },
+              {
+                "label": "Everyone",
+                "value": "Everyone"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "threadType",
+            "label": "Message type",
+            "description": "Choose message type",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Group chat",
+                "value": "groupchat"
+              },
+              {
+                "label": "Channel",
+                "value": "channel"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "OnNewTask_V3",
+        "connectorId": "planner",
+        "name": "When a new task is created",
+        "description": "To see it work now, create a task.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Group Id",
+            "description": "The group to retrieve the plan.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "id",
+            "label": "Plan Id",
+            "description": "The unique identifier of the plan.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "OnTaskAssignedToMe_V2",
+        "connectorId": "planner",
+        "name": "When a task is assigned to me",
+        "description": "To see it work now, assign a task to yourself.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": []
+      },
+      {
+        "id": "OnCompleteTask_V3",
+        "connectorId": "planner",
+        "name": "When a task is completed",
+        "description": "To see it work now, complete a task.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "groupId",
+            "label": "Group Id",
+            "description": "The group to retrieve the plan.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "id",
+            "label": "Plan Id",
+            "description": "The unique identifier of the plan.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "id": "GetOnNewItems",
+        "connectorId": "salesforce",
+        "name": "When a record is created",
+        "description": "To see it work now, create a record in Salesforce.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Salesforce Object Type",
+            "description": "The Salesforce object type like 'Leads'.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "$filter",
+            "label": "Filter Query",
+            "description": "An ODATA filter query to restrict the entries returned (e.g. stringColumn eq 'string' OR numberColumn lt 123).",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$orderby",
+            "label": "Order By",
+            "description": "An ODATA orderBy query for specifying the order of entries.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$select",
+            "label": "Select Query",
+            "description": "Specific fields to retrieve from entries (default = all).",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "GetOnUpdatedItems",
+        "connectorId": "salesforce",
+        "name": "When a record is modified",
+        "description": "To see it work now, modify a record in Salesforce.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "table",
+            "label": "Salesforce Object Type",
+            "description": "The Salesforce object type like 'Leads'.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "$filter",
+            "label": "Filter Query",
+            "description": "An ODATA filter query to restrict the entries returned (e.g. stringColumn eq 'string' OR numberColumn lt 123).",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$orderby",
+            "label": "Order By",
+            "description": "An ODATA orderBy query for specifying the order of entries.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "$select",
+            "label": "Select Query",
+            "description": "Specific fields to retrieve from entries (default = all).",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnBuildCompleted",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a build completes",
+        "description": "To see it work now, wait for a build to complete.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "resultFilter",
+            "label": "Filter By Result",
+            "description": "An option indicating which build result to trigger on. Valid options include '', 'succeeded', 'partiallySucceeded', 'failed', or 'canceled'.",
+            "type": "string",
+            "required": false,
+            "options": [
+              {
+                "label": "",
+                "value": ""
+              },
+              {
+                "label": "succeeded",
+                "value": "succeeded"
+              },
+              {
+                "label": "partiallySucceeded",
+                "value": "partiallySucceeded"
+              },
+              {
+                "label": "failed",
+                "value": "failed"
+              },
+              {
+                "label": "canceled",
+                "value": "canceled"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "definitions",
+            "label": "Filter By Definition Id",
+            "description": "An option indicating which build definition id to trigger on.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnGitPullClosed",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a pull request is closed (Git)",
+        "description": "To see it work, close a pull request in the Git repo you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "repository",
+            "label": "Repository Name",
+            "description": "The name of the repository within the specified project.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "sourceRefName",
+            "label": "Source Ref Name",
+            "description": "The name of the Git ref, such as a branch or tag.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "targetRefName",
+            "label": "Target Ref Name",
+            "description": "The name of the Git ref, such as a branch or tag.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnGitPullCreated",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a pull request is created (Git)",
+        "description": "To see it work, create a pull request in the Git repo you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "repository",
+            "label": "Repository Name",
+            "description": "The name of the repository within the specified project.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "sourceRefName",
+            "label": "Source Ref Name",
+            "description": "The name of the Git ref, such as a branch or tag.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "targetRefName",
+            "label": "Target Ref Name",
+            "description": "The name of the Git ref, such as a branch or tag.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnWorkItemAssignedV2",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a work item is assigned",
+        "description": "To see it work now, assign a work item to the user you selected",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "team",
+            "label": "Team Name (to pick Assigned To)",
+            "description": "The name of the team from which to select a member.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_AssignedTo",
+            "label": "Assigned To",
+            "description": "The name of the team member who currently owns the work item.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_WorkItemType",
+            "label": "Type",
+            "description": "The name of the work item type.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "wiql__System_AreaPath",
+            "label": "Area Path",
+            "description": "The product feature or team area the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "areaPathComparison",
+            "label": "Area Path Comparison",
+            "description": "The rule to be used while comparing Area Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_IterationPath",
+            "label": "Iteration Path",
+            "description": "The named sprint or time period the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "iterationPathComparison",
+            "label": "Iteration Path Comparison",
+            "description": "The rule to be used while comparing Iteration Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__Microsoft_VSTS_Common_Priority",
+            "label": "Priority",
+            "description": "A subjective rating of the bug, issue, task, or test case as it relates to the business.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_CreatedBy",
+            "label": "Created By",
+            "description": "The name of the team member who created the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnWorkItemClosedV2",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a work item is closed",
+        "description": "To see it work now, close a work item matching these criteria.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "team",
+            "label": "Team Name (to pick Assigned To)",
+            "description": "The name of the team from which to select an assignee.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_AssignedTo",
+            "label": "Assigned To",
+            "description": "The name of the team member who currently owns the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_WorkItemType",
+            "label": "Type",
+            "description": "The name of the work item type.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Bug",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "closedState",
+            "label": "Closed State",
+            "description": "The comma-separated list of values of the State field indicating how the work item was closed (Done, Closed, Completed, Inactive).",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Done, Closed, Completed, Inactive",
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_AreaPath",
+            "label": "Area Path",
+            "description": "The product feature or team area the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "areaPathComparison",
+            "label": "Area Path Comparison",
+            "description": "The rule to be used while comparing Area Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_IterationPath",
+            "label": "Iteration Path",
+            "description": "The named sprint or time period the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "iterationPathComparison",
+            "label": "Iteration Path Comparison",
+            "description": "The rule to be used while comparing Iteration Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__Microsoft_VSTS_Common_Priority",
+            "label": "Priority",
+            "description": "A subjective rating of the bug, issue, task, or test case as it relates to the business.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_CreatedBy",
+            "label": "Created By",
+            "description": "The name of the team member who created the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnWorkItemCreatedV2",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a work item is created",
+        "description": "To see it work now, create a work item matching these criteria.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "team",
+            "label": "Team Name (to pick Assigned To)",
+            "description": "The name of the team from which to select an assignee.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_AssignedTo",
+            "label": "Assigned To",
+            "description": "The name of the team member who currently owns the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_WorkItemType",
+            "label": "Type",
+            "description": "The name of the work item type.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Bug",
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "wiql__System_AreaPath",
+            "label": "Area Path",
+            "description": "The product feature or team area the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "areaPathComparison",
+            "label": "Area Path Comparison",
+            "description": "The rule to be used while comparing Area Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_IterationPath",
+            "label": "Iteration Path",
+            "description": "The named sprint or time period the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "iterationPathComparison",
+            "label": "Iteration Path Comparison",
+            "description": "The rule to be used while comparing Iteration Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__Microsoft_VSTS_Common_Priority",
+            "label": "Priority",
+            "description": "A subjective rating of the bug, issue, task, or test case as it relates to the business.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_CreatedBy",
+            "label": "Created By",
+            "description": "The name of the team member who created the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnWorkItemUpdatedV2",
+        "connectorId": "visualstudioteamservices",
+        "name": "When a work item is updated",
+        "description": "To see it work now, update a work item matching these criteria.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "team",
+            "label": "Team Name (to pick Assigned To)",
+            "description": "The name of the team from which to select an assignee.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_AssignedTo",
+            "label": "Assigned To",
+            "description": "The name of the team member who currently owns the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "wiql__System_WorkItemType",
+            "label": "Type",
+            "description": "The name of the work item type.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "wiql__System_AreaPath",
+            "label": "Area Path",
+            "description": "The product feature or team area the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "areaPathComparison",
+            "label": "Area Path Comparison",
+            "description": "The rule to be used while comparing Area Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_IterationPath",
+            "label": "Iteration Path",
+            "description": "The named sprint or time period the work item is in.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "iterationPathComparison",
+            "label": "Iteration Path Comparison",
+            "description": "The rule to be used while comparing Iteration Path field.",
+            "type": "string",
+            "required": false,
+            "defaultValue": "Equals",
+            "options": [
+              {
+                "label": "Equals",
+                "value": "Equals"
+              },
+              {
+                "label": "Under",
+                "value": "Under"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__Microsoft_VSTS_Common_Priority",
+            "label": "Priority",
+            "description": "A subjective rating of the bug, issue, task, or test case as it relates to the business.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          },
+          {
+            "name": "wiql__System_CreatedBy",
+            "label": "Created By",
+            "description": "The name of the team member who created the work item.",
+            "type": "string",
+            "required": false,
+            "dynamic": false,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnTfvcCheckIn",
+        "connectorId": "visualstudioteamservices",
+        "name": "When code is checked in (TFVC)",
+        "description": "To see it work, check code into the TFVC project you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "team",
+            "label": "Team Name",
+            "description": "The name of the team which to select an author.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "author",
+            "label": "Team Member",
+            "description": "The unique name of the team member who authored the check in.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          }
+        ]
+      },
+      {
+        "id": "OnGitPush",
+        "connectorId": "visualstudioteamservices",
+        "name": "When code is pushed (Git)",
+        "description": "To see it work, push code to the Git repo you selected.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "account",
+            "label": "Organization Name",
+            "description": "The name of the Organization. This can be found in the instance URL i.e. {Organization}.visualstudio.com. The Organization should have \"Third-party application access via OAuth\" enabled to prevent errors in the operation.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "project",
+            "label": "Project Name",
+            "description": "The name of the project within the specified Organization.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "repository",
+            "label": "Repository Name",
+            "description": "The name of the repository within the specified project.",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "important"
+          },
+          {
+            "name": "refName",
+            "label": "Ref Name",
+            "description": "The name of the Git ref, such as a branch or tag.",
+            "type": "string",
+            "required": false,
+            "dynamic": true,
+            "sensitive": false,
+            "visibility": "advanced"
+          }
+        ]
+      },
+      {
+        "id": "OnRefreshComplete",
+        "connectorId": "dataflows",
+        "name": "When a dataflow refresh completes",
+        "description": "To see it work now, initiate a new dataflow refresh.",
+        "visibility": "important",
+        "delivery": "polling",
+        "inputs": [
+          {
+            "name": "workspaceType",
+            "label": "Group Type",
+            "description": "Select workspace or environment",
+            "type": "string",
+            "required": true,
+            "options": [
+              {
+                "label": "Workspace",
+                "value": "Workspace"
+              },
+              {
+                "label": "Environment",
+                "value": "Environment"
+              }
+            ],
+            "dynamic": false,
+            "sensitive": false
+          },
+          {
+            "name": "groupIdForOnRefreshComplete",
+            "label": "Group",
+            "description": "The unique identifier of the workspace or environment",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          },
+          {
+            "name": "dataflowIdForOnRefreshComplete",
+            "label": "Dataflow",
+            "description": "The unique identifier of the dataflow",
+            "type": "string",
+            "required": true,
+            "dynamic": true,
+            "sensitive": false
+          }
+        ]
+      }
+    ]
+  }
 }
