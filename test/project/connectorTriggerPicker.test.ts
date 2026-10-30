@@ -96,7 +96,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(requests[1], 'https://management.azure.com/next-namespaces');
     });
 
-    test('loads live connectors and paged trigger operations from the namespace API', async () => {
+    test('loads live connectors and preserves paged trigger operations from the namespace API', async () => {
         const requests: string[] = [];
         const armClient: ConnectorArmClient = {
             async get(url: string): Promise<unknown> {
@@ -231,6 +231,7 @@ suite('Connector trigger picker', () => {
                                 properties: {
                                     summary: 'When a new email arrives',
                                     triggerHint: 'Fires for new email.',
+                                    isNotification: true,
                                     annotation: { family: 'new-email', revision: 2 },
                                     inputsDefinition: {
                                         type: 'object',
@@ -321,7 +322,7 @@ suite('Connector trigger picker', () => {
                 label: 'When a new email arrives',
                 description: 'Fires for new email.',
                 isWebhook: false,
-                isNotification: false,
+                isNotification: true,
                 inputDefinitions: [
                     {
                         name: 'folderPath',
@@ -363,6 +364,14 @@ suite('Connector trigger picker', () => {
                         sensitive: false,
                     },
                 ],
+            },
+            {
+                id: 'OnNewEmailV1',
+                connectorId: 'office365',
+                label: 'When an email arrives (old)',
+                description: undefined,
+                isWebhook: false,
+                isNotification: false,
             },
             {
                 id: 'OnNewFile',
@@ -558,7 +567,7 @@ suite('Connector trigger picker', () => {
         );
         assert.deepStrictEqual(
             getDeliverySupport({ isWebhook: false, isNotification: true }),
-            { polling: false, webhook: false },
+            { polling: true, webhook: false },
         );
     });
 
@@ -650,7 +659,7 @@ suite('Connector trigger picker', () => {
                 connectorId: connector.id,
                 label: 'When a new email arrives',
                 isWebhook: false,
-                isNotification: false,
+                isNotification: true,
             }],
         };
         const template = createProjectTemplate(

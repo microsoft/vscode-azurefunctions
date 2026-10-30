@@ -299,9 +299,8 @@ function EventParameterField({
 export function getDeliverySupport(
     operation: Pick<ConnectorTriggerOperationOption, 'isNotification' | 'isWebhook'>,
 ): { polling: boolean; webhook: boolean } {
-    const polling = !operation.isWebhook && !operation.isNotification;
     return {
-        polling,
+        polling: !operation.isWebhook,
         webhook: false,
     };
 }

@@ -294,10 +294,7 @@ function createCatalog(
         });
     }
 
-    const operationCandidates = new Map<string, {
-        operation: ConnectorTriggerOperationOption;
-        revision: number;
-    }>();
+    const operations: ConnectorTriggerOperationOption[] = [];
     for (const operation of managedApiOperations) {
         const id = operation.name?.trim();
         const api = operation.properties?.api;
@@ -309,8 +306,7 @@ function createCatalog(
             !connectorId ||
             visibility === 'internal' ||
             visibility === 'hideinui' ||
-            isWebhook ||
-            isNotification) {
+            isWebhook) {
             continue;
         }
 
@@ -337,7 +333,7 @@ function createCatalog(
             });
         }
 
-        const candidate: ConnectorTriggerOperationOption = {
+        operations.push({
             id,
             connectorId,
             label: operation.properties?.summary?.trim() || id,
@@ -350,17 +346,9 @@ function createCatalog(
                     operation.properties.inputsDefinition,
                 ),
             }),
-        };
-        const family = operation.properties?.annotation?.family?.trim().toLowerCase();
-        const key = `${connectorKey}:${family || id.toLowerCase()}`;
-        const revision = operation.properties?.annotation?.revision ?? 0;
-        const existing = operationCandidates.get(key);
-        if (!existing || revision > existing.revision) {
-            operationCandidates.set(key, { operation: candidate, revision });
-        }
+        });
     }
 
-    const operations = [...operationCandidates.values()].map(candidate => candidate.operation);
     const connectorIdsWithTriggers = new Set(operations.map(operation => operation.connectorId.toLowerCase()));
     const connectorOptions = [...connectors.entries()]
         .filter(([connectorId]) => connectorIdsWithTriggers.has(connectorId))
@@ -368,7 +356,8 @@ function createCatalog(
         .sort((left, right) => left.label.localeCompare(right.label));
     operations.sort((left, right) =>
         left.connectorId.localeCompare(right.connectorId) ||
-        left.label.localeCompare(right.label));
+        left.label.localeCompare(right.label) ||
+        left.id.localeCompare(right.id));
 
     return { connectors: connectorOptions, operations };
 }
