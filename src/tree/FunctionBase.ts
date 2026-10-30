@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { type FunctionEnvelope } from "@azure/arm-appservice";
+import { type HttpMethods } from "@azure/core-rest-pipeline";
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as url from "url";
 import { HttpAuthLevel, type ParsedFunctionJson } from "../funcConfig/function";
@@ -43,7 +44,7 @@ export abstract class FunctionBase implements IFunction {
                 triggerUrl.searchParams.set('code', key);
             }
 
-            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized };
+            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized, method: getHttpTriggerMethod(this.config) };
         }
     }
 
@@ -63,4 +64,16 @@ export abstract class FunctionBase implements IFunction {
     public get triggerBindingType(): string | undefined {
         return this.config.triggerBinding?.type;
     }
+}
+
+export function getHttpTriggerMethod(config: ParsedFunctionJson): HttpMethods {
+    const supportedMethods: HttpMethods[] = ['GET', 'PUT', 'POST', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS', 'TRACE'];
+    const bindingMethods: unknown = config.triggerBinding?.methods;
+    const methods = Array.isArray(bindingMethods) ? bindingMethods.flatMap((value: unknown) => {
+        const normalizedMethod = typeof value === 'string' ? value.toUpperCase() : undefined;
+        const method = supportedMethods.find(method => method === normalizedMethod);
+        return method ? [method] : [];
+    }) : [];
+
+    return methods.includes('POST') ? 'POST' : methods[0] ?? 'POST';
 }
