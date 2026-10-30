@@ -34,7 +34,6 @@ export async function getSupportedPythonVersions(context: IActionContext, funcVe
 
     // TODO: https://github.com/microsoft/vscode-azurefunctions/issues/4778
     const versionInfo: [string, string][] = [
-        ['4.0.4915', '3.10'],
         ['4.0.5348', '3.11'],
         // not sure if this is the minimum version, but I confirmed that 4.0.7030 works with Python 3.12
         ['4.0.7030', '3.12'],

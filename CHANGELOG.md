@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+* Remove Python 3.10 from supported interpreters for local project creation.
 * Hide end-of-support .NET runtimes from the project creation picker using the tooling feed's UTC support deadlines.
 * Install Python requirements when creating a virtual environment and migrate legacy Python launch configurations without adding duplicates.
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
