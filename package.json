@@ -1581,6 +1581,7 @@
         "compile": "tsgo -watch",
         "version": "tsgo --version",
         "cleanReadme": "node scripts/cleanReadme.mjs",
+        "connectorCatalog:validate": "tsx scripts/generateConnectorCatalog.ts --validate",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "lint-fix": "eslint --max-warnings 0 --fix",
