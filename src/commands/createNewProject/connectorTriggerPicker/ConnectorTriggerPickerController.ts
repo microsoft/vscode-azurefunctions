@@ -13,6 +13,7 @@ import { ProjectTemplateProvider } from '../../../templates/projectTemplates/Pro
 import {
     isConnectorTriggerPickerMessage,
     type ConnectorNamespaceOption,
+    type ConnectorTriggerCatalogSource,
     type ConnectorTriggerPickerResponse,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
@@ -35,10 +36,36 @@ export interface ConnectorTriggerPickerLaunchOptions {
     initialFilters: InitialTemplateFilters;
 }
 
+export interface ConnectorTriggerCatalogLoadResult {
+    catalog: ConnectorTriggerCatalog;
+    source: ConnectorTriggerCatalogSource;
+    warning?: string;
+}
+
+export type ConnectorTriggerCatalogLoader = (
+    context: IActionContext,
+    namespace?: ConnectorNamespaceOption,
+) => Promise<ConnectorTriggerCatalogLoadResult>;
+
+interface ConnectorTriggerCatalogProviderResult {
+    catalog: ConnectorTriggerCatalog;
+    source: 'remote' | 'remoteCache' | 'bundled' | 'live';
+    liveRefresh: 'notRequested' | 'succeeded' | 'failed';
+    errors: readonly unknown[];
+}
+
+interface ConnectorTriggerCatalogProviderClient {
+    getCatalog(
+        context: IActionContext,
+        namespace?: ConnectorNamespaceOption,
+    ): Promise<ConnectorTriggerCatalogProviderResult>;
+}
+
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
     private readonly namespaces = new Map<string, ConnectorNamespaceOption>();
-    private readonly catalogs = new Map<string, ConnectorTriggerCatalog>();
+    private readonly catalogs = new Map<string, ConnectorTriggerCatalogLoadResult>();
+    private readonly catalogLoadRequests = new Map<string, Promise<ConnectorTriggerCatalogLoadResult>>();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly templateProvider = new ProjectTemplateProvider();
 
@@ -46,6 +73,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         context: vscode.ExtensionContext,
         private readonly launchOptions: ConnectorTriggerPickerLaunchOptions,
         private readonly dataClient: ConnectorTriggerDataClient,
+        private readonly catalogLoader: ConnectorTriggerCatalogLoader,
     ) {
         const viewModel = createConnectorTriggerPickerViewModel(
             launchOptions.initialFilters.language,
@@ -63,6 +91,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.handleMessage', async actionContext => {
                 await this.handleMessage(message, actionContext);
+            });
+        }));
+        this.registerDisposable(vscode.authentication.onDidChangeSessions(() => {
+            void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.refreshCatalog', async actionContext => {
+                await this.loadCatalog(actionContext, undefined, true);
             });
         }));
         this.registerDisposable(this.onDisposed(() => {
@@ -85,13 +118,19 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         context: vscode.ExtensionContext,
         launchOptions: ConnectorTriggerPickerLaunchOptions,
         dataClient: ConnectorTriggerDataClient = new ConnectorTriggerDataClient(),
+        catalogLoader: ConnectorTriggerCatalogLoader = createCatalogLoader(dataClient),
     ): ConnectorTriggerPickerController {
         const existing = ConnectorTriggerPickerController.currentController;
         if (existing && !existing.isDisposed) {
             existing.panel.dispose();
         }
 
-        const controller = new ConnectorTriggerPickerController(context, launchOptions, dataClient);
+        const controller = new ConnectorTriggerPickerController(
+            context,
+            launchOptions,
+            dataClient,
+            catalogLoader,
+        );
         ConnectorTriggerPickerController.currentController = controller;
         return controller;
     }
@@ -146,13 +185,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        const namespace = this.namespaces.get(message.namespaceId);
-        const catalog = this.catalogs.get(message.namespaceId);
+        const catalog = this.catalogs.get(getCatalogKey(message.namespaceId))?.catalog;
         const connector = catalog?.connectors.find(item => item.id === message.connectorId);
         const operation = catalog?.operations.find(item =>
             item.id === message.operationId &&
             equalsIgnoreCase(item.connectorId, message.connectorId));
-        if (!namespace || !connector || !operation) {
+        if (!connector ||
+            !operation ||
+            connector.availability === 'unavailable' ||
+            operation.availability === 'unavailable') {
             return;
         }
 
@@ -223,35 +264,67 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
     }
 
-    private async loadCatalog(actionContext: IActionContext, namespaceId: string): Promise<void> {
-        const namespace = this.namespaces.get(namespaceId);
-        if (!namespace) {
+    private async loadCatalog(
+        actionContext: IActionContext,
+        namespaceId?: string,
+        forceRefresh = false,
+    ): Promise<void> {
+        const namespace = namespaceId ? this.namespaces.get(namespaceId) : undefined;
+        if (namespaceId && !namespace) {
             return;
         }
 
+        const catalogKey = getCatalogKey(namespaceId);
+        let request: Promise<ConnectorTriggerCatalogLoadResult> | undefined;
         try {
-            let catalog = this.catalogs.get(namespaceId);
-            if (!catalog) {
-                catalog = await this.dataClient.listCatalog(actionContext, namespace);
-                this.catalogs.set(namespaceId, catalog);
+            const cachedResult = this.catalogs.get(catalogKey);
+            if (cachedResult && !forceRefresh) {
+                await this.postCatalogLoaded(namespaceId, cachedResult);
+                return;
             }
 
-            await this.postMessage({
-                command: 'catalogLoaded',
-                namespaceId,
-                connectors: catalog.connectors,
-                operations: catalog.operations,
-            });
+            if (!forceRefresh && this.catalogLoadRequests.has(catalogKey)) {
+                return;
+            }
+
+            request = this.catalogLoader(actionContext, namespace);
+            this.catalogLoadRequests.set(catalogKey, request);
+            const result = await request;
+            if (this.catalogLoadRequests.get(catalogKey) !== request) {
+                return;
+            }
+
+            this.catalogs.set(catalogKey, result);
+            this.catalogLoadRequests.delete(catalogKey);
+            await this.postCatalogLoaded(namespaceId, result);
         } catch (error) {
+            if (request && this.catalogLoadRequests.get(catalogKey) !== request) {
+                return;
+            }
+            this.catalogLoadRequests.delete(catalogKey);
             actionContext.telemetry.properties.connectorPickerLoad = 'catalog';
             actionContext.telemetry.properties.result = 'Failed';
             await this.postMessage({
                 command: 'loadFailed',
                 scope: 'catalog',
-                namespaceId,
+                ...(namespaceId ? { namespaceId } : {}),
                 message: parseError(error).message,
             });
         }
+    }
+
+    private async postCatalogLoaded(
+        namespaceId: string | undefined,
+        result: ConnectorTriggerCatalogLoadResult,
+    ): Promise<void> {
+        await this.postMessage({
+            command: 'catalogLoaded',
+            ...(namespaceId ? { namespaceId } : {}),
+            source: result.source,
+            connectors: result.catalog.connectors,
+            operations: result.catalog.operations,
+            warning: result.warning,
+        });
     }
 
     private async createNamespace(actionContext: IActionContext): Promise<void> {
@@ -288,27 +361,31 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async loadOperationInputs(
         actionContext: IActionContext,
-        namespaceId: string,
+        namespaceId: string | undefined,
         connectorId: string,
         operationId: string,
     ): Promise<void> {
-        const namespace = this.namespaces.get(namespaceId);
-        const catalog = this.catalogs.get(namespaceId);
+        const namespace = namespaceId ? this.namespaces.get(namespaceId) : undefined;
+        const catalog = this.catalogs.get(getCatalogKey(namespaceId))?.catalog;
         const operation = catalog?.operations.find(item =>
             equalsIgnoreCase(item.connectorId, connectorId) &&
             equalsIgnoreCase(item.id, operationId));
-        if (!namespace || !catalog || !operation) {
+        if (!catalog || !operation) {
             return;
         }
 
         if (operation.inputDefinitions !== undefined) {
             await this.postMessage({
                 command: 'operationInputsLoaded',
-                namespaceId,
+                ...(namespaceId ? { namespaceId } : {}),
                 connectorId,
                 operationId,
                 inputDefinitions: operation.inputDefinitions,
             });
+            return;
+        }
+
+        if (!namespace) {
             return;
         }
 
@@ -324,7 +401,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 item === operation ? updatedOperation : item);
             await this.postMessage({
                 command: 'operationInputsLoaded',
-                namespaceId,
+                ...(namespaceId ? { namespaceId } : {}),
                 connectorId,
                 operationId,
                 inputDefinitions,
@@ -334,7 +411,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             actionContext.telemetry.properties.result = 'Failed';
             await this.postMessage({
                 command: 'operationInputsFailed',
-                namespaceId,
+                ...(namespaceId ? { namespaceId } : {}),
                 connectorId,
                 operationId,
                 message: parseError(error).message,
@@ -441,4 +518,61 @@ function sortNamespaces(namespaces: ConnectorNamespaceOption[]): ConnectorNamesp
     return namespaces.sort((left, right) =>
         left.name.localeCompare(right.name) ||
         left.subscriptionName.localeCompare(right.subscriptionName));
+}
+
+function getCatalogKey(namespaceId: string | undefined): string {
+    return namespaceId ?? '';
+}
+
+function createCatalogLoader(
+    dataClient: ConnectorTriggerDataClient,
+): ConnectorTriggerCatalogLoader {
+    return async (context, namespace) => {
+        if (hasCatalogProvider(dataClient)) {
+            const result = await dataClient.getCatalog(context, namespace);
+            return {
+                catalog: result.catalog,
+                source: result.source === 'remoteCache' ? 'remote' : result.source,
+                warning: getCatalogWarning(result),
+            };
+        }
+
+        if (namespace) {
+            return {
+                catalog: await dataClient.listCatalog(context, namespace),
+                source: 'live',
+            };
+        }
+
+        throw new Error(localize(
+            'connectorCatalogProviderUnavailable',
+            'The Microsoft connector catalog could not be loaded.',
+        ));
+    };
+}
+
+function hasCatalogProvider(
+    dataClient: ConnectorTriggerDataClient,
+): dataClient is ConnectorTriggerDataClient & ConnectorTriggerCatalogProviderClient {
+    return typeof (dataClient as Partial<ConnectorTriggerCatalogProviderClient>).getCatalog === 'function';
+}
+
+function getCatalogWarning(
+    result: ConnectorTriggerCatalogProviderResult,
+): string | undefined {
+    if (result.liveRefresh === 'failed') {
+        return localize(
+            'connectorCatalogLiveRefreshFailed',
+            'Live Azure availability could not be refreshed. Showing the Microsoft connector catalog without live availability.',
+        );
+    }
+
+    if (result.source === 'bundled' && result.errors.length > 0) {
+        return localize(
+            'connectorCatalogRemoteLoadFailed',
+            'The Microsoft connector catalog could not be refreshed. Showing the bundled catalog snapshot.',
+        );
+    }
+
+    return undefined;
 }

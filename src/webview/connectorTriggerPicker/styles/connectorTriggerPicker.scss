@@ -136,13 +136,23 @@ select {
     line-height: 1.5;
 }
 
-.namespace-field {
+.catalog-status {
+    display: grid;
+    gap: 6px;
     margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--connector-picker-border);
+    border-left: 3px solid var(--vscode-focusBorder);
+    border-radius: var(--connector-picker-radius);
+    background: var(--vscode-textBlockQuote-background, var(--vscode-input-background));
 
-    > label {
-        display: block;
-        margin-bottom: 7px;
-        font-weight: 600;
+    > span {
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.4;
+    }
+
+    > .warning-text {
+        color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground));
     }
 }
 
@@ -284,6 +294,11 @@ select {
         background: var(--vscode-list-hoverBackground);
     }
 
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.68;
+    }
+
     &:focus-visible,
     &.selected {
         border-color: var(--vscode-focusBorder);
@@ -313,6 +328,16 @@ select {
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    small {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.82em;
+        font-weight: 400;
+        text-overflow: ellipsis;
+    }
 }
 
 .show-more {
@@ -375,6 +400,11 @@ select {
 
     &:hover {
         background: var(--vscode-list-hoverBackground);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.68;
     }
 
     &.selected {
@@ -535,6 +565,15 @@ select {
     padding: 14px;
     border: 1px solid var(--connector-picker-border);
     border-radius: var(--connector-picker-radius);
+}
+
+.setup-deferred-note {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--vscode-focusBorder);
+    color: var(--vscode-descriptionForeground);
+    background: var(--vscode-textBlockQuote-background, var(--vscode-input-background));
+    line-height: 1.45;
 }
 
 .preview-callout {

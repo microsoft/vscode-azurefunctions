@@ -10,16 +10,15 @@ import { ConnectorBrandIcon } from './ConnectorBrandIcon';
 interface ConnectorTilePickerProps {
     label: string;
     options: readonly ConnectorTriggerOption[];
+    unavailableLabel: string;
     value: string;
     onChange: (value: string) => void;
 }
 
-/**
- * Connector Namespace tile picker adapted for the Functions connector-trigger flow.
- */
 export function ConnectorTilePicker({
     label,
     options,
+    unavailableLabel,
     value,
     onChange,
 }: ConnectorTilePickerProps): JSX.Element {
@@ -27,19 +26,25 @@ export function ConnectorTilePicker({
         <div className="connector-grid" role="radiogroup" aria-label={label}>
             {options.map(option => {
                 const selected = value === option.id;
+                const unavailable = option.availability === 'unavailable';
                 return (
                     <button
                         key={option.id}
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        className={`connector-tile${selected ? ' selected' : ''}`}
+                        aria-label={unavailable ? `${option.label}. ${unavailableLabel}` : option.label}
+                        className={`connector-tile${selected ? ' selected' : ''}${unavailable ? ' unavailable' : ''}`}
+                        disabled={unavailable}
                         onClick={() => onChange(option.id)}
                     >
                         <span className="connector-tile-icon" aria-hidden="true">
                             <ConnectorBrandIcon connector={option} />
                         </span>
-                        <span className="connector-tile-label">{option.label}</span>
+                        <span className="connector-tile-label">
+                            {option.label}
+                            {unavailable && <small>{unavailableLabel}</small>}
+                        </span>
                     </button>
                 );
             })}

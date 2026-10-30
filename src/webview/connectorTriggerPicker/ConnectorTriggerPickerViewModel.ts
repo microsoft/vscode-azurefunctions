@@ -18,7 +18,10 @@ export interface ConnectorTriggerOption {
     label: string;
     description?: string;
     iconUrl?: string;
+    availability?: ConnectorTriggerAvailability;
 }
+
+export type ConnectorTriggerAvailability = 'available' | 'unavailable' | 'unknown';
 
 export type ConnectorTriggerInputType =
     'array' |
@@ -55,7 +58,10 @@ export interface ConnectorTriggerOperationOption {
     isWebhook: boolean;
     isNotification: boolean;
     inputDefinitions?: ConnectorTriggerInputDefinition[];
+    availability?: ConnectorTriggerAvailability;
 }
+
+export type ConnectorTriggerCatalogSource = 'bundled' | 'remote' | 'live';
 
 export interface ConnectorTriggerPickerViewModel {
     language?: string;
@@ -69,12 +75,13 @@ export interface ConnectorTriggerPickerViewModel {
         connectorStep: string;
         eventStep: string;
         configureStep: string;
-        namespaceGroup: string;
-        selectNamespace: string;
-        createNamespace: string;
-        creatingNamespace: string;
-        loadingNamespaces: string;
-        noNamespaces: string;
+        bundledCatalogSource: string;
+        remoteCatalogSource: string;
+        liveCatalogSource: string;
+        refreshingCatalog: string;
+        catalogSetupDeferred: string;
+        selectionUnavailable: string;
+        unavailable: string;
         connectorGroup: string;
         featuredConnectors: string;
         otherConnectors: string;
@@ -106,6 +113,7 @@ export interface ConnectorTriggerPickerViewModel {
         eventParametersDescription: string;
         loadingEventParameters: string;
         noEventParameters: string;
+        eventParametersDeferred: string;
         dynamicParameterDescription: string;
         requiredParameter: string;
         optionalParameters: string;
@@ -114,6 +122,7 @@ export interface ConnectorTriggerPickerViewModel {
         selectionPreview: string;
         triggerMetadataPreview: string;
         resourceMetadataPreview: string;
+        resourceSetupDeferred: string;
         useTemplate: string;
         creatingProject: string;
         retry: string;
@@ -127,16 +136,16 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'openCopilot' }
     | { command: 'loadNamespaces' }
     | { command: 'createNamespace' }
-    | { command: 'loadCatalog'; namespaceId: string }
+    | { command: 'loadCatalog'; namespaceId?: string }
     | {
         command: 'loadOperationInputs';
-        namespaceId: string;
+        namespaceId?: string;
         connectorId: string;
         operationId: string;
     }
     | {
         command: 'continue';
-        namespaceId: string;
+        namespaceId?: string;
         connectorId: string;
         operationId: string;
         deliveryMode: ConnectorDeliveryMode;
@@ -151,20 +160,22 @@ export type ConnectorTriggerPickerResponse =
     }
     | {
         command: 'catalogLoaded';
-        namespaceId: string;
+        namespaceId?: string;
+        source: ConnectorTriggerCatalogSource;
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
+        warning?: string;
     }
     | {
         command: 'operationInputsLoaded';
-        namespaceId: string;
+        namespaceId?: string;
         connectorId: string;
         operationId: string;
         inputDefinitions: ConnectorTriggerInputDefinition[];
     }
     | {
         command: 'operationInputsFailed';
-        namespaceId: string;
+        namespaceId?: string;
         connectorId: string;
         operationId: string;
         message: string;
@@ -203,21 +214,18 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
     }
 
     if (message.command === 'loadCatalog') {
-        return 'namespaceId' in message && typeof message.namespaceId === 'string';
+        return !('namespaceId' in message) || typeof message.namespaceId === 'string';
     }
 
     if (message.command === 'loadOperationInputs') {
-        return 'namespaceId' in message &&
-            typeof message.namespaceId === 'string' &&
+        return (!('namespaceId' in message) || typeof message.namespaceId === 'string') &&
             'connectorId' in message &&
             typeof message.connectorId === 'string' &&
             'operationId' in message &&
             typeof message.operationId === 'string';
     }
-
     return message.command === 'continue' &&
-        'namespaceId' in message &&
-        typeof message.namespaceId === 'string' &&
+        (!('namespaceId' in message) || typeof message.namespaceId === 'string') &&
         'connectorId' in message &&
         typeof message.connectorId === 'string' &&
         'operationId' in message &&
@@ -238,17 +246,18 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
     }
 
     if (message.command === 'catalogLoaded') {
-        return 'namespaceId' in message &&
-            typeof message.namespaceId === 'string' &&
+        return (!('namespaceId' in message) || typeof message.namespaceId === 'string') &&
+            'source' in message &&
+            isConnectorTriggerCatalogSource(message.source) &&
             'connectors' in message &&
             Array.isArray(message.connectors) &&
             'operations' in message &&
-            Array.isArray(message.operations);
+            Array.isArray(message.operations) &&
+            (!('warning' in message) || typeof message.warning === 'string');
     }
 
     if (message.command === 'operationInputsLoaded') {
-        return 'namespaceId' in message &&
-            typeof message.namespaceId === 'string' &&
+        return (!('namespaceId' in message) || typeof message.namespaceId === 'string') &&
             'connectorId' in message &&
             typeof message.connectorId === 'string' &&
             'operationId' in message &&
@@ -256,10 +265,8 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             'inputDefinitions' in message &&
             Array.isArray(message.inputDefinitions);
     }
-
     if (message.command === 'operationInputsFailed') {
-        return 'namespaceId' in message &&
-            typeof message.namespaceId === 'string' &&
+        return (!('namespaceId' in message) || typeof message.namespaceId === 'string') &&
             'connectorId' in message &&
             typeof message.connectorId === 'string' &&
             'operationId' in message &&
@@ -290,4 +297,8 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
         'message' in message &&
         typeof message.message === 'string' &&
         (!('namespaceId' in message) || typeof message.namespaceId === 'string');
+}
+
+function isConnectorTriggerCatalogSource(value: unknown): value is ConnectorTriggerCatalogSource {
+    return value === 'bundled' || value === 'remote' || value === 'live';
 }

@@ -7,6 +7,7 @@ import { createTestActionContext, type IActionContext, type ISubscriptionContext
 import * as assert from 'assert';
 import {
     ConnectorTriggerPickerController,
+    type ConnectorTriggerCatalogLoadResult,
     type ConnectorTriggerPickerLaunchOptions,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import {
@@ -515,7 +516,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(requested, true);
     });
 
-    test('builds localized live-data picker labels', () => {
+    test('builds localized catalog picker labels', () => {
         const viewModel = createConnectorTriggerPickerViewModel();
 
         assert.strictEqual(viewModel.labels.panelTitle, 'Template Gallery');
@@ -523,8 +524,10 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.connectorPageTitle, 'Choose a connector');
         assert.strictEqual(viewModel.labels.eventPageTitle, 'Choose an event');
         assert.strictEqual(viewModel.labels.configurePageTitle, 'Configure & preview');
-        assert.strictEqual(viewModel.labels.namespaceGroup, 'Connector Namespace');
-        assert.strictEqual(viewModel.labels.createNamespace, '+ Create new Connector Namespace...');
+        assert.strictEqual(
+            viewModel.labels.bundledCatalogSource,
+            'Browsing the bundled Microsoft connector catalog snapshot.',
+        );
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
@@ -664,7 +667,6 @@ suite('Connector trigger picker', () => {
     });
 
     test('creates the selected connector project directly without reopening the gallery', async () => {
-        const namespace = createNamespace();
         const connector: ConnectorTriggerOption = {
             id: 'office365',
             label: 'Office 365 Outlook',
@@ -693,7 +695,7 @@ suite('Connector trigger picker', () => {
         interface TestableConnectorTriggerPickerController {
             launchOptions: ConnectorTriggerPickerLaunchOptions;
             namespaces: Map<string, ConnectorNamespaceOption>;
-            catalogs: Map<string, ConnectorTriggerCatalog>;
+            catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
             templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
             projectCreator: Pick<ProjectTemplateCreator, 'createProject'>;
             postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
@@ -725,8 +727,11 @@ suite('Connector trigger picker', () => {
                     useCase: 'connector',
                 },
             },
-            namespaces: new Map([[namespace.id, namespace]]),
-            catalogs: new Map([[namespace.id, catalog]]),
+            namespaces: new Map(),
+            catalogs: new Map([['', {
+                catalog,
+                source: 'bundled',
+            }]]),
             templateProvider: {
                 getTemplates: async () => [template],
             },
@@ -759,7 +764,6 @@ suite('Connector trigger picker', () => {
         try {
             await controllerMethods.handleMessage.call(testableController, {
                 command: 'continue',
-                namespaceId: namespace.id,
                 connectorId: connector.id,
                 operationId: catalog.operations[0].id,
                 deliveryMode: 'Polling',
@@ -775,6 +779,17 @@ suite('Connector trigger picker', () => {
             location: 'C:\\connector-project',
             entryPoint: 'details',
         }]);
+
+        connector.availability = 'unavailable';
+        await controllerMethods.handleMessage.call(testableController, {
+            command: 'continue',
+            connectorId: connector.id,
+            operationId: catalog.operations[0].id,
+            deliveryMode: 'Polling',
+        }, await createTestActionContext());
+        assert.strictEqual(createdProjects.length, 1);
+        assert.strictEqual(responses.length, 1);
+        connector.availability = undefined;
 
         responses.length = 0;
         testableController.launchOptions = {
@@ -813,7 +828,7 @@ suite('Connector trigger picker', () => {
         );
     });
 
-    test('accepts only the live picker request and response contracts', () => {
+    test('accepts only the picker request and response contracts', () => {
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'loadNamespaces' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'createNamespace' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates' }), true);
@@ -823,6 +838,9 @@ suite('Connector trigger picker', () => {
             namespaceId: 'namespace-id',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'loadCatalog',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'loadOperationInputs',
             namespaceId: 'namespace-id',
             connectorId: 'sharepointonline',
@@ -830,7 +848,6 @@ suite('Connector trigger picker', () => {
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
-            namespaceId: 'namespace-id',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
             deliveryMode: 'Webhook',
@@ -848,6 +865,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'catalogLoaded',
             namespaceId: 'namespace-id',
+            source: 'live',
             connectors: [],
             operations: [],
         }), true);

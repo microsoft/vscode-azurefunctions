@@ -7,7 +7,7 @@
 
 import { Button } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import { ConnectorConfigureStep, getDeliverySupport } from './ConnectorConfigureStep';
 import { ConnectorEventStep } from './ConnectorEventStep';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
@@ -15,55 +15,46 @@ import {
     partitionConnectorOptions,
     shouldExpandOtherConnectors,
 } from './connectorTriggerGroups';
+import { reconcileConnectorTriggerSelection } from './connectorTriggerPickerState';
 import { ConnectorTriggerShell, type ConnectorTriggerStep } from './ConnectorTriggerShell';
 import {
     isConnectorTriggerPickerResponse,
+    type ConnectorTriggerCatalogSource,
     type ConnectorDeliveryMode,
-    type ConnectorNamespaceOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
 } from './ConnectorTriggerPickerViewModel';
 
-const createNamespaceOption = '__createConnectorNamespace__';
 const connectorPageSize = 60;
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
     const [activeStep, setActiveStep] = useState<ConnectorTriggerStep>(1);
-    const [namespaces, setNamespaces] = useState<ConnectorNamespaceOption[]>([]);
-    const [namespacesLoading, setNamespacesLoading] = useState(true);
-    const [creatingNamespace, setCreatingNamespace] = useState(false);
-    const [namespaceWarning, setNamespaceWarning] = useState<string>();
-    const [selectedNamespaceId, setSelectedNamespaceId] = useState('');
-    const [catalogNamespaceId, setCatalogNamespaceId] = useState('');
+    const [catalogSource, setCatalogSource] = useState<ConnectorTriggerCatalogSource>();
+    const [catalogWarning, setCatalogWarning] = useState<string>();
+    const [selectionUnavailable, setSelectionUnavailable] = useState(false);
     const [connectors, setConnectors] = useState<ConnectorTriggerOption[]>([]);
     const [operations, setOperations] = useState<ConnectorTriggerOperationOption[]>([]);
-    const [catalogLoading, setCatalogLoading] = useState(false);
+    const [catalogLoading, setCatalogLoading] = useState(true);
     const [connectorSearch, setConnectorSearch] = useState('');
     const [connectorLimit, setConnectorLimit] = useState(connectorPageSize);
     const [otherConnectorsExpanded, setOtherConnectorsExpanded] = useState(false);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [deliveryMode, setDeliveryMode] = useState<ConnectorDeliveryMode>('Polling');
-    const [operationInputsLoading, setOperationInputsLoading] = useState(false);
-    const [operationInputsError, setOperationInputsError] = useState('');
     const [projectCreating, setProjectCreating] = useState(false);
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
-    const [loadError, setLoadError] = useState<{
-        scope: 'namespaces' | 'catalog';
-        message: string;
-    }>();
-    const selectedNamespaceIdRef = useRef('');
-    const selectedOperationKeyRef = useRef('');
-    const operationInputRequestKeyRef = useRef('');
+    const [loadError, setLoadError] = useState<string>();
 
-    const loadNamespaces = useCallback(() => {
-        setNamespacesLoading(true);
+    const loadCatalog = useCallback(() => {
+        setCatalogLoading(true);
+        setCatalogWarning(undefined);
+        setSelectionUnavailable(false);
         setLoadError(undefined);
-        vscodeApi.postMessage({ command: 'loadNamespaces' });
+        vscodeApi.postMessage({ command: 'loadCatalog' });
     }, [vscodeApi]);
 
     useEffect(() => {
@@ -73,54 +64,15 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             }
 
             const message = event.data;
-            if (message.command === 'namespacesLoaded') {
-                setNamespacesLoading(false);
-                setCreatingNamespace(false);
-                setNamespaces(message.namespaces);
-                setNamespaceWarning(message.warning);
-                setSelectedNamespaceId(current =>
-                    message.selectedNamespaceId &&
-                        message.namespaces.some(namespace => namespace.id === message.selectedNamespaceId) ?
-                        message.selectedNamespaceId :
-                        message.namespaces.some(namespace => namespace.id === current) ?
-                            current :
-                            message.namespaces.length === 1 ? message.namespaces[0].id : '');
-            } else if (message.command === 'namespaceCreationCancelled') {
-                setCreatingNamespace(false);
-            } else if (message.command === 'catalogLoaded') {
-                if (message.namespaceId !== selectedNamespaceIdRef.current) {
+            if (message.command === 'catalogLoaded') {
+                if (message.namespaceId) {
                     return;
                 }
                 setCatalogLoading(false);
-                setCatalogNamespaceId(message.namespaceId);
+                setCatalogSource(message.source);
+                setCatalogWarning(message.warning);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
-            } else if (message.command === 'operationInputsLoaded') {
-                if (message.namespaceId !== selectedNamespaceIdRef.current) {
-                    return;
-                }
-                setOperations(current => current.map(operation =>
-                    equalsIgnoreCase(operation.connectorId, message.connectorId) &&
-                        equalsIgnoreCase(operation.id, message.operationId) ?
-                        { ...operation, inputDefinitions: message.inputDefinitions } :
-                        operation));
-                if (getOperationKey(
-                    message.namespaceId,
-                    message.connectorId,
-                    message.operationId,
-                ) === selectedOperationKeyRef.current) {
-                    setOperationInputsLoading(false);
-                    setOperationInputsError('');
-                }
-            } else if (message.command === 'operationInputsFailed') {
-                if (getOperationKey(
-                    message.namespaceId,
-                    message.connectorId,
-                    message.operationId,
-                ) === selectedOperationKeyRef.current) {
-                    setOperationInputsLoading(false);
-                    setOperationInputsError(message.message);
-                }
             } else if (message.command === 'projectCreationStarted') {
                 setProjectCreating(true);
                 setProjectCreationDetail(viewModel.labels.creatingProject);
@@ -131,65 +83,61 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setProjectCreating(false);
                 setProjectCreationDetail('');
                 setProjectCreationError(message.message);
-            } else {
-                if (message.scope === 'catalog' &&
-                    message.namespaceId !== selectedNamespaceIdRef.current) {
-                    return;
-                }
-                setNamespacesLoading(current => message.scope === 'namespaces' ? false : current);
-                setCatalogLoading(current => message.scope === 'catalog' ? false : current);
-                setCreatingNamespace(false);
-                setLoadError({ scope: message.scope, message: message.message });
+            } else if (message.command === 'loadFailed' &&
+                message.scope === 'catalog' &&
+                !message.namespaceId) {
+                setCatalogLoading(false);
+                setLoadError(message.message);
             }
         };
 
         window.addEventListener('message', listener);
-        loadNamespaces();
+        loadCatalog();
         return () => window.removeEventListener('message', listener);
-    }, [loadNamespaces, viewModel.labels.creatingProject]);
-
-    useEffect(() => {
-        selectedNamespaceIdRef.current = selectedNamespaceId;
-        setActiveStep(1);
-        setSelectedConnectorId('');
-        setSelectedOperationId('');
-        setDeliveryMode('Polling');
-        setOperationInputsLoading(false);
-        setOperationInputsError('');
-        selectedOperationKeyRef.current = '';
-        operationInputRequestKeyRef.current = '';
-        setProjectCreating(false);
-        setProjectCreationDetail('');
-        setProjectCreationError('');
-        setConnectorSearch('');
-        setConnectorLimit(connectorPageSize);
-        setOtherConnectorsExpanded(false);
-        setConnectors([]);
-        setOperations([]);
-        setCatalogNamespaceId('');
-        setLoadError(current => current?.scope === 'catalog' ? undefined : current);
-
-        if (selectedNamespaceId) {
-            setCatalogLoading(true);
-            vscodeApi.postMessage({
-                command: 'loadCatalog',
-                namespaceId: selectedNamespaceId,
-            });
-        } else {
-            setCatalogLoading(false);
-        }
-    }, [selectedNamespaceId, vscodeApi]);
+    }, [loadCatalog, viewModel.labels.creatingProject]);
 
     useEffect(() => {
         setConnectorLimit(connectorPageSize);
     }, [connectorSearch]);
 
-    const visibleConnectors = catalogNamespaceId === selectedNamespaceId ? connectors : [];
-    const selectedNamespace = namespaces.find(namespace => namespace.id === selectedNamespaceId);
+    useEffect(() => {
+        if (!catalogSource) {
+            return;
+        }
+
+        const reconciled = reconcileConnectorTriggerSelection({
+            activeStep,
+            connectorId: selectedConnectorId,
+            operationId: selectedOperationId,
+        }, connectors, operations);
+        setSelectionUnavailable(reconciled.selectionUnavailable);
+        if (reconciled.connectorId !== selectedConnectorId) {
+            setSelectedConnectorId(reconciled.connectorId);
+        }
+        if (reconciled.operationId !== selectedOperationId) {
+            setSelectedOperationId(reconciled.operationId);
+            setDeliveryMode('Polling');
+        }
+        if (reconciled.activeStep !== activeStep) {
+            setActiveStep(reconciled.activeStep);
+        }
+    }, [
+        activeStep,
+        catalogSource,
+        connectors,
+        operations,
+        selectedConnectorId,
+        selectedOperationId,
+    ]);
+
+    const visibleConnectors = connectors;
     const selectedConnector = visibleConnectors.find(connector => connector.id === selectedConnectorId);
     const connectorOperations = operations.filter(operation =>
         equalsIgnoreCase(operation.connectorId, selectedConnectorId));
     const selectedOperation = connectorOperations.find(operation => operation.id === selectedOperationId);
+    const selectedCatalogItemUnavailable =
+        selectedConnector?.availability === 'unavailable' ||
+        selectedOperation?.availability === 'unavailable';
     const filteredConnectors = useMemo(() => {
         const query = connectorSearch.trim().toLocaleLowerCase();
         if (!query) {
@@ -212,67 +160,14 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         connectorGroups.other :
         connectorGroups.other.slice(0, connectorLimit);
 
-    const requestOperationInputs = useCallback((force = false) => {
-        if (!selectedNamespaceId || !selectedConnectorId || !selectedOperationId) {
-            return;
-        }
-
-        const key = getOperationKey(
-            selectedNamespaceId,
-            selectedConnectorId,
-            selectedOperationId,
-        );
-        if (!force && operationInputRequestKeyRef.current === key) {
-            return;
-        }
-
-        operationInputRequestKeyRef.current = key;
-        setOperationInputsLoading(true);
-        setOperationInputsError('');
-        vscodeApi.postMessage({
-            command: 'loadOperationInputs',
-            namespaceId: selectedNamespaceId,
-            connectorId: selectedConnectorId,
-            operationId: selectedOperationId,
-        });
-    }, [
-        selectedConnectorId,
-        selectedNamespaceId,
-        selectedOperationId,
-        vscodeApi,
-    ]);
-
-    useEffect(() => {
-        selectedOperationKeyRef.current = getOperationKey(
-            selectedNamespaceId,
-            selectedConnectorId,
-            selectedOperationId,
-        );
-        if (activeStep !== 3 || !selectedOperation) {
-            return;
-        }
-
-        if (selectedOperation.inputDefinitions === undefined) {
-            requestOperationInputs();
-        } else {
-            setOperationInputsLoading(false);
-            setOperationInputsError('');
-        }
-    }, [
-        activeStep,
-        requestOperationInputs,
-        selectedConnectorId,
-        selectedNamespaceId,
-        selectedOperation,
-        selectedOperationId,
-    ]);
-
     const selectConnector = (connectorId: string) => {
+        if (visibleConnectors.find(connector => connector.id === connectorId)?.availability === 'unavailable') {
+            return;
+        }
+
         if (connectorId !== selectedConnectorId) {
             setSelectedOperationId('');
             setDeliveryMode('Polling');
-            setOperationInputsLoading(false);
-            setOperationInputsError('');
             setProjectCreationError('');
         }
         setSelectedConnectorId(connectorId);
@@ -285,20 +180,27 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             return;
         }
 
+        if (operation.availability === 'unavailable') {
+            return;
+        }
+
         const support = getDeliverySupport(operation);
         if (!support.polling) {
             return;
         }
         setSelectedOperationId(operationId);
         setDeliveryMode('Polling');
-        setOperationInputsLoading(false);
-        setOperationInputsError('');
         setProjectCreationError('');
         setActiveStep(3);
     };
 
     const useTemplate = () => {
-        if (projectCreating || !selectedNamespace || !selectedConnector || !selectedOperation) {
+        if (projectCreating ||
+            catalogLoading ||
+            !!loadError ||
+            selectedCatalogItemUnavailable ||
+            !selectedConnector ||
+            !selectedOperation) {
             return;
         }
 
@@ -307,7 +209,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setProjectCreationError('');
         vscodeApi.postMessage({
             command: 'continue',
-            namespaceId: selectedNamespace.id,
             connectorId: selectedConnector.id,
             operationId: selectedOperation.id,
             deliveryMode,
@@ -331,141 +232,107 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     <h2>{viewModel.labels.connectorPageTitle}</h2>
                     <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
 
-                    <div className="namespace-field">
-                        <label htmlFor="connector-namespace">{viewModel.labels.namespaceGroup}</label>
-                        {namespacesLoading ?
-                            <p className="status-text">{viewModel.labels.loadingNamespaces}</p> :
-                            <select
-                                id="connector-namespace"
-                                value={selectedNamespaceId}
-                                disabled={creatingNamespace}
-                                onChange={event => {
-                                    const value = event.target.value;
-                                    if (value === createNamespaceOption) {
-                                        setCreatingNamespace(true);
-                                        setLoadError(undefined);
-                                        vscodeApi.postMessage({ command: 'createNamespace' });
-                                    } else {
-                                        setSelectedNamespaceId(value);
-                                    }
-                                }}
-                            >
-                                <option value="">{viewModel.labels.selectNamespace}</option>
-                                <option value={createNamespaceOption}>{viewModel.labels.createNamespace}</option>
-                                {namespaces.map(namespace =>
-                                    <option key={namespace.id} value={namespace.id}>
-                                        {formatNamespaceLabel(namespace)}
-                                    </option>
-                                )}
-                            </select>
-                        }
-                        {!namespacesLoading && namespaces.length === 0 &&
-                            <p className="status-text">{viewModel.labels.noNamespaces}</p>
-                        }
-                        {creatingNamespace &&
-                            <p className="status-text">{viewModel.labels.creatingNamespace}</p>
-                        }
-                        {namespaceWarning && <p className="warning-text">{namespaceWarning}</p>}
-                        {loadError?.scope === 'namespaces' &&
-                            <LoadError
-                                message={loadError.message}
-                                retryLabel={viewModel.labels.retry}
-                                onRetry={loadNamespaces}
-                            />
-                        }
-                    </div>
+                    {catalogSource &&
+                        <div className={`catalog-status ${catalogSource}`}>
+                            <strong>{getCatalogSourceLabel(catalogSource, viewModel.labels)}</strong>
+                            <span>{viewModel.labels.catalogSetupDeferred}</span>
+                            {catalogLoading && <span>{viewModel.labels.refreshingCatalog}</span>}
+                            {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
+                            {selectionUnavailable &&
+                                <span className="warning-text">{viewModel.labels.selectionUnavailable}</span>
+                            }
+                        </div>
+                    }
 
-                    {selectedNamespaceId &&
-                        <>
-                            {catalogLoading ?
-                                <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
-                                loadError?.scope === 'catalog' ?
-                                    <LoadError
-                                        message={loadError.message}
-                                        retryLabel={viewModel.labels.retry}
-                                        onRetry={() => {
-                                            setLoadError(undefined);
-                                            setCatalogLoading(true);
-                                            vscodeApi.postMessage({
-                                                command: 'loadCatalog',
-                                                namespaceId: selectedNamespaceId,
-                                            });
-                                        }}
-                                    /> :
-                                    visibleConnectors.length === 0 ?
-                                        <p className="status-text">{viewModel.labels.noConnectors}</p> :
-                                        <>
-                                            <label className="search-field">
-                                                <span className="codicon codicon-search" aria-hidden="true" />
-                                                <input
-                                                    value={connectorSearch}
-                                                    placeholder={viewModel.labels.connectorSearchPlaceholder}
-                                                    onChange={event => setConnectorSearch(event.target.value)}
+                    {catalogLoading && visibleConnectors.length === 0 ?
+                        <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
+                        loadError && visibleConnectors.length === 0 ?
+                            <LoadError
+                                message={loadError}
+                                retryLabel={viewModel.labels.retry}
+                                onRetry={loadCatalog}
+                            /> :
+                            visibleConnectors.length === 0 ?
+                                <p className="status-text">{viewModel.labels.noConnectors}</p> :
+                                <>
+                                    {loadError &&
+                                        <LoadError
+                                            message={loadError}
+                                            retryLabel={viewModel.labels.retry}
+                                            onRetry={loadCatalog}
+                                        />
+                                    }
+                                    <label className="search-field">
+                                        <span className="codicon codicon-search" aria-hidden="true" />
+                                        <input
+                                            value={connectorSearch}
+                                            placeholder={viewModel.labels.connectorSearchPlaceholder}
+                                            onChange={event => setConnectorSearch(event.target.value)}
+                                        />
+                                    </label>
+                                    <p className="result-count">
+                                        {format(
+                                            viewModel.labels.connectorCount,
+                                            filteredConnectors.length.toString(),
+                                        )}
+                                    </p>
+                                    {connectorGroups.featured.length > 0 &&
+                                        <section className="featured-connectors">
+                                            <h3>{viewModel.labels.featuredConnectors}</h3>
+                                            <ConnectorTilePicker
+                                                label={viewModel.labels.featuredConnectors}
+                                                options={connectorGroups.featured}
+                                                unavailableLabel={viewModel.labels.unavailable}
+                                                value={selectedConnectorId}
+                                                onChange={selectConnector}
+                                            />
+                                        </section>
+                                    }
+                                    {connectorGroups.other.length > 0 &&
+                                        <section className="other-connectors">
+                                            <button
+                                                type="button"
+                                                className="other-connectors-toggle"
+                                                aria-controls="other-connectors-grid"
+                                                aria-expanded={otherConnectorsVisible}
+                                                aria-label={otherConnectorsVisible ?
+                                                    viewModel.labels.hideOtherConnectors :
+                                                    viewModel.labels.showOtherConnectors}
+                                                disabled={!!connectorSearch.trim()}
+                                                onClick={() => setOtherConnectorsExpanded(expanded => !expanded)}
+                                            >
+                                                <span
+                                                    className={`codicon codicon-chevron-${otherConnectorsVisible ? 'down' : 'right'}`}
+                                                    aria-hidden="true"
                                                 />
-                                            </label>
-                                            <p className="result-count">
                                                 {format(
-                                                    viewModel.labels.connectorCount,
-                                                    filteredConnectors.length.toString(),
+                                                    viewModel.labels.otherConnectors,
+                                                    connectorGroups.other.length.toString(),
                                                 )}
-                                            </p>
-                                            {connectorGroups.featured.length > 0 &&
-                                                <section className="featured-connectors">
-                                                    <h3>{viewModel.labels.featuredConnectors}</h3>
+                                            </button>
+                                            {otherConnectorsVisible &&
+                                                <div id="other-connectors-grid">
                                                     <ConnectorTilePicker
-                                                        label={viewModel.labels.featuredConnectors}
-                                                        options={connectorGroups.featured}
+                                                        label={viewModel.labels.connectorGroup}
+                                                        options={displayedOtherConnectors}
+                                                        unavailableLabel={viewModel.labels.unavailable}
                                                         value={selectedConnectorId}
                                                         onChange={selectConnector}
                                                     />
-                                                </section>
-                                            }
-                                            {connectorGroups.other.length > 0 &&
-                                                <section className="other-connectors">
-                                                    <button
-                                                        type="button"
-                                                        className="other-connectors-toggle"
-                                                        aria-controls="other-connectors-grid"
-                                                        aria-expanded={otherConnectorsVisible}
-                                                        aria-label={otherConnectorsVisible ?
-                                                            viewModel.labels.hideOtherConnectors :
-                                                            viewModel.labels.showOtherConnectors}
-                                                        disabled={!!connectorSearch.trim()}
-                                                        onClick={() => setOtherConnectorsExpanded(expanded => !expanded)}
-                                                    >
-                                                        <span
-                                                            className={`codicon codicon-chevron-${otherConnectorsVisible ? 'down' : 'right'}`}
-                                                            aria-hidden="true"
-                                                        />
-                                                        {format(
-                                                            viewModel.labels.otherConnectors,
-                                                            connectorGroups.other.length.toString(),
-                                                        )}
-                                                    </button>
-                                                    {otherConnectorsVisible &&
-                                                        <div id="other-connectors-grid">
-                                                            <ConnectorTilePicker
-                                                                label={viewModel.labels.connectorGroup}
-                                                                options={displayedOtherConnectors}
-                                                                value={selectedConnectorId}
-                                                                onChange={selectConnector}
-                                                            />
-                                                            {displayedOtherConnectors.length < connectorGroups.other.length &&
-                                                                <Button
-                                                                    appearance="secondary"
-                                                                    className="show-more"
-                                                                    onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}
-                                                                >
-                                                                    {viewModel.labels.showMoreConnectors}
-                                                                </Button>
-                                                            }
-                                                        </div>
+                                                    {displayedOtherConnectors.length < connectorGroups.other.length &&
+                                                        <Button
+                                                            appearance="secondary"
+                                                            className="show-more"
+                                                            onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}
+                                                        >
+                                                            {viewModel.labels.showMoreConnectors}
+                                                        </Button>
                                                     }
-                                                </section>
+                                                </div>
                                             }
-                                        </>
-                            }
-                        </>
+                                        </section>
+                                    }
+                                </>
                     }
                 </section>
             }
@@ -481,22 +348,25 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 />
             }
 
-            {activeStep === 3 && selectedNamespace && selectedConnector && selectedOperation &&
+            {activeStep === 3 && catalogSource && selectedConnector && selectedOperation &&
                 <ConnectorConfigureStep
+                    catalogLoading={catalogLoading || !!loadError}
+                    catalogSource={catalogSource}
                     connector={selectedConnector}
                     deliveryMode={deliveryMode}
                     labels={viewModel.labels}
                     language={viewModel.language}
-                    namespace={selectedNamespace}
                     operation={selectedOperation}
-                    operationInputsError={operationInputsError}
-                    operationInputsLoading={operationInputsLoading}
+                    operationInputsError=""
+                    operationInputsDeferred={selectedOperation.inputDefinitions === undefined}
+                    operationInputsLoading={false}
                     projectCreating={projectCreating}
                     projectCreationDetail={projectCreationDetail}
                     projectCreationError={projectCreationError}
+                    templateUnavailable={selectedCatalogItemUnavailable}
                     onChangeDeliveryMode={setDeliveryMode}
                     onChangeEvent={() => setActiveStep(2)}
-                    onRetryOperationInputs={() => requestOperationInputs(true)}
+                    onRetryOperationInputs={() => undefined}
                     onUseTemplate={useTemplate}
                 />
             }
@@ -504,21 +374,22 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     );
 }
 
-function formatNamespaceLabel(namespace: ConnectorNamespaceOption): string {
-    const context = [namespace.subscriptionName, namespace.location].filter(Boolean).join(' - ');
-    return context ? `${namespace.label} (${context})` : namespace.label;
-}
-
 function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }
 
-function getOperationKey(
-    namespaceId: string,
-    connectorId: string,
-    operationId: string,
+function getCatalogSourceLabel(
+    source: ConnectorTriggerCatalogSource,
+    labels: ConnectorTriggerPickerViewModel['labels'],
 ): string {
-    return `${namespaceId}\n${connectorId.toLowerCase()}\n${operationId.toLowerCase()}`;
+    switch (source) {
+        case 'live':
+            return labels.liveCatalogSource;
+        case 'remote':
+            return labels.remoteCatalogSource;
+        default:
+            return labels.bundledCatalogSource;
+    }
 }
 
 function format(template: string, ...values: string[]): string {

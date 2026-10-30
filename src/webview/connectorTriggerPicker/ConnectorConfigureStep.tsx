@@ -7,6 +7,7 @@ import { Button } from '@fluentui/react-components';
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { ConnectorBrandIcon } from './ConnectorBrandIcon';
 import {
+    type ConnectorTriggerCatalogSource,
     type ConnectorDeliveryMode,
     type ConnectorNamespaceOption,
     type ConnectorTriggerInputDefinition,
@@ -16,17 +17,21 @@ import {
 } from './ConnectorTriggerPickerViewModel';
 
 interface ConnectorConfigureStepProps {
+    catalogLoading: boolean;
+    catalogSource: ConnectorTriggerCatalogSource;
     connector: ConnectorTriggerOption;
     deliveryMode: ConnectorDeliveryMode;
     labels: ConnectorTriggerPickerViewModel['labels'];
     language?: string;
-    namespace: ConnectorNamespaceOption;
+    namespace?: ConnectorNamespaceOption;
     operation: ConnectorTriggerOperationOption;
     operationInputsError: string;
+    operationInputsDeferred: boolean;
     operationInputsLoading: boolean;
     projectCreating: boolean;
     projectCreationDetail: string;
     projectCreationError: string;
+    templateUnavailable: boolean;
     onChangeDeliveryMode: (deliveryMode: ConnectorDeliveryMode) => void;
     onChangeEvent: () => void;
     onRetryOperationInputs: () => void;
@@ -34,6 +39,8 @@ interface ConnectorConfigureStepProps {
 }
 
 export function ConnectorConfigureStep({
+    catalogLoading,
+    catalogSource,
     connector,
     deliveryMode,
     labels,
@@ -41,10 +48,12 @@ export function ConnectorConfigureStep({
     namespace,
     operation,
     operationInputsError,
+    operationInputsDeferred,
     operationInputsLoading,
     projectCreating,
     projectCreationDetail,
     projectCreationError,
+    templateUnavailable,
     onChangeDeliveryMode,
     onChangeEvent,
     onRetryOperationInputs,
@@ -61,17 +70,21 @@ export function ConnectorConfigureStep({
     );
     const triggerMetadata = useMemo(() => JSON.stringify({
         language: language || 'selected project language',
-        connectorNamespace: namespace.name,
+        catalogSource,
         connector: connector.id,
         trigger: operation.id,
         deliveryMode,
-    }, null, 2), [connector.id, deliveryMode, language, namespace.name, operation.id]);
-    const resourceMetadata = useMemo(() => JSON.stringify({
+        ...(namespace ? { connectorNamespace: namespace.name } : {}),
+    }, null, 2), [catalogSource, connector.id, deliveryMode, language, namespace, operation.id]);
+    const resourceMetadata = useMemo(() => JSON.stringify(namespace ? {
         subscription: namespace.subscriptionName,
         resourceGroup: namespace.resourceGroup,
         location: namespace.location,
         connectorNamespace: namespace.name,
-    }, null, 2), [namespace]);
+    } : {
+        catalogSource,
+        azureSetup: labels.resourceSetupDeferred,
+    }, null, 2), [catalogSource, labels.resourceSetupDeferred, namespace]);
 
     useEffect(() => {
         const initialValues: Record<string, string | boolean> = {};
@@ -138,7 +151,11 @@ export function ConnectorConfigureStep({
                 <p>{labels.eventParametersDescription}</p>
                 {operationInputsLoading ||
                     inputDefinitions === undefined && !operationInputsError ?
-                    <p className="status-text">{labels.loadingEventParameters}</p> :
+                    <p className="status-text">
+                        {operationInputsDeferred ?
+                            labels.eventParametersDeferred :
+                            labels.loadingEventParameters}
+                    </p> :
                     operationInputsError ?
                         <div className="load-error" role="alert">
                             <p>{operationInputsError}</p>
@@ -202,6 +219,8 @@ export function ConnectorConfigureStep({
                 }
             </div>
 
+            <p className="setup-deferred-note">{labels.catalogSetupDeferred}</p>
+
             <div className="preview-panel">
                 <div className="preview-callout">
                     <strong>{labels.selectionPreview}</strong>
@@ -233,14 +252,23 @@ export function ConnectorConfigureStep({
                 {projectCreationError &&
                     <p className="project-creation-error" role="alert">{projectCreationError}</p>
                 }
+                {templateUnavailable &&
+                    <p className="warning-text" role="status">{labels.selectionUnavailable}</p>
+                }
                 <div className="use-template-row">
                     {projectCreating && <span>{projectCreationDetail || labels.creatingProject}</span>}
                     <Button
                         appearance="primary"
-                        disabled={projectCreating}
+                        disabled={projectCreating || catalogLoading || templateUnavailable}
                         onClick={onUseTemplate}
                     >
-                        {projectCreating ? labels.creatingProject : labels.useTemplate}
+                        {projectCreating ?
+                            labels.creatingProject :
+                            templateUnavailable ?
+                                labels.unavailable :
+                            catalogLoading ?
+                                labels.refreshingCatalog :
+                                labels.useTemplate}
                     </Button>
                 </div>
             </div>

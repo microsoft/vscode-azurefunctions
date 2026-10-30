@@ -81,12 +81,16 @@ export function ConnectorEventStep({
                         <button
                             key={operation.id}
                             type="button"
-                            className={`event-card${selectedOperationId === operation.id ? ' selected' : ''}`}
+                            className={`event-card${selectedOperationId === operation.id ? ' selected' : ''}${operation.availability === 'unavailable' ? ' unavailable' : ''}`}
+                            disabled={operation.availability === 'unavailable'}
                             onClick={() => onSelectOperation(operation.id)}
                         >
                             <span>
                                 <strong>{operation.label}</strong>
                                 {operation.description && <small>{operation.description}</small>}
+                                {operation.availability === 'unavailable' &&
+                                    <small>{labels.unavailable}</small>
+                                }
                             </span>
                             <span className="codicon codicon-chevron-right" aria-hidden="true" />
                         </button>
