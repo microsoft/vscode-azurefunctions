@@ -1606,6 +1606,7 @@
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
+        "durable-functions": "3.6.0",
         "esbuild": "*",
         "husky": "^7.0.2",
         "tsx": "*",
