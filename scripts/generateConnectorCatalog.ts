@@ -557,7 +557,8 @@ async function runCli(): Promise<void> {
     if (errors.length > 0) {
         throw new Error(errors.join('\n'));
     }
-    if (manifestContents !== `${JSON.stringify(manifest, null, 2)}\n`) {
+    const normalizedManifestContents = manifestContents.replace(/\r\n/g, '\n');
+    if (normalizedManifestContents !== `${JSON.stringify(manifest, null, 2)}\n`) {
         throw new Error('Project template manifest is not deterministically formatted.');
     }
 

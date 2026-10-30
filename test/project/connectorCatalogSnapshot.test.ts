@@ -37,7 +37,10 @@ suite('Connector catalog snapshot', () => {
         const catalog = manifest.connectorCatalog;
 
         assert.deepStrictEqual(validateConnectorCatalog(catalog), []);
-        assert.strictEqual(contents, `${JSON.stringify(manifest, null, 2)}\n`);
+        assert.strictEqual(
+            contents.replace(/\r\n/g, '\n'),
+            `${JSON.stringify(manifest, null, 2)}\n`,
+        );
         assert.strictEqual(manifest.totalTemplates, manifest.templates.length);
         assert.strictEqual(catalog.version, connectorCatalogVersion);
         assert.deepStrictEqual(
