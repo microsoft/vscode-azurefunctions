@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
+import { getPollingConnectorConnectionPrefixes } from '../../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 suite('Connector trigger Poll project scaffolding', () => {
     let projectPath: string;
@@ -46,6 +47,10 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.match(functionContents, /DeliveryMode = ConnectorTriggerDeliveryMode\.Poll/);
         assert.match(functionContents, /Connection = "ConnectorNamespace"/);
         assert.match(functionContents, /TriggerConfigName = "%ConnectorTriggerConfigName%"/);
+        assert.deepStrictEqual(
+            getPollingConnectorConnectionPrefixes(functionContents),
+            ['ConnectorNamespace'],
+        );
     });
 
     test('adds a TypeScript Poll binding with stable setting references', async () => {
@@ -57,6 +62,10 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.match(functionContents, /deliveryMode: 'Poll'/);
         assert.match(functionContents, /connection: 'ConnectorNamespace'/);
         assert.match(functionContents, /triggerConfigName: '%ConnectorTriggerConfigName%'/);
+        assert.deepStrictEqual(
+            getPollingConnectorConnectionPrefixes(functionContents),
+            ['ConnectorNamespace'],
+        );
     });
 
     test('adds an idempotent Python Poll binding and minimum SDK version', async () => {
@@ -83,5 +92,9 @@ azurefunctions-extensions-connectors
         assert.match(functionContents, /delivery_mode=func\.DeliveryMode\.POLL/);
         assert.match(functionContents, /trigger_config_name="%ConnectorTriggerConfigName%"/);
         assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
+        assert.deepStrictEqual(
+            getPollingConnectorConnectionPrefixes(functionContents),
+            ['ConnectorNamespace'],
+        );
     });
 });
