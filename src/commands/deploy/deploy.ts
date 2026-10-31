@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type Site, type SiteConfigResource } from '@azure/arm-appservice';
-import { getDeployFsPath, getDeployNode, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { getDeployFsPath, deploy as innerDeploy, showDeployConfirmation, type IDeployContext, type IDeployPaths, type InnerDeployContext, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { ResourceGroupListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, DialogResponses, subscriptionExperience, UserCancelledError, type ExecuteActivityContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { type AzureSubscription } from '@microsoft/vscode-azureresources-api';
@@ -23,7 +23,6 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
 import { isMcpProject } from '../../utils/mcpUtils';
-import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { CommandAttributes } from '../CommandAttributes';
@@ -36,7 +35,7 @@ import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { CreateRemoteMcpServerExecuteStep } from './CreateRemoteMcpServerExecuteStep';
 import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
-import { getOrCreateFunctionApp } from './getOrCreateFunctionApp';
+import { getFunctionAppToDeploy } from './getOrCreateFunctionApp';
 import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
 import { getWarningsForConnectionSettings } from './getWarningsForConnectionSettings';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -62,7 +61,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
     await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.pickSlotContextValue));
 }
 
-async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, _expectedContextValue?: string | RegExp): Promise<void> {
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue?: string | RegExp): Promise<void> {
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
@@ -80,18 +79,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         projectPath,
     });
 
-    if (treeUtils.isAzExtTreeItem(arg1)) {
-        if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
-            !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue) &&
-            !arg1.contextValue.match(ResolvedFunctionAppResource.flexContextValue)) {
-            // if the user uses the deploy button, it's possible for the local project node to be passed in, so we should reset it to undefined
-            arg1 = undefined;
-        }
-    }
-
-    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
-        return await getOrCreateFunctionApp(context);
-    });
+    const node = await getFunctionAppToDeploy(context, arg1, arg2, expectedContextValue);
 
     await node.initSite(context);
     const site = node.site;
@@ -368,4 +356,3 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
 }
-

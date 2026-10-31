@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+* [[4354](https://github.com/microsoft/vscode-azurefunctions/issues/4354), [4145](https://github.com/microsoft/vscode-azurefunctions/issues/4145)] Select a deployment slot instead of falling back to production when using Deploy to Slot.
 * Install Python requirements when creating a virtual environment and migrate legacy Python launch configurations without adding duplicates.
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 * [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238), [5239](https://github.com/microsoft/vscode-azurefunctions/pull/5239)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.

@@ -3,17 +3,48 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { getDeployNode } from "@microsoft/vscode-azext-azureappservice";
 import { AzureWizard, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ProgressLocation, l10n, window } from "vscode";
+import { ProgressLocation, l10n, window, type Uri } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 import { ResolvedFunctionAppResource } from "../../tree/ResolvedFunctionAppResource";
 import { type SlotTreeItem } from "../../tree/SlotTreeItem";
 import { ResolvedContainerizedFunctionAppResource } from "../../tree/containerizedFunctionApp/ResolvedContainerizedFunctionAppResource";
+import { pickFunctionApp } from "../../utils/pickFunctionApp";
+import { treeUtils } from "../../utils/treeUtils";
 import { SubscriptionListStep } from "../SubscriptionListStep";
 import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { FunctionAppListStep } from "./FunctionAppListStep";
 import { type IFuncDeployContext } from "./deploy";
+
+export async function getFunctionAppToDeploy(context: IFuncDeployContext, arg1: Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue?: string | RegExp): Promise<SlotTreeItem> {
+    if (treeUtils.isAzExtTreeItem(arg1)) {
+        if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
+            !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue) &&
+            !arg1.contextValue.match(ResolvedFunctionAppResource.flexContextValue)) {
+            // The deploy button can pass a local project node rather than a deployment target.
+            arg1 = undefined;
+        }
+    }
+
+    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => {
+        return expectedContextValue ?
+            await pickFunctionApp(context, { expectedChildContextValue: expectedContextValue }) :
+            await getOrCreateFunctionApp(context);
+    });
+
+    if (!expectedContextValue || node.contextValue.match(expectedContextValue)) {
+        return node;
+    }
+
+    const slot = await ext.rgApi.appResourceTree.showTreeItemPicker<SlotTreeItem>(expectedContextValue, context, node);
+    if (!slot.contextValue.match(expectedContextValue)) {
+        throw new Error(l10n.t('The selected deployment target is not a deployment slot.'));
+    }
+
+    return slot;
+}
 
 export async function getOrCreateFunctionApp(context: IFuncDeployContext & Partial<IFunctionAppWizardContext>): Promise<SlotTreeItem> {
     let node: SlotTreeItem | undefined;
