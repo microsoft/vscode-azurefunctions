@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, nonNullValue, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
@@ -70,7 +70,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
-        const newFilePath: string = await this.executeCore(context);
+        const newFilePath = await withTelemetryStage(context, { stage: 'functionCreation' }, async () => this.executeCore(context));
         if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
             context.mcpProjectType = McpProjectType.McpExtensionServer;
@@ -134,7 +134,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
         }
 
-        runPostFunctionCreateSteps(cachedFunc);
+        runPostFunctionCreateSteps(cachedFunc, context);
     }
 
     public shouldExecute(context: T): boolean {
@@ -142,9 +142,13 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 }
 
-function runPostFunctionCreateSteps(func: ICachedFunction): void {
+function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActionContext): void {
     // Don't wait
     void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+        if (parentContext?.telemetry.properties.workflowRunId) {
+            initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'unknown' }, parentContext);
+            context.valuesToMask.push(...parentContext.valuesToMask);
+        }
         context.telemetry.suppressIfSuccessful = true;
 
         // If function creation created a new file, open it in an editor...

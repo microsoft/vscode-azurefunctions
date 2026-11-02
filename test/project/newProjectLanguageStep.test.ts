@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, AzureWizardExecuteStep, createTestActionContext, initializeWorkflowTelemetry, UserCancelledError, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { QuickPickItemKind } from 'vscode';
 import { ProjectLanguage } from '../../src/constants';
+import { FuncVersion } from '../../src/FuncVersion';
 import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { NewProjectLanguageStep } from '../../src/commands/createNewProject/NewProjectLanguageStep';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
+import { telemetryUtils } from '../../src/utils/telemetryUtils';
+import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
 
 suite('NewProjectLanguageStep', () => {
     const browseTemplateGalleryLabel = 'Browse Template Gallery (Preview)...';
@@ -73,6 +76,48 @@ suite('NewProjectLanguageStep', () => {
             initialFilters: { language: 'go' },
         });
         assert.strictEqual(context.telemetry.properties.flow, 'templateGalleryFromGo');
+    });
+
+    test('gallery handoff exits a real wizard before any classic execute step', async () => {
+        let executions = 0;
+        const context = Object.assign(await createTestActionContext(), {
+            projectPath: 'selected-project',
+            workspacePath: 'selected-project',
+            workspaceFolder: undefined,
+            version: FuncVersion.v4,
+            projectTemplateKey: undefined,
+        });
+        initializeWorkflowTelemetry(context, {
+            workflow: 'createProject', command: 'createNewProject', stepNames: telemetryUtils.projectCreationStepNames,
+        });
+        context.ui.showQuickPick = async picks => {
+            const resolvedPicks = await picks;
+            const pick = resolvedPicks.find(item => item.label === templateGalleryGuidanceLabel);
+            assert.ok(pick?.onPicked);
+            await pick.onPicked();
+            throw new Error('Expected gallery handoff.');
+        };
+        class ClassicExecuteStep extends AzureWizardExecuteStep<IProjectWizardContext> {
+            public priority = 1;
+            public async execute(): Promise<void> { executions++; }
+            public shouldExecute(): boolean { return true; }
+        }
+        const wizard = new AzureWizard(context, {
+            promptSteps: [new NewProjectLanguageStep(undefined, undefined, () => undefined)],
+            executeSteps: [new ClassicExecuteStep()],
+        });
+
+        await runWithTelemetryContext(context, async () => {
+            await assert.rejects(async () => {
+                await wizard.prompt();
+                await wizard.execute();
+            }, UserCancelledError);
+        });
+
+        assert.strictEqual(executions, 0);
+        assert.strictEqual(context.telemetry.properties.outcome, 'handedOff');
+        assert.strictEqual(context.telemetry.properties.cancelReason, 'templateGallery');
+        assert.strictEqual(context.telemetry.properties.lastStep, 'prompt-NewProjectLanguageStep');
     });
 
     test('does not offer Go for containerized projects', async () => {

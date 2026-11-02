@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { handleFailedPreDeployTask, tryRunPreDeployTask, type IDeployContext, type IPreDeployTaskResult } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, setWorkflowOutcome, startWorkflowUserWait, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { buildNativeDeps, packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -30,6 +30,9 @@ export async function runPreDeployTask(context: IDeployContext, deployFsPath: st
     }
 
     if (result.failedToFindTask) {
+        setWorkflowOutcome(context, 'blocked', {
+            cancelReason: 'preDeployTask', failureCategory: 'task', failureCode: 'preDeployTaskMissing',
+        });
         throw new Error(localize('noPreDeployTaskError', 'Failed to find preDeploy task "{0}". Modify the setting "{1}.{2}" or add that task to {3}.', result.taskName, ext.prefix, preDeployTaskSetting, tasksFileName));
     } else if (result.exitCode !== undefined && result.exitCode !== 0) {
         await handleFailedPreDeployTask(context, result);
@@ -38,17 +41,29 @@ export async function runPreDeployTask(context: IDeployContext, deployFsPath: st
 
 async function promptToBuildNativeDeps(context: IDeployContext, deployFsPath: string, scmType: string | undefined): Promise<IPreDeployTaskResult> {
     const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?');
-    const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
+    const userWait = startWorkflowUserWait(context);
+    let result: vscode.MessageItem | undefined;
+    try {
+        result = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
+    } finally {
+        userWait.dispose();
+    }
     if (result === DialogResponses.yes) {
         context.telemetry.properties.preDeployTaskResponse = 'packNativeDeps';
         await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${buildNativeDeps}`, deployFsPath);
-        return await tryRunPreDeployTask(context, deployFsPath, scmType);
+        return await tryRunPreDeployTask(context, deployFsPath, scmType, { isRetry: true });
     } else if (result === DialogResponses.learnMore) {
         context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';
+        setWorkflowOutcome(context, 'failed', {
+            cancelReason: 'preDeployTask', failureCategory: 'task', failureCode: 'preDeployTaskFailed',
+        });
         await openUrl('https://aka.ms/func-python-publish');
         throw new UserCancelledError('funcPackFailed|learnMore');
     } else {
         context.telemetry.properties.preDeployTaskResponse = 'cancel';
+        setWorkflowOutcome(context, 'failed', {
+            cancelReason: 'preDeployTask', failureCategory: 'task', failureCode: 'preDeployTaskFailed',
+        });
         throw new UserCancelledError('funcPackFailed');
     }
 }

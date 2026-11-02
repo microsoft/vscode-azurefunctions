@@ -9,6 +9,7 @@ import { getContainingWorkspace, selectWorkspaceFolder } from '../../utils/works
 import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext> {
+    public telemetryId: string = 'FolderListStep';
     public hideStepCount: boolean = true;
 
     public static setProjectPath(context: Partial<IProjectWizardContext>, projectPath: string): void {

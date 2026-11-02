@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, parseError, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -18,6 +18,7 @@ import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
 import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
@@ -143,6 +144,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
+            initializeWorkflowTelemetry(actionContext, {
+                workflow: 'createProject', command: 'templateGallery.createProject', stepNames: telemetryUtils.projectCreationStepNames,
+            });
             actionContext.telemetry.properties.templateId = template.id;
             actionContext.telemetry.properties.templateName = template.displayName;
             actionContext.telemetry.properties.language = language;
@@ -157,104 +161,106 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             // confirm with the user before clobbering.
             await this.confirmTargetNotEmpty(actionContext, projectPath);
 
-            try {
-                const gitInstalled = await this.isGitInstalled();
-                actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
+            await withTelemetryStage(actionContext, { stage: 'projectCreation' }, async () => {
+                try {
+                    const gitInstalled = await this.isGitInstalled();
+                    actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
-                if (gitInstalled) {
-                    if (specificFolder) {
-                        this.sendProgress('Cloning template (sparse)...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
-                            '--branch', branch, template.repositoryUrl, tempDir]);
-                        await cpUtils.executeCommand(undefined, tempDir,
-                            'git', ['sparse-checkout', 'set', specificFolder]);
+                    if (gitInstalled) {
+                        if (specificFolder) {
+                            this.sendProgress('Cloning template (sparse)...');
+                            await cpUtils.executeCommand(undefined, undefined,
+                                'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
+                                '--branch', branch, template.repositoryUrl, tempDir]);
+                            await cpUtils.executeCommand(undefined, tempDir,
+                                'git', ['sparse-checkout', 'set', specificFolder]);
 
-                        const sourceDir = path.join(tempDir, specificFolder);
-                        if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                            throw new Error(`Template folder "${specificFolder}" not found in repository`);
+                            const sourceDir = path.join(tempDir, specificFolder);
+                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
+                                throw new Error(`Template folder "${specificFolder}" not found in repository`);
+                            }
+                            this.sendProgress('Setting up project files...');
+                            await AzExtFsExtra.ensureDir(projectPath);
+                            await this.copyDirectory(sourceDir, projectPath);
+                        } else {
+                            this.sendProgress('Cloning template repository...');
+                            await cpUtils.executeCommand(undefined, undefined,
+                                'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
+
+                            let sourceDir = tempDir;
+                            if (template.subdirectory) {
+                                sourceDir = path.join(tempDir, template.subdirectory);
+                                if (!await AzExtFsExtra.pathExists(sourceDir)) {
+                                    throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
+                                }
+                            }
+                            this.sendProgress('Setting up project files...');
+                            await AzExtFsExtra.ensureDir(projectPath);
+                            await this.copyDirectory(sourceDir, projectPath);
                         }
+                    } else {
+                        this.sendProgress('Downloading template (git not found, using zip)...');
+                        await this.downloadAndExtractZip(actionContext, template.repositoryUrl, branch, tempDir);
+
                         this.sendProgress('Setting up project files...');
+                        let sourceDir = tempDir;
+                        if (specificFolder) {
+                            sourceDir = path.join(tempDir, specificFolder);
+                        } else if (template.subdirectory) {
+                            sourceDir = path.join(tempDir, template.subdirectory);
+                        }
                         await AzExtFsExtra.ensureDir(projectPath);
                         await this.copyDirectory(sourceDir, projectPath);
-                    } else {
-                        this.sendProgress('Cloning template repository...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
+                    }
 
-                        let sourceDir = tempDir;
-                        if (template.subdirectory) {
-                            sourceDir = path.join(tempDir, template.subdirectory);
-                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
+                    if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
+                        for (const hostFile of await findFiles(projectPath, `**/${hostFileName}`)) {
+                            const functionProjectPath = path.dirname(hostFile.fsPath);
+                            if (await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
+                                this.sendProgress(localize('installingNpmDependencies', 'Installing npm dependencies...'));
+                                await installNodeDependencies(actionContext, functionProjectPath);
                             }
                         }
-                        this.sendProgress('Setting up project files...');
-                        await AzExtFsExtra.ensureDir(projectPath);
-                        await this.copyDirectory(sourceDir, projectPath);
                     }
-                } else {
-                    this.sendProgress('Downloading template (git not found, using zip)...');
-                    await this.downloadAndExtractZip(actionContext, template.repositoryUrl, branch, tempDir);
 
-                    this.sendProgress('Setting up project files...');
-                    let sourceDir = tempDir;
-                    if (specificFolder) {
-                        sourceDir = path.join(tempDir, specificFolder);
-                    } else if (template.subdirectory) {
-                        sourceDir = path.join(tempDir, template.subdirectory);
-                    }
-                    await AzExtFsExtra.ensureDir(projectPath);
-                    await this.copyDirectory(sourceDir, projectPath);
-                }
-
-                if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
-                    for (const hostFile of await findFiles(projectPath, `**/${hostFileName}`)) {
-                        const functionProjectPath = path.dirname(hostFile.fsPath);
-                        if (await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
-                            this.sendProgress(localize('installingNpmDependencies', 'Installing npm dependencies...'));
-                            await installNodeDependencies(actionContext, functionProjectPath);
+                    this.sendProgress('Initializing git repository...');
+                    // Remove the cloned template's git history so the user gets a fresh repo
+                    // without the original author's commits.
+                    const gitDir = path.join(projectPath, '.git');
+                    try {
+                        if (await AzExtFsExtra.pathExists(gitDir)) {
+                            await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
                         }
+                    } catch {
+                        // Best-effort; continue with git init anyway
                     }
-                }
-
-                this.sendProgress('Initializing git repository...');
-                // Remove the cloned template's git history so the user gets a fresh repo
-                // without the original author's commits.
-                const gitDir = path.join(projectPath, '.git');
-                try {
-                    if (await AzExtFsExtra.pathExists(gitDir)) {
-                        await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
+                    try {
+                        await cpUtils.executeCommandLine(undefined, projectPath, 'git init');
+                    } catch {
+                        // git init is optional
                     }
-                } catch {
-                    // Best-effort; continue with git init anyway
+
+                    actionContext.telemetry.properties.result = 'Succeeded';
+
+                    // Open the README in the editor before disposing the webview so the user
+                    // doesn't see an empty editor pane between dispose and the project opening.
+                    await this.tryOpenReadme(projectPath);
+
+                    this.disposePanelIfOpen();
+
+                    void vscode.window.showInformationMessage(
+                        localize('projectCreated', 'Project created successfully at {0}', projectPath),
+                    );
+
+                    // Match the classic wizard's post-create behavior: prompt the user how to
+                    // open the newly created project (Open in current/new window, or Add to
+                    // workspace) and then act on it via the shared OpenFolderStep. This keeps
+                    // both flows consistent and reuses the same telemetry / activity output.
+                    await this.promptAndOpenProject(actionContext, projectPath);
+                } finally {
+                    try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
                 }
-                try {
-                    await cpUtils.executeCommandLine(undefined, projectPath, 'git init');
-                } catch {
-                    // git init is optional
-                }
-
-                actionContext.telemetry.properties.result = 'Succeeded';
-
-                // Open the README in the editor before disposing the webview so the user
-                // doesn't see an empty editor pane between dispose and the project opening.
-                await this.tryOpenReadme(projectPath);
-
-                this.disposePanelIfOpen();
-
-                void vscode.window.showInformationMessage(
-                    localize('projectCreated', 'Project created successfully at {0}', projectPath),
-                );
-
-                // Match the classic wizard's post-create behavior: prompt the user how to
-                // open the newly created project (Open in current/new window, or Add to
-                // workspace) and then act on it via the shared OpenFolderStep. This keeps
-                // both flows consistent and reuses the same telemetry / activity output.
-                await this.promptAndOpenProject(actionContext, projectPath);
-            } finally {
-                try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
-            }
+            });
         });
     }
 

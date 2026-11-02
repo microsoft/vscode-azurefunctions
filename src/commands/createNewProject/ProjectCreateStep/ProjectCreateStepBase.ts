@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
@@ -23,7 +23,7 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
         progress.report({ message: localize('creating', 'Creating new project...') });
         await AzExtFsExtra.ensureDir(context.projectPath);
 
-        await this.executeCore(context, progress);
+        await withTelemetryStage(context, { stage: 'projectCreation' }, async () => this.executeCore(context, progress));
 
         if (await gitUtils.isGitInstalled(context.workspacePath) && !await gitUtils.isInsideRepo(context.workspacePath)) {
             await gitUtils.gitInit(context.workspacePath);
@@ -31,7 +31,11 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
 
         // OpenFolderStep sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
         await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', (startedContext: IActionContext) => {
-            Object.assign(startedContext, context);
+            Object.assign(startedContext.telemetry.properties, context.telemetry.properties);
+            Object.assign(startedContext.telemetry.measurements, context.telemetry.measurements);
+            if (context.telemetry.properties.workflowRunId) {
+                initializeWorkflowTelemetry(startedContext, { workflow: 'createProject', command: 'createNewProject' }, context);
+            }
         });
     }
 

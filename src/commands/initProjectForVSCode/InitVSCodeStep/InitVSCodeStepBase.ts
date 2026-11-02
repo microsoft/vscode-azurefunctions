@@ -20,6 +20,7 @@ import { getTasks, getTasksVersion, tasksVersion, updateTasks, updateTasksVersio
 import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
 export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
+    public telemetryId: string = 'InitVSCodeStepBase';
     public priority: number = 20;
 
     protected preDeployTask?: string;

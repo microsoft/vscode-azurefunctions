@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, setWorkflowOutcome, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -66,7 +66,9 @@ export async function createNewProjectFromCommand(
             });
         },
         showTemplateGallery: () => {
-            FunctionsTemplateGalleryController.createOrShow(ext.context);
+            FunctionsTemplateGalleryController.createOrShow(ext.context, {
+                initialLocation: typeof folderPath === 'string' ? folderPath : undefined,
+            });
         },
     });
 }
@@ -103,6 +105,7 @@ export async function routeCreateNewProject(
     if (experience === 'templateGallery') {
         context.telemetry.properties.flow = 'templateGallery';
         handlers.showTemplateGallery();
+        setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
     } else {
         await handlers.createClassicProject();
     }

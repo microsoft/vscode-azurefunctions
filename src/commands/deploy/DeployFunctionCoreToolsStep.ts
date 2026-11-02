@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type InnerDeployContext } from "@microsoft/vscode-azext-azureappservice";
-import { ActivityChildItem, ActivityChildType, activityFailContext, activityFailIcon, activityProgressContext, activityProgressIcon, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, randomUtils, type ExecuteActivityOutput } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItem, ActivityChildType, activityFailContext, activityFailIcon, activityProgressContext, activityProgressIcon, activitySuccessContext, activitySuccessIcon, AzureWizardExecuteStep, createContextValue, randomUtils, setWorkflowOutcome, setWorkflowTelemetryDetails, withTelemetryStage, type ExecuteActivityOutput, type WorkflowTelemetryDetails } from "@microsoft/vscode-azext-utils";
 import { composeArgs, withArg, withNamedArg } from "@microsoft/vscode-processutils";
 import { l10n, ThemeIcon, TreeItemCollapsibleState, type Progress } from "vscode";
 import { ext } from "../../extensionVariables";
+import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
 
 export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDeployContext> {
-    stepName: string;
+    public stepName: string = 'DeployFunctionCoreToolsStep';
     private _childId: string = randomUtils.getRandomHexString(8); // create child id in class to make it idempotent
     private _command: { title: string; command: string } = {
         title: '',
@@ -87,16 +88,33 @@ export class DeployFunctionCoreToolsStep extends AzureWizardExecuteStep<InnerDep
     }
     public priority: number = 100;
     public async execute(context: InnerDeployContext, progress: Progress<{ message?: string; increment?: number; }>): Promise<void> {
-        const message = l10n.t('Publishing "{0}" to "{1}" with Function Core Tools...', context.originalDeployFsPath, context.site.fullName);
-        progress.report({ message });
-        context.activityAttributes = context.activityAttributes ?? { logs: [] };
-        const argBuilders = [withArg('azure', 'functionapp', 'publish', context.site.siteName)];
-        if (context.site.isSlot) {
-            argBuilders.push(withNamedArg('--slot', context.site.slotName ?? 'production'));
-        }
-        const args = composeArgs(...argBuilders)();
-        const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, 'func', args);
-        context.activityAttributes.logs = [{ content: cmdOutput.cmdOutputIncludingStderr }];
+        setWorkflowTelemetryDetails(context, { deploymentMechanism: 'funccli', deploymentStatus: 'unknown' });
+        await withTelemetryStage(context, { stage: 'deployment' }, async stage => {
+            const message = l10n.t('Publishing "{0}" to "{1}" with Function Core Tools...', context.originalDeployFsPath, context.site.fullName);
+            progress.report({ message });
+            context.activityAttributes = context.activityAttributes ?? { logs: [] };
+            const argBuilders = [withArg('azure', 'functionapp', 'publish', context.site.siteName)];
+            if (context.site.isSlot) {
+                argBuilders.push(withNamedArg('--slot', context.site.slotName ?? 'production'));
+            }
+            const args = composeArgs(...argBuilders)();
+            const cmdOutput = await cpUtils.tryExecuteCommand(ext.outputChannel, context.originalDeployFsPath, 'func', args);
+            context.activityAttributes.logs = [{ content: cmdOutput.cmdOutputIncludingStderr }];
+            if (cmdOutput.exitCode === undefined) {
+                stage.setOutcome('unknown', { deploymentStatus: 'unknown' });
+                setWorkflowOutcome(context, 'unknown', { deploymentStatus: 'unknown' });
+                return;
+            }
+            if (cmdOutput.exitCode !== 0) {
+                const details: WorkflowTelemetryDetails = {
+                    failureCategory: 'deployment', failureCode: 'funcCliFailed',
+                };
+                stage.setOutcome('failed', details);
+                setWorkflowOutcome(context, 'failed', details);
+                ext.outputChannel.show();
+                throw new Error(localize('commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', 'func'));
+            }
+        });
     }
     public shouldExecute(_context: InnerDeployContext): boolean {
         return true;

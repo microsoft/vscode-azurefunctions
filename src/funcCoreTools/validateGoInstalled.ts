@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, initializeWorkflowTelemetry, setWorkflowOutcome, withTelemetryStage, type IActionContext, type WorkflowTelemetryDetails } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { type MessageItem } from 'vscode';
 import { cpUtils } from '../utils/cpUtils';
@@ -23,29 +23,40 @@ const goInstallUrl: string = 'https://go.dev/dl/';
  *
  * @returns true if Go is installed (or validation is disabled), false otherwise.
  */
-export async function validateGoInstalled(_context: IActionContext, workspacePath?: string): Promise<boolean> {
+export async function validateGoInstalled(context: IActionContext, workspacePath?: string): Promise<boolean> {
     let installed: boolean = false;
 
     await callWithTelemetryAndErrorHandling('azureFunctions.validateGoInstalled', async (innerContext: IActionContext) => {
+        if (context.telemetry.properties.workflowRunId) {
+            initializeWorkflowTelemetry(innerContext, { workflow: 'unknown', command: 'unknown' }, context);
+        }
         innerContext.errorHandling.suppressDisplay = true;
 
-        if (getWorkspaceSetting<boolean>('validateGo', workspacePath) === false) {
-            innerContext.telemetry.properties.validateGo = 'false';
-            installed = true;
-            return;
-        }
+        await withTelemetryStage(innerContext, { stage: 'prerequisites' }, async stage => {
+            if (getWorkspaceSetting<boolean>('validateGo', workspacePath) === false) {
+                innerContext.telemetry.properties.validateGo = 'false';
+                installed = true;
+                return;
+            }
 
-        if (await goInstalled(workspacePath)) {
-            installed = true;
-            return;
-        }
+            if (await goInstalled(workspacePath)) {
+                installed = true;
+                return;
+            }
 
-        const message: string = localize('installGoForDeploy', 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.');
-        const result: MessageItem = await innerContext.ui.showWarningMessage(message, { modal: true, stepName: 'goNotInstalled' }, DialogResponses.learnMore);
-        innerContext.telemetry.properties.dialogResult = result.title;
-        if (result === DialogResponses.learnMore) {
-            await openUrl(goInstallUrl);
-        }
+            const details: WorkflowTelemetryDetails = {
+                cancelReason: 'prerequisite', failureCategory: 'prerequisite', failureCode: 'goUnavailable',
+            };
+            stage.setOutcome('blocked', details);
+            setWorkflowOutcome(innerContext, 'blocked', details);
+            setWorkflowOutcome(context, 'blocked', details);
+            const message: string = localize('installGoForDeploy', 'The Go toolchain is required to package Go Functions for deployment. Install Go and try again.');
+            const result: MessageItem = await innerContext.ui.showWarningMessage(message, { modal: true, stepName: 'goNotInstalled' }, DialogResponses.learnMore);
+            innerContext.telemetry.properties.dialogResult = result.title;
+            if (result === DialogResponses.learnMore) {
+                await openUrl(goInstallUrl);
+            }
+        });
     });
 
     return installed;
