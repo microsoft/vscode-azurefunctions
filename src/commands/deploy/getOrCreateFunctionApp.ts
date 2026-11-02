@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getDeployNode } from "@microsoft/vscode-azext-azureappservice";
-import { AzureWizard, PickTreeItemWithCompatibility, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, PickTreeItemWithCompatibility, nonNullProp, nonNullValueAndProp, type AzExtParentTreeItem, type AzExtTreeItem, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ProgressLocation, l10n, window, type Uri } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
@@ -17,6 +17,8 @@ import { SubscriptionListStep } from "../SubscriptionListStep";
 import { type IFunctionAppWizardContext } from "../createFunctionApp/IFunctionAppWizardContext";
 import { FunctionAppListStep } from "./FunctionAppListStep";
 import { type IFuncDeployContext } from "./deploy";
+
+type PickerTreeItem<T extends AzExtTreeItem> = T | { unwrap(): T };
 
 export async function getFunctionAppToDeploy(context: IFuncDeployContext, arg1: Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue?: string | RegExp): Promise<SlotTreeItem> {
     if (treeUtils.isAzExtTreeItem(arg1)) {
@@ -38,8 +40,14 @@ export async function getFunctionAppToDeploy(context: IFuncDeployContext, arg1: 
         return node;
     }
 
-    // Supplied/default targets are unwrapped, so traverse their owning branch rather than the Resources wrapper tree.
-    const slot = await PickTreeItemWithCompatibility.showTreeItemPicker<SlotTreeItem>(context, node.treeDataProvider, expectedContextValue, node);
+    // Traverse the owning raw branch, but wrap its children for the compatibility picker's post-create lookup.
+    const branch = node.treeDataProvider;
+    const slot = await PickTreeItemWithCompatibility.showTreeItemPicker<SlotTreeItem>(context, {
+        getChildren: async (item: PickerTreeItem<AzExtParentTreeItem> = node) =>
+            (await branch.getChildren('unwrap' in item ? item.unwrap() : item)).map(child => ({ unwrap: () => child })),
+        getTreeItem: (item: PickerTreeItem<AzExtTreeItem>) =>
+            branch.getTreeItem('unwrap' in item ? item.unwrap() : item)
+    }, expectedContextValue, node);
     if (!slot.contextValue.match(expectedContextValue)) {
         throw new Error(l10n.t('The selected deployment target is not a deployment slot.'));
     }

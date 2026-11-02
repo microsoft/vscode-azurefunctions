@@ -9,7 +9,7 @@ import { AzExtTreeDataProvider, GenericParentTreeItem, PickTreeItemWithCompatibi
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import * as assert from 'assert';
 import { mock } from 'node:test';
-import { Uri, workspace, type WorkspaceFolder } from 'vscode';
+import { ThemeIcon, Uri, workspace, type WorkspaceFolder } from 'vscode';
 import { SubscriptionListStep } from '../src/commands/SubscriptionListStep';
 import { type IFuncDeployContext } from '../src/commands/deploy/deploy';
 import { getFunctionAppToDeploy } from '../src/commands/deploy/getOrCreateFunctionApp';
@@ -28,6 +28,7 @@ suite('Deployment target selection', () => {
     const appId = '/subscriptions/test-subscription/resourceGroups/test-group/providers/Microsoft.Web/sites/test-app';
     let production: SlotTreeItem;
     let slot: SlotTreeItem;
+    let slots: SlotsTreeItem;
     let branch: AzExtTreeDataProvider;
     let originalApi: AzureHostExtensionApi;
     let api: AzureHostExtensionApi;
@@ -62,7 +63,7 @@ suite('Deployment target selection', () => {
         const root = new GenericParentTreeItem(undefined, { label: 'Root', contextValue: 'root' });
         branch = new AzExtTreeDataProvider(root, 'test.loadMore');
         production = target(appId, ResolvedFunctionAppResource.productionContextValue, root);
-        const slots = new SlotsTreeItem(production);
+        slots = new SlotsTreeItem(production);
         slot = target(`${appId}/slots/staging`, ResolvedFunctionAppResource.slotContextValue, slots);
         Object.assign(production, {
             pickTreeItemImpl: async (expected: (string | RegExp)[]) => {
@@ -71,8 +72,10 @@ suite('Deployment target selection', () => {
             },
         });
         mock.method(production, 'loadMoreChildrenImpl', async () => [slots]);
+        mock.getter(slots, 'iconPath', () => new ThemeIcon('layers'));
         mock.method(slots, 'loadMoreChildrenImpl', async () => [slot]);
         mock.method(slots, 'createChildImpl', async () => assert.fail('Slot selection must not create a slot.'));
+        mock.method(branch, 'showTreeItemPicker', async () => assert.fail('The Resources owning branch does not support its native picker entry point.'));
         mock.method(api.appResourceTree, 'showTreeItemPicker', async () => assert.fail('Unwrapped targets must use their owning branch, not the Resources wrapper tree.'));
         const targets = new Map([[production.fullId, production], [slot.fullId, slot]]);
         context = Object.assign(await createTestActionContext(), {
@@ -148,6 +151,37 @@ suite('Deployment target selection', () => {
             });
             assert.strictEqual(context.appSource, source);
             assert.strictEqual(apps.mock.callCount(), 0);
+        });
+
+        for (const hasExistingSlot of [true, false]) {
+            test(`slot deployment can create and select a slot within a ${source} app ${hasExistingSlot ? 'with' : 'without'} an existing slot`, async () => {
+                if (!hasExistingSlot) {
+                    mock.method(slots, 'loadMoreChildrenImpl', async () => []);
+                }
+                const created = target(`${appId}/slots/new-staging`, ResolvedFunctionAppResource.slotContextValue, slots);
+                const create = mock.method(slots, 'createChildImpl', async creationContext => {
+                    assert.strictEqual(creationContext.telemetry, context.telemetry);
+                    return created;
+                });
+
+                await context.ui.runWithInputs([/Create new Slot/], async () => {
+                    assert.strictEqual(await resolve(source, production, slotContext), created);
+                });
+                assert.strictEqual(create.mock.callCount(), 1);
+                assert.strictEqual(context.appSource, source);
+                assert.strictEqual(context.isNewApp, undefined);
+            });
+        }
+    }
+
+    for (const error of [new UserCancelledError(), new Error('Synthetic slot creation failure')]) {
+        test(`slot creation ${error instanceof UserCancelledError ? 'cancellation' : 'failure'} propagates without using the production default`, async () => {
+            const create = mock.method(slots, 'createChildImpl', async () => { throw error; });
+
+            await context.ui.runWithInputs([/Create new Slot/], async () => {
+                await assert.rejects(resolve('setting', production, slotContext), actual => actual === error);
+            });
+            assert.strictEqual(create.mock.callCount(), 1);
         });
     }
 
