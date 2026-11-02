@@ -5,7 +5,7 @@
 
 import { Environment } from '@azure/ms-rest-azure-env';
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
-import { UserCancelledError, createTestActionContext, testGlobalSetup, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, GenericParentTreeItem, PickTreeItemWithCompatibility, UserCancelledError, createTestActionContext, testGlobalSetup, type AzExtParentTreeItem, type IActionContext, type TestUserInput } from '@microsoft/vscode-azext-utils';
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import * as assert from 'assert';
 import { mock } from 'node:test';
@@ -18,6 +18,7 @@ import { ext } from '../src/extensionVariables';
 import { getResourceGroupsApi } from '../src/getExtensionApi';
 import { ResolvedFunctionAppResource } from '../src/tree/ResolvedFunctionAppResource';
 import { type SlotTreeItem } from '../src/tree/SlotTreeItem';
+import { SlotsTreeItem } from '../src/tree/SlotsTreeItem';
 import { updateWorkspaceSetting } from '../src/vsCodeConfig/settings';
 import { getTestWorkspaceFolder } from './global.test';
 
@@ -25,20 +26,19 @@ suite('Deployment target selection', () => {
     const defaultSetting = 'defaultFunctionAppToDeploy';
     const slotContext = ResolvedFunctionAppResource.pickSlotContextValue;
     const appId = '/subscriptions/test-subscription/resourceGroups/test-group/providers/Microsoft.Web/sites/test-app';
-    const production = target(appId, ResolvedFunctionAppResource.productionContextValue);
-    const slot = target(`${appId}/slots/staging`, ResolvedFunctionAppResource.slotContextValue);
-    const targets = new Map([[production.fullId, production], [slot.fullId, slot]]);
+    let production: SlotTreeItem;
+    let slot: SlotTreeItem;
+    let branch: AzExtTreeDataProvider;
     let originalApi: AzureHostExtensionApi;
     let api: AzureHostExtensionApi;
     let folder: WorkspaceFolder;
     let originalDefault: string | undefined;
-    let context: IFuncDeployContext;
+    let context: IFuncDeployContext & { ui: TestUserInput };
 
-    function target(id: string, contextValue: string): SlotTreeItem {
-        return {
-            id, label: 'Test target', fullId: id, contextValue,
+    function target(id: string, contextValue: string, parent?: AzExtParentTreeItem): SlotTreeItem {
+        return Object.assign(new GenericParentTreeItem(parent, { id, label: 'Test target', contextValue }), {
             initSite: async (_context: IActionContext): Promise<void> => { assert.fail('Target selection must not initialize a site or deploy.'); },
-        } as SlotTreeItem;
+        }) as SlotTreeItem;
     }
 
     suiteSetup(async () => {
@@ -59,6 +59,22 @@ suite('Deployment target selection', () => {
 
     setup(async () => {
         await updateWorkspaceSetting(defaultSetting, undefined, folder.uri.fsPath);
+        const root = new GenericParentTreeItem(undefined, { label: 'Root', contextValue: 'root' });
+        branch = new AzExtTreeDataProvider(root, 'test.loadMore');
+        production = target(appId, ResolvedFunctionAppResource.productionContextValue, root);
+        const slots = new SlotsTreeItem(production);
+        slot = target(`${appId}/slots/staging`, ResolvedFunctionAppResource.slotContextValue, slots);
+        Object.assign(production, {
+            pickTreeItemImpl: async (expected: (string | RegExp)[]) => {
+                assert.deepStrictEqual(expected, [slotContext]);
+                return slots;
+            },
+        });
+        mock.method(production, 'loadMoreChildrenImpl', async () => [slots]);
+        mock.method(slots, 'loadMoreChildrenImpl', async () => [slot]);
+        mock.method(slots, 'createChildImpl', async () => assert.fail('Slot selection must not create a slot.'));
+        mock.method(api.appResourceTree, 'showTreeItemPicker', async () => assert.fail('Unwrapped targets must use their owning branch, not the Resources wrapper tree.'));
+        const targets = new Map([[production.fullId, production], [slot.fullId, slot]]);
         context = Object.assign(await createTestActionContext(), {
             action: CodeAction.Deploy,
             projectPath: folder.uri.fsPath,
@@ -79,7 +95,10 @@ suite('Deployment target selection', () => {
         mock.method(api.tree, 'findTreeItem', async (id: string) => targets.get(id));
     });
 
-    teardown(() => mock.reset());
+    teardown(() => {
+        mock.reset();
+        branch.dispose();
+    });
 
     async function resolve(source: 'tree' | 'api' | 'setting', node: SlotTreeItem, expectedContextValue?: RegExp): Promise<SlotTreeItem> {
         if (source === 'setting') {
@@ -104,7 +123,7 @@ suite('Deployment target selection', () => {
 
     for (const source of ['tree', 'api', 'setting'] as const) {
         test(`ordinary production deployment preserves a ${source} target`, async () => {
-            const pick = mock.method(api.appResourceTree, 'showTreeItemPicker', async () => assert.fail('Production deployment must not pick a slot.'));
+            const pick = mock.method(PickTreeItemWithCompatibility, 'showTreeItemPicker', async () => assert.fail('Production deployment must not pick a slot.'));
             const apps = mock.method(api, 'pickAppResource', async () => assert.fail('An existing target must not be repicked.'));
 
             assert.strictEqual(await resolve(source, production), production);
@@ -114,7 +133,7 @@ suite('Deployment target selection', () => {
         });
 
         test(`slot deployment preserves an explicit ${source} slot`, async () => {
-            const pick = mock.method(api.appResourceTree, 'showTreeItemPicker', async () => assert.fail('An explicit slot must not be repicked.'));
+            const pick = mock.method(PickTreeItemWithCompatibility, 'showTreeItemPicker', async () => assert.fail('An explicit slot must not be repicked.'));
 
             assert.strictEqual(await resolve(source, slot, slotContext), slot);
             assert.strictEqual(context.appSource, source);
@@ -122,12 +141,12 @@ suite('Deployment target selection', () => {
         });
 
         test(`slot deployment picks within a ${source} production app`, async () => {
-            const pick = mock.method(api.appResourceTree, 'showTreeItemPicker', async () => slot);
             const apps = mock.method(api, 'pickAppResource', async () => assert.fail('Keep the supplied or default app as the picker root.'));
 
-            assert.strictEqual(await resolve(source, production, slotContext), slot);
+            await context.ui.runWithInputs(['Test target'], async () => {
+                assert.strictEqual(await resolve(source, production, slotContext), slot);
+            });
             assert.strictEqual(context.appSource, source);
-            assert.deepStrictEqual(pick.mock.calls[0].arguments, [slotContext, context, production]);
             assert.strictEqual(apps.mock.callCount(), 0);
         });
     }
@@ -157,11 +176,11 @@ suite('Deployment target selection', () => {
     for (const project of [Uri.file('test-project'), 'test-project']) {
         test(`a ${typeof project === 'string' ? 'string' : 'URI'} project argument preserves default destination resolution`, async () => {
             await updateWorkspaceSetting(defaultSetting, production.fullId, folder.uri.fsPath);
-            const pick = mock.method(api.appResourceTree, 'showTreeItemPicker', async () => slot);
 
-            assert.strictEqual(await getFunctionAppToDeploy(context, project, undefined, slotContext), slot);
+            await context.ui.runWithInputs(['Test target'], async () => {
+                assert.strictEqual(await getFunctionAppToDeploy(context, project, undefined, slotContext), slot);
+            });
             assert.strictEqual(context.appSource, 'setting');
-            assert.strictEqual(pick.mock.calls[0].arguments[2], production);
         });
     }
 
@@ -183,7 +202,7 @@ suite('Deployment target selection', () => {
 
     for (const invalidContext of [ResolvedFunctionAppResource.productionContextValue, 'azFuncSlots', ResolvedFunctionAppResource.flexContextValue]) {
         test(`rejects a final ${invalidContext} result instead of deploying to production`, async () => {
-            mock.method(api.appResourceTree, 'showTreeItemPicker', async () => target(appId, invalidContext));
+            mock.method(PickTreeItemWithCompatibility, 'showTreeItemPicker', async () => target(appId, invalidContext));
 
             await assert.rejects(resolve('tree', production, slotContext), /not a deployment slot/);
         });
@@ -191,7 +210,7 @@ suite('Deployment target selection', () => {
 
     test('slot-picker cancellation propagates without using the production target', async () => {
         const cancelled = new UserCancelledError();
-        mock.method(api.appResourceTree, 'showTreeItemPicker', async () => { throw cancelled; });
+        mock.method(PickTreeItemWithCompatibility, 'showTreeItemPicker', async () => { throw cancelled; });
 
         await assert.rejects(resolve('tree', production, slotContext), error => error === cancelled);
     });

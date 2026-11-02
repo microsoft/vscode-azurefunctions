@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getDeployNode } from "@microsoft/vscode-azext-azureappservice";
-import { AzureWizard, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, PickTreeItemWithCompatibility, nonNullProp, nonNullValueAndProp, type ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ProgressLocation, l10n, window, type Uri } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
@@ -38,7 +38,8 @@ export async function getFunctionAppToDeploy(context: IFuncDeployContext, arg1: 
         return node;
     }
 
-    const slot = await ext.rgApi.appResourceTree.showTreeItemPicker<SlotTreeItem>(expectedContextValue, context, node);
+    // Supplied/default targets are unwrapped, so traverse their owning branch rather than the Resources wrapper tree.
+    const slot = await PickTreeItemWithCompatibility.showTreeItemPicker<SlotTreeItem>(context, node.treeDataProvider, expectedContextValue, node);
     if (!slot.contextValue.match(expectedContextValue)) {
         throw new Error(l10n.t('The selected deployment target is not a deployment slot.'));
     }
