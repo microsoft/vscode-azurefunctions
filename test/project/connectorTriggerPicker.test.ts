@@ -524,18 +524,28 @@ suite('Connector trigger picker', () => {
             buildZipUrl(repositoryUrl: string, archiveRef: string): string;
             resolveGitReference(
                 template: Pick<IProjectTemplate, 'branch' | 'gitRef'>,
-            ): { archiveRef: string; cloneRef: string };
+            ): { archiveRef: string; cloneRef: string; isCommit: boolean };
         };
         const tag = creator.resolveGitReference({ gitRef: 'refs/tags/v1.0.2' });
         const branch = creator.resolveGitReference({ branch: 'feature/connectors' });
+        const commit = creator.resolveGitReference({
+            gitRef: '0123456789abcdef0123456789abcdef01234567',
+        });
 
         assert.deepStrictEqual(tag, {
             archiveRef: 'refs/tags/v1.0.2',
             cloneRef: 'v1.0.2',
+            isCommit: false,
         });
         assert.deepStrictEqual(branch, {
             archiveRef: 'refs/heads/feature/connectors',
             cloneRef: 'feature/connectors',
+            isCommit: false,
+        });
+        assert.deepStrictEqual(commit, {
+            archiveRef: '0123456789abcdef0123456789abcdef01234567',
+            cloneRef: '0123456789abcdef0123456789abcdef01234567',
+            isCommit: true,
         });
         assert.strictEqual(
             creator.buildZipUrl('https://github.com/Azure-Samples/functions-connectors-python', tag.archiveRef),

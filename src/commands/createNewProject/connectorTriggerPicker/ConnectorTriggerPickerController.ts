@@ -485,15 +485,21 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 return;
             }
             this.operationLoadRequests.delete(requestKey);
+            const materializableOperations = await this.filterMaterializableOperations(
+                actionContext,
+                catalog,
+                connectorId,
+                operations,
+            );
             catalog.operations = [
                 ...catalog.operations.filter(operation =>
                     !equalsIgnoreCase(operation.connectorId, connectorId)),
-                ...operations,
+                ...materializableOperations,
             ];
             await this.postMessage({
                 command: 'connectorOperationsLoaded',
                 connectorId,
-                operations: operations.map(removeOperationInputs),
+                operations: materializableOperations.map(removeOperationInputs),
             });
         } catch (error) {
             if (request && this.operationLoadRequests.get(requestKey) !== request) {
@@ -506,6 +512,38 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 message: parseError(error).message,
             });
         }
+    }
+
+    private async filterMaterializableOperations(
+        actionContext: IActionContext,
+        catalog: ConnectorTriggerCatalog,
+        connectorId: string,
+        operations: ConnectorTriggerOperationOption[],
+    ): Promise<ConnectorTriggerOperationOption[]> {
+        const connector = catalog.connectors.find(item =>
+            equalsIgnoreCase(item.id, connectorId));
+        if (!connector) {
+            return [];
+        }
+        const templates = await this.templateProvider.getTemplates(
+            actionContext,
+            this.launchOptions.language,
+            this.launchOptions.languageModel,
+        );
+        const connectorTemplates = findConnectorProjectTemplates(
+            templates,
+            connector,
+        );
+        const ownedTemplates = connectorTemplates.filter(template =>
+            !!template.connectorTrigger);
+        if (ownedTemplates.length === 0) {
+            return operations;
+        }
+        const supportedOperationIds = new Set(ownedTemplates.flatMap(template =>
+            template.connectorTrigger?.operations.map(operation =>
+                operation.operationId) ?? []));
+        return operations.filter(operation =>
+            supportedOperationIds.has(operation.id));
     }
 
     private async postAzureContextRequired(): Promise<void> {
@@ -635,18 +673,29 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 templates,
                 selection.connector,
             );
-            if (matchingTemplates.length === 0) {
+            const ownedTemplates = matchingTemplates.filter(template =>
+                !!template.connectorTrigger);
+            const materializableTemplates = (
+                ownedTemplates.length > 0 ?
+                    ownedTemplates :
+                    matchingTemplates
+            ).filter(template =>
+                !template.connectorTrigger ||
+                template.connectorTrigger.operations.some(operation =>
+                    operation.operationId === selection.operation.id));
+            if (materializableTemplates.length === 0) {
                 throw new Error(localize(
                     'connectorProjectTemplateUnavailable',
-                    'No project template is currently available for connector "{0}" and language "{1}".',
+                    'No project template is currently available for event "{0}" in connector "{1}" and language "{2}".',
+                    selection.operation.label,
                     selection.connector.label,
                     this.launchOptions.language,
                 ));
             }
 
-            const template = matchingTemplates.length === 1 ?
-                matchingTemplates[0] :
-                await this.pickTemplate(actionContext, matchingTemplates);
+            const template = materializableTemplates.length === 1 ?
+                materializableTemplates[0] :
+                await this.pickTemplate(actionContext, materializableTemplates);
             if (this.azureContext !== selection.azureContext ||
                 this.subscriptionContext !== subscriptionContext) {
                 throw new Error(localize(

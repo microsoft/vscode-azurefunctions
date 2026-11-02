@@ -14,6 +14,7 @@ import {
     type ConnectorTriggerProjectHandoff,
 } from '../../connectorTrigger/connectorTriggerProjectHandoff';
 import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { materializeConnectorTriggerTemplate } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
@@ -89,11 +90,12 @@ export class ProjectTemplateCreator {
             if (gitInstalled) {
                 if (specificFolder) {
                     this.reportProgress('Cloning template (sparse)...');
-                    await cpUtils.executeCommand(undefined, undefined,
-                        'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
-                        '--branch', gitReference.cloneRef, template.repositoryUrl, tempDir]);
-                    await cpUtils.executeCommand(undefined, tempDir,
-                        'git', ['sparse-checkout', 'set', specificFolder]);
+                    await this.cloneRepository(
+                        template.repositoryUrl,
+                        tempDir,
+                        gitReference,
+                        specificFolder,
+                    );
 
                     const sourceDir = path.join(tempDir, specificFolder);
                     if (!await AzExtFsExtra.pathExists(sourceDir)) {
@@ -104,8 +106,11 @@ export class ProjectTemplateCreator {
                     await this.copyDirectory(sourceDir, projectPath);
                 } else {
                     this.reportProgress('Cloning template repository...');
-                    await cpUtils.executeCommand(undefined, undefined,
-                        'git', ['clone', '--depth', '1', '--branch', gitReference.cloneRef, template.repositoryUrl, tempDir]);
+                    await this.cloneRepository(
+                        template.repositoryUrl,
+                        tempDir,
+                        gitReference,
+                    );
 
                     let sourceDir = tempDir;
                     if (template.subdirectory) {
@@ -154,7 +159,15 @@ export class ProjectTemplateCreator {
             }
 
             if (options.connectorTriggerHandoff) {
-                await ensureConnectorTriggerPollProject(projectPath, language);
+                if (template.connectorTrigger) {
+                    await materializeConnectorTriggerTemplate(
+                        projectPath,
+                        template.connectorTrigger,
+                        options.connectorTriggerHandoff.operationId,
+                    );
+                } else {
+                    await ensureConnectorTriggerPollProject(projectPath, language);
+                }
                 await writeConnectorTriggerProjectHandoff(
                     projectPath,
                     options.connectorTriggerHandoff,
@@ -303,15 +316,65 @@ export class ProjectTemplateCreator {
 
     private resolveGitReference(
         template: Pick<IProjectTemplate, 'branch' | 'gitRef'>,
-    ): { archiveRef: string; cloneRef: string } {
+    ): { archiveRef: string; cloneRef: string; isCommit: boolean } {
         const explicitGitRef = template.gitRef?.trim();
         const rawRef = explicitGitRef || template.branch?.trim() || 'main';
+        const isCommit = /^[a-f\d]{40}$/i.test(rawRef);
         return {
             archiveRef: rawRef.startsWith('refs/') || explicitGitRef ?
                 rawRef :
                 `refs/heads/${rawRef}`,
             cloneRef: rawRef.replace(/^refs\/(?:heads|tags)\//, ''),
+            isCommit,
         };
+    }
+
+    private async cloneRepository(
+        repositoryUrl: string,
+        destination: string,
+        reference: { cloneRef: string; isCommit: boolean },
+        sparseFolder?: string,
+    ): Promise<void> {
+        const sparseArguments = sparseFolder ? ['--sparse'] : [];
+        if (reference.isCommit) {
+            await cpUtils.executeCommand(undefined, undefined, 'git', [
+                'clone',
+                '--depth', '1',
+                '--filter=blob:none',
+                ...sparseArguments,
+                '--no-checkout',
+                repositoryUrl,
+                destination,
+            ]);
+            await cpUtils.executeCommand(undefined, destination, 'git', [
+                'fetch',
+                '--depth', '1',
+                'origin',
+                reference.cloneRef,
+            ]);
+            await cpUtils.executeCommand(undefined, destination, 'git', [
+                'checkout',
+                '--detach',
+                'FETCH_HEAD',
+            ]);
+        } else {
+            await cpUtils.executeCommand(undefined, undefined, 'git', [
+                'clone',
+                '--depth', '1',
+                '--filter=blob:none',
+                ...sparseArguments,
+                '--branch', reference.cloneRef,
+                repositoryUrl,
+                destination,
+            ]);
+        }
+        if (sparseFolder) {
+            await cpUtils.executeCommand(undefined, destination, 'git', [
+                'sparse-checkout',
+                'set',
+                sparseFolder,
+            ]);
+        }
     }
 
     private async downloadAndExtractZip(

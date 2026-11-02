@@ -38,6 +38,7 @@ import {
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import { ProjectLanguage } from '../../src/constants';
 
 suite('Connector trigger picker Azure context UX', () => {
     const connector: ConnectorTriggerOption = {
@@ -408,11 +409,18 @@ interface TestableConnectorTriggerPickerController {
         | 'listSubscriptions'
     >;
     locations: Map<string, { name: string; label: string }[]>;
+    launchOptions: {
+        language: ProjectLanguage;
+        languageModel?: number;
+    };
     operationLoadRequests: Map<string, Promise<ConnectorTriggerOperationOption[]>>;
     postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
     signIn: ConnectorTriggerSignIn;
     signInPending: boolean;
     subscriptionContext: ISubscriptionContext | undefined;
+    templateProvider: {
+        getTemplates(): Promise<[]>;
+    };
 }
 
 interface TestControllerOptions {
@@ -450,6 +458,9 @@ function createTestController(
             listSubscriptions: options.listSubscriptions ?? (async () => []),
         },
         locations: new Map(),
+        launchOptions: {
+            language: ProjectLanguage.TypeScript,
+        },
         operationLoadRequests: new Map(),
         postMessage: async (message: ConnectorTriggerPickerResponse) => {
             options.responses.push(message);
@@ -457,6 +468,9 @@ function createTestController(
         signIn: options.signIn ?? (async () => undefined),
         signInPending: false,
         subscriptionContext: undefined,
+        templateProvider: {
+            getTemplates: async () => [],
+        },
     }) as TestableConnectorTriggerPickerController;
 }
 

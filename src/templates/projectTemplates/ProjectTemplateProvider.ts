@@ -16,8 +16,8 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
  * Provides project templates from a remote manifest with caching and offline fallback
  */
 export class ProjectTemplateProvider {
-    private static readonly CACHE_KEY = 'projectTemplatesManifest';
-    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
+    private static readonly CACHE_KEY = 'projectTemplatesManifestV2';
+    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestampV2';
     private static readonly MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 

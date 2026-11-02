@@ -31,6 +31,9 @@ export interface IProjectTemplate {
     /** Supported programming models per language (e.g., { "Python": [2], "TypeScript": [4] }). */
     languageModels?: Record<ProjectLanguage, number[]>;
 
+    /** Connector Trigger operations that can be materialized independently. */
+    connectorTrigger?: IConnectorTriggerTemplate;
+
     /** Git repository URL for cloning. */
     repositoryUrl: string;
 
@@ -53,6 +56,24 @@ export interface IProjectTemplate {
      * followed by a directory copy, whereas `folderPath` uses sparse-checkout.
      */
     subdirectory?: string;
+}
+
+export interface IConnectorTriggerTemplate {
+    operations: IConnectorTriggerTemplateOperation[];
+}
+
+export interface IConnectorTriggerTemplateOperation {
+    /** Exact canonical operation ID returned by the live Connector API. */
+    operationId: string;
+
+    /** Exact Azure Functions registration name owned by this operation. */
+    functionName: string;
+
+    /**
+     * Project-root-relative whole files or directories owned exclusively by
+     * this operation, including operation-specific deployment configuration.
+     */
+    ownedPaths: string[];
 }
 
 /**
