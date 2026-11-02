@@ -12,6 +12,7 @@ import { type FuncVersion } from '../../FuncVersion';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { getHttpTriggerMethod } from '../../tree/FunctionBase';
 import { FunctionTreeItemBase } from '../../tree/FunctionTreeItemBase';
 import { type FuncHostRequest } from '../../tree/IProjectTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
@@ -38,6 +39,8 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         ext.currentExecutingFunctionNode = node;
 
         const func = node instanceof FunctionTreeItemBase ? node.function : node;
+        const method = func.isHttpTrigger ? getHttpTriggerMethod(func.config) : 'POST';
+        const hasRequestBody = method !== 'GET' && method !== 'HEAD';
 
         const triggerBindingType: string | undefined = node.triggerBindingType;
         context.telemetry.properties.triggerBindingType = triggerBindingType;
@@ -45,7 +48,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         let functionInput: string | {} = '';
         if (triggerBindingType === 'eventGridTrigger') {
             return await executeEventGridFunction(context, node);
-        } else if (!func.isTimerTrigger) {
+        } else if (!func.isTimerTrigger && hasRequestBody) {
             const prompt: string = localize('enterRequestBody', 'Enter request body');
             let value: string | undefined;
             if (triggerBindingType) {
@@ -93,6 +96,7 @@ export async function executeFunctionWithInput(context: IActionContext, function
         triggerRequest.url = `${triggerRequest.url}/admin/functions/${func.name}`;
         body = { input: functionInput };
     }
+    const method = func.isHttpTrigger ? triggerRequest.method ?? 'POST' : 'POST';
 
     let responseText: string | null | undefined;
     const execute = async () => {
@@ -111,10 +115,10 @@ export async function executeFunctionWithInput(context: IActionContext, function
         try {
             responseText = (
                 await requestUtils.sendRequestWithExtTimeout(context, {
-                    method: 'POST',
                     ...triggerRequest,
+                    method,
                     headers,
-                    body: JSON.stringify(body),
+                    body: method === 'GET' || method === 'HEAD' ? undefined : JSON.stringify(body),
                 })
             ).bodyAsText;
         } catch (error) {
@@ -125,7 +129,7 @@ export async function executeFunctionWithInput(context: IActionContext, function
                     localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'),
                     { cause: error }
                 );
-            } else if (errorType === '400') {
+            } else if (errorType === '400' && method === 'POST') {
                 const response = await fetch(triggerRequest.url, {
                     method: 'POST',
                     body: JSON.stringify({
