@@ -128,6 +128,8 @@ interface ManagedApiOperation {
 }
 
 export class ConnectorTriggerDataClient {
+    private readonly registeredSubscriptions =
+        new Map<string, ConnectorSubscription>();
     private readonly subscriptions = new Map<boolean, ConnectorSubscription[]>();
     private readonly subscriptionPromises =
         new Map<boolean, Promise<ConnectorSubscription[]>>();
@@ -280,15 +282,7 @@ export class ConnectorTriggerDataClient {
         context: IActionContext,
         namespace: ConnectorNamespaceOption,
     ): Promise<ConnectorTriggerCatalog> {
-        const subscription = (await this.getSubscriptions(true))
-            .find(item => item.subscriptionId === namespace.subscriptionId);
-        if (!subscription) {
-            throw new Error(localize(
-                'connectorSubscriptionUnavailable',
-                'The subscription for Connector Namespace "{0}" is no longer available.',
-                namespace.name,
-            ));
-        }
+        const subscription = await this.getSubscription(namespace.subscriptionId);
 
         const clientContext = Object.assign({}, context, subscription.context);
         const client = await this.armClientFactory(clientContext);
@@ -424,18 +418,12 @@ export class ConnectorTriggerDataClient {
             context,
         };
         this.subscriptionPromises.clear();
-        for (const filter of [true, false]) {
-            const subscriptions = this.subscriptions.get(filter) ?? [];
-            this.subscriptions.set(filter, [
-                ...subscriptions.filter(item =>
-                    item.subscriptionId !== context.subscriptionId),
-                subscription,
-            ]);
-        }
+        this.registeredSubscriptions.set(context.subscriptionId, subscription);
     }
 
     public invalidateSubscriptions(): void {
         this.subscriptionsGeneration += 1;
+        this.registeredSubscriptions.clear();
         this.subscriptions.clear();
         this.subscriptionPromises.clear();
     }
@@ -471,7 +459,8 @@ export class ConnectorTriggerDataClient {
     private async getSubscription(
         subscriptionId: string,
     ): Promise<ConnectorSubscription> {
-        const subscription = [...this.subscriptions.values()]
+        const subscription = this.registeredSubscriptions.get(subscriptionId) ??
+            [...this.subscriptions.values()]
             .flat()
             .find(item => item.subscriptionId === subscriptionId) ??
             (await this.getSubscriptions(false))
