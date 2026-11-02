@@ -80,6 +80,15 @@ export class LiveConnectorSubscriptionResolver {
         );
         const subscription = (await this.subscriptionsProvider())
             .find(candidate => candidate.subscriptionId === handoff.subscription.id);
+        if (subscription) {
+            maskValues(
+                context,
+                subscription.subscriptionId,
+                subscription.tenantId,
+                subscription.environment.name,
+                subscription.environment.resourceManagerEndpointUrl,
+            );
+        }
         const liveCloud = subscription ? normalizeCloud(subscription.environment.name) : undefined;
         const persistedCloud = normalizeCloud(handoff.subscription.environment.name);
         const liveEndpoint = subscription ?

@@ -10,6 +10,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
+import {
+    getPollingConnectorBindings,
+    selectPollingConnectorBinding,
+} from '../../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { getPollingConnectorConnectionPrefixes } from '../../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 suite('Connector trigger Poll project scaffolding', () => {
@@ -51,6 +55,16 @@ suite('Connector trigger Poll project scaffolding', () => {
             getPollingConnectorConnectionPrefixes(functionContents),
             ['ConnectorNamespace'],
         );
+        assert.deepStrictEqual(
+            selectPollingConnectorBinding(
+                getPollingConnectorBindings(functionContents),
+                'OnNewEmailV3',
+            ),
+            {
+                connectionSettingName: 'ConnectorNamespace',
+                triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            },
+        );
     });
 
     test('adds a TypeScript Poll binding with stable setting references', async () => {
@@ -65,6 +79,16 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.deepStrictEqual(
             getPollingConnectorConnectionPrefixes(functionContents),
             ['ConnectorNamespace'],
+        );
+        assert.deepStrictEqual(
+            selectPollingConnectorBinding(
+                getPollingConnectorBindings(functionContents),
+                'OnNewEmailV3',
+            ),
+            {
+                connectionSettingName: 'ConnectorNamespace',
+                triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            },
         );
     });
 
@@ -95,6 +119,16 @@ azurefunctions-extensions-connectors
         assert.deepStrictEqual(
             getPollingConnectorConnectionPrefixes(functionContents),
             ['ConnectorNamespace'],
+        );
+        assert.deepStrictEqual(
+            selectPollingConnectorBinding(
+                getPollingConnectorBindings(functionContents),
+                'OnNewEmailV3',
+            ),
+            {
+                connectionSettingName: 'ConnectorNamespace',
+                triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            },
         );
     });
 });
