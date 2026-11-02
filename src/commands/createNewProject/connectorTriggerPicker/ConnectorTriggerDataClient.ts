@@ -69,7 +69,6 @@ export interface ConnectorArmClient {
 }
 
 export type ConnectorSubscriptionsProvider = () => Promise<ConnectorSubscription[]>;
-export type ConnectorAuthenticationProvider = () => Promise<boolean>;
 export type ConnectorLocationsProvider = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<AzExtLocation[]>;
@@ -138,15 +137,9 @@ export class ConnectorTriggerDataClient {
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
         private readonly armClientFactory: ConnectorArmClientFactory = createArmClient,
-        private readonly authenticationProvider: ConnectorAuthenticationProvider =
-            getIsSignedIn,
         private readonly locationsProvider: ConnectorLocationsProvider =
             getConnectorLocations,
     ) { }
-
-    public async getIsSignedIn(): Promise<boolean> {
-        return await this.authenticationProvider();
-    }
 
     public async listSubscriptions(): Promise<ConnectorTriggerSubscriptionOption[]> {
         try {
@@ -695,10 +688,6 @@ async function getSubscriptions(): Promise<ConnectorSubscription[]> {
             context,
         };
     });
-}
-
-async function getIsSignedIn(): Promise<boolean> {
-    return await ext.azureAccountTreeItem.getIsLoggedIn();
 }
 
 async function getConnectorLocations(

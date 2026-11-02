@@ -22,10 +22,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerAzureContextRequired',
                 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
             ),
-            selectAzureContext: localize(
-                'connectorTriggerSelectAzureContext',
-                'Select Azure context',
-            ),
             subscription: localize(
                 'connectorTriggerSubscription',
                 'Subscription',

@@ -16,19 +16,21 @@ import {
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 
 suite('Connector trigger data client', () => {
-    test('checks sign-in without requesting subscriptions', async () => {
+    test('lists subscriptions without creating an ARM client', async () => {
         let subscriptionRequestCount = 0;
         const client = new ConnectorTriggerDataClient(
             async () => {
                 subscriptionRequestCount += 1;
-                return [];
+                return [createSubscription()];
             },
             async () => assert.fail('An ARM client must not be created.'),
-            async () => false,
         );
 
-        assert.strictEqual(await client.getIsSignedIn(), false);
-        assert.strictEqual(subscriptionRequestCount, 0);
+        assert.deepStrictEqual(await client.listSubscriptions(), [{
+            id: 'sub-one',
+            label: 'Subscription One',
+        }]);
+        assert.strictEqual(subscriptionRequestCount, 1);
     });
 
     test('lists subscriptions and Connector Namespace-supported regions', async () => {
@@ -44,7 +46,6 @@ suite('Connector trigger data client', () => {
                 createSubscription(),
             ],
             async () => assert.fail('An ARM client must not be created.'),
-            async () => true,
             async context => {
                 locationContexts.push(context);
                 return [
@@ -77,7 +78,6 @@ suite('Connector trigger data client', () => {
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
             async () => createArmClient(requests),
-            async () => true,
         );
 
         const result = await client.getCatalog(context, {
@@ -147,7 +147,6 @@ suite('Connector trigger data client', () => {
                     assert.fail(`Unexpected URL: ${url}`);
                 },
             }),
-            async () => true,
         );
 
         await assert.rejects(
@@ -175,7 +174,6 @@ suite('Connector trigger data client', () => {
                     [createSubscription()];
             },
             async () => createArmClient([]),
-            async () => true,
         );
 
         const staleLoad = client.listSubscriptions();

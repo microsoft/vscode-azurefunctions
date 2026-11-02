@@ -66,6 +66,8 @@ export type ConnectorTriggerCatalogLoader = (
 ) => Promise<ConnectorTriggerCatalogLoadResult>;
 
 export type ConnectorTriggerSignIn = () => Promise<unknown>;
+export type ConnectorTriggerCommandExecutor =
+    (command: string) => Thenable<unknown>;
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
@@ -130,8 +132,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         launchOptions: ConnectorTriggerPickerLaunchOptions,
         dataClient: ConnectorTriggerDataClient = new ConnectorTriggerDataClient(),
         catalogLoader: ConnectorTriggerCatalogLoader = createCatalogLoader(dataClient),
-        signIn: ConnectorTriggerSignIn =
-            async () => await vscode.commands.executeCommand('azure-account.login'),
+        signIn: ConnectorTriggerSignIn = signInToAzureResources,
     ): ConnectorTriggerPickerController {
         const existing = ConnectorTriggerPickerController.currentController;
         if (existing && !existing.isDisposed) {
@@ -274,15 +275,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async initialize(actionContext: IActionContext): Promise<void> {
         this.resetAzureContext();
-        try {
-            if (!await this.dataClient.getIsSignedIn()) {
-                await this.postAzureContextRequired();
-                return;
-            }
-            await this.loadSubscriptions(actionContext);
-        } catch (error) {
-            await this.postLoadFailed(actionContext, 'subscriptions', error);
-        }
+        await this.loadSubscriptions(actionContext, true);
     }
 
     private async handleAuthenticationChange(actionContext: IActionContext): Promise<void> {
@@ -292,11 +285,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (await this.dataClient.getIsSignedIn()) {
-            await this.loadSubscriptions(actionContext);
-        } else {
-            await this.postAzureContextRequired();
-        }
+        await this.loadSubscriptions(actionContext, true);
     }
 
     private async signInAndLoadSubscriptions(actionContext: IActionContext): Promise<void> {
@@ -306,10 +295,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 await this.signIn();
             } finally {
                 this.signInPending = false;
-            }
-            if (!await this.dataClient.getIsSignedIn()) {
-                await this.postAzureContextRequired();
-                return;
             }
             await this.loadSubscriptions(actionContext);
         } catch (error) {
@@ -321,10 +306,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
     }
 
-    private async loadSubscriptions(actionContext: IActionContext): Promise<void> {
+    private async loadSubscriptions(
+        actionContext: IActionContext,
+        showSignInWhenUnavailable = false,
+    ): Promise<void> {
         try {
             const subscriptions = await this.dataClient.listSubscriptions();
             if (subscriptions.length === 0) {
+                if (showSignInWhenUnavailable) {
+                    await this.postAzureContextRequired();
+                    return;
+                }
                 throw new Error(localize(
                     'connectorSubscriptionsUnavailable',
                     'No Azure subscriptions are available for Connector Triggers.',
@@ -335,7 +327,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 subscriptions,
             });
         } catch (error) {
-            await this.postLoadFailed(actionContext, 'subscriptions', error);
+            if (showSignInWhenUnavailable) {
+                await this.postAzureContextRequired();
+            } else {
+                await this.postLoadFailed(actionContext, 'subscriptions', error);
+            }
         }
     }
 
@@ -608,6 +604,13 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             ['https:'],
         );
     }
+}
+
+export async function signInToAzureResources(
+    executeCommand: ConnectorTriggerCommandExecutor =
+        vscode.commands.executeCommand,
+): Promise<void> {
+    await executeCommand('azureResourceGroups.logIn');
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {

@@ -329,23 +329,6 @@ select {
     margin-top: 12px;
 }
 
-.azure-context-gate {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-    padding: 14px;
-    border: 1px solid var(--connector-picker-border);
-    border-radius: var(--connector-picker-radius);
-
-    p {
-        margin: 0;
-        color: var(--vscode-descriptionForeground);
-        line-height: 1.5;
-    }
-}
-
 .azure-context-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -395,11 +378,6 @@ select {
 
     > button {
         margin-left: auto;
-    }
-
-    .azure-context-gate {
-        align-items: flex-start;
-        flex-direction: column;
     }
 
     .azure-context-fields {

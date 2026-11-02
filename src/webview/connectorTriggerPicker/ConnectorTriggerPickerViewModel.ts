@@ -90,7 +90,6 @@ export interface ConnectorTriggerPickerViewModel {
         connectorStep: string;
         eventStep: string;
         azureContextRequired: string;
-        selectAzureContext: string;
         subscription: string;
         selectSubscription: string;
         region: string;

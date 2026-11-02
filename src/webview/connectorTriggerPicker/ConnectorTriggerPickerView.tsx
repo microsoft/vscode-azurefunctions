@@ -7,7 +7,17 @@
 
 import { Button } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import {
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type JSX,
+    type KeyboardEvent,
+    type MouseEvent,
+} from 'react';
 import { ConnectorEventStep } from './ConnectorEventStep';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
 import {
@@ -38,6 +48,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [locations, setLocations] = useState<ConnectorTriggerLocationOption[]>([]);
     const [selectedSubscriptionId, setSelectedSubscriptionId] = useState('');
     const selectedSubscriptionIdRef = useRef('');
+    const signInRequestPendingRef = useRef(false);
     const [selectedRegion, setSelectedRegion] = useState('');
     const [signInRequired, setSignInRequired] = useState(false);
     const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
@@ -79,6 +90,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     }, [azureContext, initialize, vscodeApi]);
 
     const signIn = useCallback(() => {
+        if (signInRequestPendingRef.current) {
+            return;
+        }
+        signInRequestPendingRef.current = true;
         setSubscriptionsLoading(true);
         setAzureContextMessage(undefined);
         vscodeApi.postMessage({ command: 'signIn' });
@@ -141,6 +156,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             const message = event.data;
             if (message.command === 'azureContextRequired') {
                 selectedSubscriptionIdRef.current = '';
+                signInRequestPendingRef.current = false;
                 setSignInRequired(true);
                 setAzureContext(undefined);
                 setAzureContextMessage(message.message);
@@ -168,6 +184,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setActiveStep(1);
             } else if (message.command === 'subscriptionsLoaded') {
                 selectedSubscriptionIdRef.current = '';
+                signInRequestPendingRef.current = false;
                 setSignInRequired(false);
                 setAzureContext(undefined);
                 setAzureContextMessage(undefined);
@@ -233,6 +250,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     setLocationsLoading(false);
                     setAzureContextMessage(message.message);
                 } else {
+                    signInRequestPendingRef.current = false;
                     setSignInRequired(false);
                     setSubscriptionsLoading(false);
                     setAzureContextMessage(message.message);
@@ -372,27 +390,19 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     <h2>{viewModel.labels.connectorPageTitle}</h2>
                     <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
 
-                    {subscriptions.length === 0 ?
-                        <AzureContextGate
-                            actionLabel={signInRequired ?
-                                viewModel.labels.selectAzureContext :
-                                viewModel.labels.retry}
-                            message={azureContextMessage}
-                            labels={viewModel.labels}
-                            loading={subscriptionsLoading}
-                            onSelect={signInRequired ? signIn : initialize}
-                        /> :
-                        <AzureContextFields
-                            labels={viewModel.labels}
-                            locations={locations}
-                            locationsLoading={locationsLoading}
-                            selectedRegion={selectedRegion}
-                            selectedSubscriptionId={selectedSubscriptionId}
-                            subscriptions={subscriptions}
-                            onSelectRegion={selectRegion}
-                            onSelectSubscription={selectSubscription}
-                        />
-                    }
+                    <AzureContextFields
+                        labels={viewModel.labels}
+                        locations={locations}
+                        locationsLoading={locationsLoading}
+                        selectedRegion={selectedRegion}
+                        selectedSubscriptionId={selectedSubscriptionId}
+                        signInRequired={signInRequired}
+                        subscriptions={subscriptions}
+                        subscriptionsLoading={subscriptionsLoading}
+                        onRequestSignIn={signIn}
+                        onSelectRegion={selectRegion}
+                        onSelectSubscription={selectSubscription}
+                    />
 
                     {azureContext &&
                         <div className="catalog-status azure-context-status">
@@ -417,14 +427,19 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         </div>
                     }
 
-                    {!azureContext && azureContextMessage && subscriptions.length > 0 &&
-                        <LoadError
-                            message={azureContextMessage}
-                            retryLabel={viewModel.labels.retry}
-                            onRetry={() => selectedSubscriptionId ?
-                                selectSubscription(selectedSubscriptionId) :
-                                initialize()}
-                        />
+                    {!azureContext && azureContextMessage &&
+                        (signInRequired ?
+                            <p className="warning-text" role="status">
+                                {azureContextMessage}
+                            </p> :
+                            <LoadError
+                                message={azureContextMessage}
+                                retryLabel={viewModel.labels.retry}
+                                onRetry={() => selectedSubscriptionId ?
+                                    selectSubscription(selectedSubscriptionId) :
+                                    initialize()}
+                            />
+                        )
                     }
 
                     {!azureContext ? null :
@@ -545,40 +560,16 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     );
 }
 
-export function AzureContextGate({
-    actionLabel,
-    message,
-    labels,
-    loading,
-    onSelect,
-}: {
-    actionLabel: string;
-    message?: string;
-    labels: ConnectorTriggerPickerViewModel['labels'];
-    loading: boolean;
-    onSelect: () => void;
-}): JSX.Element {
-    return (
-        <div className="azure-context-gate">
-            <p>
-                {loading ? labels.loadingSubscriptions : message || labels.azureContextRequired}
-            </p>
-            {!loading &&
-                <Button appearance="primary" onClick={onSelect}>
-                    {actionLabel}
-                </Button>
-            }
-        </div>
-    );
-}
-
 export function AzureContextFields({
     labels,
     locations,
     locationsLoading,
     selectedRegion,
     selectedSubscriptionId,
+    signInRequired,
     subscriptions,
+    subscriptionsLoading,
+    onRequestSignIn,
     onSelectRegion,
     onSelectSubscription,
 }: {
@@ -587,19 +578,44 @@ export function AzureContextFields({
     locationsLoading: boolean;
     selectedRegion: string;
     selectedSubscriptionId: string;
+    signInRequired: boolean;
     subscriptions: readonly ConnectorTriggerSubscriptionOption[];
+    subscriptionsLoading: boolean;
+    onRequestSignIn: () => void;
     onSelectRegion: (region: string) => void;
     onSelectSubscription: (subscriptionId: string) => void;
 }): JSX.Element {
+    const requestSignIn = (
+        event: MouseEvent<HTMLSelectElement> |
+        KeyboardEvent<HTMLSelectElement>,
+    ): void => {
+        if (!shouldRequestAzureSignIn(signInRequired, subscriptionsLoading)) {
+            return;
+        }
+        event.preventDefault();
+        onRequestSignIn();
+    };
+
     return (
         <div className="azure-context-fields">
             <label>
                 <span>{labels.subscription}</span>
                 <select
+                    disabled={subscriptionsLoading}
                     value={selectedSubscriptionId}
+                    onKeyDown={event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            requestSignIn(event);
+                        }
+                    }}
+                    onClick={requestSignIn}
                     onChange={event => onSelectSubscription(event.target.value)}
                 >
-                    <option value="">{labels.selectSubscription}</option>
+                    <option value="">
+                        {subscriptionsLoading ?
+                            labels.loadingSubscriptions :
+                            labels.selectSubscription}
+                    </option>
                     {subscriptions.map(subscription =>
                         <option key={subscription.id} value={subscription.id}>
                             {subscription.label}
@@ -626,6 +642,13 @@ export function AzureContextFields({
             </label>
         </div>
     );
+}
+
+export function shouldRequestAzureSignIn(
+    signInRequired: boolean,
+    subscriptionsLoading: boolean,
+): boolean {
+    return signInRequired && !subscriptionsLoading;
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {

@@ -13,6 +13,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
     ConnectorTriggerPickerController,
+    signInToAzureResources,
     type ConnectorTriggerCatalogLoadResult,
     type ConnectorTriggerCatalogLoader,
     type ConnectorTriggerSignIn,
@@ -27,7 +28,7 @@ import {
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import {
     AzureContextFields,
-    AzureContextGate,
+    shouldRequestAzureSignIn,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     reconcileConnectorTriggerSelection,
@@ -115,33 +116,61 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(!html.includes('Folder parameter must not render'));
     });
 
-    test('renders sign-in gating and subscription/region dropdowns in the webview', () => {
+    test('renders both dropdowns while signed out with Location disabled', () => {
         const labels = createConnectorTriggerPickerViewModel('python').labels;
-        const gateHtml = renderToStaticMarkup(createElement(AzureContextGate, {
-            actionLabel: labels.selectAzureContext,
-            labels,
-            loading: false,
-            message: labels.azureContextRequired,
-            onSelect: () => undefined,
-        }));
         const fieldsHtml = renderToStaticMarkup(createElement(AzureContextFields, {
             labels,
-            locations: [{ name: 'eastus', label: 'East US' }],
+            locations: [],
             locationsLoading: false,
-            selectedRegion: 'eastus',
-            selectedSubscriptionId: 'sub-one',
-            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            selectedRegion: '',
+            selectedSubscriptionId: '',
+            signInRequired: true,
+            subscriptions: [],
+            subscriptionsLoading: false,
+            onRequestSignIn: () => undefined,
             onSelectRegion: () => undefined,
             onSelectSubscription: () => undefined,
         }));
 
-        assert.ok(gateHtml.includes(labels.azureContextRequired));
-        assert.ok(gateHtml.includes(labels.selectAzureContext));
         assert.ok(fieldsHtml.includes(`<span>${labels.subscription}</span>`));
         assert.ok(fieldsHtml.includes(`<span>${labels.region}</span>`));
-        assert.ok(fieldsHtml.includes('Subscription One'));
-        assert.ok(fieldsHtml.includes('East US'));
         assert.strictEqual((fieldsHtml.match(/<select/g) ?? []).length, 2);
+        assert.strictEqual((fieldsHtml.match(/disabled=""/g) ?? []).length, 1);
+        assert.ok(!fieldsHtml.includes('<button'));
+        assert.strictEqual(shouldRequestAzureSignIn(true, false), true);
+        assert.strictEqual(shouldRequestAzureSignIn(true, true), false);
+    });
+
+    test('uses the Azure Resources sign-in command and never Azure Accounts', async () => {
+        const commands: string[] = [];
+
+        await signInToAzureResources(async command => {
+            commands.push(command);
+        });
+
+        assert.deepStrictEqual(commands, ['azureResourceGroups.logIn']);
+        assert.ok(!commands.some(command => command.includes('azure-account')));
+    });
+
+    test('enables and populates Location only after Subscription selection', () => {
+        const labels = createConnectorTriggerPickerViewModel('python').labels;
+        const html = renderToStaticMarkup(createElement(AzureContextFields, {
+            labels,
+            locations: [{ name: 'eastus', label: 'East US' }],
+            locationsLoading: false,
+            selectedRegion: '',
+            selectedSubscriptionId: 'sub-one',
+            signInRequired: false,
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            subscriptionsLoading: false,
+            onRequestSignIn: () => undefined,
+            onSelectRegion: () => undefined,
+            onSelectSubscription: () => undefined,
+        }));
+
+        assert.ok(html.includes('Subscription One'));
+        assert.ok(html.includes('East US'));
+        assert.strictEqual((html.match(/disabled=""/g) ?? []).length, 0);
     });
 
     test('keeps browsing blocked while signed out and initiates sign-in on demand', async () => {
@@ -152,10 +181,11 @@ suite('Connector trigger picker Azure context UX', () => {
         const controller = createTestController({
             responses,
             catalogLoader: async () => assert.fail('The catalog must not load.'),
-            getIsSignedIn: async () => signedIn,
             listSubscriptions: async () => {
                 subscriptionRequestCount += 1;
-                return [{ id: 'sub-one', label: 'Subscription One' }];
+                return signedIn ?
+                    [{ id: 'sub-one', label: 'Subscription One' }] :
+                    [];
             },
             signIn: async () => {
                 signInCount += 1;
@@ -164,7 +194,7 @@ suite('Connector trigger picker Azure context UX', () => {
         });
 
         await callHandleMessage(controller, { command: 'initialize' });
-        assert.strictEqual(subscriptionRequestCount, 0);
+        assert.strictEqual(subscriptionRequestCount, 1);
         assert.deepStrictEqual(responses, [{
             command: 'azureContextRequired',
             message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
@@ -173,7 +203,7 @@ suite('Connector trigger picker Azure context UX', () => {
         responses.length = 0;
         await callHandleMessage(controller, { command: 'signIn' });
         assert.strictEqual(signInCount, 1);
-        assert.strictEqual(subscriptionRequestCount, 1);
+        assert.strictEqual(subscriptionRequestCount, 2);
         assert.deepStrictEqual(responses, [{
             command: 'subscriptionsLoaded',
             subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
@@ -187,7 +217,6 @@ suite('Connector trigger picker Azure context UX', () => {
         const azureContext = createAzureContext();
         const controller = createTestController({
             responses,
-            getIsSignedIn: async () => true,
             listSubscriptions: async () => [{
                 id: subscriptionContext.subscriptionId,
                 label: subscriptionContext.subscriptionDisplayName,
@@ -269,10 +298,10 @@ suite('Connector trigger picker Azure context UX', () => {
         let invalidationCount = 0;
         const controller = createTestController({
             responses,
-            getIsSignedIn: async () => false,
             invalidateSubscriptions: () => {
                 invalidationCount += 1;
             },
+            listSubscriptions: async () => [],
         });
         controller.azureContext = createAzureContext();
         controller.subscriptionContext = createSubscriptionContext();
@@ -309,7 +338,6 @@ interface TestableConnectorTriggerPickerController {
     catalogLoader: ConnectorTriggerCatalogLoader;
     dataClient: Pick<
         ConnectorTriggerDataClient,
-        | 'getIsSignedIn'
         | 'getSubscriptionContext'
         | 'invalidateSubscriptions'
         | 'listLocations'
@@ -325,7 +353,6 @@ interface TestableConnectorTriggerPickerController {
 interface TestControllerOptions {
     responses: ConnectorTriggerPickerResponse[];
     catalogLoader?: ConnectorTriggerCatalogLoader;
-    getIsSignedIn?: () => Promise<boolean>;
     getSubscriptionContext?: (subscriptionId: string) => Promise<ISubscriptionContext>;
     invalidateSubscriptions?: () => void;
     listLocations?: (
@@ -346,7 +373,6 @@ function createTestController(
         catalogLoadRequests: new Map(),
         catalogLoader: options.catalogLoader ?? (async () => assert.fail('Unexpected catalog load.')),
         dataClient: {
-            getIsSignedIn: options.getIsSignedIn ?? (async () => false),
             getSubscriptionContext: options.getSubscriptionContext ??
                 (async () => createSubscriptionContext()),
             invalidateSubscriptions: options.invalidateSubscriptions ?? (() => undefined),
