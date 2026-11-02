@@ -124,6 +124,35 @@ suite('Connector trigger project handoff', () => {
         );
     });
 
+    test('ProjectTemplateCreator adds a Connector Trigger to an existing supported project', async () => {
+        const handoff = createHandoff();
+        let projectCreated = false;
+        const creator = new ProjectTemplateCreator({
+            onProjectCreated: () => {
+                projectCreated = true;
+            },
+        });
+
+        await creator.addConnectorTrigger(
+            await createTestActionContext(),
+            ProjectLanguage.TypeScript,
+            projectPath,
+            handoff,
+        );
+
+        assert.strictEqual(projectCreated, true);
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+            ),
+            true,
+        );
+        assert.deepStrictEqual(
+            await readConnectorTriggerProjectHandoff(projectPath),
+            handoff,
+        );
+    });
+
     test('does not persist trigger parameters or other unrecognized fields', async () => {
         const unsafeHandoff = {
             ...createHandoff(),
@@ -216,9 +245,6 @@ function createHandoff(): ConnectorTriggerProjectHandoff {
         region: 'usgovvirginia',
         connectorId: 'office365',
         operationId: 'OnNewEmail',
-        catalog: {
-            source: 'remote',
-        },
     };
 }
 

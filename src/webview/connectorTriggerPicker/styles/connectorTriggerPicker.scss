@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -329,9 +330,53 @@ input {
 }
 
 .azure-context-gate {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
     padding: 14px;
     border: 1px solid var(--connector-picker-border);
     border-radius: var(--connector-picker-radius);
+
+    p {
+        margin: 0;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+    }
+}
+
+.azure-context-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+
+    label {
+        display: grid;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+    select {
+        min-height: 34px;
+        padding: 5px 28px 5px 8px;
+        border: 1px solid var(--vscode-dropdown-border, var(--connector-picker-border));
+        border-radius: var(--connector-picker-radius);
+        color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+        background: var(--vscode-dropdown-background, var(--vscode-input-background));
+
+        &:focus-visible {
+            border-color: var(--vscode-focusBorder);
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+    }
 }
 
 .azure-context-status {
@@ -350,6 +395,15 @@ input {
 
     > button {
         margin-left: auto;
+    }
+
+    .azure-context-gate {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .azure-context-fields {
+        grid-template-columns: 1fr;
     }
 }
 

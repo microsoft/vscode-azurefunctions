@@ -18,37 +18,41 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             buildWithCopilotChat: localize('connectorTriggerBuildWithCopilot', 'Build with Copilot Chat'),
             connectorStep: localize('connectorTriggerConnectorStep', 'Connector'),
             eventStep: localize('connectorTriggerEventStep', 'Event'),
-            selectingAzureContext: localize(
-                'connectorTriggerSelectingAzureContext',
-                'Select an Azure subscription and region to browse Connector Triggers.',
-            ),
             azureContextRequired: localize(
                 'connectorTriggerAzureContextRequired',
                 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
-            ),
-            selectedAzureContext: localize(
-                'connectorTriggerSelectedAzureContext',
-                'Azure context: {0} · {1}',
             ),
             selectAzureContext: localize(
                 'connectorTriggerSelectAzureContext',
                 'Select Azure context',
             ),
-            bundledCatalogSource: localize(
-                'connectorTriggerBundledCatalogSource',
-                'Live Azure availability could not be loaded. Browsing the bundled Microsoft connector catalog snapshot.',
+            subscription: localize(
+                'connectorTriggerSubscription',
+                'Subscription',
             ),
-            remoteCatalogSource: localize(
-                'connectorTriggerRemoteCatalogSource',
-                'Browsing the Microsoft connector catalog.',
+            selectSubscription: localize(
+                'connectorTriggerSelectSubscription',
+                'Select a subscription',
+            ),
+            region: localize(
+                'connectorTriggerRegion',
+                'Region',
+            ),
+            selectRegion: localize(
+                'connectorTriggerSelectRegion',
+                'Select a region',
+            ),
+            loadingSubscriptions: localize(
+                'connectorTriggerLoadingSubscriptions',
+                'Loading subscriptions...',
+            ),
+            loadingRegions: localize(
+                'connectorTriggerLoadingRegions',
+                'Loading regions...',
             ),
             liveCatalogSource: localize(
                 'connectorTriggerLiveCatalogSource',
-                'Connector availability was refreshed from Azure.',
-            ),
-            refreshingCatalog: localize(
-                'connectorTriggerRefreshingCatalog',
-                'Refreshing connector availability...',
+                'Browsing connectors available in the selected Azure subscription and region.',
             ),
             catalogSetupDeferred: localize(
                 'connectorTriggerCatalogSetupDeferred',
@@ -56,7 +60,7 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             ),
             selectionUnavailable: localize(
                 'connectorTriggerSelectionUnavailable',
-                'The previous connector or event is not available in the refreshed catalog. Choose another selection.',
+                'The previous connector or event is no longer available in the live catalog. Choose another selection.',
             ),
             unavailable: localize(
                 'connectorTriggerUnavailable',

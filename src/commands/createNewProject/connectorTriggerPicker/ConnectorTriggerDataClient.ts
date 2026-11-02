@@ -5,43 +5,46 @@
 
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
-import { createGenericClient, parseAzureResourceId, type AzExtPipelineResponse } from '@microsoft/vscode-azext-azureutils';
+import {
+    createGenericClient,
+    LocationListStep,
+    parseAzureResourceId,
+    type AzExtLocation,
+    type AzExtPipelineResponse,
+    type ILocationWizardContext,
+} from '@microsoft/vscode-azext-azureutils';
 import { createSubscriptionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { ConnectorNamespaceApiVersion } from '../../../constants';
+import {
+    ConnectorNamespaceApiVersion,
+    ConnectorNamespaceResourceType,
+    webProvider,
+} from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
     type ConnectorNamespaceOption,
-    type ConnectorTriggerInputDefinition,
+    type ConnectorTriggerLocationOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
+    type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import { isFeaturedConnectorId } from '../../../webview/connectorTriggerPicker/connectorTriggerGroups';
 import { requestUtils } from '../../../utils/requestUtils';
-import {
-    parseConnectorInputsDefinition,
-    parseConnectorSwaggerInputs,
-} from './connectorTriggerInputs';
-import {
-    ConnectorCatalogError,
-    ConnectorCatalogLiveLoadError,
-    ConnectorTriggerCatalogProvider,
-    type ConnectorCatalogBaseline,
-    type ConnectorTriggerCatalog,
-    type ConnectorTriggerCatalogResult,
-    type IConnectorTriggerCatalogProvider,
-} from './ConnectorTriggerCatalogProvider';
 
-const managedApiSwaggerApiVersion = '2022-09-01-preview';
+const managedApiCatalogApiVersion = '2016-06-01';
+const managedApiOperationsApiVersion = '2016-06-01';
+const catalogRequestConcurrency = 8;
 
-export type {
-    ConnectorCatalogConnector,
-    ConnectorCatalogItemAvailability,
-    ConnectorCatalogLiveRefresh,
-    ConnectorCatalogOperation,
-    ConnectorCatalogSource,
-    ConnectorTriggerCatalog,
-    ConnectorTriggerCatalogResult,
-} from './ConnectorTriggerCatalogProvider';
+export interface ConnectorTriggerCatalog {
+    connectors: ConnectorTriggerOption[];
+    operations: ConnectorTriggerOperationOption[];
+}
+
+export interface ConnectorTriggerCatalogResult {
+    catalog: ConnectorTriggerCatalog;
+    failedConnectorCount: number;
+    source: 'live';
+}
 
 export interface ConnectorNamespaceResult {
     namespaces: ConnectorNamespaceOption[];
@@ -66,6 +69,10 @@ export interface ConnectorArmClient {
 }
 
 export type ConnectorSubscriptionsProvider = () => Promise<ConnectorSubscription[]>;
+export type ConnectorAuthenticationProvider = () => Promise<boolean>;
+export type ConnectorLocationsProvider = (
+    context: IActionContext & ISubscriptionContext,
+) => Promise<AzExtLocation[]>;
 export type ConnectorArmClientFactory = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<ConnectorArmClient>;
@@ -131,9 +138,69 @@ export class ConnectorTriggerDataClient {
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
         private readonly armClientFactory: ConnectorArmClientFactory = createArmClient,
-        private readonly catalogProvider: IConnectorTriggerCatalogProvider =
-            new ConnectorTriggerCatalogProvider(),
+        private readonly authenticationProvider: ConnectorAuthenticationProvider =
+            getIsSignedIn,
+        private readonly locationsProvider: ConnectorLocationsProvider =
+            getConnectorLocations,
     ) { }
+
+    public async getIsSignedIn(): Promise<boolean> {
+        return await this.authenticationProvider();
+    }
+
+    public async listSubscriptions(): Promise<ConnectorTriggerSubscriptionOption[]> {
+        try {
+            return (await this.getSubscriptions())
+                .map(subscription => ({
+                    id: subscription.subscriptionId,
+                    label: subscription.subscriptionDisplayName,
+                }))
+                .sort((left, right) => left.label.localeCompare(right.label));
+        } catch (error) {
+            throw new Error(localize(
+                'connectorSubscriptionsLoadFailed',
+                'Unable to load Azure subscriptions for Connector Triggers.',
+            ), { cause: error });
+        }
+    }
+
+    public async listLocations(
+        context: IActionContext,
+        subscriptionId: string,
+    ): Promise<ConnectorTriggerLocationOption[]> {
+        const subscription = await this.getSubscription(subscriptionId);
+        maskSubscriptionContext(context, subscription.context);
+        let locations: AzExtLocation[];
+        try {
+            locations = await this.locationsProvider(
+                Object.assign({}, context, subscription.context),
+            );
+        } catch (error) {
+            throw new Error(localize(
+                'connectorRegionsLoadFailed',
+                'Unable to load Connector Trigger regions for the selected subscription.',
+            ), { cause: error });
+        }
+        const unique = new Map<string, ConnectorTriggerLocationOption>();
+        for (const location of locations) {
+            const name = location.name?.trim();
+            if (!name) {
+                continue;
+            }
+            unique.set(name.toLowerCase(), {
+                name,
+                label: location.displayName?.trim() || name,
+            });
+        }
+        return [...unique.values()].sort((left, right) =>
+            left.label.localeCompare(right.label));
+    }
+
+    public async getSubscriptionContext(
+        subscriptionId: string,
+    ): Promise<ISubscriptionContext> {
+        return (await this.getSubscription(subscriptionId)).context;
+    }
 
     public async listNamespaces(context: IActionContext): Promise<ConnectorNamespaceResult> {
         const subscriptions = await this.getSubscriptions();
@@ -190,14 +257,31 @@ export class ConnectorTriggerDataClient {
 
     public async getCatalog(
         context: IActionContext,
-        azureContext?: ConnectorTriggerAzureContext,
+        azureContext: ConnectorTriggerAzureContext,
     ): Promise<ConnectorTriggerCatalogResult> {
-        return await this.catalogProvider.getCatalog(
+        maskValues(
             context,
-            azureContext ?
-                baseline => this.listLocationCatalog(context, azureContext, baseline) :
-                undefined,
+            azureContext.subscriptionId,
+            azureContext.subscriptionName,
+            azureContext.region,
+            azureContext.regionDisplayName,
         );
+        let result: Awaited<ReturnType<ConnectorTriggerDataClient['listLocationCatalog']>>;
+        try {
+            result = await this.listLocationCatalog(context, azureContext);
+        } catch (error) {
+            throw new Error(localize(
+                'connectorCatalogLiveLoadFailed',
+                'Unable to load Connector Triggers from the selected Azure subscription and region.',
+            ), { cause: error });
+        }
+        context.telemetry.properties.connectorCatalogSource = 'live';
+        context.telemetry.properties.connectorCatalogPartial =
+            String(result.failedConnectorCount > 0);
+        return {
+            ...result,
+            source: 'live',
+        };
     }
 
     public async listCatalog(
@@ -242,28 +326,19 @@ export class ConnectorTriggerDataClient {
     private async listLocationCatalog(
         context: IActionContext,
         azureContext: ConnectorTriggerAzureContext,
-        baseline: ConnectorCatalogBaseline | undefined,
-    ): Promise<ConnectorTriggerCatalog | undefined> {
-        if (!baseline) {
-            throw new ConnectorCatalogLiveLoadError(
-                ConnectorCatalogError.LiveCatalogUnavailable,
-            );
-        }
-
-        const subscriptions = await this.getSubscriptions();
-        const subscription = subscriptions.find(item =>
-            item.subscriptionId === azureContext.subscriptionId);
-        if (!subscription) {
-            throw new ConnectorCatalogLiveLoadError(
-                ConnectorCatalogError.LiveSubscriptionUnavailable,
-            );
-        }
+    ): Promise<{
+        catalog: ConnectorTriggerCatalog;
+        failedConnectorCount: number;
+    }> {
+        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        maskSubscriptionContext(context, subscription.context);
 
         const location = normalizeLocation(azureContext.region);
         if (!location) {
-            throw new ConnectorCatalogLiveLoadError(
-                ConnectorCatalogError.LiveCatalogUnavailable,
-            );
+            throw new Error(localize(
+                'connectorRegionUnavailable',
+                'Select a valid Azure region for Connector Triggers.',
+            ));
         }
 
         const clientContext = Object.assign({}, context, subscription.context);
@@ -275,78 +350,94 @@ export class ConnectorTriggerDataClient {
         const managedApisUrl = requestUtils.createRequestUrl(
             `${locationUrl}/managedApis`,
             {
-                'api-version':
-                    baseline.snapshotSource.catalogApiVersion,
+                'api-version': managedApiCatalogApiVersion,
             },
         );
         const managedApis = await listAll<ManagedApiDefinition>(
             client,
             managedApisUrl,
         );
-        const baselineConnectorIds = new Set(
-            baseline.catalog.connectors.map(connector =>
-                connector.id.toLowerCase()),
+        const availableApis = managedApis.filter(
+            (api): api is ManagedApiDefinition & { name: string } =>
+                typeof api.name === 'string' &&
+                !!api.name.trim() &&
+                isFeaturedConnectorId(api.name),
         );
-        const matchingApis = managedApis.filter((api): api is ManagedApiDefinition & { name: string } =>
-            typeof api.name === 'string' &&
-            baselineConnectorIds.has(api.name.toLowerCase()),
-        );
-
-        const catalogs = await Promise.all(matchingApis.map(async api => {
-            const connectorId = api.name;
-            const operationsUrl = requestUtils.createRequestUrl(
-                `${locationUrl}/managedApis/${encodeURIComponent(connectorId)}/apiOperations`,
-                {
-                    'api-version':
-                        baseline.snapshotSource.operationsApiVersion,
-                },
-            );
-            const operations = await listAll<ManagedApiOperation>(
-                client,
-                operationsUrl,
-            );
-            const connectorInformation = api.properties?.generalInformation;
-            const connectorLabel = api.properties?.displayName?.trim() ||
-                connectorInformation?.displayName?.trim() ||
-                connectorId;
-            const connectorDescription = api.properties?.description?.trim() ||
-                connectorInformation?.description?.trim();
-            const connectorIconUrl = getConnectorIconUrl(
-                api.properties?.iconUri,
-                connectorInformation?.iconUri,
-                api.properties?.iconUrl,
-                connectorInformation?.iconUrl,
-            );
-            const triggerOperations = operations
-                .filter(isTriggerOperation)
-                .map(operation => ({
-                    ...operation,
-                    properties: {
-                        ...operation.properties,
-                        api: {
-                            ...operation.properties?.api,
-                            name: connectorId,
-                            displayName: connectorLabel,
-                            description: connectorDescription,
-                            iconUri: connectorIconUrl,
-                        },
+        const results = await mapInBatches(
+            availableApis,
+            catalogRequestConcurrency,
+            async api => {
+                const connectorId = api.name;
+                const operationsUrl = requestUtils.createRequestUrl(
+                    `${locationUrl}/managedApis/${encodeURIComponent(connectorId)}/apiOperations`,
+                    {
+                        'api-version': managedApiOperationsApiVersion,
                     },
-                }));
-            return createCatalog([api], triggerOperations);
-        }));
+                );
+                try {
+                    const operations = await listAll<ManagedApiOperation>(
+                        client,
+                        operationsUrl,
+                    );
+                    const connectorInformation = api.properties?.generalInformation;
+                    const connectorLabel = api.properties?.displayName?.trim() ||
+                        connectorInformation?.displayName?.trim() ||
+                        connectorId;
+                    const connectorDescription = api.properties?.description?.trim() ||
+                        connectorInformation?.description?.trim();
+                    const connectorIconUrl = getConnectorIconUrl(
+                        api.properties?.iconUri,
+                        connectorInformation?.iconUri,
+                        api.properties?.iconUrl,
+                        connectorInformation?.iconUrl,
+                    );
+                    const triggerOperations = operations
+                        .filter(isTriggerOperation)
+                        .map(operation => ({
+                            ...operation,
+                            properties: {
+                                ...operation.properties,
+                                api: {
+                                    ...operation.properties?.api,
+                                    name: connectorId,
+                                    displayName: connectorLabel,
+                                    description: connectorDescription,
+                                    iconUri: connectorIconUrl,
+                                },
+                            },
+                        }));
+                    return createCatalog([api], triggerOperations);
+                } catch {
+                    return undefined;
+                }
+            },
+        );
+        const catalogs = results.filter(
+            (catalog): catalog is ConnectorTriggerCatalog => !!catalog,
+        );
+        const failedConnectorCount = results.length - catalogs.length;
+        if (availableApis.length > 0 && catalogs.length === 0) {
+            throw new Error(localize(
+                'connectorCatalogOperationsUnavailable',
+                'Connector event metadata is unavailable in the selected Azure subscription and region.',
+            ));
+        }
 
         return {
-            connectors: catalogs
+            catalog: {
+                connectors: catalogs
                 .flatMap(catalog => catalog.connectors)
                 .sort((left, right) =>
                     left.label.localeCompare(right.label) ||
                     left.id.localeCompare(right.id)),
-            operations: catalogs
+                operations: catalogs
                 .flatMap(catalog => catalog.operations)
                 .sort((left, right) =>
                     left.connectorId.localeCompare(right.connectorId) ||
                     left.label.localeCompare(right.label) ||
                     left.id.localeCompare(right.id)),
+            },
+            failedConnectorCount,
         };
     }
 
@@ -369,52 +460,6 @@ export class ConnectorTriggerDataClient {
         this.subscriptionsGeneration += 1;
         this._subscriptions = undefined;
         this.subscriptionsPromise = undefined;
-    }
-
-    public async listOperationInputs(
-        context: IActionContext,
-        namespace: ConnectorNamespaceOption,
-        connectorId: string,
-        operationId: string,
-    ): Promise<ConnectorTriggerInputDefinition[]> {
-        const subscription = (await this.getSubscriptions())
-            .find(item => item.subscriptionId === namespace.subscriptionId);
-        if (!subscription) {
-            throw new Error(localize(
-                'connectorSubscriptionUnavailable',
-                'The subscription for Connector Namespace "{0}" is no longer available.',
-                namespace.name,
-            ));
-        }
-
-        const location = namespace.location.replace(/\s+/g, '').toLowerCase();
-        if (!location) {
-            throw new Error(localize(
-                'connectorNamespaceLocationUnavailable',
-                'The Connector Namespace location is unavailable.',
-            ));
-        }
-
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const url = requestUtils.createRequestUrl(
-            `${endpoint}/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Web/locations/${location}/managedApis/${encodeURIComponent(connectorId)}`,
-            {
-                'api-version': managedApiSwaggerApiVersion,
-                export: 'true',
-            },
-        );
-        const swagger = await client.get(url);
-        const inputDefinitions = parseConnectorSwaggerInputs(swagger, operationId);
-        if (!inputDefinitions) {
-            throw new Error(localize(
-                'connectorOperationInputsUnavailable',
-                'The selected connector event input schema could not be loaded.',
-            ));
-        }
-
-        return inputDefinitions;
     }
 
     private async getSubscriptions(): Promise<ConnectorSubscription[]> {
@@ -440,6 +485,20 @@ export class ConnectorTriggerDataClient {
             }
             throw error;
         }
+    }
+
+    private async getSubscription(
+        subscriptionId: string,
+    ): Promise<ConnectorSubscription> {
+        const subscription = (await this.getSubscriptions())
+            .find(item => item.subscriptionId === subscriptionId);
+        if (!subscription) {
+            throw new Error(localize(
+                'connectorSubscriptionUnavailable',
+                'The selected Azure subscription is no longer available.',
+            ));
+        }
+        return subscription;
     }
 }
 
@@ -512,9 +571,6 @@ function createCatalog(
             });
         }
 
-        const inputDefinitions = operation.properties?.inputsDefinition === undefined ?
-            undefined :
-            parseConnectorInputsDefinition(operation.properties.inputsDefinition);
         operations.push({
             id,
             connectorId,
@@ -523,7 +579,6 @@ function createCatalog(
                 operation.properties?.description?.trim(),
             isWebhook,
             isNotification,
-            ...(inputDefinitions === undefined ? {} : { inputDefinitions }),
         });
     }
 
@@ -543,6 +598,7 @@ function createCatalog(
 async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promise<T[]> {
     const items: T[] = [];
     const visited = new Set<string>();
+    const expectedOrigin = new URL(initialUrl).origin;
     let nextUrl: string | undefined = initialUrl;
     while (nextUrl) {
         const currentUrl = nextUrl;
@@ -553,10 +609,35 @@ async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promi
 
         const response = await client.get(currentUrl) as ArmListResult<T>;
         items.push(...response.value ?? []);
-        nextUrl = response.nextLink ? new URL(response.nextLink, currentUrl).toString() : undefined;
+        if (response.nextLink) {
+            const resolved = new URL(response.nextLink, currentUrl);
+            if (resolved.origin !== expectedOrigin) {
+                throw new Error(localize(
+                    'connectorApiPagingOrigin',
+                    'Azure returned an invalid paging host for Connector Trigger metadata.',
+                ));
+            }
+            nextUrl = resolved.toString();
+        } else {
+            nextUrl = undefined;
+        }
     }
 
     return items;
+}
+
+async function mapInBatches<T, TResult>(
+    values: readonly T[],
+    batchSize: number,
+    mapper: (value: T) => Promise<TResult>,
+): Promise<TResult[]> {
+    const results: TResult[] = [];
+    for (let index = 0; index < values.length; index += batchSize) {
+        results.push(...await Promise.all(
+            values.slice(index, index + batchSize).map(mapper),
+        ));
+    }
+    return results;
 }
 
 function getResourceManagerEndpoint(context: ISubscriptionContext): string {
@@ -614,6 +695,47 @@ async function getSubscriptions(): Promise<ConnectorSubscription[]> {
             context,
         };
     });
+}
+
+async function getIsSignedIn(): Promise<boolean> {
+    return await ext.azureAccountTreeItem.getIsLoggedIn();
+}
+
+async function getConnectorLocations(
+    context: IActionContext & ISubscriptionContext,
+): Promise<AzExtLocation[]> {
+    const wizardContext = context as IActionContext & ILocationWizardContext;
+    LocationListStep.addProviderForFiltering(
+        wizardContext,
+        webProvider,
+        ConnectorNamespaceResourceType,
+    );
+    return await LocationListStep.getLocations(wizardContext);
+}
+
+function maskSubscriptionContext(
+    context: IActionContext,
+    subscription: ISubscriptionContext,
+): void {
+    maskValues(
+        context,
+        subscription.subscriptionId,
+        subscription.subscriptionDisplayName,
+        subscription.tenantId,
+        subscription.environment.name,
+        subscription.environment.resourceManagerEndpointUrl,
+    );
+}
+
+function maskValues(
+    context: IActionContext,
+    ...values: (string | undefined)[]
+): void {
+    for (const value of values) {
+        if (value && !context.valuesToMask.includes(value)) {
+            context.valuesToMask.push(value);
+        }
+    }
 }
 
 async function createArmClient(

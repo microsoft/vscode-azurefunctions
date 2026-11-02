@@ -31,6 +31,7 @@ import {
     ProjectTemplateCreator,
     type ProjectTemplateCreationOptions,
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
+import { type ConnectorTriggerProjectHandoff } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
 import {
     partitionConnectorOptions,
     shouldExpandOtherConnectors,
@@ -329,47 +330,6 @@ suite('Connector trigger picker', () => {
                 description: 'Fires for new email.',
                 isWebhook: false,
                 isNotification: true,
-                inputDefinitions: [
-                    {
-                        name: 'folderPath',
-                        label: 'Folder',
-                        description: 'Mail folder to monitor.',
-                        type: 'string',
-                        format: undefined,
-                        required: true,
-                        defaultValue: undefined,
-                        options: undefined,
-                        dynamic: true,
-                        sensitive: false,
-                    },
-                    {
-                        name: 'importance',
-                        label: 'Importance',
-                        description: undefined,
-                        type: 'string',
-                        format: undefined,
-                        required: false,
-                        defaultValue: undefined,
-                        options: [
-                            { label: 'any', value: 'any' },
-                            { label: 'high', value: 'high' },
-                        ],
-                        dynamic: false,
-                        sensitive: false,
-                    },
-                    {
-                        name: 'includeAttachments',
-                        label: 'Include Attachments',
-                        description: undefined,
-                        type: 'boolean',
-                        format: undefined,
-                        required: false,
-                        defaultValue: false,
-                        options: undefined,
-                        dynamic: false,
-                        sensitive: false,
-                    },
-                ],
             },
             {
                 id: 'OnNewEmailV1',
@@ -394,80 +354,6 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(operationsRequest.searchParams.get('$top'), '250');
         assert.ok(requests.includes('https://management.azure.com/operation-page-2'));
         assert.ok(requests.includes('https://management.azure.com/managed-api-page-2'));
-
-        const inputs = await client.listOperationInputs(
-            await createTestActionContext(),
-            createNamespace(),
-            'office365',
-            'OnNewEmail',
-        );
-        assert.deepStrictEqual(inputs, [
-            {
-                name: 'folderPath',
-                label: 'Folder',
-                description: undefined,
-                type: 'string',
-                format: undefined,
-                required: false,
-                defaultValue: undefined,
-                options: undefined,
-                dynamic: true,
-                sensitive: false,
-            },
-            {
-                name: 'importance',
-                label: 'Importance',
-                description: undefined,
-                type: 'string',
-                format: undefined,
-                required: false,
-                defaultValue: undefined,
-                options: [
-                    { label: 'Any', value: 'any' },
-                    { label: 'High', value: 'high' },
-                ],
-                dynamic: false,
-                sensitive: false,
-                visibility: 'important',
-            },
-            {
-                name: 'includeAttachments',
-                label: 'Include Attachments',
-                description: undefined,
-                type: 'boolean',
-                format: undefined,
-                required: false,
-                defaultValue: false,
-                options: undefined,
-                dynamic: false,
-                sensitive: false,
-            },
-            {
-                name: 'advanced.threshold',
-                label: 'Threshold',
-                description: 'Minimum score.',
-                type: 'integer',
-                format: undefined,
-                required: true,
-                defaultValue: undefined,
-                options: undefined,
-                dynamic: false,
-                sensitive: false,
-            },
-        ]);
-        const swaggerRequest = new URL(requests.find(url =>
-            url.includes('/locations/eastus2/managedApis/office365')) as string);
-        assert.strictEqual(swaggerRequest.searchParams.get('api-version'), '2022-09-01-preview');
-        assert.strictEqual(swaggerRequest.searchParams.get('export'), 'true');
-        await assert.rejects(
-            client.listOperationInputs(
-                await createTestActionContext(),
-                createNamespace(),
-                'office365',
-                'MissingOperation',
-            ),
-            /input schema could not be loaded/,
-        );
     });
 
     test('fails explicitly when every subscription namespace request fails', async () => {
@@ -520,12 +406,12 @@ suite('Connector trigger picker', () => {
             'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
         );
         assert.strictEqual(
-            viewModel.labels.selectedAzureContext,
-            'Azure context: {0} · {1}',
+            viewModel.labels.selectSubscription,
+            'Select a subscription',
         );
         assert.strictEqual(
-            viewModel.labels.bundledCatalogSource,
-            'Live Azure availability could not be loaded. Browsing the bundled Microsoft connector catalog snapshot.',
+            viewModel.labels.selectRegion,
+            'Select a region',
         );
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
@@ -688,6 +574,11 @@ suite('Connector trigger picker', () => {
             entryPoint: string | undefined;
             options: ProjectTemplateCreationOptions | undefined;
         }[] = [];
+        const addedTriggers: {
+            language: string;
+            location: string;
+            handoff: ConnectorTriggerProjectHandoff;
+        }[] = [];
         const responses: ConnectorTriggerPickerResponse[] = [];
         interface TestableConnectorTriggerPickerController {
             launchOptions: ConnectorTriggerPickerLaunchOptions;
@@ -696,13 +587,15 @@ suite('Connector trigger picker', () => {
             catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
             catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
             templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
-            projectCreator: Pick<ProjectTemplateCreator, 'createProject'>;
+            projectCreator: Pick<
+                ProjectTemplateCreator,
+                'addConnectorTrigger' | 'createProject'
+            >;
             postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
             createSelectedProject(
                 context: IActionContext,
                 selection: {
                     azureContext: ConnectorTriggerAzureContext;
-                    catalogSource: 'bundled' | 'live' | 'remote';
                     connector: ConnectorTriggerOption;
                     operation: ConnectorTriggerCatalog['operations'][number];
                 },
@@ -719,7 +612,6 @@ suite('Connector trigger picker', () => {
                 context: IActionContext,
                 selection: {
                     azureContext: ConnectorTriggerAzureContext;
-                    catalogSource: 'bundled' | 'live' | 'remote';
                     connector: ConnectorTriggerOption;
                     operation: ConnectorTriggerCatalog['operations'][number];
                 },
@@ -741,12 +633,19 @@ suite('Connector trigger picker', () => {
             catalogLoadRequests: new Map(),
             catalogs: new Map([[`${azureContext.subscriptionId}:${azureContext.region}`, {
                 catalog,
-                source: 'bundled',
             }]]),
             templateProvider: {
                 getTemplates: async () => [template],
             },
             projectCreator: {
+                addConnectorTrigger: async (
+                    _context,
+                    language,
+                    location,
+                    handoff,
+                ) => {
+                    addedTriggers.push({ language, location, handoff });
+                },
                 createProject: async (
                     _context,
                     selectedTemplate,
@@ -811,9 +710,6 @@ suite('Connector trigger picker', () => {
                     region: azureContext.region,
                     connectorId: connector.id,
                     operationId: catalog.operations[0].id,
-                    catalog: {
-                        source: 'bundled',
-                    },
                 },
             },
         }]);
@@ -841,16 +737,33 @@ suite('Connector trigger picker', () => {
             await createTestActionContext(),
             {
                 azureContext,
-                catalogSource: 'bundled',
                 connector,
                 operation: catalog.operations[0],
             },
         );
         assert.deepStrictEqual(responses, [{
-            command: 'projectCreationFailed',
-            message: 'Adding a connector trigger to an existing project is not supported yet.',
+            command: 'projectCreationStarted',
         }]);
         assert.strictEqual(createdProjects.length, 1);
+        assert.deepStrictEqual(addedTriggers, [{
+            language: ProjectLanguage.Python,
+            location: 'C:\\connector-project',
+            handoff: {
+                version: 1,
+                subscription: {
+                    id: azureContext.subscriptionId,
+                    tenantId: selectedSubscriptionContext.tenantId,
+                    environment: {
+                        name: selectedSubscriptionContext.environment.name,
+                        resourceManagerEndpointUrl:
+                            selectedSubscriptionContext.environment.resourceManagerEndpointUrl,
+                    },
+                },
+                region: azureContext.region,
+                connectorId: connector.id,
+                operationId: catalog.operations[0].id,
+            },
+        }]);
     });
 
     test('escapes initial data and allows HTTPS API-provided icons', () => {
@@ -875,8 +788,18 @@ suite('Connector trigger picker', () => {
 
     test('accepts only the picker request and response contracts', () => {
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'initialize' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'signIn' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'openCopilot' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'selectSubscription',
+            subscriptionId: 'sub-one',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'selectRegion',
+            subscriptionId: 'sub-one',
+            region: 'eastus2',
+        }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'loadCatalog',
         }), true);
@@ -899,17 +822,27 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'azureContextSelected',
             azureContext: {
+                subscriptionId: 'sub-one',
                 subscriptionName: 'Subscription One',
+                region: 'eastus2',
                 regionDisplayName: 'East US 2',
             },
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
-            command: 'azureContextSelectionCancelled',
+            command: 'azureContextRequired',
             message: 'Azure context is required.',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'subscriptionsLoaded',
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'locationsLoaded',
+            subscriptionId: 'sub-one',
+            locations: [{ name: 'eastus2', label: 'East US 2' }],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'catalogLoaded',
-            source: 'live',
             connectors: [],
             operations: [],
         }), true);

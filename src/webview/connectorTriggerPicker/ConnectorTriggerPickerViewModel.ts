@@ -23,6 +23,16 @@ export interface ConnectorTriggerOption {
 
 export type ConnectorTriggerAvailability = 'available' | 'unavailable' | 'unknown';
 
+export interface ConnectorTriggerSubscriptionOption {
+    id: string;
+    label: string;
+}
+
+export interface ConnectorTriggerLocationOption {
+    name: string;
+    label: string;
+}
+
 export type ConnectorTriggerInputType =
     'array' |
     'boolean' |
@@ -61,10 +71,10 @@ export interface ConnectorTriggerOperationOption {
     availability?: ConnectorTriggerAvailability;
 }
 
-export type ConnectorTriggerCatalogSource = 'bundled' | 'remote' | 'live';
-
 export interface ConnectorTriggerAzureContextDisplay {
+    subscriptionId: string;
     subscriptionName: string;
+    region: string;
     regionDisplayName: string;
 }
 
@@ -79,14 +89,15 @@ export interface ConnectorTriggerPickerViewModel {
         buildWithCopilotChat: string;
         connectorStep: string;
         eventStep: string;
-        selectingAzureContext: string;
         azureContextRequired: string;
-        selectedAzureContext: string;
         selectAzureContext: string;
-        bundledCatalogSource: string;
-        remoteCatalogSource: string;
+        subscription: string;
+        selectSubscription: string;
+        region: string;
+        selectRegion: string;
+        loadingSubscriptions: string;
+        loadingRegions: string;
         liveCatalogSource: string;
-        refreshingCatalog: string;
         catalogSetupDeferred: string;
         selectionUnavailable: string;
         unavailable: string;
@@ -119,6 +130,16 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'browseTemplates' }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
+    | { command: 'signIn' }
+    | {
+        command: 'selectSubscription';
+        subscriptionId: string;
+    }
+    | {
+        command: 'selectRegion';
+        subscriptionId: string;
+        region: string;
+    }
     | { command: 'loadCatalog' }
     | {
         command: 'continue';
@@ -128,16 +149,24 @@ export type ConnectorTriggerPickerMessage =
 
 export type ConnectorTriggerPickerResponse =
     | {
+        command: 'azureContextRequired';
+        message: string;
+    }
+    | {
+        command: 'subscriptionsLoaded';
+        subscriptions: ConnectorTriggerSubscriptionOption[];
+    }
+    | {
+        command: 'locationsLoaded';
+        subscriptionId: string;
+        locations: ConnectorTriggerLocationOption[];
+    }
+    | {
         command: 'azureContextSelected';
         azureContext: ConnectorTriggerAzureContextDisplay;
     }
     | {
-        command: 'azureContextSelectionCancelled';
-        message: string;
-    }
-    | {
         command: 'catalogLoaded';
-        source: ConnectorTriggerCatalogSource;
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
         warning?: string;
@@ -155,7 +184,7 @@ export type ConnectorTriggerPickerResponse =
     }
     | {
         command: 'loadFailed';
-        scope: 'azureContext' | 'catalog';
+        scope: 'azureContext' | 'subscriptions' | 'locations' | 'catalog';
         message: string;
     };
 
@@ -167,8 +196,21 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
     if (message.command === 'browseTemplates' ||
         message.command === 'openCopilot' ||
         message.command === 'initialize' ||
+        message.command === 'signIn' ||
         message.command === 'loadCatalog') {
         return true;
+    }
+
+    if (message.command === 'selectSubscription') {
+        return 'subscriptionId' in message &&
+            typeof message.subscriptionId === 'string';
+    }
+
+    if (message.command === 'selectRegion') {
+        return 'subscriptionId' in message &&
+            typeof message.subscriptionId === 'string' &&
+            'region' in message &&
+            typeof message.region === 'string';
     }
 
     return message.command === 'continue' &&
@@ -183,19 +225,29 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
         return false;
     }
 
+    if (message.command === 'azureContextRequired') {
+        return 'message' in message && typeof message.message === 'string';
+    }
+
+    if (message.command === 'subscriptionsLoaded') {
+        return 'subscriptions' in message &&
+            Array.isArray(message.subscriptions);
+    }
+
+    if (message.command === 'locationsLoaded') {
+        return 'subscriptionId' in message &&
+            typeof message.subscriptionId === 'string' &&
+            'locations' in message &&
+            Array.isArray(message.locations);
+    }
+
     if (message.command === 'azureContextSelected') {
         return 'azureContext' in message &&
             isConnectorTriggerAzureContextDisplay(message.azureContext);
     }
 
-    if (message.command === 'azureContextSelectionCancelled') {
-        return 'message' in message && typeof message.message === 'string';
-    }
-
     if (message.command === 'catalogLoaded') {
-        return 'source' in message &&
-            isConnectorTriggerCatalogSource(message.source) &&
-            'connectors' in message &&
+        return 'connectors' in message &&
             Array.isArray(message.connectors) &&
             'operations' in message &&
             Array.isArray(message.operations) &&
@@ -216,13 +268,14 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
 
     return message.command === 'loadFailed' &&
         'scope' in message &&
-        (message.scope === 'azureContext' || message.scope === 'catalog') &&
+        (
+            message.scope === 'azureContext' ||
+            message.scope === 'subscriptions' ||
+            message.scope === 'locations' ||
+            message.scope === 'catalog'
+        ) &&
         'message' in message &&
         typeof message.message === 'string';
-}
-
-function isConnectorTriggerCatalogSource(value: unknown): value is ConnectorTriggerCatalogSource {
-    return value === 'bundled' || value === 'remote' || value === 'live';
 }
 
 function isConnectorTriggerAzureContextDisplay(
@@ -230,8 +283,12 @@ function isConnectorTriggerAzureContextDisplay(
 ): value is ConnectorTriggerAzureContextDisplay {
     return !!value &&
         typeof value === 'object' &&
+        'subscriptionId' in value &&
+        typeof value.subscriptionId === 'string' &&
         'subscriptionName' in value &&
         typeof value.subscriptionName === 'string' &&
+        'region' in value &&
+        typeof value.region === 'string' &&
         'regionDisplayName' in value &&
         typeof value.regionDisplayName === 'string';
 }

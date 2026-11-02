@@ -7,7 +7,7 @@
 
 import { Button } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { ConnectorEventStep } from './ConnectorEventStep';
 import { ConnectorTilePicker } from './ConnectorTilePicker';
 import {
@@ -19,10 +19,11 @@ import { ConnectorTriggerShell, type ConnectorTriggerStep } from './ConnectorTri
 import {
     isConnectorTriggerPickerResponse,
     type ConnectorTriggerAzureContextDisplay,
-    type ConnectorTriggerCatalogSource,
+    type ConnectorTriggerLocationOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel,
+    type ConnectorTriggerSubscriptionOption,
 } from './ConnectorTriggerPickerViewModel';
 
 const connectorPageSize = 60;
@@ -32,9 +33,16 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const { vscodeApi } = useContext(WebviewContext);
     const [activeStep, setActiveStep] = useState<ConnectorTriggerStep>(1);
     const [azureContext, setAzureContext] = useState<ConnectorTriggerAzureContextDisplay>();
-    const [azureContextLoading, setAzureContextLoading] = useState(true);
-    const [azureContextError, setAzureContextError] = useState<string>();
-    const [catalogSource, setCatalogSource] = useState<ConnectorTriggerCatalogSource>();
+    const [azureContextMessage, setAzureContextMessage] = useState<string>();
+    const [subscriptions, setSubscriptions] = useState<ConnectorTriggerSubscriptionOption[]>([]);
+    const [locations, setLocations] = useState<ConnectorTriggerLocationOption[]>([]);
+    const [selectedSubscriptionId, setSelectedSubscriptionId] = useState('');
+    const selectedSubscriptionIdRef = useRef('');
+    const [selectedRegion, setSelectedRegion] = useState('');
+    const [signInRequired, setSignInRequired] = useState(false);
+    const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
+    const [locationsLoading, setLocationsLoading] = useState(false);
+    const [catalogLoaded, setCatalogLoaded] = useState(false);
     const [catalogWarning, setCatalogWarning] = useState<string>();
     const [selectionUnavailable, setSelectionUnavailable] = useState(false);
     const [connectors, setConnectors] = useState<ConnectorTriggerOption[]>([]);
@@ -51,8 +59,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [loadError, setLoadError] = useState<string>();
 
     const initialize = useCallback(() => {
-        setAzureContextLoading(true);
-        setAzureContextError(undefined);
+        setSubscriptionsLoading(true);
+        setAzureContextMessage(undefined);
         setLoadError(undefined);
         vscodeApi.postMessage({ command: 'initialize' });
     }, [vscodeApi]);
@@ -70,6 +78,60 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         vscodeApi.postMessage({ command: 'loadCatalog' });
     }, [azureContext, initialize, vscodeApi]);
 
+    const signIn = useCallback(() => {
+        setSubscriptionsLoading(true);
+        setAzureContextMessage(undefined);
+        vscodeApi.postMessage({ command: 'signIn' });
+    }, [vscodeApi]);
+
+    const selectSubscription = useCallback((subscriptionId: string) => {
+        selectedSubscriptionIdRef.current = subscriptionId;
+        setSelectedSubscriptionId(subscriptionId);
+        setSelectedRegion('');
+        setLocations([]);
+        setAzureContext(undefined);
+        setCatalogLoaded(false);
+        setCatalogWarning(undefined);
+        setConnectors([]);
+        setOperations([]);
+        setSelectedConnectorId('');
+        setSelectedOperationId('');
+        setLoadError(undefined);
+        setProjectCreationError('');
+        if (subscriptionId) {
+            setLocationsLoading(true);
+            vscodeApi.postMessage({
+                command: 'selectSubscription',
+                subscriptionId,
+            });
+        } else {
+            setLocationsLoading(false);
+        }
+    }, [vscodeApi]);
+
+    const selectRegion = useCallback((region: string) => {
+        setSelectedRegion(region);
+        setAzureContext(undefined);
+        setCatalogLoaded(false);
+        setCatalogWarning(undefined);
+        setConnectors([]);
+        setOperations([]);
+        setSelectedConnectorId('');
+        setSelectedOperationId('');
+        setLoadError(undefined);
+        setProjectCreationError('');
+        if (selectedSubscriptionId && region) {
+            setCatalogLoading(true);
+            vscodeApi.postMessage({
+                command: 'selectRegion',
+                subscriptionId: selectedSubscriptionId,
+                region,
+            });
+        } else {
+            setCatalogLoading(false);
+        }
+    }, [selectedSubscriptionId, vscodeApi]);
+
     useEffect(() => {
         const listener = (event: MessageEvent<unknown>) => {
             if (!isConnectorTriggerPickerResponse(event.data)) {
@@ -77,23 +139,18 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             }
 
             const message = event.data;
-            if (message.command === 'azureContextSelected') {
-                setAzureContext(message.azureContext);
-                setAzureContextLoading(false);
-                setAzureContextError(undefined);
-                setCatalogLoading(true);
-                setLoadError(undefined);
-                setCatalogSource(undefined);
-                setConnectors([]);
-                setOperations([]);
-                setSelectedConnectorId('');
-                setSelectedOperationId('');
-                setActiveStep(1);
-            } else if (message.command === 'azureContextSelectionCancelled') {
+            if (message.command === 'azureContextRequired') {
+                selectedSubscriptionIdRef.current = '';
+                setSignInRequired(true);
                 setAzureContext(undefined);
-                setAzureContextLoading(false);
-                setAzureContextError(message.message);
-                setCatalogSource(undefined);
+                setAzureContextMessage(message.message);
+                setSubscriptions([]);
+                setLocations([]);
+                setSelectedSubscriptionId('');
+                setSelectedRegion('');
+                setSubscriptionsLoading(false);
+                setLocationsLoading(false);
+                setCatalogLoaded(false);
                 setCatalogWarning(undefined);
                 setSelectionUnavailable(false);
                 setConnectors([]);
@@ -109,9 +166,51 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setProjectCreationError('');
                 setLoadError(undefined);
                 setActiveStep(1);
+            } else if (message.command === 'subscriptionsLoaded') {
+                selectedSubscriptionIdRef.current = '';
+                setSignInRequired(false);
+                setAzureContext(undefined);
+                setAzureContextMessage(undefined);
+                setSubscriptions(message.subscriptions);
+                setLocations([]);
+                setSelectedSubscriptionId('');
+                setSelectedRegion('');
+                setSubscriptionsLoading(false);
+                setLocationsLoading(false);
+                setCatalogLoaded(false);
+                setCatalogWarning(undefined);
+                setSelectionUnavailable(false);
+                setConnectors([]);
+                setOperations([]);
+                setCatalogLoading(false);
+                setSelectedConnectorId('');
+                setSelectedOperationId('');
+                setLoadError(undefined);
+                setActiveStep(1);
+            } else if (message.command === 'locationsLoaded') {
+                if (message.subscriptionId !== selectedSubscriptionIdRef.current) {
+                    return;
+                }
+                setLocations(message.locations);
+                setLocationsLoading(false);
+                setAzureContextMessage(undefined);
+            } else if (message.command === 'azureContextSelected') {
+                selectedSubscriptionIdRef.current = message.azureContext.subscriptionId;
+                setAzureContext(message.azureContext);
+                setSelectedSubscriptionId(message.azureContext.subscriptionId);
+                setSelectedRegion(message.azureContext.region);
+                setAzureContextMessage(undefined);
+                setCatalogLoading(true);
+                setLoadError(undefined);
+                setCatalogLoaded(false);
+                setConnectors([]);
+                setOperations([]);
+                setSelectedConnectorId('');
+                setSelectedOperationId('');
+                setActiveStep(1);
             } else if (message.command === 'catalogLoaded') {
                 setCatalogLoading(false);
-                setCatalogSource(message.source);
+                setCatalogLoaded(true);
                 setCatalogWarning(message.warning);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
@@ -126,12 +225,17 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setProjectCreationDetail('');
                 setProjectCreationError(message.message);
             } else if (message.command === 'loadFailed') {
-                if (message.scope === 'azureContext') {
-                    setAzureContextLoading(false);
-                    setAzureContextError(message.message);
-                } else {
+                if (message.scope === 'catalog') {
                     setCatalogLoading(false);
                     setLoadError(message.message);
+                } else if (message.scope === 'locations') {
+                    setSignInRequired(false);
+                    setLocationsLoading(false);
+                    setAzureContextMessage(message.message);
+                } else {
+                    setSignInRequired(false);
+                    setSubscriptionsLoading(false);
+                    setAzureContextMessage(message.message);
                 }
             }
         };
@@ -146,7 +250,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     }, [connectorSearch]);
 
     useEffect(() => {
-        if (!catalogSource) {
+        if (!catalogLoaded) {
             return;
         }
 
@@ -167,7 +271,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
     }, [
         activeStep,
-        catalogSource,
+        catalogLoaded,
         connectors,
         operations,
         selectedConnectorId,
@@ -263,36 +367,42 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 onStepChange={setActiveStep}
             />
 
-            {activeStep === 1 && !azureContext &&
-                <AzureContextGate
-                    error={azureContextError}
-                    labels={viewModel.labels}
-                    loading={azureContextLoading}
-                    onRetry={initialize}
-                />
-            }
-
-            {activeStep === 1 && azureContext &&
+            {activeStep === 1 &&
                 <section className="step-page connector-page">
                     <h2>{viewModel.labels.connectorPageTitle}</h2>
                     <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
 
-                    <div className="catalog-status azure-context-status">
-                        <strong>
-                            {format(
-                                viewModel.labels.selectedAzureContext,
-                                azureContext.subscriptionName,
-                                azureContext.regionDisplayName,
-                            )}
-                        </strong>
-                        <span>{viewModel.labels.catalogSetupDeferred}</span>
-                    </div>
+                    {subscriptions.length === 0 ?
+                        <AzureContextGate
+                            actionLabel={signInRequired ?
+                                viewModel.labels.selectAzureContext :
+                                viewModel.labels.retry}
+                            message={azureContextMessage}
+                            labels={viewModel.labels}
+                            loading={subscriptionsLoading}
+                            onSelect={signInRequired ? signIn : initialize}
+                        /> :
+                        <AzureContextFields
+                            labels={viewModel.labels}
+                            locations={locations}
+                            locationsLoading={locationsLoading}
+                            selectedRegion={selectedRegion}
+                            selectedSubscriptionId={selectedSubscriptionId}
+                            subscriptions={subscriptions}
+                            onSelectRegion={selectRegion}
+                            onSelectSubscription={selectSubscription}
+                        />
+                    }
 
-                    {catalogSource &&
-                        <div className={`catalog-status ${catalogSource}`}>
-                            <strong>{getCatalogSourceLabel(catalogSource, viewModel.labels)}</strong>
-                            {catalogLoading && <span>{viewModel.labels.refreshingCatalog}</span>}
-                            {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
+                    {azureContext &&
+                        <div className="catalog-status azure-context-status">
+                            <strong>{viewModel.labels.liveCatalogSource}</strong>
+                            <span>
+                                {azureContext.subscriptionName} · {azureContext.regionDisplayName}
+                            </span>
+                            {catalogWarning &&
+                                <span className="warning-text">{catalogWarning}</span>
+                            }
                             {selectionUnavailable &&
                                 <span className="warning-text">
                                     {viewModel.labels.selectionUnavailable}
@@ -301,100 +411,117 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         </div>
                     }
 
-                    {catalogLoading && connectors.length === 0 ?
-                        <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
-                        loadError && connectors.length === 0 ?
-                            <LoadError
-                                message={loadError}
-                                retryLabel={viewModel.labels.retry}
-                                onRetry={loadCatalog}
-                            /> :
-                            connectors.length === 0 ?
-                                <p className="status-text">{viewModel.labels.noConnectors}</p> :
-                                <>
-                                    {loadError &&
-                                        <LoadError
-                                            message={loadError}
-                                            retryLabel={viewModel.labels.retry}
-                                            onRetry={loadCatalog}
-                                        />
-                                    }
-                                    <label className="search-field">
-                                        <span className="codicon codicon-search" aria-hidden="true" />
-                                        <input
-                                            value={connectorSearch}
-                                            placeholder={viewModel.labels.connectorSearchPlaceholder}
-                                            onChange={event => setConnectorSearch(event.target.value)}
-                                        />
-                                    </label>
-                                    <p className="result-count">
-                                        {format(
-                                            viewModel.labels.connectorCount,
-                                            filteredConnectors.length.toString(),
-                                        )}
-                                    </p>
-                                    {connectorGroups.featured.length > 0 &&
-                                        <section className="featured-connectors">
-                                            <h3>{viewModel.labels.featuredConnectors}</h3>
-                                            <ConnectorTilePicker
-                                                label={viewModel.labels.featuredConnectors}
-                                                options={connectorGroups.featured}
-                                                unavailableLabel={viewModel.labels.unavailable}
-                                                value={selectedConnectorId}
-                                                onChange={selectConnector}
+                    {azureContext &&
+                        <div className="catalog-status">
+                            <strong>{viewModel.labels.catalogSetupDeferred}</strong>
+                        </div>
+                    }
+
+                    {!azureContext && azureContextMessage && subscriptions.length > 0 &&
+                        <LoadError
+                            message={azureContextMessage}
+                            retryLabel={viewModel.labels.retry}
+                            onRetry={() => selectedSubscriptionId ?
+                                selectSubscription(selectedSubscriptionId) :
+                                initialize()}
+                        />
+                    }
+
+                    {!azureContext ? null :
+                        catalogLoading && connectors.length === 0 ?
+                            <p className="status-text">{viewModel.labels.loadingConnectors}</p> :
+                            loadError && connectors.length === 0 ?
+                                <LoadError
+                                    message={loadError}
+                                    retryLabel={viewModel.labels.retry}
+                                    onRetry={loadCatalog}
+                                /> :
+                                connectors.length === 0 ?
+                                    <p className="status-text">{viewModel.labels.noConnectors}</p> :
+                                    <>
+                                        {loadError &&
+                                            <LoadError
+                                                message={loadError}
+                                                retryLabel={viewModel.labels.retry}
+                                                onRetry={loadCatalog}
                                             />
-                                        </section>
-                                    }
-                                    {connectorGroups.other.length > 0 &&
-                                        <section className="other-connectors">
-                                            <button
-                                                type="button"
-                                                className="other-connectors-toggle"
-                                                aria-controls="other-connectors-grid"
-                                                aria-expanded={otherConnectorsVisible}
-                                                aria-label={otherConnectorsVisible ?
-                                                    viewModel.labels.hideOtherConnectors :
-                                                    viewModel.labels.showOtherConnectors}
-                                                disabled={!!connectorSearch.trim()}
-                                                onClick={() => setOtherConnectorsExpanded(
-                                                    expanded => !expanded,
-                                                )}
-                                            >
-                                                <span
-                                                    className={`codicon codicon-chevron-${otherConnectorsVisible ? 'down' : 'right'}`}
-                                                    aria-hidden="true"
+                                        }
+                                        <label className="search-field">
+                                            <span className="codicon codicon-search" aria-hidden="true" />
+                                            <input
+                                                value={connectorSearch}
+                                                placeholder={viewModel.labels.connectorSearchPlaceholder}
+                                                onChange={event => setConnectorSearch(event.target.value)}
+                                            />
+                                        </label>
+                                        <p className="result-count">
+                                            {format(
+                                                viewModel.labels.connectorCount,
+                                                filteredConnectors.length.toString(),
+                                            )}
+                                        </p>
+                                        {connectorGroups.featured.length > 0 &&
+                                            <section className="featured-connectors">
+                                                <h3>{viewModel.labels.featuredConnectors}</h3>
+                                                <ConnectorTilePicker
+                                                    label={viewModel.labels.featuredConnectors}
+                                                    options={connectorGroups.featured}
+                                                    unavailableLabel={viewModel.labels.unavailable}
+                                                    value={selectedConnectorId}
+                                                    onChange={selectConnector}
                                                 />
-                                                {format(
-                                                    viewModel.labels.otherConnectors,
-                                                    connectorGroups.other.length.toString(),
-                                                )}
-                                            </button>
-                                            {otherConnectorsVisible &&
-                                                <div id="other-connectors-grid">
-                                                    <ConnectorTilePicker
-                                                        label={viewModel.labels.connectorGroup}
-                                                        options={displayedOtherConnectors}
-                                                        unavailableLabel={viewModel.labels.unavailable}
-                                                        value={selectedConnectorId}
-                                                        onChange={selectConnector}
+                                            </section>
+                                        }
+                                        {connectorGroups.other.length > 0 &&
+                                            <section className="other-connectors">
+                                                <button
+                                                    type="button"
+                                                    className="other-connectors-toggle"
+                                                    aria-controls="other-connectors-grid"
+                                                    aria-expanded={otherConnectorsVisible}
+                                                    aria-label={otherConnectorsVisible ?
+                                                        viewModel.labels.hideOtherConnectors :
+                                                        viewModel.labels.showOtherConnectors}
+                                                    disabled={!!connectorSearch.trim()}
+                                                    onClick={() => setOtherConnectorsExpanded(
+                                                        expanded => !expanded,
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={`codicon codicon-chevron-${otherConnectorsVisible ? 'down' : 'right'}`}
+                                                        aria-hidden="true"
                                                     />
-                                                    {displayedOtherConnectors.length <
-                                                        connectorGroups.other.length &&
-                                                        <Button
-                                                            appearance="secondary"
-                                                            className="show-more"
-                                                            onClick={() => setConnectorLimit(
-                                                                limit => limit + connectorPageSize,
-                                                            )}
-                                                        >
-                                                            {viewModel.labels.showMoreConnectors}
-                                                        </Button>
-                                                    }
-                                                </div>
-                                            }
-                                        </section>
-                                    }
-                                </>
+                                                    {format(
+                                                        viewModel.labels.otherConnectors,
+                                                        connectorGroups.other.length.toString(),
+                                                    )}
+                                                </button>
+                                                {otherConnectorsVisible &&
+                                                    <div id="other-connectors-grid">
+                                                        <ConnectorTilePicker
+                                                            label={viewModel.labels.connectorGroup}
+                                                            options={displayedOtherConnectors}
+                                                            unavailableLabel={viewModel.labels.unavailable}
+                                                            value={selectedConnectorId}
+                                                            onChange={selectConnector}
+                                                        />
+                                                        {displayedOtherConnectors.length <
+                                                            connectorGroups.other.length &&
+                                                            <Button
+                                                                appearance="secondary"
+                                                                className="show-more"
+                                                                onClick={() => setConnectorLimit(
+                                                                    limit => limit + connectorPageSize,
+                                                                )}
+                                                            >
+                                                                {viewModel.labels.showMoreConnectors}
+                                                            </Button>
+                                                        }
+                                                    </div>
+                                                }
+                                            </section>
+                                        }
+                                    </>
                     }
                 </section>
             }
@@ -418,48 +545,91 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     );
 }
 
-function AzureContextGate({
-    error,
+export function AzureContextGate({
+    actionLabel,
+    message,
     labels,
     loading,
-    onRetry,
+    onSelect,
 }: {
-    error?: string;
+    actionLabel: string;
+    message?: string;
     labels: ConnectorTriggerPickerViewModel['labels'];
     loading: boolean;
-    onRetry: () => void;
+    onSelect: () => void;
 }): JSX.Element {
     return (
-        <section className="step-page azure-context-gate">
-            <h2>{labels.connectorPageTitle}</h2>
-            <p className="step-description">
-                {loading ? labels.selectingAzureContext : error || labels.azureContextRequired}
+        <div className="azure-context-gate">
+            <p>
+                {loading ? labels.loadingSubscriptions : message || labels.azureContextRequired}
             </p>
             {!loading &&
-                <Button appearance="primary" onClick={onRetry}>
-                    {labels.selectAzureContext}
+                <Button appearance="primary" onClick={onSelect}>
+                    {actionLabel}
                 </Button>
             }
-        </section>
+        </div>
+    );
+}
+
+export function AzureContextFields({
+    labels,
+    locations,
+    locationsLoading,
+    selectedRegion,
+    selectedSubscriptionId,
+    subscriptions,
+    onSelectRegion,
+    onSelectSubscription,
+}: {
+    labels: ConnectorTriggerPickerViewModel['labels'];
+    locations: readonly ConnectorTriggerLocationOption[];
+    locationsLoading: boolean;
+    selectedRegion: string;
+    selectedSubscriptionId: string;
+    subscriptions: readonly ConnectorTriggerSubscriptionOption[];
+    onSelectRegion: (region: string) => void;
+    onSelectSubscription: (subscriptionId: string) => void;
+}): JSX.Element {
+    return (
+        <div className="azure-context-fields">
+            <label>
+                <span>{labels.subscription}</span>
+                <select
+                    value={selectedSubscriptionId}
+                    onChange={event => onSelectSubscription(event.target.value)}
+                >
+                    <option value="">{labels.selectSubscription}</option>
+                    {subscriptions.map(subscription =>
+                        <option key={subscription.id} value={subscription.id}>
+                            {subscription.label}
+                        </option>
+                    )}
+                </select>
+            </label>
+            <label>
+                <span>{labels.region}</span>
+                <select
+                    disabled={!selectedSubscriptionId || locationsLoading}
+                    value={selectedRegion}
+                    onChange={event => onSelectRegion(event.target.value)}
+                >
+                    <option value="">
+                        {locationsLoading ? labels.loadingRegions : labels.selectRegion}
+                    </option>
+                    {locations.map(location =>
+                        <option key={location.name} value={location.name}>
+                            {location.label}
+                        </option>
+                    )}
+                </select>
+            </label>
+        </div>
     );
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {
     return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function getCatalogSourceLabel(
-    source: ConnectorTriggerCatalogSource,
-    labels: ConnectorTriggerPickerViewModel['labels'],
-): string {
-    switch (source) {
-        case 'live':
-            return labels.liveCatalogSource;
-        case 'remote':
-            return labels.remoteCatalogSource;
-        default:
-            return labels.bundledCatalogSource;
-    }
 }
 
 function format(template: string, ...values: string[]): string {

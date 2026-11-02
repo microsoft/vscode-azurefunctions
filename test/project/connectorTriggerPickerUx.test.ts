@@ -3,15 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import {
+    createTestActionContext,
+    type IActionContext,
+    type ISubscriptionContext,
+} from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
     ConnectorTriggerPickerController,
-    type ConnectorTriggerAzureContextProvider,
     type ConnectorTriggerCatalogLoadResult,
     type ConnectorTriggerCatalogLoader,
+    type ConnectorTriggerSignIn,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import {
     type ConnectorTriggerAzureContext,
@@ -21,6 +25,10 @@ import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
+import {
+    AzureContextFields,
+    AzureContextGate,
+} from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     reconcileConnectorTriggerSelection,
 } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
@@ -41,10 +49,9 @@ suite('Connector trigger picker Azure context UX', () => {
         label: 'When a new email arrives',
         isWebhook: false,
         isNotification: true,
-        inputDefinitions: [],
     };
 
-    test('keeps valid selections when catalog availability is refreshed', () => {
+    test('keeps valid selections when the live catalog is refreshed', () => {
         assert.deepStrictEqual(
             reconcileConnectorTriggerSelection({
                 activeStep: 2,
@@ -60,7 +67,7 @@ suite('Connector trigger picker Azure context UX', () => {
         );
     });
 
-    test('returns to the narrowest valid step when live availability changes', () => {
+    test('returns to the narrowest valid step when live events change', () => {
         assert.deepStrictEqual(
             reconcileConnectorTriggerSelection({
                 activeStep: 2,
@@ -71,35 +78,6 @@ suite('Connector trigger picker Azure context UX', () => {
                 activeStep: 2,
                 connectorId: connector.id,
                 operationId: '',
-                selectionUnavailable: true,
-            },
-        );
-        assert.deepStrictEqual(
-            reconcileConnectorTriggerSelection({
-                activeStep: 2,
-                connectorId: connector.id,
-                operationId: operation.id,
-            }, [], []),
-            {
-                activeStep: 1,
-                connectorId: '',
-                operationId: '',
-                selectionUnavailable: true,
-            },
-        );
-    });
-
-    test('keeps explicitly unavailable live selections visible but blocked', () => {
-        assert.deepStrictEqual(
-            reconcileConnectorTriggerSelection({
-                activeStep: 2,
-                connectorId: connector.id,
-                operationId: operation.id,
-            }, [{ ...connector, availability: 'unavailable' }], [operation]),
-            {
-                activeStep: 2,
-                connectorId: connector.id,
-                operationId: operation.id,
                 selectionUnavailable: true,
             },
         );
@@ -135,205 +113,252 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(html.includes(operation.label));
         assert.ok(html.includes(labels.useTemplate));
         assert.ok(!html.includes('Folder parameter must not render'));
-        assert.ok(!html.includes('Configure &amp; preview'));
     });
 
-    test('selects Azure context before loading the catalog', async () => {
-        const azureContext = createAzureContext();
-        const subscriptionContext = createSubscriptionContext();
-        const sequence: string[] = [];
+    test('renders sign-in gating and subscription/region dropdowns in the webview', () => {
+        const labels = createConnectorTriggerPickerViewModel('python').labels;
+        const gateHtml = renderToStaticMarkup(createElement(AzureContextGate, {
+            actionLabel: labels.selectAzureContext,
+            labels,
+            loading: false,
+            message: labels.azureContextRequired,
+            onSelect: () => undefined,
+        }));
+        const fieldsHtml = renderToStaticMarkup(createElement(AzureContextFields, {
+            labels,
+            locations: [{ name: 'eastus', label: 'East US' }],
+            locationsLoading: false,
+            selectedRegion: 'eastus',
+            selectedSubscriptionId: 'sub-one',
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            onSelectRegion: () => undefined,
+            onSelectSubscription: () => undefined,
+        }));
+
+        assert.ok(gateHtml.includes(labels.azureContextRequired));
+        assert.ok(gateHtml.includes(labels.selectAzureContext));
+        assert.ok(fieldsHtml.includes(`<span>${labels.subscription}</span>`));
+        assert.ok(fieldsHtml.includes(`<span>${labels.region}</span>`));
+        assert.ok(fieldsHtml.includes('Subscription One'));
+        assert.ok(fieldsHtml.includes('East US'));
+        assert.strictEqual((fieldsHtml.match(/<select/g) ?? []).length, 2);
+    });
+
+    test('keeps browsing blocked while signed out and initiates sign-in on demand', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
-        const catalogLoader: ConnectorTriggerCatalogLoader = async (_context, selectedContext) => {
-            sequence.push('catalog');
-            assert.deepStrictEqual(selectedContext, azureContext);
-            return {
-                catalog: {
-                    connectors: [connector],
-                    operations: [operation],
-                },
-                source: 'live',
-            };
-        };
-        const azureContextProvider: ConnectorTriggerAzureContextProvider = async () => {
-            sequence.push('azureContext');
-            return { azureContext, subscriptionContext };
-        };
-        const controller = createTestController(
+        let signedIn = false;
+        let signInCount = 0;
+        let subscriptionRequestCount = 0;
+        const controller = createTestController({
             responses,
-            catalogLoader,
-            azureContextProvider,
-            selectedSubscription => {
-                sequence.push('subscription');
-                assert.strictEqual(selectedSubscription, subscriptionContext);
+            catalogLoader: async () => assert.fail('The catalog must not load.'),
+            getIsSignedIn: async () => signedIn,
+            listSubscriptions: async () => {
+                subscriptionRequestCount += 1;
+                return [{ id: 'sub-one', label: 'Subscription One' }];
             },
-        );
+            signIn: async () => {
+                signInCount += 1;
+                signedIn = true;
+            },
+        });
 
         await callHandleMessage(controller, { command: 'initialize' });
-
-        assert.deepStrictEqual(sequence, [
-            'azureContext',
-            'subscription',
-            'catalog',
-        ]);
+        assert.strictEqual(subscriptionRequestCount, 0);
         assert.deepStrictEqual(responses, [{
-            command: 'azureContextSelected',
-            azureContext: {
-                subscriptionName: azureContext.subscriptionName,
-                regionDisplayName: azureContext.regionDisplayName,
-            },
-        }, {
-            command: 'catalogLoaded',
-            source: 'live',
-            connectors: [connector],
-            operations: [{
-                id: operation.id,
-                connectorId: operation.connectorId,
-                label: operation.label,
-                isWebhook: operation.isWebhook,
-                isNotification: operation.isNotification,
-            }],
+            command: 'azureContextRequired',
+            message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+        }]);
+
+        responses.length = 0;
+        await callHandleMessage(controller, { command: 'signIn' });
+        assert.strictEqual(signInCount, 1);
+        assert.strictEqual(subscriptionRequestCount, 1);
+        assert.deepStrictEqual(responses, [{
+            command: 'subscriptionsLoaded',
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
         }]);
     });
 
-    test('keeps connector browsing blocked when Azure context selection is cancelled', async () => {
+    test('loads regions and then the live catalog from dropdown selections', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
-        let catalogLoadCount = 0;
-        const controller = createTestController(
+        const sequence: string[] = [];
+        const subscriptionContext = createSubscriptionContext();
+        const azureContext = createAzureContext();
+        const controller = createTestController({
             responses,
-            async () => {
-                catalogLoadCount += 1;
+            getIsSignedIn: async () => true,
+            listSubscriptions: async () => [{
+                id: subscriptionContext.subscriptionId,
+                label: subscriptionContext.subscriptionDisplayName,
+            }],
+            getSubscriptionContext: async subscriptionId => {
+                sequence.push(`subscription:${subscriptionId}`);
+                return subscriptionContext;
+            },
+            listLocations: async (_context, subscriptionId) => {
+                sequence.push(`locations:${subscriptionId}`);
+                return [{
+                    name: azureContext.region,
+                    label: azureContext.regionDisplayName,
+                }];
+            },
+            catalogLoader: async (_context, selectedContext) => {
+                sequence.push(`catalog:${selectedContext.region}`);
+                assert.deepStrictEqual(selectedContext, azureContext);
                 return {
                     catalog: {
                         connectors: [connector],
                         operations: [operation],
                     },
-                    source: 'live',
                 };
             },
-            async () => {
-                throw new UserCancelledError('Azure context selection cancelled.');
-            },
-        );
+        });
 
         await callHandleMessage(controller, { command: 'initialize' });
-
-        assert.strictEqual(catalogLoadCount, 0);
         assert.deepStrictEqual(responses, [{
-            command: 'azureContextSelectionCancelled',
-            message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+            command: 'subscriptionsLoaded',
+            subscriptions: [{
+                id: 'sub-one',
+                label: 'Subscription One',
+            }],
+        }]);
+
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'selectSubscription',
+            subscriptionId: 'sub-one',
+        });
+        assert.deepStrictEqual(responses, [{
+            command: 'locationsLoaded',
+            subscriptionId: 'sub-one',
+            locations: [{
+                name: 'usgovvirginia',
+                label: 'US Gov Virginia',
+            }],
+        }]);
+
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'selectRegion',
+            subscriptionId: 'sub-one',
+            region: 'usgovvirginia',
+        });
+        assert.deepStrictEqual(sequence, [
+            'subscription:sub-one',
+            'locations:sub-one',
+            'catalog:usgovvirginia',
+        ]);
+        assert.deepStrictEqual(responses, [{
+            command: 'azureContextSelected',
+            azureContext: {
+                subscriptionId: 'sub-one',
+                subscriptionName: 'Subscription One',
+                region: 'usgovvirginia',
+                regionDisplayName: 'US Gov Virginia',
+            },
+        }, {
+            command: 'catalogLoaded',
+            connectors: [connector],
+            operations: [operation],
         }]);
     });
 
-    test('requires Azure-context reselection after authentication changes', async () => {
+    test('requires fresh dropdown selections after authentication changes', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         let invalidationCount = 0;
-        const controller = createTestController(
+        const controller = createTestController({
             responses,
-            async () => assert.fail('The catalog must not load.'),
-            async () => assert.fail('Azure context must not be selected.'),
-            undefined,
-            () => {
+            getIsSignedIn: async () => false,
+            invalidateSubscriptions: () => {
                 invalidationCount += 1;
             },
-        );
+        });
         controller.azureContext = createAzureContext();
         controller.subscriptionContext = createSubscriptionContext();
-        controller.azureContextRequest = new Promise<void>(() => undefined);
+        controller.locations.set('sub-one', [{
+            name: 'usgovvirginia',
+            label: 'US Gov Virginia',
+        }]);
         controller.catalogs.set('stale', {
             catalog: {
                 connectors: [connector],
                 operations: [operation],
             },
-            source: 'live',
         });
-        controller.catalogLoadRequests.set('stale', Promise.resolve({
-            catalog: {
-                connectors: [connector],
-                operations: [operation],
-            },
-            source: 'live',
-        }));
 
         await callHandleAuthenticationChange(controller);
 
         assert.strictEqual(invalidationCount, 1);
         assert.strictEqual(controller.azureContext, undefined);
         assert.strictEqual(controller.subscriptionContext, undefined);
+        assert.strictEqual(controller.locations.size, 0);
         assert.strictEqual(controller.catalogs.size, 0);
-        assert.strictEqual(controller.catalogLoadRequests.size, 0);
-        await callHandleMessage(controller, {
-            command: 'continue',
-            connectorId: connector.id,
-            operationId: operation.id,
-        });
         assert.deepStrictEqual(responses, [{
-            command: 'azureContextSelectionCancelled',
+            command: 'azureContextRequired',
             message: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
-        }, {
-            command: 'projectCreationFailed',
-            message: 'Select an Azure subscription and region before creating the project.',
         }]);
-    });
-
-    test('does not race an in-flight initial sign-in', async () => {
-        const responses: ConnectorTriggerPickerResponse[] = [];
-        let invalidationCount = 0;
-        const controller = createTestController(
-            responses,
-            async () => assert.fail('The catalog must not load.'),
-            async () => assert.fail('Azure context must not be selected.'),
-            undefined,
-            () => {
-                invalidationCount += 1;
-            },
-        );
-        controller.azureContextSelectionPending = true;
-
-        await callHandleAuthenticationChange(controller);
-
-        assert.strictEqual(invalidationCount, 1);
-        assert.strictEqual(controller.azureContext, undefined);
-        assert.strictEqual(controller.subscriptionContext, undefined);
-        assert.strictEqual(controller.catalogs.size, 0);
-        assert.deepStrictEqual(responses, []);
     });
 });
 
 interface TestableConnectorTriggerPickerController {
     azureContext: ConnectorTriggerAzureContext | undefined;
-    azureContextRequest: Promise<void> | undefined;
-    azureContextSelectionPending: boolean;
-    azureContextProvider: ConnectorTriggerAzureContextProvider;
+    azureContextRevision: number;
     catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
     catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
     catalogLoader: ConnectorTriggerCatalogLoader;
     dataClient: Pick<
         ConnectorTriggerDataClient,
-        'invalidateSubscriptions' | 'registerSubscription'
+        | 'getIsSignedIn'
+        | 'getSubscriptionContext'
+        | 'invalidateSubscriptions'
+        | 'listLocations'
+        | 'listSubscriptions'
     >;
+    locations: Map<string, { name: string; label: string }[]>;
     postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
+    signIn: ConnectorTriggerSignIn;
+    signInPending: boolean;
     subscriptionContext: ISubscriptionContext | undefined;
 }
 
+interface TestControllerOptions {
+    responses: ConnectorTriggerPickerResponse[];
+    catalogLoader?: ConnectorTriggerCatalogLoader;
+    getIsSignedIn?: () => Promise<boolean>;
+    getSubscriptionContext?: (subscriptionId: string) => Promise<ISubscriptionContext>;
+    invalidateSubscriptions?: () => void;
+    listLocations?: (
+        context: IActionContext,
+        subscriptionId: string,
+    ) => Promise<{ name: string; label: string }[]>;
+    listSubscriptions?: () => Promise<{ id: string; label: string }[]>;
+    signIn?: ConnectorTriggerSignIn;
+}
+
 function createTestController(
-    responses: ConnectorTriggerPickerResponse[],
-    catalogLoader: ConnectorTriggerCatalogLoader,
-    azureContextProvider: ConnectorTriggerAzureContextProvider,
-    registerSubscription: (context: ISubscriptionContext) => void = () => undefined,
-    invalidateSubscriptions: () => void = () => undefined,
+    options: TestControllerOptions,
 ): TestableConnectorTriggerPickerController {
     return Object.assign(Object.create(ConnectorTriggerPickerController.prototype), {
         azureContext: undefined,
-        azureContextRequest: undefined,
-        azureContextSelectionPending: false,
-        azureContextProvider,
+        azureContextRevision: 0,
         catalogs: new Map(),
         catalogLoadRequests: new Map(),
-        catalogLoader,
-        dataClient: { invalidateSubscriptions, registerSubscription },
-        postMessage: async (message: ConnectorTriggerPickerResponse) => {
-            responses.push(message);
+        catalogLoader: options.catalogLoader ?? (async () => assert.fail('Unexpected catalog load.')),
+        dataClient: {
+            getIsSignedIn: options.getIsSignedIn ?? (async () => false),
+            getSubscriptionContext: options.getSubscriptionContext ??
+                (async () => createSubscriptionContext()),
+            invalidateSubscriptions: options.invalidateSubscriptions ?? (() => undefined),
+            listLocations: options.listLocations ?? (async () => []),
+            listSubscriptions: options.listSubscriptions ?? (async () => []),
         },
+        locations: new Map(),
+        postMessage: async (message: ConnectorTriggerPickerResponse) => {
+            options.responses.push(message);
+        },
+        signIn: options.signIn ?? (async () => undefined),
+        signInPending: false,
         subscriptionContext: undefined,
     }) as TestableConnectorTriggerPickerController;
 }
@@ -342,14 +367,14 @@ async function callHandleMessage(
     controller: TestableConnectorTriggerPickerController,
     message: unknown,
 ): Promise<void> {
-    const handleMessage = ConnectorTriggerPickerController.prototype as unknown as {
+    const methods = ConnectorTriggerPickerController.prototype as unknown as {
         handleMessage(
             this: TestableConnectorTriggerPickerController,
             message: unknown,
             context: IActionContext,
         ): Promise<void>;
     };
-    await handleMessage.handleMessage.call(
+    await methods.handleMessage.call(
         controller,
         message,
         await createTestActionContext(),
@@ -359,12 +384,16 @@ async function callHandleMessage(
 async function callHandleAuthenticationChange(
     controller: TestableConnectorTriggerPickerController,
 ): Promise<void> {
-    const controllerMethods = ConnectorTriggerPickerController.prototype as unknown as {
+    const methods = ConnectorTriggerPickerController.prototype as unknown as {
         handleAuthenticationChange(
             this: TestableConnectorTriggerPickerController,
+            context: IActionContext,
         ): Promise<void>;
     };
-    await controllerMethods.handleAuthenticationChange.call(controller);
+    await methods.handleAuthenticationChange.call(
+        controller,
+        await createTestActionContext(),
+    );
 }
 
 function createAzureContext(): ConnectorTriggerAzureContext {

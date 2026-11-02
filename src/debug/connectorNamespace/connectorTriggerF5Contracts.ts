@@ -27,9 +27,6 @@ export interface ConnectorTriggerProjectHandoff {
     region: string;
     connectorId: string;
     operationId: string;
-    catalog?: {
-        source: 'bundled' | 'live' | 'remote';
-    };
 }
 
 export interface ConnectorTriggerProjectHandoffStore {

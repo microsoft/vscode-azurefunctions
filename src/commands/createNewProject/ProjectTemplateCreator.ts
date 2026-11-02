@@ -41,6 +41,26 @@ export class ProjectTemplateCreator {
         private readonly callbacks: ProjectTemplateCreatorCallbacks = {},
     ) { }
 
+    public async addConnectorTrigger(
+        actionContext: IActionContext,
+        language: string,
+        projectPath: string,
+        handoff: ConnectorTriggerProjectHandoff,
+    ): Promise<void> {
+        this.reportProgress('Adding Connector Trigger...');
+        await ensureConnectorTriggerPollProject(projectPath, language);
+        await writeConnectorTriggerProjectHandoff(projectPath, handoff);
+        actionContext.telemetry.properties.result = 'Succeeded';
+        this.callbacks.onProjectCreated?.();
+        void vscode.window.showInformationMessage(
+            localize(
+                'connectorTriggerAdded',
+                'Connector Trigger added successfully to {0}',
+                projectPath,
+            ),
+        );
+    }
+
     public async createProject(
         actionContext: IActionContext,
         template: IProjectTemplate,

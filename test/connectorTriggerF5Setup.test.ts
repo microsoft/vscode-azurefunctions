@@ -55,9 +55,6 @@ const handoff: ConnectorTriggerProjectHandoff = {
     region: 'eastus',
     connectorId: 'office365',
     operationId: 'OnNewEmailV3',
-    catalog: {
-        source: 'live',
-    },
 };
 
 suite('Connector Trigger F5 setup', () => {

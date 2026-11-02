@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ProjectLanguage } from '../../constants';
-import { type IConnectorCatalogManifest } from './IConnectorCatalogManifest';
 
 /**
  * Subset of the project template manifest schema that this extension reads or
@@ -69,8 +68,6 @@ export interface ITemplateManifest {
     /** Array of project templates. */
     templates: IProjectTemplate[];
 
-    /** Optional anonymous connector catalog used when live Azure metadata is unavailable. */
-    connectorCatalog?: IConnectorCatalogManifest;
 }
 
 /**

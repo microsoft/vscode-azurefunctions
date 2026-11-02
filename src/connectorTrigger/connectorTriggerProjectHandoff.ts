@@ -19,8 +19,6 @@ export const connectorTriggerProjectHandoffRelativePath =
 const connectorTriggerProjectHandoffGitIgnoreEntry =
     `/${connectorTriggerProjectHandoffRelativePath}`;
 
-export type ConnectorTriggerCatalogSource = 'bundled' | 'live' | 'remote';
-
 export interface ConnectorTriggerProjectHandoff {
     version: typeof connectorTriggerProjectHandoffVersion;
     subscription: {
@@ -34,9 +32,6 @@ export interface ConnectorTriggerProjectHandoff {
     region: string;
     connectorId: string;
     operationId: string;
-    catalog?: {
-        source: ConnectorTriggerCatalogSource;
-    };
 }
 
 export type ConnectorTriggerProjectHandoffErrorCode =
@@ -184,7 +179,6 @@ function validateHandoff(value: unknown): ConnectorTriggerProjectHandoff {
     if (!hasExactKeys(
         value,
         ['version', 'subscription', 'region', 'connectorId', 'operationId'],
-        ['catalog'],
     )) {
         throw createHandoffError('InvalidSchema');
     }
@@ -219,16 +213,6 @@ function validateHandoff(value: unknown): ConnectorTriggerProjectHandoff {
         throw createHandoffError('InvalidSchema');
     }
 
-    let catalog: ConnectorTriggerProjectHandoff['catalog'];
-    if (value.catalog !== undefined) {
-        if (!isJsonObject(value.catalog) ||
-            !hasExactKeys(value.catalog, ['source']) ||
-            !isCatalogSource(value.catalog.source)) {
-            throw createHandoffError('InvalidSchema');
-        }
-        catalog = { source: value.catalog.source };
-    }
-
     return {
         version: connectorTriggerProjectHandoffVersion,
         subscription: {
@@ -242,7 +226,6 @@ function validateHandoff(value: unknown): ConnectorTriggerProjectHandoff {
         region,
         connectorId,
         operationId,
-        ...(catalog ? { catalog } : {}),
     };
 }
 
@@ -328,10 +311,6 @@ function hasExactKeys(
     const allowedKeys = new Set([...requiredKeys, ...optionalKeys]);
     return requiredKeys.every(key => Object.prototype.hasOwnProperty.call(value, key)) &&
         keys.every(key => allowedKeys.has(key));
-}
-
-function isCatalogSource(value: unknown): value is ConnectorTriggerCatalogSource {
-    return value === 'bundled' || value === 'live' || value === 'remote';
 }
 
 function isJsonObject(value: unknown): value is Record<string, unknown> {
