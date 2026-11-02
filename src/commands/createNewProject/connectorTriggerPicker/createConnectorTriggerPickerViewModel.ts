@@ -30,6 +30,10 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerSelectSubscription',
                 'Select a subscription',
             ),
+            showAllSubscriptions: localize(
+                'connectorTriggerShowAllSubscriptions',
+                'Show all subscriptions...',
+            ),
             region: localize(
                 'connectorTriggerRegion',
                 'Region',
@@ -49,10 +53,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             liveCatalogSource: localize(
                 'connectorTriggerLiveCatalogSource',
                 'Browsing connectors available in the selected Azure subscription and region.',
-            ),
-            catalogSetupDeferred: localize(
-                'connectorTriggerCatalogSetupDeferred',
-                'No Azure resources are created now. The selected subscription and region will be used when you configure the trigger during debugging.',
             ),
             selectionUnavailable: localize(
                 'connectorTriggerSelectionUnavailable',
@@ -77,6 +77,7 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             eventPageTitle: localize('connectorTriggerChooseEvent', 'Choose an event'),
             eventPageDescription: localize('connectorTriggerChooseEventDescription', 'Select the event that will start your function.'),
             eventSearchPlaceholder: localize('connectorTriggerSearchEvents', 'Search events...'),
+            loadingEvents: localize('connectorTriggerLoadingEvents', 'Loading events...'),
             eventCount: localize('connectorTriggerEventCount', 'Showing {0} of {1} events.'),
             eventSelected: localize('connectorTriggerEventSelected', 'Selected: {0}'),
             changeConnector: localize('connectorTriggerChangeConnector', 'Change connector'),

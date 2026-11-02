@@ -28,12 +28,10 @@ import {
     type ConnectorTriggerOption,
     type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { isFeaturedConnectorId } from '../../../webview/connectorTriggerPicker/connectorTriggerGroups';
 import { requestUtils } from '../../../utils/requestUtils';
 
 const managedApiCatalogApiVersion = '2016-06-01';
 const managedApiOperationsApiVersion = '2016-06-01';
-const catalogRequestConcurrency = 8;
 
 export interface ConnectorTriggerCatalog {
     connectors: ConnectorTriggerOption[];
@@ -42,7 +40,6 @@ export interface ConnectorTriggerCatalog {
 
 export interface ConnectorTriggerCatalogResult {
     catalog: ConnectorTriggerCatalog;
-    failedConnectorCount: number;
     source: 'live';
 }
 
@@ -68,7 +65,8 @@ export interface ConnectorArmClient {
     get(url: string): Promise<unknown>;
 }
 
-export type ConnectorSubscriptionsProvider = () => Promise<ConnectorSubscription[]>;
+export type ConnectorSubscriptionsProvider =
+    (filter: boolean) => Promise<ConnectorSubscription[]>;
 export type ConnectorLocationsProvider = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<AzExtLocation[]>;
@@ -130,9 +128,10 @@ interface ManagedApiOperation {
 }
 
 export class ConnectorTriggerDataClient {
-    private _subscriptions: ConnectorSubscription[] | undefined;
+    private readonly subscriptions = new Map<boolean, ConnectorSubscription[]>();
+    private readonly subscriptionPromises =
+        new Map<boolean, Promise<ConnectorSubscription[]>>();
     private subscriptionsGeneration = 0;
-    private subscriptionsPromise: Promise<ConnectorSubscription[]> | undefined;
 
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
@@ -141,9 +140,11 @@ export class ConnectorTriggerDataClient {
             getConnectorLocations,
     ) { }
 
-    public async listSubscriptions(): Promise<ConnectorTriggerSubscriptionOption[]> {
+    public async listSubscriptions(
+        showAll = false,
+    ): Promise<ConnectorTriggerSubscriptionOption[]> {
         try {
-            return (await this.getSubscriptions())
+            return (await this.getSubscriptions(!showAll))
                 .map(subscription => ({
                     id: subscription.subscriptionId,
                     label: subscription.subscriptionDisplayName,
@@ -196,7 +197,7 @@ export class ConnectorTriggerDataClient {
     }
 
     public async listNamespaces(context: IActionContext): Promise<ConnectorNamespaceResult> {
-        const subscriptions = await this.getSubscriptions();
+        const subscriptions = await this.getSubscriptions(true);
         const results = await Promise.allSettled(subscriptions.map(async subscription => {
             const clientContext = Object.assign({}, context, subscription.context);
             const client = await this.armClientFactory(clientContext);
@@ -269,8 +270,6 @@ export class ConnectorTriggerDataClient {
             ), { cause: error });
         }
         context.telemetry.properties.connectorCatalogSource = 'live';
-        context.telemetry.properties.connectorCatalogPartial =
-            String(result.failedConnectorCount > 0);
         return {
             ...result,
             source: 'live',
@@ -281,7 +280,7 @@ export class ConnectorTriggerDataClient {
         context: IActionContext,
         namespace: ConnectorNamespaceOption,
     ): Promise<ConnectorTriggerCatalog> {
-        const subscription = (await this.getSubscriptions())
+        const subscription = (await this.getSubscriptions(true))
             .find(item => item.subscriptionId === namespace.subscriptionId);
         if (!subscription) {
             throw new Error(localize(
@@ -321,7 +320,6 @@ export class ConnectorTriggerDataClient {
         azureContext: ConnectorTriggerAzureContext,
     ): Promise<{
         catalog: ConnectorTriggerCatalog;
-        failedConnectorCount: number;
     }> {
         const subscription = await this.getSubscription(azureContext.subscriptionId);
         maskSubscriptionContext(context, subscription.context);
@@ -350,131 +348,121 @@ export class ConnectorTriggerDataClient {
             client,
             managedApisUrl,
         );
-        const availableApis = managedApis.filter(
-            (api): api is ManagedApiDefinition & { name: string } =>
-                typeof api.name === 'string' &&
-                !!api.name.trim() &&
-                isFeaturedConnectorId(api.name),
-        );
-        const results = await mapInBatches(
-            availableApis,
-            catalogRequestConcurrency,
-            async api => {
-                const connectorId = api.name;
-                const operationsUrl = requestUtils.createRequestUrl(
-                    `${locationUrl}/managedApis/${encodeURIComponent(connectorId)}/apiOperations`,
-                    {
-                        'api-version': managedApiOperationsApiVersion,
-                    },
-                );
-                try {
-                    const operations = await listAll<ManagedApiOperation>(
-                        client,
-                        operationsUrl,
-                    );
-                    const connectorInformation = api.properties?.generalInformation;
-                    const connectorLabel = api.properties?.displayName?.trim() ||
-                        connectorInformation?.displayName?.trim() ||
-                        connectorId;
-                    const connectorDescription = api.properties?.description?.trim() ||
-                        connectorInformation?.description?.trim();
-                    const connectorIconUrl = getConnectorIconUrl(
-                        api.properties?.iconUri,
-                        connectorInformation?.iconUri,
-                        api.properties?.iconUrl,
-                        connectorInformation?.iconUrl,
-                    );
-                    const triggerOperations = operations
-                        .filter(isTriggerOperation)
-                        .map(operation => ({
-                            ...operation,
-                            properties: {
-                                ...operation.properties,
-                                api: {
-                                    ...operation.properties?.api,
-                                    name: connectorId,
-                                    displayName: connectorLabel,
-                                    description: connectorDescription,
-                                    iconUri: connectorIconUrl,
-                                },
-                            },
-                        }));
-                    return createCatalog([api], triggerOperations);
-                } catch {
-                    return undefined;
-                }
-            },
-        );
-        const catalogs = results.filter(
-            (catalog): catalog is ConnectorTriggerCatalog => !!catalog,
-        );
-        const failedConnectorCount = results.length - catalogs.length;
-        if (availableApis.length > 0 && catalogs.length === 0) {
-            throw new Error(localize(
-                'connectorCatalogOperationsUnavailable',
-                'Connector event metadata is unavailable in the selected Azure subscription and region.',
-            ));
-        }
 
         return {
             catalog: {
-                connectors: catalogs
-                .flatMap(catalog => catalog.connectors)
-                .sort((left, right) =>
-                    left.label.localeCompare(right.label) ||
-                    left.id.localeCompare(right.id)),
-                operations: catalogs
-                .flatMap(catalog => catalog.operations)
-                .sort((left, right) =>
-                    left.connectorId.localeCompare(right.connectorId) ||
-                    left.label.localeCompare(right.label) ||
-                    left.id.localeCompare(right.id)),
+                connectors: createConnectorOptions(managedApis),
+                operations: [],
             },
-            failedConnectorCount,
         };
+    }
+
+    public async listConnectorOperations(
+        context: IActionContext,
+        azureContext: ConnectorTriggerAzureContext,
+        connectorId: string,
+    ): Promise<ConnectorTriggerOperationOption[]> {
+        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        maskSubscriptionContext(context, subscription.context);
+        maskValues(
+            context,
+            azureContext.region,
+            azureContext.regionDisplayName,
+        );
+        const location = normalizeLocation(azureContext.region);
+        if (!location) {
+            throw new Error(localize(
+                'connectorRegionUnavailable',
+                'Select a valid Azure region for Connector Triggers.',
+            ));
+        }
+
+        const clientContext = Object.assign({}, context, subscription.context);
+        const client = await this.armClientFactory(clientContext);
+        const endpoint = getResourceManagerEndpoint(subscription.context);
+        const operationsUrl = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+            `/managedApis/${encodeURIComponent(connectorId)}/apiOperations`,
+            {
+                'api-version': managedApiOperationsApiVersion,
+            },
+        );
+        try {
+            const operations = await listAll<ManagedApiOperation>(
+                client,
+                operationsUrl,
+            );
+            return createCatalog(
+                [],
+                operations
+                    .filter(isTriggerOperation)
+                    .map(operation => ({
+                        ...operation,
+                        properties: {
+                            ...operation.properties,
+                            api: {
+                                ...operation.properties?.api,
+                                name: connectorId,
+                            },
+                        },
+                    })),
+            ).operations;
+        } catch (error) {
+            throw new Error(localize(
+                'connectorEventsLoadFailed',
+                'Unable to load events for the selected connector.',
+            ), { cause: error });
+        }
     }
 
     public registerSubscription(context: ISubscriptionContext): void {
         this.subscriptionsGeneration += 1;
-        this.subscriptionsPromise = undefined;
         const subscription: ConnectorSubscription = {
             subscriptionId: context.subscriptionId,
             subscriptionDisplayName: context.subscriptionDisplayName,
             context,
         };
-        const subscriptions = this._subscriptions ?? [];
-        this._subscriptions = [
-            ...subscriptions.filter(item => item.subscriptionId !== context.subscriptionId),
-            subscription,
-        ];
+        this.subscriptionPromises.clear();
+        for (const filter of [true, false]) {
+            const subscriptions = this.subscriptions.get(filter) ?? [];
+            this.subscriptions.set(filter, [
+                ...subscriptions.filter(item =>
+                    item.subscriptionId !== context.subscriptionId),
+                subscription,
+            ]);
+        }
     }
 
     public invalidateSubscriptions(): void {
         this.subscriptionsGeneration += 1;
-        this._subscriptions = undefined;
-        this.subscriptionsPromise = undefined;
+        this.subscriptions.clear();
+        this.subscriptionPromises.clear();
     }
 
-    private async getSubscriptions(): Promise<ConnectorSubscription[]> {
-        if (this._subscriptions) {
-            return this._subscriptions;
+    private async getSubscriptions(filter: boolean): Promise<ConnectorSubscription[]> {
+        const cached = this.subscriptions.get(filter);
+        if (cached) {
+            return cached;
         }
 
         const generation = this.subscriptionsGeneration;
-        const promise = this.subscriptionsPromise ??= this.subscriptionsProvider();
+        const promise = this.subscriptionPromises.get(filter) ??
+            this.subscriptionsProvider(filter);
+        this.subscriptionPromises.set(filter, promise);
         try {
             const subscriptions = await promise;
             if (generation !== this.subscriptionsGeneration) {
-                return await this.getSubscriptions();
+                return await this.getSubscriptions(filter);
             }
 
-            this._subscriptions = subscriptions;
-            this.subscriptionsPromise = undefined;
+            this.subscriptions.set(filter, subscriptions);
+            this.subscriptionPromises.delete(filter);
             return subscriptions;
         } catch (error) {
             if (generation === this.subscriptionsGeneration &&
-                this.subscriptionsPromise === promise) {
-                this.subscriptionsPromise = undefined;
+                this.subscriptionPromises.get(filter) === promise) {
+                this.subscriptionPromises.delete(filter);
             }
             throw error;
         }
@@ -483,8 +471,11 @@ export class ConnectorTriggerDataClient {
     private async getSubscription(
         subscriptionId: string,
     ): Promise<ConnectorSubscription> {
-        const subscription = (await this.getSubscriptions())
-            .find(item => item.subscriptionId === subscriptionId);
+        const subscription = [...this.subscriptions.values()]
+            .flat()
+            .find(item => item.subscriptionId === subscriptionId) ??
+            (await this.getSubscriptions(false))
+                .find(item => item.subscriptionId === subscriptionId);
         if (!subscription) {
             throw new Error(localize(
                 'connectorSubscriptionUnavailable',
@@ -493,6 +484,37 @@ export class ConnectorTriggerDataClient {
         }
         return subscription;
     }
+}
+
+function createConnectorOptions(
+    managedApis: readonly ManagedApiDefinition[],
+): ConnectorTriggerOption[] {
+    const connectors = new Map<string, ConnectorTriggerOption>();
+    for (const api of managedApis) {
+        const id = api.name?.trim();
+        if (!id) {
+            continue;
+        }
+        const properties = api.properties;
+        const information = properties?.generalInformation;
+        connectors.set(id.toLowerCase(), {
+            id,
+            label: properties?.displayName?.trim() ||
+                information?.displayName?.trim() ||
+                id,
+            description: properties?.description?.trim() ||
+                information?.description?.trim(),
+            iconUrl: getConnectorIconUrl(
+                properties?.iconUri,
+                information?.iconUri,
+                properties?.iconUrl,
+                information?.iconUrl,
+            ),
+        });
+    }
+    return [...connectors.values()].sort((left, right) =>
+        left.label.localeCompare(right.label) ||
+        left.id.localeCompare(right.id));
 }
 
 function createCatalog(
@@ -619,20 +641,6 @@ async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promi
     return items;
 }
 
-async function mapInBatches<T, TResult>(
-    values: readonly T[],
-    batchSize: number,
-    mapper: (value: T) => Promise<TResult>,
-): Promise<TResult[]> {
-    const results: TResult[] = [];
-    for (let index = 0; index < values.length; index += batchSize) {
-        results.push(...await Promise.all(
-            values.slice(index, index + batchSize).map(mapper),
-        ));
-    }
-    return results;
-}
-
 function getResourceManagerEndpoint(context: ISubscriptionContext): string {
     return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
 }
@@ -679,8 +687,8 @@ function normalizeIconUrl(value: string | undefined): string | undefined {
     }
 }
 
-async function getSubscriptions(): Promise<ConnectorSubscription[]> {
-    return (await ext.rgApi.getSubscriptions(true)).map(subscription => {
+async function getSubscriptions(filter: boolean): Promise<ConnectorSubscription[]> {
+    return (await ext.rgApi.getSubscriptions(filter)).map(subscription => {
         const context = createSubscriptionContext(subscription);
         return {
             subscriptionId: context.subscriptionId,

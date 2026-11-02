@@ -16,12 +16,17 @@ import {
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 
 suite('Connector trigger data client', () => {
-    test('lists subscriptions without creating an ARM client', async () => {
-        let subscriptionRequestCount = 0;
+    test('uses filtered subscriptions by default and loads all on request', async () => {
+        const filters: boolean[] = [];
         const client = new ConnectorTriggerDataClient(
-            async () => {
-                subscriptionRequestCount += 1;
-                return [createSubscription()];
+            async filter => {
+                filters.push(filter);
+                return filter ?
+                    [createSubscription()] :
+                    [
+                        createSubscription(),
+                        createSubscription('sub-two', 'Subscription Two'),
+                    ];
             },
             async () => assert.fail('An ARM client must not be created.'),
         );
@@ -30,7 +35,11 @@ suite('Connector trigger data client', () => {
             id: 'sub-one',
             label: 'Subscription One',
         }]);
-        assert.strictEqual(subscriptionRequestCount, 1);
+        assert.deepStrictEqual(await client.listSubscriptions(true), [
+            { id: 'sub-one', label: 'Subscription One' },
+            { id: 'sub-two', label: 'Subscription Two' },
+        ]);
+        assert.deepStrictEqual(filters, [true, false]);
     });
 
     test('lists subscriptions and Connector Namespace-supported regions', async () => {
@@ -72,7 +81,7 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(locationContexts[0].subscriptionId, 'sub-one');
     });
 
-    test('loads only live connectors and events from the selected custom-cloud region', async () => {
+    test('loads the full live catalog and defers events until connector selection', async () => {
         const requests: string[] = [];
         const context = await createTestActionContext();
         const client = new ConnectorTriggerDataClient(
@@ -88,18 +97,11 @@ suite('Connector trigger data client', () => {
         });
 
         assert.strictEqual(result.source, 'live');
-        assert.strictEqual(result.failedConnectorCount, 1);
         assert.deepStrictEqual(
             result.catalog.connectors.map(connector => connector.id),
-            ['office365', 'sharepointonline'],
+            ['github', 'teams', 'office365', 'sharepointonline'],
         );
-        assert.deepStrictEqual(
-            result.catalog.operations.map(operation => operation.id),
-            ['OnNewEmail', 'OnNewFile'],
-        );
-        assert.ok(result.catalog.operations.every(operation =>
-            operation.inputDefinitions === undefined,
-        ));
+        assert.deepStrictEqual(result.catalog.operations, []);
         assert.ok(requests.every(request =>
             request.startsWith('https://management.usgovcloudapi.net/'),
         ));
@@ -107,10 +109,7 @@ suite('Connector trigger data client', () => {
             request.includes('/locations/usgovvirginia/managedApis?') &&
             new URL(request).searchParams.get('api-version') === '2016-06-01',
         ));
-        assert.ok(requests.some(request =>
-            request.includes('/managedApis/office365/apiOperations?') &&
-            new URL(request).searchParams.get('api-version') === '2016-06-01',
-        ));
+        assert.ok(!requests.some(request => request.includes('/apiOperations?')));
         assert.ok(!requests.some(request =>
             new URL(request).searchParams.get('export') === 'true',
         ));
@@ -121,15 +120,34 @@ suite('Connector trigger data client', () => {
             context.telemetry.properties.connectorCatalogSource,
             'live',
         );
-        assert.strictEqual(
-            context.telemetry.properties.connectorCatalogPartial,
-            'true',
-        );
         assert.ok(context.valuesToMask.includes('sub-one'));
         assert.ok(context.valuesToMask.includes('Subscription One'));
         assert.ok(context.valuesToMask.includes('US Gov Virginia'));
         assert.ok(context.valuesToMask.includes(
             'https://management.usgovcloudapi.net/',
+        ));
+
+        const operations = await client.listConnectorOperations(
+            context,
+            {
+                subscriptionId: 'sub-one',
+                subscriptionName: 'Subscription One',
+                region: 'US Gov Virginia',
+                regionDisplayName: 'US Gov Virginia',
+            },
+            'office365',
+        );
+        assert.deepStrictEqual(operations, [{
+            id: 'OnNewEmail',
+            connectorId: 'office365',
+            label: 'When an email arrives',
+            description: undefined,
+            isWebhook: false,
+            isNotification: true,
+        }]);
+        assert.ok(requests.some(request =>
+            request.includes('/managedApis/office365/apiOperations?') &&
+            new URL(request).searchParams.get('api-version') === '2016-06-01',
         ));
     });
 
@@ -219,6 +237,12 @@ function createArmClient(requests: string[]): ConnectorArmClient {
                             name: 'teams',
                             properties: {
                                 displayName: 'Microsoft Teams',
+                            },
+                        },
+                        {
+                            name: 'github',
+                            properties: {
+                                displayName: 'GitHub',
                             },
                         },
                     ],

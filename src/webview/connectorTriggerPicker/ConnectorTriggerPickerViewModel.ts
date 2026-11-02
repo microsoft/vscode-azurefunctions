@@ -92,12 +92,12 @@ export interface ConnectorTriggerPickerViewModel {
         azureContextRequired: string;
         subscription: string;
         selectSubscription: string;
+        showAllSubscriptions: string;
         region: string;
         selectRegion: string;
         loadingSubscriptions: string;
         loadingRegions: string;
         liveCatalogSource: string;
-        catalogSetupDeferred: string;
         selectionUnavailable: string;
         unavailable: string;
         connectorGroup: string;
@@ -115,6 +115,7 @@ export interface ConnectorTriggerPickerViewModel {
         eventPageTitle: string;
         eventPageDescription: string;
         eventSearchPlaceholder: string;
+        loadingEvents: string;
         eventCount: string;
         eventSelected: string;
         changeConnector: string;
@@ -130,6 +131,7 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'openCopilot' }
     | { command: 'initialize' }
     | { command: 'signIn' }
+    | { command: 'loadAllSubscriptions' }
     | {
         command: 'selectSubscription';
         subscriptionId: string;
@@ -138,6 +140,10 @@ export type ConnectorTriggerPickerMessage =
         command: 'selectRegion';
         subscriptionId: string;
         region: string;
+    }
+    | {
+        command: 'loadConnectorOperations';
+        connectorId: string;
     }
     | { command: 'loadCatalog' }
     | {
@@ -154,6 +160,7 @@ export type ConnectorTriggerPickerResponse =
     | {
         command: 'subscriptionsLoaded';
         subscriptions: ConnectorTriggerSubscriptionOption[];
+        showingAll: boolean;
     }
     | {
         command: 'locationsLoaded';
@@ -169,6 +176,16 @@ export type ConnectorTriggerPickerResponse =
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
         warning?: string;
+    }
+    | {
+        command: 'connectorOperationsLoaded';
+        connectorId: string;
+        operations: ConnectorTriggerOperationOption[];
+    }
+    | {
+        command: 'connectorOperationsFailed';
+        connectorId: string;
+        message: string;
     }
     | {
         command: 'projectCreationStarted';
@@ -196,6 +213,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         message.command === 'openCopilot' ||
         message.command === 'initialize' ||
         message.command === 'signIn' ||
+        message.command === 'loadAllSubscriptions' ||
         message.command === 'loadCatalog') {
         return true;
     }
@@ -210,6 +228,11 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
             typeof message.subscriptionId === 'string' &&
             'region' in message &&
             typeof message.region === 'string';
+    }
+
+    if (message.command === 'loadConnectorOperations') {
+        return 'connectorId' in message &&
+            typeof message.connectorId === 'string';
     }
 
     return message.command === 'continue' &&
@@ -230,7 +253,9 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
 
     if (message.command === 'subscriptionsLoaded') {
         return 'subscriptions' in message &&
-            Array.isArray(message.subscriptions);
+            Array.isArray(message.subscriptions) &&
+            'showingAll' in message &&
+            typeof message.showingAll === 'boolean';
     }
 
     if (message.command === 'locationsLoaded') {
@@ -251,6 +276,20 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             'operations' in message &&
             Array.isArray(message.operations) &&
             (!('warning' in message) || typeof message.warning === 'string');
+    }
+
+    if (message.command === 'connectorOperationsLoaded') {
+        return 'connectorId' in message &&
+            typeof message.connectorId === 'string' &&
+            'operations' in message &&
+            Array.isArray(message.operations);
+    }
+
+    if (message.command === 'connectorOperationsFailed') {
+        return 'connectorId' in message &&
+            typeof message.connectorId === 'string' &&
+            'message' in message &&
+            typeof message.message === 'string';
     }
 
     if (message.command === 'projectCreationStarted') {

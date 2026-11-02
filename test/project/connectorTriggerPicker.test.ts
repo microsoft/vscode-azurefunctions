@@ -413,6 +413,11 @@ suite('Connector trigger picker', () => {
             viewModel.labels.selectRegion,
             'Select a region',
         );
+        assert.strictEqual(
+            viewModel.labels.showAllSubscriptions,
+            'Show all subscriptions...',
+        );
+        assert.ok(!('catalogSetupDeferred' in viewModel.labels));
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
@@ -804,6 +809,13 @@ suite('Connector trigger picker', () => {
             command: 'loadCatalog',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'loadAllSubscriptions',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'loadConnectorOperations',
+            connectorId: 'office365',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
@@ -835,6 +847,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'subscriptionsLoaded',
             subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            showingAll: false,
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'locationsLoaded',
@@ -845,6 +858,16 @@ suite('Connector trigger picker', () => {
             command: 'catalogLoaded',
             connectors: [],
             operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'connectorOperationsLoaded',
+            connectorId: 'office365',
+            operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'connectorOperationsFailed',
+            connectorId: 'office365',
+            message: 'Failed',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'operationInputsFailed',

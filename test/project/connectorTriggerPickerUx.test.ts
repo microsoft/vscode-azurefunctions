@@ -100,12 +100,15 @@ suite('Connector trigger picker Azure context UX', () => {
                     sensitive: false,
                 }],
             }],
+            operationsError: '',
+            operationsLoading: false,
             projectCreating: false,
             projectCreationDetail: '',
             projectCreationError: '',
             selectedOperationId: operation.id,
             templateUnavailable: false,
             onChangeConnector: () => undefined,
+            onRetryOperations: () => undefined,
             onSelectOperation: () => undefined,
             onUseTemplate: () => undefined,
         }));
@@ -125,9 +128,11 @@ suite('Connector trigger picker Azure context UX', () => {
             selectedRegion: '',
             selectedSubscriptionId: '',
             signInRequired: true,
+            showingAllSubscriptions: false,
             subscriptions: [],
             subscriptionsLoading: false,
             onRequestSignIn: () => undefined,
+            onShowAllSubscriptions: () => undefined,
             onSelectRegion: () => undefined,
             onSelectSubscription: () => undefined,
         }));
@@ -161,16 +166,50 @@ suite('Connector trigger picker Azure context UX', () => {
             selectedRegion: '',
             selectedSubscriptionId: 'sub-one',
             signInRequired: false,
+            showingAllSubscriptions: false,
             subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
             subscriptionsLoading: false,
             onRequestSignIn: () => undefined,
+            onShowAllSubscriptions: () => undefined,
             onSelectRegion: () => undefined,
             onSelectSubscription: () => undefined,
         }));
 
         assert.ok(html.includes('Subscription One'));
         assert.ok(html.includes('East US'));
+        assert.ok(html.includes(labels.showAllSubscriptions));
         assert.strictEqual((html.match(/disabled=""/g) ?? []).length, 0);
+    });
+
+    test('loads all subscriptions without clearing a valid current selection', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const filters: boolean[] = [];
+        const controller = createTestController({
+            responses,
+            listSubscriptions: async showAll => {
+                filters.push(showAll === true);
+                return [
+                    { id: 'sub-one', label: 'Subscription One' },
+                    { id: 'sub-two', label: 'Subscription Two' },
+                ];
+            },
+        });
+        controller.azureContext = createAzureContext();
+        controller.subscriptionContext = createSubscriptionContext();
+
+        await callHandleMessage(controller, { command: 'loadAllSubscriptions' });
+
+        assert.deepStrictEqual(filters, [true]);
+        assert.deepStrictEqual(controller.azureContext, createAzureContext());
+        assert.strictEqual(controller.subscriptionContext?.subscriptionId, 'sub-one');
+        assert.deepStrictEqual(responses, [{
+            command: 'subscriptionsLoaded',
+            subscriptions: [
+                { id: 'sub-one', label: 'Subscription One' },
+                { id: 'sub-two', label: 'Subscription Two' },
+            ],
+            showingAll: true,
+        }]);
     });
 
     test('keeps browsing blocked while signed out and initiates sign-in on demand', async () => {
@@ -207,6 +246,7 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.deepStrictEqual(responses, [{
             command: 'subscriptionsLoaded',
             subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            showingAll: false,
         }]);
     });
 
@@ -238,9 +278,14 @@ suite('Connector trigger picker Azure context UX', () => {
                 return {
                     catalog: {
                         connectors: [connector],
-                        operations: [operation],
+                        operations: [],
                     },
                 };
+            },
+            listConnectorOperations: async (_context, selectedContext, connectorId) => {
+                sequence.push(`operations:${connectorId}`);
+                assert.deepStrictEqual(selectedContext, azureContext);
+                return [operation];
             },
         });
 
@@ -251,6 +296,7 @@ suite('Connector trigger picker Azure context UX', () => {
                 id: 'sub-one',
                 label: 'Subscription One',
             }],
+            showingAll: false,
         }]);
 
         responses.length = 0;
@@ -289,6 +335,23 @@ suite('Connector trigger picker Azure context UX', () => {
         }, {
             command: 'catalogLoaded',
             connectors: [connector],
+            operations: [],
+        }]);
+
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: connector.id,
+        });
+        assert.deepStrictEqual(sequence, [
+            'subscription:sub-one',
+            'locations:sub-one',
+            'catalog:usgovvirginia',
+            'operations:office365',
+        ]);
+        assert.deepStrictEqual(responses, [{
+            command: 'connectorOperationsLoaded',
+            connectorId: connector.id,
             operations: [operation],
         }]);
     });
@@ -341,9 +404,11 @@ interface TestableConnectorTriggerPickerController {
         | 'getSubscriptionContext'
         | 'invalidateSubscriptions'
         | 'listLocations'
+        | 'listConnectorOperations'
         | 'listSubscriptions'
     >;
     locations: Map<string, { name: string; label: string }[]>;
+    operationLoadRequests: Map<string, Promise<ConnectorTriggerOperationOption[]>>;
     postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
     signIn: ConnectorTriggerSignIn;
     signInPending: boolean;
@@ -359,7 +424,10 @@ interface TestControllerOptions {
         context: IActionContext,
         subscriptionId: string,
     ) => Promise<{ name: string; label: string }[]>;
-    listSubscriptions?: () => Promise<{ id: string; label: string }[]>;
+    listConnectorOperations?: ConnectorTriggerDataClient['listConnectorOperations'];
+    listSubscriptions?: (
+        showAll?: boolean,
+    ) => Promise<{ id: string; label: string }[]>;
     signIn?: ConnectorTriggerSignIn;
 }
 
@@ -377,9 +445,12 @@ function createTestController(
                 (async () => createSubscriptionContext()),
             invalidateSubscriptions: options.invalidateSubscriptions ?? (() => undefined),
             listLocations: options.listLocations ?? (async () => []),
+            listConnectorOperations: options.listConnectorOperations ??
+                (async () => []),
             listSubscriptions: options.listSubscriptions ?? (async () => []),
         },
         locations: new Map(),
+        operationLoadRequests: new Map(),
         postMessage: async (message: ConnectorTriggerPickerResponse) => {
             options.responses.push(message);
         },

@@ -37,6 +37,7 @@ import {
 } from './ConnectorTriggerPickerViewModel';
 
 const connectorPageSize = 60;
+const showAllSubscriptionsValue = '__showAllSubscriptions__';
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
@@ -48,9 +49,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [locations, setLocations] = useState<ConnectorTriggerLocationOption[]>([]);
     const [selectedSubscriptionId, setSelectedSubscriptionId] = useState('');
     const selectedSubscriptionIdRef = useRef('');
+    const selectedConnectorIdRef = useRef('');
     const signInRequestPendingRef = useRef(false);
     const [selectedRegion, setSelectedRegion] = useState('');
     const [signInRequired, setSignInRequired] = useState(false);
+    const [showingAllSubscriptions, setShowingAllSubscriptions] = useState(false);
     const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
     const [locationsLoading, setLocationsLoading] = useState(false);
     const [catalogLoaded, setCatalogLoaded] = useState(false);
@@ -64,6 +67,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [otherConnectorsExpanded, setOtherConnectorsExpanded] = useState(false);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
+    const [operationsLoading, setOperationsLoading] = useState(false);
+    const [operationsError, setOperationsError] = useState('');
     const [projectCreating, setProjectCreating] = useState(false);
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
@@ -109,8 +114,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setCatalogWarning(undefined);
         setConnectors([]);
         setOperations([]);
+        selectedConnectorIdRef.current = '';
         setSelectedConnectorId('');
         setSelectedOperationId('');
+        setOperationsLoading(false);
+        setOperationsError('');
         setLoadError(undefined);
         setProjectCreationError('');
         if (subscriptionId) {
@@ -124,6 +132,12 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         }
     }, [vscodeApi]);
 
+    const loadAllSubscriptions = useCallback(() => {
+        setSubscriptionsLoading(true);
+        setAzureContextMessage(undefined);
+        vscodeApi.postMessage({ command: 'loadAllSubscriptions' });
+    }, [vscodeApi]);
+
     const selectRegion = useCallback((region: string) => {
         setSelectedRegion(region);
         setAzureContext(undefined);
@@ -131,8 +145,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setCatalogWarning(undefined);
         setConnectors([]);
         setOperations([]);
+        selectedConnectorIdRef.current = '';
         setSelectedConnectorId('');
         setSelectedOperationId('');
+        setOperationsLoading(false);
+        setOperationsError('');
         setLoadError(undefined);
         setProjectCreationError('');
         if (selectedSubscriptionId && region) {
@@ -158,6 +175,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 selectedSubscriptionIdRef.current = '';
                 signInRequestPendingRef.current = false;
                 setSignInRequired(true);
+                setShowingAllSubscriptions(false);
                 setAzureContext(undefined);
                 setAzureContextMessage(message.message);
                 setSubscriptions([]);
@@ -177,18 +195,29 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setOtherConnectorsExpanded(false);
                 setSelectedConnectorId('');
                 setSelectedOperationId('');
+                selectedConnectorIdRef.current = '';
+                setOperationsLoading(false);
+                setOperationsError('');
                 setProjectCreating(false);
                 setProjectCreationDetail('');
                 setProjectCreationError('');
                 setLoadError(undefined);
                 setActiveStep(1);
             } else if (message.command === 'subscriptionsLoaded') {
-                selectedSubscriptionIdRef.current = '';
                 signInRequestPendingRef.current = false;
                 setSignInRequired(false);
+                setShowingAllSubscriptions(message.showingAll);
+                const preservesSelection = message.showingAll &&
+                    message.subscriptions.some(subscription =>
+                        subscription.id === selectedSubscriptionIdRef.current);
+                setSubscriptions(message.subscriptions);
+                setSubscriptionsLoading(false);
+                if (preservesSelection) {
+                    return;
+                }
+                selectedSubscriptionIdRef.current = '';
                 setAzureContext(undefined);
                 setAzureContextMessage(undefined);
-                setSubscriptions(message.subscriptions);
                 setLocations([]);
                 setSelectedSubscriptionId('');
                 setSelectedRegion('');
@@ -202,6 +231,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogLoading(false);
                 setSelectedConnectorId('');
                 setSelectedOperationId('');
+                selectedConnectorIdRef.current = '';
+                setOperationsLoading(false);
+                setOperationsError('');
                 setLoadError(undefined);
                 setActiveStep(1);
             } else if (message.command === 'locationsLoaded') {
@@ -224,6 +256,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setOperations([]);
                 setSelectedConnectorId('');
                 setSelectedOperationId('');
+                selectedConnectorIdRef.current = '';
+                setOperationsLoading(false);
+                setOperationsError('');
                 setActiveStep(1);
             } else if (message.command === 'catalogLoaded') {
                 setCatalogLoading(false);
@@ -231,6 +266,29 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogWarning(message.warning);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
+            } else if (message.command === 'connectorOperationsLoaded') {
+                if (!equalsIgnoreCase(
+                    message.connectorId,
+                    selectedConnectorIdRef.current,
+                )) {
+                    return;
+                }
+                setOperations(current => [
+                    ...current.filter(operation =>
+                        !equalsIgnoreCase(operation.connectorId, message.connectorId)),
+                    ...message.operations,
+                ]);
+                setOperationsLoading(false);
+                setOperationsError('');
+            } else if (message.command === 'connectorOperationsFailed') {
+                if (!equalsIgnoreCase(
+                    message.connectorId,
+                    selectedConnectorIdRef.current,
+                )) {
+                    return;
+                }
+                setOperationsLoading(false);
+                setOperationsError(message.message);
             } else if (message.command === 'projectCreationStarted') {
                 setProjectCreating(true);
                 setProjectCreationDetail(viewModel.labels.creatingProject);
@@ -337,8 +395,27 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             setSelectedOperationId('');
             setProjectCreationError('');
         }
+        selectedConnectorIdRef.current = connectorId;
         setSelectedConnectorId(connectorId);
+        setOperationsLoading(true);
+        setOperationsError('');
         setActiveStep(2);
+        vscodeApi.postMessage({
+            command: 'loadConnectorOperations',
+            connectorId,
+        });
+    };
+
+    const retryConnectorOperations = () => {
+        if (!selectedConnectorId) {
+            return;
+        }
+        setOperationsLoading(true);
+        setOperationsError('');
+        vscodeApi.postMessage({
+            command: 'loadConnectorOperations',
+            connectorId: selectedConnectorId,
+        });
     };
 
     const selectOperation = (operationId: string) => {
@@ -397,9 +474,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         selectedRegion={selectedRegion}
                         selectedSubscriptionId={selectedSubscriptionId}
                         signInRequired={signInRequired}
+                        showingAllSubscriptions={showingAllSubscriptions}
                         subscriptions={subscriptions}
                         subscriptionsLoading={subscriptionsLoading}
                         onRequestSignIn={signIn}
+                        onShowAllSubscriptions={loadAllSubscriptions}
                         onSelectRegion={selectRegion}
                         onSelectSubscription={selectSubscription}
                     />
@@ -418,12 +497,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                     {viewModel.labels.selectionUnavailable}
                                 </span>
                             }
-                        </div>
-                    }
-
-                    {azureContext &&
-                        <div className="catalog-status">
-                            <strong>{viewModel.labels.catalogSetupDeferred}</strong>
                         </div>
                     }
 
@@ -546,6 +619,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     connector={selectedConnector}
                     labels={viewModel.labels}
                     operations={connectorOperations}
+                    operationsError={operationsError}
+                    operationsLoading={operationsLoading}
                     projectCreating={projectCreating}
                     projectCreationDetail={projectCreationDetail}
                     projectCreationError={projectCreationError}
@@ -553,6 +628,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     templateUnavailable={selectedCatalogItemUnavailable}
                     onChangeConnector={() => setActiveStep(1)}
                     onSelectOperation={selectOperation}
+                    onRetryOperations={retryConnectorOperations}
                     onUseTemplate={useTemplate}
                 />
             }
@@ -567,9 +643,11 @@ export function AzureContextFields({
     selectedRegion,
     selectedSubscriptionId,
     signInRequired,
+    showingAllSubscriptions,
     subscriptions,
     subscriptionsLoading,
     onRequestSignIn,
+    onShowAllSubscriptions,
     onSelectRegion,
     onSelectSubscription,
 }: {
@@ -579,9 +657,11 @@ export function AzureContextFields({
     selectedRegion: string;
     selectedSubscriptionId: string;
     signInRequired: boolean;
+    showingAllSubscriptions: boolean;
     subscriptions: readonly ConnectorTriggerSubscriptionOption[];
     subscriptionsLoading: boolean;
     onRequestSignIn: () => void;
+    onShowAllSubscriptions: () => void;
     onSelectRegion: (region: string) => void;
     onSelectSubscription: (subscriptionId: string) => void;
 }): JSX.Element {
@@ -609,7 +689,13 @@ export function AzureContextFields({
                         }
                     }}
                     onClick={requestSignIn}
-                    onChange={event => onSelectSubscription(event.target.value)}
+                    onChange={event => {
+                        if (event.target.value === showAllSubscriptionsValue) {
+                            onShowAllSubscriptions();
+                        } else {
+                            onSelectSubscription(event.target.value);
+                        }
+                    }}
                 >
                     <option value="">
                         {subscriptionsLoading ?
@@ -621,6 +707,11 @@ export function AzureContextFields({
                             {subscription.label}
                         </option>
                     )}
+                    {!showingAllSubscriptions &&
+                        <option value={showAllSubscriptionsValue}>
+                            {labels.showAllSubscriptions}
+                        </option>
+                    }
                 </select>
             </label>
             <label>

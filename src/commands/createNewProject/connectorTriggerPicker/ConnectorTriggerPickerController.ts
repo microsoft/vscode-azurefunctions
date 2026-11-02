@@ -73,6 +73,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private static currentController: ConnectorTriggerPickerController | undefined;
     private readonly catalogs = new Map<string, ConnectorTriggerCatalogLoadResult>();
     private readonly catalogLoadRequests = new Map<string, Promise<ConnectorTriggerCatalogLoadResult>>();
+    private readonly operationLoadRequests =
+        new Map<string, Promise<ConnectorTriggerOperationOption[]>>();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly templateProvider = new ProjectTemplateProvider();
     private readonly locations = new Map<string, ConnectorTriggerLocationOption[]>();
@@ -185,6 +187,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
+        if (message.command === 'loadAllSubscriptions') {
+            await this.loadSubscriptions(actionContext, false, true);
+            return;
+        }
+
         if (message.command === 'selectSubscription') {
             await this.selectSubscription(actionContext, message.subscriptionId);
             return;
@@ -217,6 +224,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     'Select an Azure subscription and region before creating the project.',
                 ),
             });
+            return;
+        }
+
+        if (message.command === 'loadConnectorOperations') {
+            await this.loadConnectorOperations(
+                actionContext,
+                azureContext,
+                message.connectorId,
+            );
             return;
         }
 
@@ -309,9 +325,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private async loadSubscriptions(
         actionContext: IActionContext,
         showSignInWhenUnavailable = false,
+        showingAll = false,
     ): Promise<void> {
         try {
-            const subscriptions = await this.dataClient.listSubscriptions();
+            const subscriptions = await this.dataClient.listSubscriptions(showingAll);
             if (subscriptions.length === 0) {
                 if (showSignInWhenUnavailable) {
                     await this.postAzureContextRequired();
@@ -325,6 +342,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             await this.postMessage({
                 command: 'subscriptionsLoaded',
                 subscriptions,
+                showingAll,
             });
         } catch (error) {
             if (showSignInWhenUnavailable) {
@@ -415,6 +433,79 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.locations.clear();
         this.catalogs.clear();
         this.catalogLoadRequests.clear();
+        this.operationLoadRequests.clear();
+    }
+
+    private async loadConnectorOperations(
+        actionContext: IActionContext,
+        azureContext: ConnectorTriggerAzureContext,
+        connectorId: string,
+        forceRefresh = false,
+    ): Promise<void> {
+        const catalogKey = getCatalogKey(azureContext);
+        const requestKey = `${catalogKey}:${connectorId.toLowerCase()}`;
+        const catalog = this.catalogs.get(catalogKey)?.catalog;
+        if (!catalog?.connectors.some(connector =>
+            equalsIgnoreCase(connector.id, connectorId))) {
+            await this.postMessage({
+                command: 'connectorOperationsFailed',
+                connectorId,
+                message: localize(
+                    'connectorSelectionUnavailable',
+                    'The selected connector is no longer available.',
+                ),
+            });
+            return;
+        }
+
+        const existing = catalog.operations.filter(operation =>
+            equalsIgnoreCase(operation.connectorId, connectorId));
+        if (!forceRefresh && existing.length > 0) {
+            await this.postMessage({
+                command: 'connectorOperationsLoaded',
+                connectorId,
+                operations: existing.map(removeOperationInputs),
+            });
+            return;
+        }
+        if (!forceRefresh && this.operationLoadRequests.has(requestKey)) {
+            return;
+        }
+
+        let request: Promise<ConnectorTriggerOperationOption[]> | undefined;
+        try {
+            request = this.dataClient.listConnectorOperations(
+                actionContext,
+                azureContext,
+                connectorId,
+            );
+            this.operationLoadRequests.set(requestKey, request);
+            const operations = await request;
+            if (this.operationLoadRequests.get(requestKey) !== request) {
+                return;
+            }
+            this.operationLoadRequests.delete(requestKey);
+            catalog.operations = [
+                ...catalog.operations.filter(operation =>
+                    !equalsIgnoreCase(operation.connectorId, connectorId)),
+                ...operations,
+            ];
+            await this.postMessage({
+                command: 'connectorOperationsLoaded',
+                connectorId,
+                operations: operations.map(removeOperationInputs),
+            });
+        } catch (error) {
+            if (request && this.operationLoadRequests.get(requestKey) !== request) {
+                return;
+            }
+            this.operationLoadRequests.delete(requestKey);
+            await this.postMessage({
+                command: 'connectorOperationsFailed',
+                connectorId,
+                message: parseError(error).message,
+            });
+        }
     }
 
     private async postAzureContextRequired(): Promise<void> {
@@ -680,13 +771,6 @@ function createCatalogLoader(
         const result = await dataClient.getCatalog(context, azureContext);
         return {
             catalog: result.catalog,
-            warning: result.failedConnectorCount > 0 ?
-                localize(
-                    'connectorCatalogPartialLoad',
-                    'Events could not be loaded for {0} connector(s). Retry to refresh the live catalog.',
-                    result.failedConnectorCount.toString(),
-                ) :
-                undefined,
         };
     };
 }

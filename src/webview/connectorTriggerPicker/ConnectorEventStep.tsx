@@ -16,12 +16,15 @@ interface ConnectorEventStepProps {
     connector: ConnectorTriggerOption;
     labels: ConnectorTriggerPickerViewModel['labels'];
     operations: ConnectorTriggerOperationOption[];
+    operationsError: string;
+    operationsLoading: boolean;
     projectCreating: boolean;
     projectCreationDetail: string;
     projectCreationError: string;
     selectedOperationId: string;
     templateUnavailable: boolean;
     onChangeConnector: () => void;
+    onRetryOperations: () => void;
     onSelectOperation: (operationId: string) => void;
     onUseTemplate: () => void;
 }
@@ -30,12 +33,15 @@ export function ConnectorEventStep({
     connector,
     labels,
     operations,
+    operationsError,
+    operationsLoading,
     projectCreating,
     projectCreationDetail,
     projectCreationError,
     selectedOperationId,
     templateUnavailable,
     onChangeConnector,
+    onRetryOperations,
     onSelectOperation,
     onUseTemplate,
 }: ConnectorEventStepProps): JSX.Element {
@@ -84,7 +90,16 @@ export function ConnectorEventStep({
                 {selectedOperation ? ` ${format(labels.eventSelected, selectedOperation.label)}` : ''}
             </p>
 
-            {filteredOperations.length === 0 ?
+            {operationsLoading ?
+                <p className="status-text">{labels.loadingEvents}</p> :
+                operationsError ?
+                    <div className="load-error" role="alert">
+                        <p>{operationsError}</p>
+                        <Button appearance="secondary" onClick={onRetryOperations}>
+                            {labels.retry}
+                        </Button>
+                    </div> :
+                    filteredOperations.length === 0 ?
                 <p className="status-text">{labels.noTriggers}</p> :
                 <div className="event-list">
                     {filteredOperations.map(operation =>
@@ -108,7 +123,7 @@ export function ConnectorEventStep({
                 </div>
             }
 
-            {selectedOperation &&
+            {selectedOperation && !operationsLoading &&
                 <div className="event-selection-actions">
                     <span>
                         {projectCreationError &&
