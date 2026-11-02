@@ -325,7 +325,7 @@ suite('Project npm dependencies', () => {
         } finally {
             handler.dispose();
         }
-        assert.strictEqual(context.telemetry.properties.stage, 'functionCreation');
+        assert.strictEqual(context.telemetry.properties.stage, 'workflow');
         assert.strictEqual(context.telemetry.properties.isWorkflowRoot, 'true');
         assert.strictEqual(children.length, 1);
         assert.strictEqual(children[0].telemetry.properties.workflowRunId, context.telemetry.properties.workflowRunId);
