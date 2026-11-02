@@ -6,6 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../localize';
+import { findPollingConnectorBindings } from './connectorTriggerBindings';
 import {
     type IConnectorTriggerTemplate,
     type IConnectorTriggerTemplateOperation,
@@ -54,6 +55,14 @@ export async function materializeConnectorTriggerTemplate(
             ));
         }
     }
+
+    const bindings = await findPollingConnectorBindings(projectPath);
+    if (bindings.length !== 1 || bindings[0].functionName !== selected.functionName) {
+        throw new Error(localize(
+            'connectorTriggerMaterializationInvalid',
+            'The selected connector event template did not produce exactly one matching Poll trigger.',
+        ));
+    }
     return selected;
 }
 
@@ -69,16 +78,18 @@ function validateConnectorTriggerTemplate(
     const functionNames = new Set<string>();
     const ownedPaths = new Set<string>();
     for (const operation of template.operations) {
+        const operationId = normalizeIdentifier(operation.operationId);
+        const functionName = normalizeIdentifier(operation.functionName);
         if (!isNonEmptyString(operation.operationId) ||
             !isNonEmptyString(operation.functionName) ||
             !Array.isArray(operation.ownedPaths) ||
             operation.ownedPaths.length === 0 ||
-            operationIds.has(operation.operationId) ||
-            functionNames.has(operation.functionName)) {
+            operationIds.has(operationId) ||
+            functionNames.has(functionName)) {
             throw createInvalidOwnershipError();
         }
-        operationIds.add(operation.operationId);
-        functionNames.add(operation.functionName);
+        operationIds.add(operationId);
+        functionNames.add(functionName);
 
         const operationPaths = new Set<string>();
         for (const ownedPath of operation.ownedPaths) {
@@ -87,7 +98,9 @@ function validateConnectorTriggerTemplate(
             }
             resolveOwnedPath(projectPath, ownedPath);
             const normalized = normalizeOwnedPath(ownedPath);
-            if (operationPaths.has(normalized) || ownedPaths.has(normalized)) {
+            if (operationPaths.has(normalized) ||
+                [...ownedPaths].some(existingPath =>
+                    pathsOverlap(existingPath, normalized))) {
                 throw createInvalidOwnershipError();
             }
             operationPaths.add(normalized);
@@ -99,15 +112,20 @@ function validateConnectorTriggerTemplate(
 
 function resolveOwnedPath(projectPath: string, ownedPath: string): string {
     if (path.isAbsolute(ownedPath) ||
-        ownedPath.includes('*') ||
-        ownedPath.includes('?') ||
+        /[*?[\]{}]/.test(ownedPath) ||
         ownedPath.includes('\\')) {
         throw createInvalidOwnershipError();
     }
 
     const segments = ownedPath.split('/');
     if (segments.some(segment =>
-        !segment || segment === '.' || segment === '..')) {
+        !segment ||
+        segment === '.' ||
+        segment === '..' ||
+        segment.trim() !== segment ||
+        segment.endsWith('.') ||
+        segment.includes(':') ||
+        /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment))) {
         throw createInvalidOwnershipError();
     }
     const projectRoot = path.resolve(projectPath);
@@ -121,6 +139,16 @@ function resolveOwnedPath(projectPath: string, ownedPath: string): string {
 
 function normalizeOwnedPath(ownedPath: string): string {
     return ownedPath.toLowerCase();
+}
+
+function normalizeIdentifier(value: unknown): string {
+    return typeof value === 'string' ? value.toLowerCase() : '';
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+    return left === right ||
+        left.startsWith(`${right}/`) ||
+        right.startsWith(`${left}/`);
 }
 
 function isNonEmptyString(value: unknown): value is string {

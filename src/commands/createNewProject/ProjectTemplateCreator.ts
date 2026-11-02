@@ -17,7 +17,10 @@ import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensure
 import { materializeConnectorTriggerTemplate } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
-import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
+import {
+    type IConnectorTriggerTemplate,
+    type IProjectTemplate,
+} from '../../templates/projectTemplates/IProjectTemplate';
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
@@ -74,6 +77,10 @@ export class ProjectTemplateCreator {
         actionContext.telemetry.properties.templateName = template.displayName;
         actionContext.telemetry.properties.language = language;
         actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
+
+        const connectorTriggerTemplate = options.connectorTriggerHandoff ?
+            getConnectorTriggerTemplate(template) :
+            undefined;
 
         const gitReference = this.resolveGitReference(template);
         const specificFolder = template.folderPath && template.folderPath !== '.' ?
@@ -158,16 +165,12 @@ export class ProjectTemplateCreator {
                 // git init is optional.
             }
 
-            if (options.connectorTriggerHandoff) {
-                if (template.connectorTrigger) {
-                    await materializeConnectorTriggerTemplate(
-                        projectPath,
-                        template.connectorTrigger,
-                        options.connectorTriggerHandoff.operationId,
-                    );
-                } else {
-                    await ensureConnectorTriggerPollProject(projectPath, language);
-                }
+            if (options.connectorTriggerHandoff && connectorTriggerTemplate) {
+                await materializeConnectorTriggerTemplate(
+                    projectPath,
+                    connectorTriggerTemplate,
+                    options.connectorTriggerHandoff.operationId,
+                );
                 await writeConnectorTriggerProjectHandoff(
                     projectPath,
                     options.connectorTriggerHandoff,
@@ -439,4 +442,17 @@ export class ProjectTemplateCreator {
             }
         }
     }
+
+}
+
+function getConnectorTriggerTemplate(
+    template: IProjectTemplate,
+): IConnectorTriggerTemplate {
+    if (!template.connectorTrigger) {
+        throw new Error(localize(
+            'connectorTriggerOwnershipMissing',
+            'The selected connector project template is missing operation ownership metadata.',
+        ));
+    }
+    return template.connectorTrigger;
 }

@@ -8,7 +8,9 @@
 export {
     Button,
     Card,
+    Combobox,
     FluentProvider,
+    Option,
     createDarkTheme,
     createLightTheme,
     teamsDarkTheme,

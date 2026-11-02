@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connector Trigger subscription picker fixture</title>
+    <link rel="stylesheet" href="/dist/webview/connectorTriggerPicker.css">
+    <style>
+        :root {
+            color-scheme: dark;
+            --vscode-foreground: #cccccc;
+            --vscode-descriptionForeground: #9d9d9d;
+            --vscode-disabledForeground: #6d6d6d;
+            --vscode-errorForeground: #f48771;
+            --vscode-focusBorder: #007fd4;
+            --vscode-font-family: "Segoe UI", sans-serif;
+            --vscode-font-size: 13px;
+            --vscode-input-background: #313131;
+            --vscode-input-foreground: #cccccc;
+            --vscode-input-border: #3c3c3c;
+            --vscode-input-placeholderForeground: #989898;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-button-hoverBackground: #1177bb;
+            --vscode-dropdown-background: #313131;
+            --vscode-dropdown-foreground: #f0f0f0;
+            --vscode-dropdown-border: #3c3c3c;
+            --vscode-list-activeSelectionBackground: #04395e;
+            --vscode-list-activeSelectionForeground: #ffffff;
+            --vscode-list-hoverBackground: #2a2d2e;
+            --vscode-sideBar-background: #181818;
+            --vscode-editor-background: #1f1f1f;
+        }
+
+        html, body, #root {
+            min-height: 100%;
+        }
+
+        body {
+            margin: 0;
+            background: var(--vscode-editor-background);
+            color: var(--vscode-foreground);
+            font-family: var(--vscode-font-family);
+        }
+    </style>
+</head>
+<body class="vscode-dark">
+    <div id="root"></div>
+    <script type="module">
+        const labels = {
+            panelTitle: 'Template Gallery',
+            galleryTitle: 'Template Gallery',
+            gallerySubtitle: 'Create a new Azure Functions project from a template',
+            browseTemplates: 'Browse Templates',
+            connectorTriggers: 'Connector Triggers',
+            buildWithCopilotChat: 'Build with Copilot Chat',
+            connectorStep: 'Connector',
+            eventStep: 'Event',
+            azureContextRequired: 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
+            subscription: 'Subscription',
+            selectSubscription: 'Select a subscription',
+            showAllSubscriptions: 'Show all subscriptions...',
+            useFilteredSubscriptions: 'Use subscription filter...',
+            region: 'Region',
+            selectRegion: 'Select a region',
+            loadingSubscriptions: 'Loading subscriptions...',
+            loadingRegions: 'Loading regions...',
+            liveCatalogSource: 'Browsing connectors available in the selected Azure subscription and region.',
+            selectionUnavailable: 'The previous connector or event is no longer available in the live catalog. Choose another selection.',
+            unavailable: 'Unavailable in the selected Azure catalog',
+            connectorGroup: 'Connector',
+            featuredConnectors: 'Featured connectors',
+            otherConnectors: 'Other connectors ({0})',
+            showOtherConnectors: 'Show other connectors',
+            hideOtherConnectors: 'Hide other connectors',
+            connectorPageTitle: 'Choose a connector',
+            connectorPageDescription: 'Find the service that will start your function, then choose an event.',
+            connectorSearchPlaceholder: 'Search connectors...',
+            connectorCount: '{0} connectors',
+            showMoreConnectors: 'Show more connectors',
+            loadingConnectors: 'Loading connectors...',
+            noConnectors: 'No connectors with trigger operations are available in this catalog.',
+            eventPageTitle: 'Choose an event',
+            eventPageDescription: 'Select the event that will start your function.',
+            eventSearchPlaceholder: 'Search events...',
+            loadingEvents: 'Loading events...',
+            eventCount: 'Showing {0} of {1} events.',
+            eventSelected: 'Selected: {0}',
+            changeConnector: 'Change connector',
+            noTriggers: 'No triggers are available for this connector.',
+            useTemplate: 'Use Template',
+            creatingProject: 'Creating project...',
+            retry: 'Retry',
+        };
+        const subscriptions = Array.from({ length: 100 }, (_, index) => ({
+            id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+            label: index === 0
+                ? 'A very long subscription display name that must never cover the adjacent Region control'
+                : `Subscription ${String(index + 1).padStart(3, '0')}`,
+        }));
+        const filteredSubscriptions = subscriptions.slice(0, 50);
+        const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
+        const vscodeApi = {
+            getState: () => undefined,
+            setState: () => undefined,
+            postMessage(message) {
+                window.fixtureMessages.push(message);
+                if (message.command === 'initialize' || message.command === 'loadFilteredSubscriptions') {
+                    queueMicrotask(() => postResponse({
+                        command: 'subscriptionsLoaded',
+                        subscriptions: filteredSubscriptions,
+                        showingAll: false,
+                    }));
+                } else if (message.command === 'loadAllSubscriptions') {
+                    queueMicrotask(() => postResponse({
+                        command: 'subscriptionsLoaded',
+                        subscriptions,
+                        showingAll: true,
+                    }));
+                } else if (message.command === 'selectSubscription') {
+                    queueMicrotask(() => postResponse({
+                        command: 'locationsLoaded',
+                        subscriptionId: message.subscriptionId,
+                        locations: [
+                            { name: 'westcentralus', label: 'West Central US' },
+                            { name: 'eastus2', label: 'East US 2' },
+                        ],
+                    }));
+                }
+            },
+        };
+        window.fixtureMessages = [];
+        window.config = {
+            _initialData: encodeURIComponent(JSON.stringify({
+                language: 'TypeScript',
+                labels,
+            })),
+        };
+        const { render } = await import('/dist/webview/connectorTriggerPicker.js');
+        render('connectorTriggerPicker', vscodeApi);
+
+        const automation = new URLSearchParams(location.search).get('auto');
+        if (automation) {
+            const waitFor = async predicate => {
+                for (let index = 0; index < 120; index++) {
+                    const value = predicate();
+                    if (value) {
+                        return value;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 25));
+                }
+                throw new Error(`Timed out while preparing fixture automation: ${automation}`);
+            };
+            const input = await waitFor(() => {
+                const element = document.querySelector('[role="combobox"]');
+                return element && !element.disabled ? element : undefined;
+            });
+            input.click();
+            const firstOption = await waitFor(() =>
+                document.querySelector('[role="option"]'));
+            firstOption.click();
+            await waitFor(() =>
+                !document.querySelector('[role="listbox"]') &&
+                document.querySelector('select')?.options.length === 3);
+
+            if (automation === 'open' || automation === 'all') {
+                input.click();
+                const options = await waitFor(() => {
+                    const values = [...document.querySelectorAll('[role="option"]')];
+                    return values.length === 51 ? values : undefined;
+                });
+                if (automation === 'all') {
+                    options.at(-1).click();
+                    await waitFor(() =>
+                        !document.querySelector('[role="listbox"]') &&
+                        window.fixtureMessages.some(message =>
+                            message.command === 'loadAllSubscriptions'));
+                    input.click();
+                    await waitFor(() =>
+                        document.querySelectorAll('[role="option"]').length === 101);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

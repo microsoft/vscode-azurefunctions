@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Add live Connector Trigger project authoring and first-debug Azure setup
+
 ### Fixed
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 

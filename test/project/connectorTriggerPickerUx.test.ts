@@ -28,6 +28,9 @@ import {
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import {
     AzureContextFields,
+    filterSubscriptionOptions,
+    getSubscriptionModeActionLabel,
+    shouldPreserveSubscriptionSelection,
     shouldRequestAzureSignIn,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
@@ -39,6 +42,10 @@ import {
     type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { ProjectLanguage } from '../../src/constants';
+import {
+    TemplateCategory,
+    type IProjectTemplate,
+} from '../../src/templates/projectTemplates/IProjectTemplate';
 
 suite('Connector trigger picker Azure context UX', () => {
     const connector: ConnectorTriggerOption = {
@@ -134,13 +141,15 @@ suite('Connector trigger picker Azure context UX', () => {
             subscriptionsLoading: false,
             onRequestSignIn: () => undefined,
             onShowAllSubscriptions: () => undefined,
+            onUseFilteredSubscriptions: () => undefined,
             onSelectRegion: () => undefined,
             onSelectSubscription: () => undefined,
         }));
 
         assert.ok(fieldsHtml.includes(`<span>${labels.subscription}</span>`));
         assert.ok(fieldsHtml.includes(`<span>${labels.region}</span>`));
-        assert.strictEqual((fieldsHtml.match(/<select/g) ?? []).length, 2);
+        assert.strictEqual((fieldsHtml.match(/role="combobox"/g) ?? []).length, 1);
+        assert.strictEqual((fieldsHtml.match(/<select/g) ?? []).length, 1);
         assert.strictEqual((fieldsHtml.match(/disabled=""/g) ?? []).length, 1);
         assert.ok(!fieldsHtml.includes('<button'));
         assert.strictEqual(shouldRequestAzureSignIn(true, false), true);
@@ -172,14 +181,83 @@ suite('Connector trigger picker Azure context UX', () => {
             subscriptionsLoading: false,
             onRequestSignIn: () => undefined,
             onShowAllSubscriptions: () => undefined,
+            onUseFilteredSubscriptions: () => undefined,
             onSelectRegion: () => undefined,
             onSelectSubscription: () => undefined,
         }));
 
         assert.ok(html.includes('Subscription One'));
         assert.ok(html.includes('East US'));
-        assert.ok(html.includes(labels.showAllSubscriptions));
         assert.strictEqual((html.match(/disabled=""/g) ?? []).length, 0);
+
+        const allHtml = renderToStaticMarkup(createElement(AzureContextFields, {
+            labels,
+            locations: [{ name: 'eastus', label: 'East US' }],
+            locationsLoading: false,
+            selectedRegion: 'eastus',
+            selectedSubscriptionId: 'sub-one',
+            signInRequired: false,
+            showingAllSubscriptions: true,
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            subscriptionsLoading: false,
+            onRequestSignIn: () => undefined,
+            onShowAllSubscriptions: () => undefined,
+            onUseFilteredSubscriptions: () => undefined,
+            onSelectRegion: () => undefined,
+            onSelectSubscription: () => undefined,
+        }));
+        assert.ok(allHtml.includes('Subscription One'));
+        assert.strictEqual(
+            getSubscriptionModeActionLabel(false, labels),
+            labels.showAllSubscriptions,
+        );
+        assert.strictEqual(
+            getSubscriptionModeActionLabel(true, labels),
+            labels.useFilteredSubscriptions,
+        );
+    });
+
+    test('filters a large subscription list by display name or ID', () => {
+        const subscriptions = Array.from({ length: 100 }, (_value, index) => ({
+            id: `00000000-0000-0000-0000-${index.toString().padStart(12, '0')}`,
+            label: `Subscription ${index.toString().padStart(3, '0')}`,
+        }));
+
+        assert.deepStrictEqual(
+            filterSubscriptionOptions(subscriptions, 'Subscription 042', ''),
+            [subscriptions[42]],
+        );
+        assert.deepStrictEqual(
+            filterSubscriptionOptions(subscriptions, '000000000073', ''),
+            [subscriptions[73]],
+        );
+        assert.strictEqual(
+            filterSubscriptionOptions(
+                subscriptions,
+                subscriptions[5].label,
+                subscriptions[5].id,
+            ).length,
+            100,
+        );
+    });
+
+    test('preserves a selected subscription in either subscription mode', () => {
+        const subscriptions = [
+            { id: 'sub-one', label: 'Subscription One' },
+            { id: 'sub-two', label: 'Subscription Two' },
+        ];
+        assert.strictEqual(
+            shouldPreserveSubscriptionSelection(subscriptions, 'sub-one'),
+            true,
+        );
+        assert.strictEqual(
+            shouldPreserveSubscriptionSelection(subscriptions, 'missing'),
+            false,
+        );
+        assert.strictEqual(
+            shouldPreserveSubscriptionSelection(subscriptions, ''),
+            false,
+        );
     });
 
     test('loads all subscriptions without clearing a valid current selection', async () => {
@@ -210,6 +288,43 @@ suite('Connector trigger picker Azure context UX', () => {
                 { id: 'sub-two', label: 'Subscription Two' },
             ],
             showingAll: true,
+        }]);
+
+        responses.length = 0;
+        await callHandleMessage(controller, { command: 'loadFilteredSubscriptions' });
+        assert.deepStrictEqual(filters, [true, false]);
+        assert.deepStrictEqual(controller.azureContext, createAzureContext());
+        assert.deepStrictEqual(responses, [{
+            command: 'subscriptionsLoaded',
+            subscriptions: [
+                { id: 'sub-one', label: 'Subscription One' },
+                { id: 'sub-two', label: 'Subscription Two' },
+            ],
+            showingAll: false,
+        }]);
+    });
+
+    test('clears Azure context when the reapplied filter excludes its subscription', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const controller = createTestController({
+            responses,
+            listSubscriptions: async () => [
+                { id: 'sub-two', label: 'Subscription Two' },
+            ],
+        });
+        controller.azureContext = createAzureContext();
+        controller.subscriptionContext = createSubscriptionContext();
+
+        await callHandleMessage(controller, { command: 'loadFilteredSubscriptions' });
+
+        assert.strictEqual(controller.azureContext, undefined);
+        assert.strictEqual(controller.subscriptionContext, undefined);
+        assert.deepStrictEqual(responses, [{
+            command: 'subscriptionsLoaded',
+            subscriptions: [
+                { id: 'sub-two', label: 'Subscription Two' },
+            ],
+            showingAll: false,
         }]);
     });
 
@@ -419,7 +534,7 @@ interface TestableConnectorTriggerPickerController {
     signInPending: boolean;
     subscriptionContext: ISubscriptionContext | undefined;
     templateProvider: {
-        getTemplates(): Promise<[]>;
+        getTemplates(): Promise<IProjectTemplate[]>;
     };
 }
 
@@ -469,7 +584,7 @@ function createTestController(
         signInPending: false,
         subscriptionContext: undefined,
         templateProvider: {
-            getTemplates: async () => [],
+            getTemplates: async () => [createOwnedTemplate()],
         },
     }) as TestableConnectorTriggerPickerController;
 }
@@ -526,4 +641,22 @@ function createSubscriptionContext(): ISubscriptionContext {
             resourceManagerEndpointUrl: 'https://management.usgovcloudapi.net/',
         },
     } as ISubscriptionContext;
+}
+
+function createOwnedTemplate(): IProjectTemplate {
+    return {
+        id: 'office365-connector-trigger-typescript',
+        displayName: 'Office 365 Outlook Connector Trigger',
+        shortDescription: 'Office 365 connector trigger',
+        categories: ['connectors' as TemplateCategory],
+        languages: [ProjectLanguage.TypeScript],
+        repositoryUrl: 'https://example.invalid/office365',
+        connectorTrigger: {
+            operations: [{
+                operationId: 'OnNewEmail',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions/onNewEmail.ts'],
+            }],
+        },
+    };
 }

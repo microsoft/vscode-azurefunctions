@@ -22,11 +22,21 @@ import {
 } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
-import { getPollingConnectorBindings } from '../../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+import {
+    findPollingConnectorBindings,
+    getPollingConnectorBindings,
+} from '../../src/connectorTrigger/connectorTriggerBindings';
 import {
     TemplateCategory,
     type IProjectTemplate,
+    type ITemplateManifest,
 } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
+import { envUtils } from '../../src/utils/envUtils';
+
+const realTemplateTestsEnabled = envUtils.isEnvironmentVariableSet(
+    process.env.AZFUNC_TEST_REAL_CONNECTOR_TEMPLATES,
+);
 
 suite('Connector Trigger template materialization', () => {
     let projectPath: string;
@@ -84,7 +94,7 @@ suite('Connector Trigger template materialization', () => {
         );
     });
 
-    test('rejects missing operations, traversal, and shared path ownership', async () => {
+    test('rejects missing operations and unsafe ownership metadata', async () => {
         await createOperationFixture(projectPath);
         const template = createTemplate().connectorTrigger!;
 
@@ -128,22 +138,54 @@ suite('Connector Trigger template materialization', () => {
             ),
             /invalid operation ownership metadata/,
         );
+
+        const invalidTemplates = [{
+            operations: [{
+                operationId: 'OnNewEmailV3',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions'],
+            }, {
+                operationId: 'OnFlaggedEmailV4',
+                functionName: 'OnFlaggedEmail',
+                ownedPaths: ['src/functions/onFlaggedEmail.ts'],
+            }],
+        }, {
+            operations: [{
+                operationId: 'OnNewEmailV3',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions/onNewEmail.ts'],
+            }, {
+                operationId: 'onnewemailv3',
+                functionName: 'OtherFunction',
+                ownedPaths: ['src/functions/other.ts'],
+            }],
+        }, {
+            operations: [{
+                operationId: 'OnNewEmailV3',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions/[event].ts'],
+            }],
+        }, {
+            operations: [{
+                operationId: 'OnNewEmailV3',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions/CON.ts'],
+            }],
+        }];
+        for (const invalidTemplate of invalidTemplates) {
+            await assert.rejects(
+                materializeConnectorTriggerTemplate(
+                    projectPath,
+                    invalidTemplate,
+                    'OnNewEmailV3',
+                ),
+                /invalid operation ownership metadata/,
+            );
+        }
     });
 
     test('ProjectTemplateCreator produces one selected Poll registration', async () => {
-        const creator = new ProjectTemplateCreator() as unknown as TestableProjectTemplateCreator;
-        creator.confirmTargetNotEmpty = async () => undefined;
-        creator.isGitInstalled = async () => false;
-        creator.downloadAndExtractZip = async (
-            _context,
-            _repositoryUrl,
-            _archiveRef,
-            destination,
-        ) => {
-            await createOperationFixture(destination);
-        };
-        creator.tryOpenReadme = async () => undefined;
-        creator.promptAndOpenProject = async () => undefined;
+        const creator = createTestCreator();
 
         await creator.createProject(
             await createTestActionContext(),
@@ -168,7 +210,320 @@ suite('Connector Trigger template materialization', () => {
             false,
         );
     });
+
+    test('ProjectTemplateCreator rejects connector templates without ownership metadata', async () => {
+        let downloaded = false;
+        const creator = createTestCreator(() => {
+            downloaded = true;
+        });
+        const template = createTemplate();
+        delete template.connectorTrigger;
+
+        await assert.rejects(
+            creator.createProject(
+                await createTestActionContext(),
+                template,
+                ProjectLanguage.TypeScript,
+                projectPath,
+                'details',
+                { connectorTriggerHandoff: createHandoff() },
+            ),
+            /missing operation ownership metadata/,
+        );
+        assert.strictEqual(downloaded, false);
+        assert.deepStrictEqual(await AzExtFsExtra.readDirectory(projectPath), []);
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+            ),
+            false,
+        );
+    });
+
+    test('ProjectTemplateProvider overlays older manifests and preserves remote ownership', async () => {
+        const remoteTemplate = createTemplate();
+        delete remoteTemplate.connectorTrigger;
+        remoteTemplate.gitRef = 'refs/tags/old';
+        remoteTemplate.folderPath = 'old-template-root';
+        const bundledTemplate = createTemplate();
+        bundledTemplate.gitRef = '0123456789abcdef0123456789abcdef01234567';
+        bundledTemplate.folderPath = 'office365App/template';
+        bundledTemplate.repositoryUrl = 'https://example.invalid/pinned-template';
+        const provider = new ProjectTemplateProvider() as unknown as {
+            getTemplates(
+                context: IActionContext,
+                language?: ProjectLanguage,
+            ): Promise<IProjectTemplate[]>;
+            getManifest(): Promise<{
+                version: string;
+                generatedAt: string;
+                templates: IProjectTemplate[];
+            }>;
+            getBundledManifest(): Promise<{
+                version: string;
+                generatedAt: string;
+                templates: IProjectTemplate[];
+            }>;
+        };
+        provider.getManifest = async () => ({
+            version: '1.0.0',
+            generatedAt: '2026-01-01T00:00:00Z',
+            templates: [remoteTemplate],
+        });
+        provider.getBundledManifest = async () => ({
+            version: '1.0.0',
+            generatedAt: '2026-01-01T00:00:00Z',
+            templates: [bundledTemplate],
+        });
+        const context = await createTestActionContext();
+
+        const [template] = await provider.getTemplates(
+            context,
+            ProjectLanguage.TypeScript,
+        );
+
+        assert.strictEqual(
+            template.gitRef,
+            '0123456789abcdef0123456789abcdef01234567',
+        );
+        assert.deepStrictEqual(
+            template.connectorTrigger,
+            bundledTemplate.connectorTrigger,
+        );
+        assert.strictEqual(template.folderPath, 'office365App/template');
+        assert.strictEqual(
+            template.repositoryUrl,
+            'https://example.invalid/pinned-template',
+        );
+        assert.strictEqual(
+            context.telemetry.properties.connectorOwnershipOverlay,
+            'true',
+        );
+
+        remoteTemplate.connectorTrigger = {
+            operations: [{
+                operationId: 'RemoteOperation',
+                functionName: 'RemoteFunction',
+                ownedPaths: ['src/functions/remote.ts'],
+            }],
+        };
+        remoteTemplate.gitRef = 'refs/tags/remote-contract';
+        remoteTemplate.folderPath = 'remote-template-root';
+        remoteTemplate.repositoryUrl = 'https://example.invalid/remote-template';
+        const remoteContext = await createTestActionContext();
+        const [remoteOwnedTemplate] = await provider.getTemplates(
+            remoteContext,
+            ProjectLanguage.TypeScript,
+        );
+
+        assert.strictEqual(remoteOwnedTemplate.gitRef, 'refs/tags/remote-contract');
+        assert.strictEqual(remoteOwnedTemplate.folderPath, 'remote-template-root');
+        assert.strictEqual(
+            remoteOwnedTemplate.repositoryUrl,
+            'https://example.invalid/remote-template',
+        );
+        assert.deepStrictEqual(
+            remoteOwnedTemplate.connectorTrigger,
+            remoteTemplate.connectorTrigger,
+        );
+        assert.strictEqual(
+            remoteContext.telemetry.properties.connectorOwnershipOverlay,
+            'false',
+        );
+    });
+
+    test('bundled manifest carries every exact connector ownership contract', async () => {
+        const manifest = await readBundledManifest();
+        const expected = getExpectedConnectorTemplates();
+        const actual = Object.fromEntries(manifest.templates
+            .filter(template => Object.hasOwn(expected, template.id))
+            .map(template => [template.id, {
+                connectorTrigger: template.connectorTrigger,
+                folderPath: template.folderPath,
+                gitRef: template.gitRef,
+                repositoryUrl: template.repositoryUrl,
+            }]));
+
+        assert.deepStrictEqual(actual, expected);
+    });
+
+    (realTemplateTestsEnabled ? test : test.skip)(
+        'production provider and creator materialize pinned real templates',
+        async function (this: Mocha.Context): Promise<void> {
+            this.timeout(10 * 60 * 1000);
+            const provider = await createIntegrationProvider();
+            const cases: {
+                connectorId: string;
+                gitRepeats: number;
+                language: ProjectLanguage;
+                operationId: string;
+                templateId: string;
+                triggerConfigSettingName: string;
+            }[] = [{
+                connectorId: 'office365',
+                gitRepeats: 3,
+                language: ProjectLanguage.TypeScript,
+                operationId: 'OnNewEmailV3',
+                templateId: 'office365-connector-trigger-typescript',
+                triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            }, {
+                connectorId: 'sharepointonline',
+                gitRepeats: 1,
+                language: ProjectLanguage.Python,
+                operationId: 'GetOnNewFileItems',
+                templateId: 'sharepoint-connector-trigger-python',
+                triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            }, {
+                connectorId: 'office365',
+                gitRepeats: 1,
+                language: ProjectLanguage.CSharp,
+                operationId: 'OnUpcomingEventsV3',
+                templateId: 'office365-connector-trigger-csharp',
+                triggerConfigSettingName: 'OnUpcomingEventTriggerConfigName',
+            }];
+
+            for (const testCase of cases) {
+                const context = await createTestActionContext();
+                const template = (await provider.getTemplates(
+                    context,
+                    testCase.language,
+                )).find(candidate => candidate.id === testCase.templateId);
+                assert.ok(template, `Missing template ${testCase.templateId}`);
+                assert.match(template.gitRef ?? '', /^[a-f\d]{40}$/i);
+
+                for (const transport of ['git', 'zip'] as const) {
+                    const repeats = transport === 'git' ? testCase.gitRepeats : 1;
+                    for (let iteration = 0; iteration < repeats; iteration++) {
+                        const destination = path.join(
+                            projectPath,
+                            `${testCase.templateId}-${transport}-${iteration}`,
+                        );
+                        const creator = createIntegrationCreator(transport === 'git');
+                        await creator.createProject(
+                            await createTestActionContext(),
+                            template,
+                            testCase.language,
+                            destination,
+                            'details',
+                            {
+                                connectorTriggerHandoff: createHandoff(
+                                    testCase.connectorId,
+                                    testCase.operationId,
+                                ),
+                            },
+                        );
+                        await assertMaterializedOperation(
+                            destination,
+                            template,
+                            testCase.operationId,
+                            testCase.triggerConfigSettingName,
+                        );
+                    }
+                }
+            }
+        },
+    );
 });
+
+function createTestCreator(onDownload?: () => void): TestableProjectTemplateCreator {
+    const creator = new ProjectTemplateCreator() as unknown as TestableProjectTemplateCreator;
+    creator.confirmTargetNotEmpty = async () => undefined;
+    creator.isGitInstalled = async () => false;
+    creator.downloadAndExtractZip = async (
+        _context,
+        _repositoryUrl,
+        _archiveRef,
+        destination,
+    ) => {
+        onDownload?.();
+        await createOperationFixture(destination);
+    };
+    creator.tryOpenReadme = async () => undefined;
+    creator.promptAndOpenProject = async () => undefined;
+    return creator;
+}
+
+function createIntegrationCreator(useGit: boolean): TestableProjectTemplateCreator {
+    const creator = new ProjectTemplateCreator() as unknown as TestableProjectTemplateCreator;
+    creator.confirmTargetNotEmpty = async () => undefined;
+    creator.isGitInstalled = async () => useGit;
+    creator.tryOpenReadme = async () => undefined;
+    creator.promptAndOpenProject = async () => undefined;
+    return creator;
+}
+
+async function createIntegrationProvider(): Promise<ProjectTemplateProvider> {
+    const bundledManifest = await readBundledManifest();
+    const remoteManifest = JSON.parse(
+        JSON.stringify(bundledManifest),
+    ) as ITemplateManifest;
+    for (const template of remoteManifest.templates) {
+        if (template.connectorTrigger) {
+            delete template.connectorTrigger;
+            template.gitRef = 'refs/tags/pre-ownership-contract';
+            template.folderPath = template.folderPath?.replace(/\/template$/, '');
+        }
+    }
+
+    const provider = new ProjectTemplateProvider() as unknown as {
+        getBundledManifest(): Promise<ITemplateManifest>;
+        getManifest(context: IActionContext): Promise<ITemplateManifest>;
+    };
+    provider.getManifest = async context => {
+        context.telemetry.properties.manifestSource = 'cache';
+        return remoteManifest;
+    };
+    provider.getBundledManifest = async () => bundledManifest;
+    return provider as unknown as ProjectTemplateProvider;
+}
+
+async function readBundledManifest(): Promise<ITemplateManifest> {
+    return JSON.parse(await fs.promises.readFile(
+        path.join(
+            __dirname,
+            '..',
+            '..',
+            'resources',
+            'backupProjectTemplates',
+            'manifest.json',
+        ),
+        'utf8',
+    )) as ITemplateManifest;
+}
+
+async function assertMaterializedOperation(
+    root: string,
+    template: IProjectTemplate,
+    operationId: string,
+    triggerConfigSettingName: string,
+): Promise<void> {
+    assert.ok(template.connectorTrigger);
+    const selected = template.connectorTrigger.operations.find(operation =>
+        operation.operationId === operationId);
+    assert.ok(selected, `Missing ownership metadata for ${operationId}`);
+
+    for (const operation of template.connectorTrigger.operations) {
+        for (const ownedPath of operation.ownedPaths) {
+            assert.strictEqual(
+                await AzExtFsExtra.pathExists(path.join(root, ...ownedPath.split('/'))),
+                operation === selected,
+                `${operation.operationId}: ${ownedPath}`,
+            );
+        }
+    }
+    assert.strictEqual(
+        await AzExtFsExtra.pathExists(path.join(root, 'host.json')),
+        true,
+    );
+    assert.deepStrictEqual(
+        await findPollingConnectorBindings(root),
+        [{
+            connectionSettingName: 'ConnectorNamespace',
+            functionName: selected.functionName,
+            triggerConfigSettingName,
+        }],
+    );
+}
 
 async function createOperationFixture(root: string): Promise<void> {
     await AzExtFsExtra.ensureDir(path.join(root, 'src', 'functions'));
@@ -230,7 +585,10 @@ function createTemplate(): IProjectTemplate {
     };
 }
 
-function createHandoff(): ConnectorTriggerProjectHandoff {
+function createHandoff(
+    connectorId = 'office365',
+    operationId = 'OnNewEmailV3',
+): ConnectorTriggerProjectHandoff {
     return {
         version: connectorTriggerProjectHandoffVersion,
         subscription: {
@@ -242,8 +600,8 @@ function createHandoff(): ConnectorTriggerProjectHandoff {
             },
         },
         region: 'westcentralus',
-        connectorId: 'office365',
-        operationId: 'OnNewEmailV3',
+        connectorId,
+        operationId,
     };
 }
 
@@ -281,4 +639,91 @@ interface TestableProjectTemplateCreator {
         projectPath: string,
     ): Promise<void>;
     tryOpenReadme(projectPath: string): Promise<void>;
+}
+
+function getExpectedConnectorTemplates(): Record<string, {
+    connectorTrigger: NonNullable<IProjectTemplate['connectorTrigger']>;
+    folderPath: string;
+    gitRef: string;
+    repositoryUrl: string;
+}> {
+    const officeOperations = [
+        ['OnNewEmailV3', 'OnNewEmail', 'onNewEmail.ts'],
+        ['OnFlaggedEmailV4', 'OnFlaggedEmail', 'onFlaggedEmail.ts'],
+        ['OnNewMentionMeEmailV3', 'OnNewMentionMeEmail', 'onNewMentionMeEmail.ts'],
+        ['CalendarGetOnNewItemsV3', 'OnNewCalendarEvent', 'onNewCalendarEvent.ts'],
+        ['OnUpcomingEventsV3', 'OnUpcomingEvent', 'onUpcomingEvent.ts'],
+    ] as const;
+    const sharePointOperations = [
+        ['GetOnNewFileItems', 'OnSharepointNewFile', 'onSharepointNewFile.ts'],
+        ['GetOnUpdatedFileItems', 'OnSharepointUpdatedFile', 'onSharepointUpdatedFile.ts'],
+    ] as const;
+    const createOperations = (
+        language: 'csharp' | 'python' | 'typescript',
+        operations: readonly (readonly [string, string, string])[],
+    ): NonNullable<IProjectTemplate['connectorTrigger']> => ({
+        operations: operations.map(([operationId, functionName, typeScriptFile]) => ({
+            operationId,
+            functionName: language === 'csharp' ?
+                functionName.replace('OnSharepoint', 'On') :
+                functionName,
+            ownedPaths: language === 'csharp' ?
+                [
+                    `${functionName.replace('OnSharepoint', 'On')}.cs`,
+                    `infra/triggers/${operationId}.json`,
+                ] :
+                language === 'python' ?
+                    [`operations/${operationId}`] :
+                    [
+                        `src/functions/${typeScriptFile}`,
+                        `infra/operations/${operationId}`,
+                    ],
+        })),
+    });
+    const csharpRef = 'b053eac5ad6e4e1c96f9515e39b5b3b0ebfaf74e';
+    const pythonRef = 'a9bfc5cc752e61926b1fea1599024801d0b7a755';
+    const typeScriptRef = 'e45f811fda9aed46ab8914291816d69b30dade1a';
+    const csharpRepository = 'https://github.com/Azure-Samples/functions-connectors-net';
+    const pythonRepository = 'https://github.com/Azure-Samples/functions-connectors-python';
+    const typeScriptRepository =
+        'https://github.com/Azure-Samples/functions-connectors-typescript';
+
+    return {
+        'office365-connector-trigger-csharp': {
+            connectorTrigger: createOperations('csharp', officeOperations),
+            folderPath: 'office365App/template',
+            gitRef: csharpRef,
+            repositoryUrl: csharpRepository,
+        },
+        'office365-connector-trigger-python': {
+            connectorTrigger: createOperations('python', officeOperations),
+            folderPath: 'office365App',
+            gitRef: pythonRef,
+            repositoryUrl: pythonRepository,
+        },
+        'office365-connector-trigger-typescript': {
+            connectorTrigger: createOperations('typescript', officeOperations),
+            folderPath: 'office365App',
+            gitRef: typeScriptRef,
+            repositoryUrl: typeScriptRepository,
+        },
+        'sharepoint-connector-trigger-csharp': {
+            connectorTrigger: createOperations('csharp', sharePointOperations),
+            folderPath: 'sharepointApp/template',
+            gitRef: csharpRef,
+            repositoryUrl: csharpRepository,
+        },
+        'sharepoint-connector-trigger-python': {
+            connectorTrigger: createOperations('python', sharePointOperations),
+            folderPath: 'sharepointApp',
+            gitRef: pythonRef,
+            repositoryUrl: pythonRepository,
+        },
+        'sharepoint-connector-trigger-typescript': {
+            connectorTrigger: createOperations('typescript', sharePointOperations),
+            folderPath: 'sharepointApp',
+            gitRef: typeScriptRef,
+            repositoryUrl: typeScriptRepository,
+        },
+    };
 }

@@ -192,6 +192,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
+        if (message.command === 'loadFilteredSubscriptions') {
+            await this.loadSubscriptions(actionContext);
+            return;
+        }
+
         if (message.command === 'selectSubscription') {
             await this.selectSubscription(actionContext, message.subscriptionId);
             return;
@@ -338,6 +343,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     'connectorSubscriptionsUnavailable',
                     'No Azure subscriptions are available for Connector Triggers.',
                 ));
+            }
+            if (this.azureContext &&
+                !subscriptions.some(subscription =>
+                    subscription.id === this.azureContext?.subscriptionId)) {
+                this.resetAzureContext();
             }
             await this.postMessage({
                 command: 'subscriptionsLoaded',
@@ -536,9 +546,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         );
         const ownedTemplates = connectorTemplates.filter(template =>
             !!template.connectorTrigger);
-        if (ownedTemplates.length === 0) {
-            return operations;
-        }
         const supportedOperationIds = new Set(ownedTemplates.flatMap(template =>
             template.connectorTrigger?.operations.map(operation =>
                 operation.operationId) ?? []));
@@ -675,13 +682,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             );
             const ownedTemplates = matchingTemplates.filter(template =>
                 !!template.connectorTrigger);
-            const materializableTemplates = (
-                ownedTemplates.length > 0 ?
-                    ownedTemplates :
-                    matchingTemplates
-            ).filter(template =>
-                !template.connectorTrigger ||
-                template.connectorTrigger.operations.some(operation =>
+            const materializableTemplates = ownedTemplates.filter(template =>
+                template.connectorTrigger?.operations.some(operation =>
                     operation.operationId === selection.operation.id));
             if (materializableTemplates.length === 0) {
                 throw new Error(localize(

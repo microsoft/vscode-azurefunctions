@@ -96,8 +96,18 @@ suite('Connector trigger project handoff', () => {
         creator.confirmTargetNotEmpty = async () => undefined;
         creator.isGitInstalled = async () => false;
         creator.downloadAndExtractZip = async (_context, _repositoryUrl, _archiveRef, destination) => {
-            await AzExtFsExtra.ensureDir(destination);
+            await AzExtFsExtra.ensureDir(path.join(destination, 'src', 'functions'));
             await AzExtFsExtra.writeFile(path.join(destination, 'host.json'), '{}');
+            await AzExtFsExtra.writeFile(
+                path.join(destination, 'src', 'functions', 'onNewEmail.ts'),
+                `app.connectorTrigger('OnNewEmail', {
+    deliveryMode: 'Poll',
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%ConnectorTriggerConfigName%',
+    handler: async () => undefined,
+});
+`,
+            );
         };
         creator.tryOpenReadme = async () => undefined;
         creator.promptAndOpenProject = async () => undefined;
@@ -114,9 +124,15 @@ suite('Connector trigger project handoff', () => {
         assert.strictEqual(projectCreated, true);
         assert.strictEqual(
             await AzExtFsExtra.pathExists(
-                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+                path.join(projectPath, 'src', 'functions', 'onNewEmail.ts'),
             ),
             true,
+        );
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+            ),
+            false,
         );
         assert.deepStrictEqual(
             await readConnectorTriggerProjectHandoff(projectPath),
@@ -256,6 +272,13 @@ function createProjectTemplate(): IProjectTemplate {
         categories: [TemplateCategory.Other],
         languages: [ProjectLanguage.TypeScript],
         repositoryUrl: 'https://example.invalid/connector-trigger',
+        connectorTrigger: {
+            operations: [{
+                operationId: 'OnNewEmail',
+                functionName: 'OnNewEmail',
+                ownedPaths: ['src/functions/onNewEmail.ts'],
+            }],
+        },
     };
 }
 

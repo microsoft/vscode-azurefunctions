@@ -1,7 +1,7 @@
 {
-  "$schema": "https://cdn.functions.azure.com/public/templates-manifest/schemas/manifest.schema.json",
-  "generatedAt": "2026-10-13T02:51:46Z",
-  "version": "1.10.3",
+  "$schema": "./schemas/manifest.schema.json",
+  "generatedAt": "2026-11-02T22:37:32Z",
+  "version": "1.11.2",
   "totalTemplates": 76,
   "runtimeVersions": {
     "Python": {
@@ -2417,8 +2417,52 @@
       ],
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-net",
-      "folderPath": "office365App",
-      "gitRef": "refs/tags/v1.0.2",
+      "folderPath": "office365App/template",
+      "gitRef": "b053eac5ad6e4e1c96f9515e39b5b3b0ebfaf74e",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "OnNewEmailV3",
+            "functionName": "OnNewEmail",
+            "ownedPaths": [
+              "OnNewEmail.cs",
+              "infra/triggers/OnNewEmailV3.json"
+            ]
+          },
+          {
+            "operationId": "OnFlaggedEmailV4",
+            "functionName": "OnFlaggedEmail",
+            "ownedPaths": [
+              "OnFlaggedEmail.cs",
+              "infra/triggers/OnFlaggedEmailV4.json"
+            ]
+          },
+          {
+            "operationId": "OnNewMentionMeEmailV3",
+            "functionName": "OnNewMentionMeEmail",
+            "ownedPaths": [
+              "OnNewMentionMeEmail.cs",
+              "infra/triggers/OnNewMentionMeEmailV3.json"
+            ]
+          },
+          {
+            "operationId": "CalendarGetOnNewItemsV3",
+            "functionName": "OnNewCalendarEvent",
+            "ownedPaths": [
+              "OnNewCalendarEvent.cs",
+              "infra/triggers/CalendarGetOnNewItemsV3.json"
+            ]
+          },
+          {
+            "operationId": "OnUpcomingEventsV3",
+            "functionName": "OnUpcomingEvent",
+            "ownedPaths": [
+              "OnUpcomingEvent.cs",
+              "infra/triggers/OnUpcomingEventsV3.json"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
         "Connector trigger functions (OnNewEmail, OnFlaggedEmail, OnNewMentionMeEmail, OnNewCalendarEvent, OnUpcomingEvent)",
         "ConnectorTrigger bindings with BlobOutput payload storage",
@@ -2427,14 +2471,14 @@
         "User-assigned managed identity",
         "Bicep infrastructure files",
         "Azure Developer CLI (azd) configuration (azure.yaml)",
-        "VS Code configuration"
+        "Isolated .NET project files"
       ]
     },
     {
       "id": "office365-connector-trigger-typescript",
       "displayName": "Office 365 Outlook Connector Triggers (TypeScript + AZD + Bicep)",
       "shortDescription": "Office 365 Outlook email and calendar connector triggers, deployed via azd",
-      "longDescription": "Build and deploy an Office 365 Outlook connector app on Azure Functions in TypeScript. This app provides five connector trigger functions, each receiving a different Outlook event type from the Connector Namespace via the connector trigger and logging the received payload: (1) onNewEmail for incoming mail, (2) onFlaggedEmail for flagged mail, (3) onNewMentionMeEmail for mail that mentions you, (4) onNewCalendarEvent for newly created calendar items, and (5) onUpcomingEvent for upcoming calendar events. Built on the Azure Functions Connector trigger extension. Runs on Flex Consumption with a user-assigned managed identity and an OAuth Office 365 Outlook connection authorized via a post-deploy hook. Deployed with azd.",
+      "longDescription": "Build and deploy an Office 365 Outlook connector app on Azure Functions in TypeScript. This app provides five connector trigger functions, each receiving a different Outlook event type from the Connector Namespace via the connector trigger and logging the received payload: (1) OnNewEmail for incoming mail, (2) OnFlaggedEmail for flagged mail, (3) OnNewMentionMeEmail for mail that mentions you, (4) OnNewCalendarEvent for newly created calendar items, and (5) OnUpcomingEvent for upcoming calendar events. Built on the Azure Functions Connector trigger extension. Runs on Flex Consumption with a user-assigned managed identity and an OAuth Office 365 Outlook connection authorized via a post-deploy hook. Deployed with azd.",
       "language": "TypeScript",
       "bindingType": "trigger",
       "resource": "connector",
@@ -2448,9 +2492,53 @@
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-typescript",
       "folderPath": "office365App",
-      "gitRef": "refs/tags/v1.0.1",
+      "gitRef": "e45f811fda9aed46ab8914291816d69b30dade1a",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "OnNewEmailV3",
+            "functionName": "OnNewEmail",
+            "ownedPaths": [
+              "src/functions/onNewEmail.ts",
+              "infra/operations/OnNewEmailV3"
+            ]
+          },
+          {
+            "operationId": "OnFlaggedEmailV4",
+            "functionName": "OnFlaggedEmail",
+            "ownedPaths": [
+              "src/functions/onFlaggedEmail.ts",
+              "infra/operations/OnFlaggedEmailV4"
+            ]
+          },
+          {
+            "operationId": "OnNewMentionMeEmailV3",
+            "functionName": "OnNewMentionMeEmail",
+            "ownedPaths": [
+              "src/functions/onNewMentionMeEmail.ts",
+              "infra/operations/OnNewMentionMeEmailV3"
+            ]
+          },
+          {
+            "operationId": "CalendarGetOnNewItemsV3",
+            "functionName": "OnNewCalendarEvent",
+            "ownedPaths": [
+              "src/functions/onNewCalendarEvent.ts",
+              "infra/operations/CalendarGetOnNewItemsV3"
+            ]
+          },
+          {
+            "operationId": "OnUpcomingEventsV3",
+            "functionName": "OnUpcomingEvent",
+            "ownedPaths": [
+              "src/functions/onUpcomingEvent.ts",
+              "infra/operations/OnUpcomingEventsV3"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
-        "Connector trigger functions (onNewEmail, onFlaggedEmail, onNewMentionMeEmail, onNewCalendarEvent, onUpcomingEvent)",
+        "Connector trigger functions (OnNewEmail, OnFlaggedEmail, OnNewMentionMeEmail, OnNewCalendarEvent, OnUpcomingEvent)",
         "Connector triggers that log the received payload",
         "OAuth Office 365 Outlook connection",
         "Post-deploy connection authorization scripts",
@@ -2478,7 +2566,46 @@
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-python",
       "folderPath": "office365App",
-      "gitRef": "refs/tags/v1.0.2",
+      "gitRef": "a9bfc5cc752e61926b1fea1599024801d0b7a755",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "OnNewEmailV3",
+            "functionName": "OnNewEmail",
+            "ownedPaths": [
+              "operations/OnNewEmailV3"
+            ]
+          },
+          {
+            "operationId": "OnFlaggedEmailV4",
+            "functionName": "OnFlaggedEmail",
+            "ownedPaths": [
+              "operations/OnFlaggedEmailV4"
+            ]
+          },
+          {
+            "operationId": "OnNewMentionMeEmailV3",
+            "functionName": "OnNewMentionMeEmail",
+            "ownedPaths": [
+              "operations/OnNewMentionMeEmailV3"
+            ]
+          },
+          {
+            "operationId": "CalendarGetOnNewItemsV3",
+            "functionName": "OnNewCalendarEvent",
+            "ownedPaths": [
+              "operations/CalendarGetOnNewItemsV3"
+            ]
+          },
+          {
+            "operationId": "OnUpcomingEventsV3",
+            "functionName": "OnUpcomingEvent",
+            "ownedPaths": [
+              "operations/OnUpcomingEventsV3"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
         "Connector trigger functions (OnNewEmail, OnFlaggedEmail, OnNewMentionMeEmail, OnNewCalendarEvent, OnUpcomingEvent)",
         "Connector triggers that log the received payload",
@@ -2507,8 +2634,28 @@
       ],
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-net",
-      "folderPath": "sharepointApp",
-      "gitRef": "refs/tags/v1.0.2",
+      "folderPath": "sharepointApp/template",
+      "gitRef": "b053eac5ad6e4e1c96f9515e39b5b3b0ebfaf74e",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "GetOnNewFileItems",
+            "functionName": "OnNewFile",
+            "ownedPaths": [
+              "OnNewFile.cs",
+              "infra/triggers/GetOnNewFileItems.json"
+            ]
+          },
+          {
+            "operationId": "GetOnUpdatedFileItems",
+            "functionName": "OnUpdatedFile",
+            "ownedPaths": [
+              "OnUpdatedFile.cs",
+              "infra/triggers/GetOnUpdatedFileItems.json"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
         "Connector trigger functions (OnNewFile, OnUpdatedFile)",
         "ConnectorTrigger bindings with BlobOutput payload storage",
@@ -2525,7 +2672,7 @@
       "id": "sharepoint-connector-trigger-typescript",
       "displayName": "SharePoint Online Connector Triggers (TypeScript + AZD + Bicep)",
       "shortDescription": "SharePoint Online file connector triggers, deployed via azd",
-      "longDescription": "Build and deploy a SharePoint Online connector app on Azure Functions in TypeScript. This app provides two connector trigger functions, each receiving a different SharePoint Online file event from the Connector Namespace via the connector trigger and logging the received payload: (1) onSharepointNewFile for newly added files and (2) onSharepointUpdatedFile for updated files. Built on the Azure Functions Connector trigger extension. Runs on Flex Consumption with a user-assigned managed identity and an OAuth SharePoint Online connection authorized via a post-deploy hook. Deployed with azd.",
+      "longDescription": "Build and deploy a SharePoint Online connector app on Azure Functions in TypeScript. This app provides two connector trigger functions, each receiving a different SharePoint Online file event from the Connector Namespace via the connector trigger and logging the received payload: (1) OnSharepointNewFile for newly added files and (2) OnSharepointUpdatedFile for updated files. Built on the Azure Functions Connector trigger extension. Runs on Flex Consumption with a user-assigned managed identity and an OAuth SharePoint Online connection authorized via a post-deploy hook. Deployed with azd.",
       "language": "TypeScript",
       "bindingType": "trigger",
       "resource": "connector",
@@ -2539,9 +2686,29 @@
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-typescript",
       "folderPath": "sharepointApp",
-      "gitRef": "refs/tags/v1.0.1",
+      "gitRef": "e45f811fda9aed46ab8914291816d69b30dade1a",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "GetOnNewFileItems",
+            "functionName": "OnSharepointNewFile",
+            "ownedPaths": [
+              "src/functions/onSharepointNewFile.ts",
+              "infra/operations/GetOnNewFileItems"
+            ]
+          },
+          {
+            "operationId": "GetOnUpdatedFileItems",
+            "functionName": "OnSharepointUpdatedFile",
+            "ownedPaths": [
+              "src/functions/onSharepointUpdatedFile.ts",
+              "infra/operations/GetOnUpdatedFileItems"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
-        "Connector trigger functions (onSharepointNewFile, onSharepointUpdatedFile)",
+        "Connector trigger functions (OnSharepointNewFile, OnSharepointUpdatedFile)",
         "Connector triggers that log the received payload",
         "OAuth SharePoint Online connection",
         "Post-deploy connection authorization scripts",
@@ -2570,7 +2737,25 @@
       "author": "Azure Functions Team",
       "repositoryUrl": "https://github.com/Azure-Samples/functions-connectors-python",
       "folderPath": "sharepointApp",
-      "gitRef": "refs/tags/v1.0.2",
+      "gitRef": "a9bfc5cc752e61926b1fea1599024801d0b7a755",
+      "connectorTrigger": {
+        "operations": [
+          {
+            "operationId": "GetOnNewFileItems",
+            "functionName": "OnSharepointNewFile",
+            "ownedPaths": [
+              "operations/GetOnNewFileItems"
+            ]
+          },
+          {
+            "operationId": "GetOnUpdatedFileItems",
+            "functionName": "OnSharepointUpdatedFile",
+            "ownedPaths": [
+              "operations/GetOnUpdatedFileItems"
+            ]
+          }
+        ]
+      },
       "whatsIncluded": [
         "Connector trigger functions (OnSharepointNewFile, OnSharepointUpdatedFile)",
         "Connector triggers that log the received payload",

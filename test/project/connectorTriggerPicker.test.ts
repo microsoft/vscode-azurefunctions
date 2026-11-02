@@ -822,6 +822,9 @@ suite('Connector trigger picker', () => {
             command: 'loadAllSubscriptions',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'loadFilteredSubscriptions',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'loadConnectorOperations',
             connectorId: 'office365',
         }), true);
@@ -948,6 +951,20 @@ function createProjectTemplate(
     resource: string = 'connector',
     language: ProjectLanguage = ProjectLanguage.Python,
 ): IProjectTemplate {
+    const operation = id.startsWith('office365-connector-trigger-') ?
+        {
+            operationId: 'OnNewEmail',
+            functionName: 'OnNewEmail',
+            ownedPaths: ['src/functions/onNewEmail.ts'],
+        } :
+        id.startsWith('sharepoint-connector-trigger-') ?
+            {
+                operationId: 'OnNewFile',
+                functionName: 'OnNewFile',
+                ownedPaths: ['src/functions/onNewFile.ts'],
+            } :
+            undefined;
+
     return {
         id,
         displayName,
@@ -956,5 +973,6 @@ function createProjectTemplate(
         languages: [language],
         repositoryUrl: 'https://example.invalid/template',
         resource,
+        connectorTrigger: operation ? { operations: [operation] } : undefined,
     } as IProjectTemplate;
 }

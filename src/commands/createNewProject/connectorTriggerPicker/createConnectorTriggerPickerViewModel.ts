@@ -34,6 +34,10 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerShowAllSubscriptions',
                 'Show all subscriptions...',
             ),
+            useFilteredSubscriptions: localize(
+                'connectorTriggerUseFilteredSubscriptions',
+                'Use subscription filter...',
+            ),
             region: localize(
                 'connectorTriggerRegion',
                 'Region',

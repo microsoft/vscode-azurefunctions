@@ -45,6 +45,29 @@ select {
     }
 }
 
+.subscription-option {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+
+    strong,
+    small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    small {
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.82em;
+        font-weight: 400;
+    }
+}
+
+.subscription-combobox-listbox {
+    max-height: min(320px, calc(100vh - 32px)) !important;
+}
+
 .gallery-tabs {
     display: flex;
     gap: 8px;
@@ -330,19 +353,28 @@ select {
 }
 
 .azure-context-fields {
+    width: 100%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
     margin-bottom: 18px;
 
     label {
         display: grid;
+        min-width: 0;
         gap: 6px;
         font-weight: 600;
     }
 
-    select {
+    select,
+    .subscription-combobox {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         min-height: 34px;
+    }
+
+    select {
         padding: 5px 28px 5px 8px;
         border: 1px solid var(--vscode-dropdown-border, var(--connector-picker-border));
         border-radius: var(--connector-picker-radius);
@@ -380,9 +412,6 @@ select {
         margin-left: auto;
     }
 
-    .azure-context-fields {
-        grid-template-columns: 1fr;
-    }
 }
 
 .event-list {
@@ -466,6 +495,12 @@ select {
 @media (max-width: 840px) {
     .connector-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .azure-context-fields {
+        grid-template-columns: 1fr;
     }
 }
 

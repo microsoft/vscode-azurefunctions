@@ -13,7 +13,7 @@ import { ProjectLanguage } from '../../src/constants';
 import {
     getPollingConnectorBindings,
     selectPollingConnectorBinding,
-} from '../../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+} from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getPollingConnectorConnectionPrefixes } from '../../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 suite('Connector trigger Poll project scaffolding', () => {
@@ -62,6 +62,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             ),
             {
                 connectionSettingName: 'ConnectorNamespace',
+                functionName: 'ConnectorTriggerFunction',
                 triggerConfigSettingName: 'ConnectorTriggerConfigName',
             },
         );
@@ -87,6 +88,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             ),
             {
                 connectionSettingName: 'ConnectorNamespace',
+                functionName: 'ConnectorTriggerFunction',
                 triggerConfigSettingName: 'ConnectorTriggerConfigName',
             },
         );
@@ -127,6 +129,7 @@ azurefunctions-extensions-connectors
             ),
             {
                 connectionSettingName: 'ConnectorNamespace',
+                functionName: 'ConnectorTriggerFunction',
                 triggerConfigSettingName: 'ConnectorTriggerConfigName',
             },
         );

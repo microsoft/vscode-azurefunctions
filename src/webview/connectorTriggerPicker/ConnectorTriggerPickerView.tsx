@@ -5,7 +5,7 @@
 
 /// <reference lib="dom" />
 
-import { Button } from '@fluentui/react-components';
+import { Button, Combobox, Option } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import {
     useCallback,
@@ -38,6 +38,7 @@ import {
 
 const connectorPageSize = 60;
 const showAllSubscriptionsValue = '__showAllSubscriptions__';
+const useFilteredSubscriptionsValue = '__useFilteredSubscriptions__';
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
@@ -138,6 +139,12 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         vscodeApi.postMessage({ command: 'loadAllSubscriptions' });
     }, [vscodeApi]);
 
+    const loadFilteredSubscriptions = useCallback(() => {
+        setSubscriptionsLoading(true);
+        setAzureContextMessage(undefined);
+        vscodeApi.postMessage({ command: 'loadFilteredSubscriptions' });
+    }, [vscodeApi]);
+
     const selectRegion = useCallback((region: string) => {
         setSelectedRegion(region);
         setAzureContext(undefined);
@@ -207,9 +214,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 signInRequestPendingRef.current = false;
                 setSignInRequired(false);
                 setShowingAllSubscriptions(message.showingAll);
-                const preservesSelection = message.showingAll &&
-                    message.subscriptions.some(subscription =>
-                        subscription.id === selectedSubscriptionIdRef.current);
+                const preservesSelection = shouldPreserveSubscriptionSelection(
+                    message.subscriptions,
+                    selectedSubscriptionIdRef.current,
+                );
                 setSubscriptions(message.subscriptions);
                 setSubscriptionsLoading(false);
                 if (preservesSelection) {
@@ -479,6 +487,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         subscriptionsLoading={subscriptionsLoading}
                         onRequestSignIn={signIn}
                         onShowAllSubscriptions={loadAllSubscriptions}
+                        onUseFilteredSubscriptions={loadFilteredSubscriptions}
                         onSelectRegion={selectRegion}
                         onSelectSubscription={selectSubscription}
                     />
@@ -648,6 +657,7 @@ export function AzureContextFields({
     subscriptionsLoading,
     onRequestSignIn,
     onShowAllSubscriptions,
+    onUseFilteredSubscriptions,
     onSelectRegion,
     onSelectSubscription,
 }: {
@@ -662,12 +672,30 @@ export function AzureContextFields({
     subscriptionsLoading: boolean;
     onRequestSignIn: () => void;
     onShowAllSubscriptions: () => void;
+    onUseFilteredSubscriptions: () => void;
     onSelectRegion: (region: string) => void;
     onSelectSubscription: (subscriptionId: string) => void;
 }): JSX.Element {
+    const selectedSubscription = subscriptions.find(subscription =>
+        subscription.id === selectedSubscriptionId);
+    const [subscriptionQuery, setSubscriptionQuery] = useState(
+        selectedSubscription?.label ?? '',
+    );
+    useEffect(() => {
+        setSubscriptionQuery(selectedSubscription?.label ?? '');
+    }, [selectedSubscription?.label]);
+    const filteredSubscriptions = filterSubscriptionOptions(
+        subscriptions,
+        subscriptionQuery,
+        selectedSubscriptionId,
+    );
+    const modeActionLabel = getSubscriptionModeActionLabel(
+        showingAllSubscriptions,
+        labels,
+    );
     const requestSignIn = (
-        event: MouseEvent<HTMLSelectElement> |
-        KeyboardEvent<HTMLSelectElement>,
+        event: MouseEvent<HTMLElement> |
+        KeyboardEvent<HTMLElement>,
     ): void => {
         if (!shouldRequestAzureSignIn(signInRequired, subscriptionsLoading)) {
             return;
@@ -680,39 +708,75 @@ export function AzureContextFields({
         <div className="azure-context-fields">
             <label>
                 <span>{labels.subscription}</span>
-                <select
+                <Combobox
+                    aria-label={labels.subscription}
+                    className="subscription-combobox"
                     disabled={subscriptionsLoading}
-                    value={selectedSubscriptionId}
+                    inlinePopup
+                    listbox={{
+                        className: 'subscription-combobox-listbox',
+                    }}
+                    placeholder={subscriptionsLoading ?
+                        labels.loadingSubscriptions :
+                        labels.selectSubscription}
+                    selectedOptions={selectedSubscriptionId ?
+                        [selectedSubscriptionId] :
+                        []}
+                    value={subscriptionQuery}
+                    onChange={event => setSubscriptionQuery(event.target.value)}
+                    onClick={requestSignIn}
                     onKeyDown={event => {
                         if (event.key === 'Enter' || event.key === ' ') {
                             requestSignIn(event);
                         }
                     }}
-                    onClick={requestSignIn}
-                    onChange={event => {
-                        if (event.target.value === showAllSubscriptionsValue) {
+                    onOpenChange={(_event, data) => {
+                        if (!data.open) {
+                            setSubscriptionQuery(selectedSubscription?.label ?? '');
+                        }
+                    }}
+                    onOptionSelect={(_event, data) => {
+                        if (data.optionValue === showAllSubscriptionsValue) {
                             onShowAllSubscriptions();
-                        } else {
-                            onSelectSubscription(event.target.value);
+                            setSubscriptionQuery(selectedSubscription?.label ?? '');
+                        } else if (data.optionValue === useFilteredSubscriptionsValue) {
+                            onUseFilteredSubscriptions();
+                            setSubscriptionQuery(selectedSubscription?.label ?? '');
+                        } else if (data.optionValue) {
+                            const subscription = subscriptions.find(option =>
+                                option.id === data.optionValue);
+                            setSubscriptionQuery(subscription?.label ?? '');
+                            onSelectSubscription(data.optionValue);
                         }
                     }}
                 >
-                    <option value="">
-                        {subscriptionsLoading ?
-                            labels.loadingSubscriptions :
-                            labels.selectSubscription}
-                    </option>
-                    {subscriptions.map(subscription =>
-                        <option key={subscription.id} value={subscription.id}>
-                            {subscription.label}
-                        </option>
+                    {filteredSubscriptions.map(subscription =>
+                        <Option
+                            key={subscription.id}
+                            text={`${subscription.label} ${subscription.id}`}
+                            value={subscription.id}
+                        >
+                            <span className="subscription-option">
+                                <strong>{subscription.label}</strong>
+                                <small>{subscription.id}</small>
+                            </span>
+                        </Option>
                     )}
-                    {!showingAllSubscriptions &&
-                        <option value={showAllSubscriptionsValue}>
-                            {labels.showAllSubscriptions}
-                        </option>
+                    {!showingAllSubscriptions ?
+                        <Option
+                            text={modeActionLabel}
+                            value={showAllSubscriptionsValue}
+                        >
+                            {modeActionLabel}
+                        </Option> :
+                        <Option
+                            text={modeActionLabel}
+                            value={useFilteredSubscriptionsValue}
+                        >
+                            {modeActionLabel}
+                        </Option>
                     }
-                </select>
+                </Combobox>
             </label>
             <label>
                 <span>{labels.region}</span>
@@ -740,6 +804,44 @@ export function shouldRequestAzureSignIn(
     subscriptionsLoading: boolean,
 ): boolean {
     return signInRequired && !subscriptionsLoading;
+}
+
+export function filterSubscriptionOptions(
+    subscriptions: readonly ConnectorTriggerSubscriptionOption[],
+    query: string,
+    selectedSubscriptionId: string,
+): ConnectorTriggerSubscriptionOption[] {
+    const normalized = query.trim().toLocaleLowerCase();
+    const selected = subscriptions.find(subscription =>
+        subscription.id === selectedSubscriptionId);
+    if (!normalized || normalized === selected?.label.toLocaleLowerCase()) {
+        return [...subscriptions];
+    }
+
+    return subscriptions.filter(subscription =>
+        subscription.label.toLocaleLowerCase().includes(normalized) ||
+        subscription.id.toLocaleLowerCase().includes(normalized));
+}
+
+export function getSubscriptionModeActionLabel(
+    showingAllSubscriptions: boolean,
+    labels: Pick<
+        ConnectorTriggerPickerViewModel['labels'],
+        'showAllSubscriptions' | 'useFilteredSubscriptions'
+    >,
+): string {
+    return showingAllSubscriptions ?
+        labels.useFilteredSubscriptions :
+        labels.showAllSubscriptions;
+}
+
+export function shouldPreserveSubscriptionSelection(
+    subscriptions: readonly ConnectorTriggerSubscriptionOption[],
+    selectedSubscriptionId: string,
+): boolean {
+    return !!selectedSubscriptionId &&
+        subscriptions.some(subscription =>
+            subscription.id === selectedSubscriptionId);
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {

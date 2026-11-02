@@ -27,7 +27,7 @@ import {
     getPollingConnectorBindings,
     getPollingConnectorBindingsFromFunctionJson,
     selectPollingConnectorBinding,
-} from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+} from '../src/connectorTrigger/connectorTriggerBindings';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
@@ -72,12 +72,16 @@ suite('Connector Trigger F5 production adapters', () => {
                 pass
         `);
         const typescript = getPollingConnectorBindings(`
-            app.connectorTrigger('OnUpcomingEvent', {
+            const onUpcomingEventOptions = {
                 deliveryMode: 'Poll',
                 connection: 'Office365Connection',
                 triggerConfigName: '%OnUpcomingEventTriggerConfigName%',
                 handler: async () => {}
-            });
+            } satisfies ConnectorTriggerOptions & PollConnectorTriggerOptions;
+            connectors.office365.onUpcomingEvents(
+                'OnUpcomingEvent',
+                onUpcomingEventOptions,
+            );
         `);
         const functionJson = getPollingConnectorBindingsFromFunctionJson({
             bindings: [{
@@ -93,10 +97,12 @@ suite('Connector Trigger F5 production adapters', () => {
             'OnNewEmailV3',
         ), {
             connectionSettingName: 'Office365Connection',
+            functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
         });
         assert.deepStrictEqual(selectPollingConnectorBinding(functionJson, 'OnNewEmailV3'), {
             connectionSettingName: 'Office365Connection',
+            functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
         });
         assert.throws(

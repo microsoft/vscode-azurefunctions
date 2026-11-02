@@ -93,6 +93,7 @@ export interface ConnectorTriggerPickerViewModel {
         subscription: string;
         selectSubscription: string;
         showAllSubscriptions: string;
+        useFilteredSubscriptions: string;
         region: string;
         selectRegion: string;
         loadingSubscriptions: string;
@@ -132,6 +133,7 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'initialize' }
     | { command: 'signIn' }
     | { command: 'loadAllSubscriptions' }
+    | { command: 'loadFilteredSubscriptions' }
     | {
         command: 'selectSubscription';
         subscriptionId: string;
@@ -214,6 +216,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         message.command === 'initialize' ||
         message.command === 'signIn' ||
         message.command === 'loadAllSubscriptions' ||
+        message.command === 'loadFilteredSubscriptions' ||
         message.command === 'loadCatalog') {
         return true;
     }
