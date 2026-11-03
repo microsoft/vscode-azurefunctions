@@ -66,6 +66,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [connectorSearch, setConnectorSearch] = useState('');
     const [connectorLimit, setConnectorLimit] = useState(connectorPageSize);
     const [otherConnectorsExpanded, setOtherConnectorsExpanded] = useState(false);
+    const [webhookOnlyConnectorsExpanded, setWebhookOnlyConnectorsExpanded] =
+        useState(false);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [operationsLoading, setOperationsLoading] = useState(false);
@@ -286,6 +288,13 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         !equalsIgnoreCase(operation.connectorId, message.connectorId)),
                     ...message.operations,
                 ]);
+                setConnectors(current => current.map(connector =>
+                    equalsIgnoreCase(connector.id, message.connectorId) ?
+                        {
+                            ...connector,
+                            eventSupport: message.eventSupport,
+                        } :
+                        connector));
                 setOperationsLoading(false);
                 setOperationsError('');
             } else if (message.command === 'connectorOperationsFailed') {
@@ -392,6 +401,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const displayedOtherConnectors = connectorSearch.trim() ?
         connectorGroups.other :
         connectorGroups.other.slice(0, connectorLimit);
+    const webhookOnlyConnectorsVisible = shouldExpandOtherConnectors(
+        connectorSearch,
+        webhookOnlyConnectorsExpanded,
+    );
 
     const selectConnector = (connectorId: string) => {
         if (connectors.find(connector =>
@@ -618,6 +631,43 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                                 }
                                             </section>
                                         }
+                                        {connectorGroups.webhookOnly.length > 0 &&
+                                            <section className="other-connectors webhook-only-connectors">
+                                                <button
+                                                    type="button"
+                                                    className="other-connectors-toggle"
+                                                    aria-controls="webhook-only-connectors-grid"
+                                                    aria-expanded={webhookOnlyConnectorsVisible}
+                                                    aria-label={webhookOnlyConnectorsVisible ?
+                                                        viewModel.labels.hideWebhookOnlyConnectors :
+                                                        viewModel.labels.showWebhookOnlyConnectors}
+                                                    disabled={!!connectorSearch.trim()}
+                                                    onClick={() => setWebhookOnlyConnectorsExpanded(
+                                                        expanded => !expanded,
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={`codicon codicon-chevron-${webhookOnlyConnectorsVisible ? 'down' : 'right'}`}
+                                                        aria-hidden="true"
+                                                    />
+                                                    {format(
+                                                        viewModel.labels.webhookOnlyConnectors,
+                                                        connectorGroups.webhookOnly.length.toString(),
+                                                    )}
+                                                </button>
+                                                {webhookOnlyConnectorsVisible &&
+                                                    <div id="webhook-only-connectors-grid">
+                                                        <ConnectorTilePicker
+                                                            label={viewModel.labels.webhookOnlyConnectors}
+                                                            options={connectorGroups.webhookOnly}
+                                                            unavailableLabel={viewModel.labels.unavailable}
+                                                            value={selectedConnectorId}
+                                                            onChange={selectConnector}
+                                                        />
+                                                    </div>
+                                                }
+                                            </section>
+                                        }
                                     </>
                     }
                 </section>
@@ -635,6 +685,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     projectCreationError={projectCreationError}
                     selectedOperationId={selectedOperationId}
                     templateUnavailable={selectedCatalogItemUnavailable}
+                    webhookOnly={selectedConnector.eventSupport === 'webhook-only'}
                     onChangeConnector={() => setActiveStep(1)}
                     onSelectOperation={selectOperation}
                     onRetryOperations={retryConnectorOperations}

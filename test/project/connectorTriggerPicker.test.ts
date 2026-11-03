@@ -421,6 +421,11 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
+        assert.strictEqual(viewModel.labels.webhookOnlyConnectors, 'Webhook only ({0})');
+        assert.strictEqual(
+            viewModel.labels.webhookOnlyDescription,
+            'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
+        );
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {
@@ -435,6 +440,11 @@ suite('Connector trigger picker', () => {
             { id: 'visualstudio-team-services', label: 'Azure DevOps' },
             { id: 'planner', label: 'Planner' },
             { id: 'onedriveforbusiness', label: 'OneDrive for Business' },
+            {
+                id: 'adobesign',
+                label: 'Adobe Acrobat Sign',
+                eventSupport: 'webhook-only',
+            },
         ];
 
         const groups = partitionConnectorOptions(connectors);
@@ -452,6 +462,9 @@ suite('Connector trigger picker', () => {
         assert.deepStrictEqual(groups.other.map(connector => connector.id), [
             'custom-office-helper',
             'github',
+        ]);
+        assert.deepStrictEqual(groups.webhookOnly.map(connector => connector.id), [
+            'adobesign',
         ]);
         assert.strictEqual(shouldExpandOtherConnectors('', false), false);
         assert.strictEqual(shouldExpandOtherConnectors('', true), true);
@@ -1035,8 +1048,21 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsLoaded',
             connectorId: 'office365',
+            eventSupport: 'poll',
             operations: [],
         }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'connectorOperationsLoaded',
+            connectorId: 'adobesign',
+            eventSupport: 'webhook-only',
+            operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'connectorOperationsLoaded',
+            connectorId: 'adobesign',
+            eventSupport: 'unknown',
+            operations: [],
+        }), false);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsFailed',
             connectorId: 'office365',

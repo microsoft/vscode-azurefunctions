@@ -21,6 +21,7 @@ import {
 import {
     type ConnectorTriggerAzureContext,
     type ConnectorTriggerDataClient,
+    type ConnectorTriggerOperationMetadataResult,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import {
     createConnectorTriggerPickerViewModel,
@@ -143,6 +144,7 @@ suite('Connector trigger picker Azure context UX', () => {
             projectCreationError: '',
             selectedOperationId: operation.id,
             templateUnavailable: false,
+            webhookOnly: false,
             onChangeConnector: () => undefined,
             onRetryOperations: () => undefined,
             onSelectOperation: () => undefined,
@@ -153,6 +155,44 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(html.includes(operation.label));
         assert.ok(html.includes(labels.useTemplate));
         assert.ok(!html.includes('Folder parameter must not render'));
+    });
+
+    test('renders webhook-only events as read-only and unsupported', () => {
+        const labels = createConnectorTriggerPickerViewModel('python').labels;
+        const html = renderToStaticMarkup(createElement(ConnectorEventStep, {
+            connector: {
+                id: 'adobesign',
+                label: 'Adobe Acrobat Sign',
+                eventSupport: 'webhook-only',
+            },
+            labels,
+            operations: [{
+                id: 'CreateWebhookForAgreementCreatedEvent',
+                connectorId: 'adobesign',
+                label: 'When a new agreement is created',
+                isWebhook: true,
+                isNotification: false,
+                availability: 'unavailable',
+            }],
+            operationsError: '',
+            operationsLoading: false,
+            projectCreating: false,
+            projectCreationDetail: '',
+            projectCreationError: '',
+            selectedOperationId: '',
+            templateUnavailable: false,
+            webhookOnly: true,
+            onChangeConnector: () => undefined,
+            onRetryOperations: () => undefined,
+            onSelectOperation: () => assert.fail('Webhook event must be read-only.'),
+            onUseTemplate: () => assert.fail('Webhook event must not be creatable.'),
+        }));
+
+        assert.ok(html.includes(labels.webhookOnlyDescription));
+        assert.ok(html.includes(labels.webhookEventUnavailable));
+        assert.ok(html.includes('When a new agreement is created'));
+        assert.ok(html.includes('disabled=""'));
+        assert.ok(!html.includes(labels.useTemplate));
     });
 
     test('renders both dropdowns while signed out with Location disabled', () => {
@@ -496,6 +536,7 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.deepStrictEqual(responses, [{
             command: 'connectorOperationsLoaded',
             connectorId: connector.id,
+            eventSupport: 'poll',
             operations: outlookOperations,
         }]);
     });
@@ -544,12 +585,168 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.deepStrictEqual(responses, [{
             command: 'connectorOperationsLoaded',
             connectorId: azureBlobConnector.id,
+            eventSupport: 'poll',
             operations: [azureBlobOperation],
         }]);
         assert.deepStrictEqual(
             controller.catalogs.get('sub-one:usgovvirginia')?.catalog.operations,
             [azureBlobOperation],
         );
+    });
+
+    test('classifies webhook-only connectors after authoritative lazy loading', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const azureContext = createAzureContext();
+        const adobeConnector = {
+            id: 'adobesign',
+            label: 'Adobe Acrobat Sign',
+        };
+        const webhookOperations: ConnectorTriggerOperationOption[] = [{
+            id: 'CreateWebhookForAgreementCreatedEvent',
+            connectorId: adobeConnector.id,
+            label: 'When a new agreement is created',
+            isWebhook: true,
+            isNotification: false,
+        }, {
+            id: 'CreateWebhookForAgreementSignedEvent',
+            connectorId: adobeConnector.id,
+            label: 'When an agreement workflow is completed successfully',
+            isWebhook: true,
+            isNotification: false,
+        }];
+        const controller = createTestController({
+            responses,
+            listConnectorOperationMetadata: async (
+                _context,
+                selectedContext,
+                connectorId,
+            ) => {
+                assert.deepStrictEqual(selectedContext, azureContext);
+                assert.strictEqual(connectorId, adobeConnector.id);
+                return {
+                    pollOperations: [],
+                    webhookOperations,
+                };
+            },
+        });
+        controller.azureContext = azureContext;
+        controller.subscriptionContext = createSubscriptionContext();
+        controller.catalogs.set('sub-one:usgovvirginia', {
+            catalog: {
+                connectors: [connector, adobeConnector],
+                operations: [],
+            },
+        });
+
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: adobeConnector.id,
+        });
+
+        assert.deepStrictEqual(responses, [{
+            command: 'connectorOperationsLoaded',
+            connectorId: adobeConnector.id,
+            eventSupport: 'webhook-only',
+            operations: webhookOperations.map(webhookOperation => ({
+                ...webhookOperation,
+                availability: 'unavailable',
+            })),
+        }]);
+        assert.deepStrictEqual(
+            controller.catalogs.get('sub-one:usgovvirginia')?.catalog.operations,
+            webhookOperations.map(webhookOperation => ({
+                ...webhookOperation,
+                availability: 'unavailable',
+            })),
+        );
+        assert.strictEqual(
+            controller.connectorEventSupport.get(
+                'sub-one:usgovvirginia:adobesign',
+            ),
+            'webhook-only',
+        );
+
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: adobeConnector.id,
+        });
+        assert.strictEqual(responses[0]?.command, 'connectorOperationsLoaded');
+
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'continue',
+            connectorId: adobeConnector.id,
+            operationId: webhookOperations[0].id,
+        });
+        assert.deepStrictEqual(responses, [{
+            command: 'projectCreationFailed',
+            message: 'The selected connector or event is no longer available. Choose another selection.',
+        }]);
+    });
+
+    test('does not classify action-only or failed loads as webhook-only', async () => {
+        const azureContext = createAzureContext();
+        for (const [connectorId, shouldFail] of [
+            ['kusto', false],
+            ['failedconnector', true],
+        ] as const) {
+            const responses: ConnectorTriggerPickerResponse[] = [];
+            const controller = createTestController({
+                responses,
+                listConnectorOperationMetadata: async () => {
+                    if (shouldFail) {
+                        throw new Error('Operation metadata unavailable.');
+                    }
+                    return {
+                        pollOperations: [],
+                        webhookOperations: [],
+                    };
+                },
+            });
+            controller.azureContext = azureContext;
+            controller.subscriptionContext = createSubscriptionContext();
+            controller.catalogs.set('sub-one:usgovvirginia', {
+                catalog: {
+                    connectors: [{
+                        id: connectorId,
+                        label: connectorId,
+                    }],
+                    operations: [],
+                },
+            });
+
+            await callHandleMessage(controller, {
+                command: 'loadConnectorOperations',
+                connectorId,
+            });
+
+            if (shouldFail) {
+                assert.strictEqual(
+                    responses[0]?.command,
+                    'connectorOperationsFailed',
+                );
+                assert.strictEqual(
+                    controller.connectorEventSupport.has(
+                        `sub-one:usgovvirginia:${connectorId}`,
+                    ),
+                    false,
+                );
+            } else {
+                assert.deepStrictEqual(responses, [{
+                    command: 'connectorOperationsLoaded',
+                    connectorId,
+                    eventSupport: 'none',
+                    operations: [],
+                }]);
+                assert.strictEqual(
+                    controller.connectorEventSupport.get(
+                        `sub-one:usgovvirginia:${connectorId}`,
+                    ),
+                    'none',
+                );
+            }
+        }
     });
 
     test('requires fresh dropdown selections after authentication changes', async () => {
@@ -600,15 +797,17 @@ interface TestableConnectorTriggerPickerController {
         | 'getSubscriptionContext'
         | 'invalidateSubscriptions'
         | 'listLocations'
+        | 'listConnectorOperationMetadata'
         | 'listConnectorOperations'
         | 'listSubscriptions'
     >;
+    connectorEventSupport: Map<string, 'none' | 'poll' | 'webhook-only'>;
     locations: Map<string, { name: string; label: string }[]>;
     launchOptions: {
         language: ProjectLanguage;
         languageModel?: number;
     };
-    operationLoadRequests: Map<string, Promise<ConnectorTriggerOperationOption[]>>;
+    operationLoadRequests: Map<string, Promise<ConnectorTriggerOperationMetadataResult>>;
     postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
     signIn: ConnectorTriggerSignIn;
     signInPending: boolean;
@@ -628,6 +827,8 @@ interface TestControllerOptions {
         subscriptionId: string,
     ) => Promise<{ name: string; label: string }[]>;
     listConnectorOperations?: ConnectorTriggerDataClient['listConnectorOperations'];
+    listConnectorOperationMetadata?:
+        ConnectorTriggerDataClient['listConnectorOperationMetadata'];
     listSubscriptions?: (
         showAll?: boolean,
     ) => Promise<{ id: string; label: string }[]>;
@@ -643,11 +844,21 @@ function createTestController(
         catalogs: new Map(),
         catalogLoadRequests: new Map(),
         catalogLoader: options.catalogLoader ?? (async () => assert.fail('Unexpected catalog load.')),
+        connectorEventSupport: new Map(),
         dataClient: {
             getSubscriptionContext: options.getSubscriptionContext ??
                 (async () => createSubscriptionContext()),
             invalidateSubscriptions: options.invalidateSubscriptions ?? (() => undefined),
             listLocations: options.listLocations ?? (async () => []),
+            listConnectorOperationMetadata:
+                options.listConnectorOperationMetadata ??
+                (async (context, azureContext, connectorId) => ({
+                    pollOperations: await (
+                        options.listConnectorOperations ??
+                        (async () => [])
+                    )(context, azureContext, connectorId),
+                    webhookOperations: [],
+                })),
             listConnectorOperations: options.listConnectorOperations ??
                 (async () => []),
             listSubscriptions: options.listSubscriptions ?? (async () => []),

@@ -23,6 +23,7 @@ interface ConnectorEventStepProps {
     projectCreationError: string;
     selectedOperationId: string;
     templateUnavailable: boolean;
+    webhookOnly: boolean;
     onChangeConnector: () => void;
     onRetryOperations: () => void;
     onSelectOperation: (operationId: string) => void;
@@ -40,6 +41,7 @@ export function ConnectorEventStep({
     projectCreationError,
     selectedOperationId,
     templateUnavailable,
+    webhookOnly,
     onChangeConnector,
     onRetryOperations,
     onSelectOperation,
@@ -90,6 +92,12 @@ export function ConnectorEventStep({
                 {selectedOperation ? ` ${format(labels.eventSelected, selectedOperation.label)}` : ''}
             </p>
 
+            {webhookOnly &&
+                <p className="warning-text" role="status">
+                    {labels.webhookOnlyDescription}
+                </p>
+            }
+
             {operationsLoading ?
                 <p className="status-text">{labels.loadingEvents}</p> :
                 operationsError ?
@@ -114,7 +122,11 @@ export function ConnectorEventStep({
                                 <strong>{operation.label}</strong>
                                 {operation.description && <small>{operation.description}</small>}
                                 {operation.availability === 'unavailable' &&
-                                    <small>{labels.unavailable}</small>
+                                    <small>
+                                        {webhookOnly ?
+                                            labels.webhookEventUnavailable :
+                                            labels.unavailable}
+                                    </small>
                                 }
                             </span>
                             <span className="codicon codicon-chevron-right" aria-hidden="true" />

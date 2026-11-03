@@ -73,6 +73,11 @@
             otherConnectors: 'Other connectors ({0})',
             showOtherConnectors: 'Show other connectors',
             hideOtherConnectors: 'Hide other connectors',
+            webhookOnlyConnectors: 'Webhook only ({0})',
+            showWebhookOnlyConnectors: 'Show webhook-only connectors',
+            hideWebhookOnlyConnectors: 'Hide webhook-only connectors',
+            webhookOnlyDescription: 'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
+            webhookEventUnavailable: 'Webhook authoring is not available yet.',
             connectorPageTitle: 'Choose a connector',
             connectorPageDescription: 'Find the service that will start your function, then choose an event.',
             connectorSearchPlaceholder: 'Search connectors...',
@@ -107,6 +112,18 @@
             id: 'azureblob',
             label: 'Azure Blob Storage',
         };
+        const adobeSignConnector = {
+            id: 'adobesign',
+            label: 'Adobe Acrobat Sign',
+        };
+        const creativeCloudConnector = {
+            id: 'adobecreativecloud',
+            label: 'Adobe Creative Cloud',
+        };
+        const kustoConnector = {
+            id: 'kusto',
+            label: 'Azure Data Explorer',
+        };
         const officeOperations = [
             ['OnNewEmailV3', 'When a new email arrives'],
             ['OnFlaggedEmailV4', 'When an email is flagged'],
@@ -134,7 +151,49 @@
                 label: 'When a blob is added or modified (properties only) (V2)',
                 description: 'This operation triggers a flow when blobs change.',
             }],
+            adobesign: [
+                'When a new agreement is created',
+                'When a web form agreement event occurs',
+                'When an agreement is sent to a participant',
+                'When an agreement workflow is completed successfully',
+                'When an event occurs',
+                'When the state of an agreement changes',
+                'When a group event occurs',
+            ].map((label, index) => ({
+                connectorId: adobeSignConnector.id,
+                id: `AdobeSignWebhook${index + 1}`,
+                isNotification: false,
+                isWebhook: true,
+                label,
+                availability: 'unavailable',
+            })),
+            adobecreativecloud: [
+                'When an asset is added',
+                'When an asset is updated',
+            ].map((label, index) => ({
+                connectorId: creativeCloudConnector.id,
+                id: `CreativeCloudWebhook${index + 1}`,
+                isNotification: false,
+                isWebhook: true,
+                label,
+                availability: 'unavailable',
+            })),
+            kusto: [],
         };
+        const eventSupportMap = {
+            office365: 'poll',
+            azureblob: 'poll',
+            adobesign: 'webhook-only',
+            adobecreativecloud: 'webhook-only',
+            kusto: 'none',
+        };
+        const catalogConnectors = [
+            officeConnector,
+            azureBlobConnector,
+            adobeSignConnector,
+            creativeCloudConnector,
+            kustoConnector,
+        ];
         const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
         const vscodeApi = {
             getState: () => undefined,
@@ -175,7 +234,7 @@
                         });
                         postResponse({
                             command: 'catalogLoaded',
-                            connectors: [officeConnector, azureBlobConnector],
+                            connectors: catalogConnectors,
                             operations: [],
                         });
                     });
@@ -183,6 +242,7 @@
                     queueMicrotask(() => postResponse({
                         command: 'connectorOperationsLoaded',
                         connectorId: message.connectorId,
+                        eventSupport: eventSupportMap[message.connectorId] ?? 'none',
                         operations: operationMap[message.connectorId] ?? [],
                     }));
                 }
@@ -195,7 +255,9 @@
                 labels,
             })),
         };
-        const { render } = await import('/dist/webview/connectorTriggerPicker.js');
+        const { render } = await import(
+            `/dist/webview/connectorTriggerPicker.js?fixture=${Date.now()}`,
+        );
         render('connectorTriggerPicker', vscodeApi);
 
         const automation = new URLSearchParams(location.search).get('auto');
@@ -250,7 +312,7 @@
                 });
                 postResponse({
                     command: 'catalogLoaded',
-                    connectors: [officeConnector, azureBlobConnector],
+                    connectors: catalogConnectors,
                     operations: [],
                 });
                 const connectorButton = await waitFor(() =>
@@ -274,7 +336,7 @@
                 });
                 postResponse({
                     command: 'catalogLoaded',
-                    connectors: [officeConnector, azureBlobConnector],
+                    connectors: catalogConnectors,
                     operations: [],
                 });
                 const toggle = await waitFor(() =>
@@ -290,6 +352,53 @@
                     document.body.textContent.includes(
                         'When a blob is added or modified',
                     ));
+            } else if (automation === 'webhook') {
+                postResponse({
+                    command: 'azureContextSelected',
+                    azureContext: {
+                        subscriptionId: subscriptions[0].id,
+                        subscriptionName: subscriptions[0].label,
+                        region: 'westcentralus',
+                        regionDisplayName: 'West Central US',
+                    },
+                });
+                postResponse({
+                    command: 'catalogLoaded',
+                    connectors: catalogConnectors,
+                    operations: [],
+                });
+                const otherToggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Other connectors')));
+                otherToggle.click();
+                for (const webhookConnector of [
+                    adobeSignConnector,
+                    creativeCloudConnector,
+                ]) {
+                    const connectorButton = await waitFor(() =>
+                        [...document.querySelectorAll('button')].find(button =>
+                            button.textContent.includes(webhookConnector.label)));
+                    connectorButton.click();
+                    await waitFor(() =>
+                        document.body.textContent.includes(
+                            'Webhook authoring is not available yet.',
+                        ));
+                    const changeConnector = await waitFor(() =>
+                        [...document.querySelectorAll('button')].find(button =>
+                            button.textContent.includes('Change connector')));
+                    changeConnector.click();
+                }
+                const webhookToggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Webhook only (2)')));
+                webhookToggle.click();
+                await waitFor(() =>
+                    [...document.querySelectorAll('button')].filter(button =>
+                        button.getAttribute('role') === 'radio' &&
+                        (
+                            button.textContent.includes(adobeSignConnector.label) ||
+                            button.textContent.includes(creativeCloudConnector.label)
+                        )).length === 2);
             }
         }
     </script>

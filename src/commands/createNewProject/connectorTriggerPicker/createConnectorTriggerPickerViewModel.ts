@@ -71,6 +71,26 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             otherConnectors: localize('connectorTriggerOtherConnectors', 'Other connectors ({0})'),
             showOtherConnectors: localize('connectorTriggerShowOtherConnectors', 'Show other connectors'),
             hideOtherConnectors: localize('connectorTriggerHideOtherConnectors', 'Hide other connectors'),
+            webhookOnlyConnectors: localize(
+                'connectorTriggerWebhookOnlyConnectors',
+                'Webhook only ({0})',
+            ),
+            showWebhookOnlyConnectors: localize(
+                'connectorTriggerShowWebhookOnlyConnectors',
+                'Show webhook-only connectors',
+            ),
+            hideWebhookOnlyConnectors: localize(
+                'connectorTriggerHideWebhookOnlyConnectors',
+                'Hide webhook-only connectors',
+            ),
+            webhookOnlyDescription: localize(
+                'connectorTriggerWebhookOnlyDescription',
+                'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
+            ),
+            webhookEventUnavailable: localize(
+                'connectorTriggerWebhookEventUnavailable',
+                'Webhook authoring is not available yet.',
+            ),
             connectorPageTitle: localize('connectorTriggerChooseConnector', 'Choose a connector'),
             connectorPageDescription: localize('connectorTriggerChooseConnectorDescription', 'Find the service that will start your function, then choose an event.'),
             connectorSearchPlaceholder: localize('connectorTriggerSearchConnectors', 'Search connectors...'),

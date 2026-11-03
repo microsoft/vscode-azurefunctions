@@ -43,6 +43,11 @@ export interface ConnectorTriggerCatalogResult {
     source: 'live';
 }
 
+export interface ConnectorTriggerOperationMetadataResult {
+    pollOperations: ConnectorTriggerOperationOption[];
+    webhookOperations: ConnectorTriggerOperationOption[];
+}
+
 export interface ConnectorNamespaceResult {
     namespaces: ConnectorNamespaceOption[];
     failedSubscriptionCount: number;
@@ -356,6 +361,18 @@ export class ConnectorTriggerDataClient {
         azureContext: ConnectorTriggerAzureContext,
         connectorId: string,
     ): Promise<ConnectorTriggerOperationOption[]> {
+        return (await this.listConnectorOperationMetadata(
+            context,
+            azureContext,
+            connectorId,
+        )).pollOperations;
+    }
+
+    public async listConnectorOperationMetadata(
+        context: IActionContext,
+        azureContext: ConnectorTriggerAzureContext,
+        connectorId: string,
+    ): Promise<ConnectorTriggerOperationMetadataResult> {
         const subscription = await this.getSubscription(azureContext.subscriptionId);
         maskSubscriptionContext(context, subscription.context);
         maskValues(
@@ -383,13 +400,13 @@ export class ConnectorTriggerDataClient {
             },
         );
         try {
-            const operations = await listAll<ManagedApiOperation>(
+            const rawOperations = await listAll<ManagedApiOperation>(
                 client,
                 operationsUrl,
             );
-            return createCatalog(
+            const operations = createCatalog(
                 [],
-                operations
+                rawOperations
                     .filter(isTriggerOperation)
                     .map(operation => ({
                         ...operation,
@@ -401,7 +418,12 @@ export class ConnectorTriggerDataClient {
                             },
                         },
                     })),
+                true,
             ).operations;
+            return {
+                pollOperations: operations.filter(operation => !operation.isWebhook),
+                webhookOperations: operations.filter(operation => operation.isWebhook),
+            };
         } catch (error) {
             throw new Error(localize(
                 'connectorEventsLoadFailed',
@@ -509,6 +531,7 @@ function createConnectorOptions(
 function createCatalog(
     managedApis: ManagedApiDefinition[],
     managedApiOperations: ManagedApiOperation[],
+    includeWebhooks = false,
 ): ConnectorTriggerCatalog {
     const connectors = new Map<string, ConnectorTriggerOption>();
     for (const api of managedApis) {
@@ -548,7 +571,7 @@ function createCatalog(
             !connectorId ||
             visibility === 'internal' ||
             visibility === 'hideinui' ||
-            isWebhook) {
+            (!includeWebhooks && isWebhook)) {
             continue;
         }
 

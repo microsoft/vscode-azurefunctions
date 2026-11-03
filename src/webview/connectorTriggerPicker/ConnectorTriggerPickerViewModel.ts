@@ -19,9 +19,15 @@ export interface ConnectorTriggerOption {
     description?: string;
     iconUrl?: string;
     availability?: ConnectorTriggerAvailability;
+    eventSupport?: ConnectorTriggerEventSupport;
 }
 
 export type ConnectorTriggerAvailability = 'available' | 'unavailable' | 'unknown';
+export type ConnectorTriggerEventSupport =
+    'none' |
+    'poll' |
+    'unknown' |
+    'webhook-only';
 
 export interface ConnectorTriggerSubscriptionOption {
     id: string;
@@ -106,6 +112,11 @@ export interface ConnectorTriggerPickerViewModel {
         otherConnectors: string;
         showOtherConnectors: string;
         hideOtherConnectors: string;
+        webhookOnlyConnectors: string;
+        showWebhookOnlyConnectors: string;
+        hideWebhookOnlyConnectors: string;
+        webhookOnlyDescription: string;
+        webhookEventUnavailable: string;
         connectorPageTitle: string;
         connectorPageDescription: string;
         connectorSearchPlaceholder: string;
@@ -182,6 +193,7 @@ export type ConnectorTriggerPickerResponse =
     | {
         command: 'connectorOperationsLoaded';
         connectorId: string;
+        eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'>;
         operations: ConnectorTriggerOperationOption[];
     }
     | {
@@ -284,6 +296,12 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
     if (message.command === 'connectorOperationsLoaded') {
         return 'connectorId' in message &&
             typeof message.connectorId === 'string' &&
+            'eventSupport' in message &&
+            (
+                message.eventSupport === 'none' ||
+                message.eventSupport === 'poll' ||
+                message.eventSupport === 'webhook-only'
+            ) &&
             'operations' in message &&
             Array.isArray(message.operations);
     }

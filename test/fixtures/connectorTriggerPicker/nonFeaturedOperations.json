@@ -237,6 +237,30 @@
   "adobepdftools": {
     "value": []
   },
+  "mixedconnector": {
+    "value": [
+      {
+        "name": "OnPolledItem",
+        "properties": {
+          "summary": "When a polled item changes",
+          "visibility": "important",
+          "trigger": "batch",
+          "isWebhook": false,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "SubscribeWebhook",
+        "properties": {
+          "summary": "When a webhook event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      }
+    ]
+  },
   "azureblob": {
     "value": [
       {

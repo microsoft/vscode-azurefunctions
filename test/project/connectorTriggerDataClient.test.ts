@@ -16,7 +16,6 @@ import {
     type ConnectorArmClient,
     type ConnectorSubscription,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
-import { cpUtils } from '../../src/utils/cpUtils';
 import { envUtils } from '../../src/utils/envUtils';
 
 const liveCatalogTestsEnabled = envUtils.isEnvironmentVariableSet(
@@ -235,49 +234,60 @@ suite('Connector trigger data client', () => {
                 `${connectorId} must remain excluded from Poll authoring.`,
             );
         }
+
+        const adobeSign = await client.listConnectorOperationMetadata(
+            context,
+            azureContext,
+            'adobesign',
+        );
+        assert.deepStrictEqual(adobeSign.pollOperations, []);
+        assert.strictEqual(adobeSign.webhookOperations.length, 7);
+        assert.ok(adobeSign.webhookOperations.every(operation =>
+            operation.isWebhook));
+
+        const creativeCloud = await client.listConnectorOperationMetadata(
+            context,
+            azureContext,
+            'adobecreativecloud',
+        );
+        assert.deepStrictEqual(creativeCloud.pollOperations, []);
+        assert.strictEqual(creativeCloud.webhookOperations.length, 2);
+
+        const mixed = await client.listConnectorOperationMetadata(
+            context,
+            azureContext,
+            'mixedconnector',
+        );
+        assert.deepStrictEqual(
+            mixed.pollOperations.map(operation => operation.id),
+            ['OnPolledItem'],
+        );
+        assert.deepStrictEqual(
+            mixed.webhookOperations.map(operation => operation.id),
+            ['SubscribeWebhook'],
+        );
     });
 
     (liveCatalogTestsEnabled ? test : test.skip)(
         'loads featured and nonfeatured Poll events through the production client',
         async function (this: Mocha.Context): Promise<void> {
             this.timeout(3 * 60 * 1000);
-            const account = JSON.parse(await cpUtils.executeCommand(
-                undefined,
-                undefined,
-                'az',
-                ['account', 'show', '--only-show-errors', '--output', 'json'],
-            )) as {
-                environmentName: string;
-                id: string;
-                name: string;
-            };
-            assert.strictEqual(account.environmentName, 'AzureCloud');
-            const token = JSON.parse(await cpUtils.executeCommand(
-                undefined,
-                undefined,
-                'az',
-                [
-                    'account',
-                    'get-access-token',
-                    '--only-show-errors',
-                    '--resource',
-                    'https://management.azure.com/',
-                    '--output',
-                    'json',
-                ],
-            )) as { accessToken: string };
+            const subscriptionId = process.env.AZFUNC_TEST_SUBSCRIPTION_ID;
+            const accessToken = process.env.AZFUNC_TEST_ARM_TOKEN;
+            assert.ok(subscriptionId);
+            assert.ok(accessToken);
             const client = new ConnectorTriggerDataClient(
                 async () => [createSubscription(
-                    account.id,
-                    account.name,
-                    account.environmentName,
+                    subscriptionId,
+                    'Live Connector Catalog Test',
+                    'AzureCloud',
                     'https://management.azure.com/',
                 )],
                 async () => ({
                     async get(url: string): Promise<unknown> {
                         const response = await fetch(url, {
                             headers: {
-                                Authorization: `Bearer ${token.accessToken}`,
+                                Authorization: `Bearer ${accessToken}`,
                             },
                         });
                         if (!response.ok) {
@@ -290,9 +300,10 @@ suite('Connector trigger data client', () => {
                 }),
             );
             const context = await createTestActionContext();
+            context.valuesToMask.push(accessToken);
             const azureContext = {
-                subscriptionId: account.id,
-                subscriptionName: account.name,
+                subscriptionId,
+                subscriptionName: 'Live Connector Catalog Test',
                 region: 'westcentralus',
                 regionDisplayName: 'West Central US',
             };
@@ -323,6 +334,43 @@ suite('Connector trigger data client', () => {
                 dropbox: 4,
                 rss: 1,
                 sftpwithssh: 2,
+            });
+
+            const adobeSign = await client.listConnectorOperationMetadata(
+                context,
+                azureContext,
+                'adobesign',
+            );
+            assert.deepStrictEqual({
+                poll: adobeSign.pollOperations.length,
+                webhook: adobeSign.webhookOperations.length,
+            }, {
+                poll: 0,
+                webhook: 7,
+            });
+            const creativeCloud = await client.listConnectorOperationMetadata(
+                context,
+                azureContext,
+                'adobecreativecloud',
+            );
+            assert.deepStrictEqual({
+                poll: creativeCloud.pollOperations.length,
+                webhook: creativeCloud.webhookOperations.length,
+            }, {
+                poll: 0,
+                webhook: 2,
+            });
+            const kusto = await client.listConnectorOperationMetadata(
+                context,
+                azureContext,
+                'kusto',
+            );
+            assert.deepStrictEqual({
+                poll: kusto.pollOperations.length,
+                webhook: kusto.webhookOperations.length,
+            }, {
+                poll: 0,
+                webhook: 0,
             });
         },
     );

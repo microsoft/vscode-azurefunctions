@@ -21,9 +21,12 @@ export function partitionConnectorOptions(
 ): {
     featured: ConnectorTriggerOption[];
     other: ConnectorTriggerOption[];
+    webhookOnly: ConnectorTriggerOption[];
 } {
     const remaining = new Map(
-        options.map(option => [normalizeConnectorIdentity(option.id), option]),
+        options
+            .filter(option => option.eventSupport !== 'webhook-only')
+            .map(option => [normalizeConnectorIdentity(option.id), option]),
     );
     const featured: ConnectorTriggerOption[] = [];
     for (const identities of featuredConnectorIdentities) {
@@ -39,7 +42,10 @@ export function partitionConnectorOptions(
     return {
         featured,
         other: options.filter(option =>
+            option.eventSupport !== 'webhook-only' &&
             remaining.has(normalizeConnectorIdentity(option.id))),
+        webhookOnly: options.filter(option =>
+            option.eventSupport === 'webhook-only'),
     };
 }
 

@@ -24,6 +24,7 @@ import { ProjectTemplateProvider } from '../../../templates/projectTemplates/Pro
 import {
     isConnectorTriggerPickerMessage,
     type ConnectorTriggerLocationOption,
+    type ConnectorTriggerEventSupport,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerPickerResponse,
     type ConnectorTriggerOption,
@@ -36,6 +37,7 @@ import {
     ConnectorTriggerDataClient,
     type ConnectorTriggerAzureContext,
     type ConnectorTriggerCatalog,
+    type ConnectorTriggerOperationMetadataResult,
 } from './ConnectorTriggerDataClient';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
@@ -74,8 +76,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private static currentController: ConnectorTriggerPickerController | undefined;
     private readonly catalogs = new Map<string, ConnectorTriggerCatalogLoadResult>();
     private readonly catalogLoadRequests = new Map<string, Promise<ConnectorTriggerCatalogLoadResult>>();
+    private readonly connectorEventSupport =
+        new Map<string, Exclude<ConnectorTriggerEventSupport, 'unknown'>>();
     private readonly operationLoadRequests =
-        new Map<string, Promise<ConnectorTriggerOperationOption[]>>();
+        new Map<string, Promise<ConnectorTriggerOperationMetadataResult>>();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly templateProvider = new ProjectTemplateProvider();
     private readonly locations = new Map<string, ConnectorTriggerLocationOption[]>();
@@ -430,6 +434,8 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.azureContext = azureContext;
         this.catalogs.clear();
         this.catalogLoadRequests.clear();
+        this.connectorEventSupport.clear();
+        this.operationLoadRequests.clear();
         await this.postMessage({
             command: 'azureContextSelected',
             azureContext: getAzureContextDisplay(azureContext),
@@ -444,6 +450,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.locations.clear();
         this.catalogs.clear();
         this.catalogLoadRequests.clear();
+        this.connectorEventSupport.clear();
         this.operationLoadRequests.clear();
     }
 
@@ -471,10 +478,12 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         const existing = catalog.operations.filter(operation =>
             equalsIgnoreCase(operation.connectorId, connectorId));
-        if (!forceRefresh && existing.length > 0) {
+        const existingSupport = this.connectorEventSupport.get(requestKey);
+        if (!forceRefresh && existingSupport) {
             await this.postMessage({
                 command: 'connectorOperationsLoaded',
                 connectorId,
+                eventSupport: existingSupport,
                 operations: existing.map(removeOperationInputs),
             });
             return;
@@ -483,19 +492,32 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        let request: Promise<ConnectorTriggerOperationOption[]> | undefined;
+        let request: Promise<ConnectorTriggerOperationMetadataResult> | undefined;
         try {
-            request = this.dataClient.listConnectorOperations(
+            request = this.dataClient.listConnectorOperationMetadata(
                 actionContext,
                 azureContext,
                 connectorId,
             );
             this.operationLoadRequests.set(requestKey, request);
-            const operations = await request;
+            const metadata = await request;
             if (this.operationLoadRequests.get(requestKey) !== request) {
                 return;
             }
             this.operationLoadRequests.delete(requestKey);
+            const eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'> =
+                metadata.pollOperations.length > 0 ?
+                    'poll' :
+                    metadata.webhookOperations.length > 0 ?
+                        'webhook-only' :
+                        'none';
+            const operations = eventSupport === 'webhook-only' ?
+                metadata.webhookOperations.map(operation => ({
+                    ...operation,
+                    availability: 'unavailable' as const,
+                })) :
+                metadata.pollOperations;
+            this.connectorEventSupport.set(requestKey, eventSupport);
             catalog.operations = [
                 ...catalog.operations.filter(operation =>
                     !equalsIgnoreCase(operation.connectorId, connectorId)),
@@ -504,6 +526,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             await this.postMessage({
                 command: 'connectorOperationsLoaded',
                 connectorId,
+                eventSupport,
                 operations: operations.map(removeOperationInputs),
             });
         } catch (error) {
