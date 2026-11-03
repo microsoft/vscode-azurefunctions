@@ -20,6 +20,8 @@ import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
+import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
+import { findTemplateFunctionFile } from './findTemplateFunctionFile';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
@@ -251,18 +253,25 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 // open the newly created project (Open in current/new window, or Add to
                 // workspace) and then act on it via the shared OpenFolderStep. This keeps
                 // both flows consistent and reuses the same telemetry / activity output.
-                await this.promptAndOpenProject(actionContext, projectPath);
+                const functionFile = await findTemplateFunctionFile(projectPath, language);
+                await this.promptAndOpenProject(actionContext, projectPath, functionFile);
             } finally {
                 try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
             }
         });
     }
 
-    private async promptAndOpenProject(actionContext: IActionContext, projectPath: string): Promise<void> {
+    private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {
+        const openFunction = async (cache: boolean): Promise<void> => {
+            if (functionFile) {
+                await openCreatedFunction({ projectPath, newFilePath: functionFile, isHttpTrigger: false, isMcpTrigger: false }, cache);
+            }
+        };
         // If the freshly-created project is already part of the open workspace,
         // there's nothing to open.
         const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
         if (alreadyOpen) {
+            await openFunction(false);
             return;
         }
 
@@ -281,7 +290,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
         try {
             await wizard.prompt();
+            if (wizardContext.openBehavior !== 'DontOpen') {
+                await openFunction(true);
+            }
             await wizard.execute();
+            if (wizardContext.openBehavior !== 'DontOpen') {
+                await openFunction(false);
+            }
         } catch (err) {
             if (err instanceof UserCancelledError) {
                 // User dismissed the open-behavior picker — files are already on disk,
