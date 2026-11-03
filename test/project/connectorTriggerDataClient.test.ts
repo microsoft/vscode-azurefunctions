@@ -104,143 +104,6 @@ suite('Connector trigger data client', () => {
             regionDisplayName: 'US Gov Virginia',
         });
 
-        test('preserves real nonfeatured Poll operation shapes', async () => {
-            const fixture = JSON.parse(await fs.promises.readFile(
-                path.join(
-                    __dirname,
-                    '..',
-                    '..',
-                    'test',
-                    'fixtures',
-                    'connectorTriggerPicker',
-                    'nonFeaturedOperations.json',
-                ),
-                'utf8',
-            )) as Record<string, unknown>;
-            const client = new ConnectorTriggerDataClient(
-                async () => [createSubscription()],
-                async () => ({
-                    async get(url: string): Promise<unknown> {
-                        const connectorId = /\/managedApis\/([^/]+)\/apiOperations/.exec(url)?.[1];
-                        assert.ok(connectorId);
-                        return fixture[decodeURIComponent(connectorId)];
-                    },
-                }),
-            );
-            const context = await createTestActionContext();
-            const azureContext = {
-                subscriptionId: 'sub-one',
-                subscriptionName: 'Subscription One',
-                region: 'usgovvirginia',
-                regionDisplayName: 'US Gov Virginia',
-            };
-
-            assert.deepStrictEqual(
-                (await client.listConnectorOperations(
-                    context,
-                    azureContext,
-                    'azureblob',
-                )).map(operation => operation.id),
-                ['OnUpdatedFiles_V2'],
-            );
-            assert.deepStrictEqual(
-                (await client.listConnectorOperations(
-                    context,
-                    azureContext,
-                    'rss',
-                )).map(operation => operation.id),
-                ['OnNewFeed'],
-            );
-            assert.deepStrictEqual(
-                (await client.listConnectorOperations(
-                    context,
-                    azureContext,
-                    'sftpwithssh',
-                )).map(operation => operation.id),
-                ['OnUpdatedFile', 'OnUpdatedFiles'],
-            );
-        });
-
-        (liveCatalogTestsEnabled ? test : test.skip)(
-            'loads featured and nonfeatured Poll events through the production client',
-            async function (this: Mocha.Context): Promise<void> {
-                this.timeout(3 * 60 * 1000);
-                const account = JSON.parse(await cpUtils.executeCommand(
-                    undefined,
-                    undefined,
-                    'az',
-                    ['account', 'show', '--only-show-errors', '--output', 'json'],
-                )) as {
-                    environmentName: string;
-                    id: string;
-                    name: string;
-                };
-                assert.strictEqual(account.environmentName, 'AzureCloud');
-                const client = new ConnectorTriggerDataClient(
-                    async () => [createSubscription(
-                        account.id,
-                        account.name,
-                        account.environmentName,
-                        'https://management.azure.com/',
-                    )],
-                    async () => ({
-                        async get(url: string): Promise<unknown> {
-                            return JSON.parse(await cpUtils.executeCommand(
-                                undefined,
-                                undefined,
-                                'az',
-                                [
-                                    'rest',
-                                    '--only-show-errors',
-                                    '--method',
-                                    'get',
-                                    '--url',
-                                    url,
-                                    '--output',
-                                    'json',
-                                ],
-                            ));
-                        },
-                    }),
-                );
-                const context = await createTestActionContext();
-                const azureContext = {
-                    subscriptionId: account.id,
-                    subscriptionName: account.name,
-                    region: 'westcentralus',
-                    regionDisplayName: 'West Central US',
-                };
-                const counts = new Map<string, number>();
-                for (const connectorId of [
-                    'office365',
-                    'azureblob',
-                    'github',
-                    'slack',
-                    'dropbox',
-                    'rss',
-                    'sftpwithssh',
-                ]) {
-                    counts.set(
-                        connectorId,
-                        (await client.listConnectorOperations(
-                            context,
-                            azureContext,
-                            connectorId,
-                        )).length,
-                    );
-                }
-                assert.deepStrictEqual(Object.fromEntries(counts), {
-                    office365: 9,
-                    azureblob: 1,
-                    github: 3,
-                    slack: 1,
-                    dropbox: 4,
-                    rss: 1,
-                    sftpwithssh: 2,
-                });
-            },
-        );
-
         assert.strictEqual(result.source, 'live');
         assert.deepStrictEqual(
             result.catalog.connectors.map(connector => connector.id),
@@ -295,6 +158,174 @@ suite('Connector trigger data client', () => {
             new URL(request).searchParams.get('api-version') === '2016-06-01',
         ));
     });
+
+    test('preserves real nonfeatured Poll operation shapes', async () => {
+        const fixture = JSON.parse(await fs.promises.readFile(
+            path.join(
+                __dirname,
+                '..',
+                '..',
+                'test',
+                'fixtures',
+                'connectorTriggerPicker',
+                'nonFeaturedOperations.json',
+            ),
+            'utf8',
+        )) as Record<string, unknown>;
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(url: string): Promise<unknown> {
+                    const connectorId = /\/managedApis\/([^/]+)\/apiOperations/.exec(url)?.[1];
+                    assert.ok(connectorId);
+                    return fixture[decodeURIComponent(connectorId)];
+                },
+            }),
+        );
+        const context = await createTestActionContext();
+        const azureContext = {
+            subscriptionId: 'sub-one',
+            subscriptionName: 'Subscription One',
+            region: 'usgovvirginia',
+            regionDisplayName: 'US Gov Virginia',
+        };
+
+        assert.deepStrictEqual(
+            (await client.listConnectorOperations(
+                context,
+                azureContext,
+                'azureblob',
+            )).map(operation => operation.id),
+            ['OnUpdatedFiles_V2'],
+        );
+        assert.deepStrictEqual(
+            (await client.listConnectorOperations(
+                context,
+                azureContext,
+                'rss',
+            )).map(operation => operation.id),
+            ['OnNewFeed'],
+        );
+        assert.deepStrictEqual(
+            (await client.listConnectorOperations(
+                context,
+                azureContext,
+                'sftpwithssh',
+            )).map(operation => operation.id),
+            ['OnUpdatedFile', 'OnUpdatedFiles'],
+        );
+
+        for (const connectorId of [
+            'adobeacrobatknowledg',
+            'adobesign',
+            'adobeacrobatsignsand',
+            'magento',
+            'adobecommerce',
+            'adobecreativecloud',
+            'adobeexperiencemanag',
+            'adobepdftools',
+        ]) {
+            assert.deepStrictEqual(
+                await client.listConnectorOperations(
+                    context,
+                    azureContext,
+                    connectorId,
+                ),
+                [],
+                `${connectorId} must remain excluded from Poll authoring.`,
+            );
+        }
+    });
+
+    (liveCatalogTestsEnabled ? test : test.skip)(
+        'loads featured and nonfeatured Poll events through the production client',
+        async function (this: Mocha.Context): Promise<void> {
+            this.timeout(3 * 60 * 1000);
+            const account = JSON.parse(await cpUtils.executeCommand(
+                undefined,
+                undefined,
+                'az',
+                ['account', 'show', '--only-show-errors', '--output', 'json'],
+            )) as {
+                environmentName: string;
+                id: string;
+                name: string;
+            };
+            assert.strictEqual(account.environmentName, 'AzureCloud');
+            const token = JSON.parse(await cpUtils.executeCommand(
+                undefined,
+                undefined,
+                'az',
+                [
+                    'account',
+                    'get-access-token',
+                    '--only-show-errors',
+                    '--resource',
+                    'https://management.azure.com/',
+                    '--output',
+                    'json',
+                ],
+            )) as { accessToken: string };
+            const client = new ConnectorTriggerDataClient(
+                async () => [createSubscription(
+                    account.id,
+                    account.name,
+                    account.environmentName,
+                    'https://management.azure.com/',
+                )],
+                async () => ({
+                    async get(url: string): Promise<unknown> {
+                        const response = await fetch(url, {
+                            headers: {
+                                Authorization: `Bearer ${token.accessToken}`,
+                            },
+                        });
+                        if (!response.ok) {
+                            throw new Error(
+                                `ARM request failed with status ${response.status}.`,
+                            );
+                        }
+                        return await response.json();
+                    },
+                }),
+            );
+            const context = await createTestActionContext();
+            const azureContext = {
+                subscriptionId: account.id,
+                subscriptionName: account.name,
+                region: 'westcentralus',
+                regionDisplayName: 'West Central US',
+            };
+            const counts = new Map<string, number>();
+            for (const connectorId of [
+                'office365',
+                'azureblob',
+                'github',
+                'slack',
+                'dropbox',
+                'rss',
+                'sftpwithssh',
+            ]) {
+                counts.set(
+                    connectorId,
+                    (await client.listConnectorOperations(
+                        context,
+                        azureContext,
+                        connectorId,
+                    )).length,
+                );
+            }
+            assert.deepStrictEqual(Object.fromEntries(counts), {
+                office365: 9,
+                azureblob: 1,
+                github: 3,
+                slack: 1,
+                dropbox: 4,
+                rss: 1,
+                sftpwithssh: 2,
+            });
+        },
+    );
 
     test('rejects cross-origin live catalog paging', async () => {
         const client = new ConnectorTriggerDataClient(
