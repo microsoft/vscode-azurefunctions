@@ -109,7 +109,10 @@
             ['OnNewMentionMeEmailV3', 'When an email mentions me'],
             ['CalendarGetOnNewItemsV3', 'When a calendar item is created'],
             ['OnUpcomingEventsV3', 'When an event is upcoming'],
-            ['UnmappedOutlookPollEvent', 'When an unmapped Outlook event occurs'],
+            [
+                'CalendarGetOnChangedItemsV3',
+                'When an event is added, updated or deleted (V3)',
+            ],
         ].map(([id, label]) => ({
             connectorId: officeConnector.id,
             id,
@@ -240,9 +243,9 @@
                         button.textContent.includes(officeConnector.label)));
                 connectorButton.click();
                 await waitFor(() =>
-                    document.body.textContent.includes('UnmappedOutlookPollEvent') ||
+                    document.body.textContent.includes('CalendarGetOnChangedItemsV3') ||
                     document.body.textContent.includes(
-                        'When an unmapped Outlook event occurs',
+                        'When an event is added, updated or deleted (V3)',
                     ));
             }
         }

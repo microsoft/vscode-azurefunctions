@@ -179,6 +179,7 @@ export class ProjectTemplateCreator {
                     await materializeGenericConnectorTriggerProject(
                         projectPath,
                         language,
+                        options.connectorTriggerHandoff,
                     );
                 } else if (connectorTriggerTemplate) {
                     await materializeConnectorTriggerTemplate(

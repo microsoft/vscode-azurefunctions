@@ -83,8 +83,8 @@ suite('Connector trigger picker Azure context UX', () => {
         },
         {
             ...operation,
-            id: 'UnmappedOutlookPollEvent',
-            label: 'When an unmapped Outlook event occurs',
+            id: 'CalendarGetOnChangedItemsV3',
+            label: 'When an event is added, updated or deleted (V3)',
         },
     ];
 

@@ -21,6 +21,7 @@ import {
     readConnectorTriggerProjectHandoff,
     type ConnectorTriggerProjectHandoff,
 } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
@@ -354,6 +355,42 @@ suite('Connector Trigger template materialization', () => {
         assert.deepStrictEqual(actual, expected);
     });
 
+    test('derives valid event identities from canonical operation IDs', () => {
+        const calendar = getConnectorTriggerEventIdentity(
+            'office365',
+            'CalendarGetOnChangedItemsV3',
+        );
+        assert.deepStrictEqual({
+            functionName: calendar.functionName,
+            csharpClassName: calendar.csharpClassName,
+            csharpNamespace: calendar.csharpNamespace,
+            packageName: calendar.packageName,
+            pythonFunctionName: calendar.pythonFunctionName,
+            typescriptFileName: calendar.typescriptFileName,
+            schemaName: calendar.payloadModel?.schemaName,
+        }, {
+            functionName: 'CalendarGetOnChangedItemsV3',
+            csharpClassName: 'CalendarGetOnChangedItemsV3Function',
+            csharpNamespace: 'CalendarGetOnChangedItemsV3App',
+            packageName: 'calendar-get-on-changed-items-v3',
+            pythonFunctionName: 'calendar_get_on_changed_items_v3_function',
+            typescriptFileName: 'calendarGetOnChangedItemsV3Function.ts',
+            schemaName: 'GraphCalendarEventClientWithActionType',
+        });
+
+        const unsafe = getConnectorTriggerEventIdentity(
+            'customconnector',
+            '123/CON/../class',
+        );
+        assert.match(unsafe.functionName, /^[A-Za-z][A-Za-z\d_-]*$/);
+        assert.ok(!/[\\/:*?"<>|]/.test(unsafe.csharpFileName));
+        assert.match(unsafe.pythonFunctionName, /^[a-z_][a-z\d_]*$/);
+        assert.match(unsafe.packageName, /^[a-z\d][a-z\d-]*$/);
+        assert.ok(!/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(
+            unsafe.csharpFileName,
+        ));
+    });
+
     (realTemplateTestsEnabled ? test : test.skip)(
         'production provider and creator materialize pinned real templates',
         async function (this: Mocha.Context): Promise<void> {
@@ -442,7 +479,7 @@ suite('Connector Trigger template materialization', () => {
             ];
             const selections = [{
                 connectorId: 'office365',
-                operationId: 'UnmappedOutlookPollEvent',
+                operationId: 'CalendarGetOnChangedItemsV3',
             }, {
                 connectorId: 'customconnector',
                 operationId: 'OnCustomPollEvent',
@@ -600,16 +637,20 @@ async function assertGenericMaterialized(
     language: ProjectLanguage,
     handoff: ConnectorTriggerProjectHandoff,
 ): Promise<void> {
+    const identity = getConnectorTriggerEventIdentity(
+        handoff.connectorId,
+        handoff.operationId,
+    );
     assert.deepStrictEqual(
         await findConnectorTriggerRegistrations(root),
-        ['ConnectorTriggerFunction'],
+        [identity.functionName],
     );
     assert.deepStrictEqual(
         await findPollingConnectorBindings(root),
         [{
             connectionSettingName: 'ConnectorNamespace',
-            functionName: 'ConnectorTriggerFunction',
-            triggerConfigSettingName: 'ConnectorTriggerConfigName',
+            functionName: identity.functionName,
+            triggerConfigSettingName: identity.triggerConfigSettingName,
         }],
     );
     assert.deepStrictEqual(
@@ -620,22 +661,54 @@ async function assertGenericMaterialized(
         await AzExtFsExtra.pathExists(path.join(root, 'host.json')),
         true,
     );
+    const readme = (await AzExtFsExtra.readFile(
+        path.join(root, 'README.md'),
+    )).toString();
+    assert.ok(readme.includes(identity.operationId));
+    assert.ok(!readme.includes('OnGenericCustomConnectorEvent'));
 
     if (language === ProjectLanguage.TypeScript) {
         const functionsPath = path.join(root, 'src', 'functions');
         assert.deepStrictEqual(
             (await AzExtFsExtra.readDirectory(functionsPath)).map(entry => entry.name),
-            ['connectorTriggerFunction.ts'],
+            [identity.typescriptFileName],
         );
         const source = (await AzExtFsExtra.readFile(
-            path.join(functionsPath, 'connectorTriggerFunction.ts'),
+            path.join(functionsPath, identity.typescriptFileName),
         )).toString();
-        assert.match(source, /type GenericConnectorItem = Record<string, unknown>/);
+        const packageJson = JSON.parse((await AzExtFsExtra.readFile(
+            path.join(root, 'package.json'),
+        )).toString()) as {
+            dependencies?: Record<string, string>;
+            name: string;
+        };
+        assert.strictEqual(packageJson.name, identity.packageName);
+        assert.match(
+            (await AzExtFsExtra.readFile(path.join(root, 'azure.yaml'))).toString(),
+            new RegExp(`^name: ${identity.projectName}$`, 'm'),
+        );
+        assert.match(source, new RegExp(`'${identity.functionName}'`));
+        if (identity.payloadModel?.typescript) {
+            assert.ok(source.includes(identity.payloadModel.typescript.importName));
+            assert.ok(source.includes(identity.payloadModel.typescript.importPath));
+            assert.ok(!source.includes('Record<string, unknown>'));
+            assert.strictEqual(
+                packageJson.dependencies?.['@typespec/ts-http-runtime'],
+                '0.3.9',
+            );
+        } else {
+            assert.match(
+                source,
+                new RegExp(`type ${identity.pascalName}Item = Record<string, unknown>`),
+            );
+            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+        }
         assert.ok(!source.includes('OnGeneric'));
         assert.strictEqual(
             await AzExtFsExtra.pathExists(path.join(root, 'infra', 'main.bicep')),
             true,
         );
+        await assertGenericSampleSettingsRemoved(root);
     } else if (language === ProjectLanguage.Python) {
         const source = (await AzExtFsExtra.readFile(
             path.join(root, 'function_app.py'),
@@ -644,21 +717,58 @@ async function assertGenericMaterialized(
             path.join(root, 'requirements.txt'),
         )).toString();
         assert.match(source, /payloads: List\[str\]/);
+        assert.ok(source.includes(`name="${identity.functionName}"`));
+        assert.ok(source.includes(`def ${identity.pythonFunctionName}`));
         assert.ok(!source.includes('OnGeneric'));
         assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
+        if (identity.payloadModel?.python) {
+            assert.ok(source.includes(identity.payloadModel.python.importName));
+            assert.ok(source.includes('"ActionType": "action_type"'));
+            assert.ok(!source.includes('IsDeleted'));
+            assert.match(requirements, /^azure-connectors==0\.1\.0$/m);
+        } else {
+            assert.ok(!requirements.includes('azure-connectors'));
+            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+        }
         assert.strictEqual(
             await AzExtFsExtra.pathExists(path.join(root, 'azure.yaml')),
             true,
         );
+        assert.match(
+            (await AzExtFsExtra.readFile(path.join(root, 'azure.yaml'))).toString(),
+            new RegExp(`^name: ${identity.projectName}$`, 'm'),
+        );
+        await assertGenericSampleSettingsRemoved(root);
     } else {
+        const sourcePath = path.join(root, identity.csharpFileName);
         const source = (await AzExtFsExtra.readFile(
-            path.join(root, 'GenericFunctions.cs'),
+            sourcePath,
         )).toString();
         const project = (await AzExtFsExtra.readFile(
-            path.join(root, 'functions-connectors-net.csproj'),
+            path.join(root, `${identity.pascalName}.csproj`),
         )).toString();
-        assert.match(source, /\]\s*string payload\)/);
+        assert.ok(source.includes(`namespace ${identity.csharpNamespace};`));
+        assert.ok(source.includes(`[Function("${identity.functionName}")]`));
+        if (identity.payloadModel?.csharp) {
+            assert.ok(source.includes(identity.payloadModel.csharp.payloadType));
+            assert.ok(project.includes(identity.payloadModel.csharp.packageName));
+            assert.ok(!source.includes('string payload'));
+        } else {
+            assert.match(source, /\]\s*string payload\)/);
+            assert.ok(!project.includes('Azure.Connectors.Sdk'));
+            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+        }
         assert.ok(!source.includes('OnGeneric'));
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(path.join(root, 'GenericFunctions.cs')),
+            false,
+        );
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(root, 'functions-connectors-net.csproj'),
+            ),
+            false,
+        );
         assert.match(
             project,
             /Microsoft\.Azure\.Functions\.Worker\.Extensions\.Connector"\s+Version="1\.0\.0"/,
@@ -668,6 +778,17 @@ async function assertGenericMaterialized(
             true,
         );
     }
+}
+
+async function assertGenericSampleSettingsRemoved(root: string): Promise<void> {
+    const settings = JSON.parse((await AzExtFsExtra.readFile(
+        path.join(root, 'local.settings.json'),
+    )).toString()) as { Values?: Record<string, unknown> };
+    assert.deepStrictEqual(
+        Object.keys(settings.Values ?? {}).filter(key =>
+            /^(?:AzureBlob|Office365|Sharepoint|Teams)|_TOKEN$/.test(key)),
+        [],
+    );
 }
 
 async function buildGenericTemplate(
@@ -683,12 +804,51 @@ async function buildGenericTemplate(
             [path.join('node_modules', 'typescript', 'bin', 'tsc')],
         );
     } else if (language === ProjectLanguage.Python) {
+        const python = process.env.AZFUNC_TEST_PYTHON || 'python';
         await cpUtils.executeCommand(
             undefined,
             root,
-            'python',
+            python,
+            [
+                '-m',
+                'pip',
+                'install',
+                '--quiet',
+                '--target',
+                path.join('.python_packages', 'lib', 'site-packages'),
+                '-r',
+                'requirements.txt',
+            ],
+        );
+        await cpUtils.executeCommand(
+            undefined,
+            root,
+            python,
             ['-m', 'compileall', '-q', '.'],
         );
+        const importProbe = path.join(root, '.test_import.py');
+        try {
+            await AzExtFsExtra.writeFile(
+                importProbe,
+                `import sys
+sys.path.insert(0, ".python_packages/lib/site-packages")
+import function_app
+`,
+            );
+            await cpUtils.executeCommand(
+                undefined,
+                root,
+                python,
+                [importProbe],
+            );
+        } finally {
+            if (await AzExtFsExtra.pathExists(importProbe)) {
+                await AzExtFsExtra.deleteResource(importProbe, {
+                    recursive: false,
+                    useTrash: false,
+                });
+            }
+        }
     } else {
         await cpUtils.executeCommand(
             undefined,

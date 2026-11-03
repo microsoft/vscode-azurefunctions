@@ -853,7 +853,7 @@ suite('Connector trigger picker', () => {
 
         for (const [language, expectedTemplate] of genericTemplates) {
             for (const [connector, operationId] of [
-                [specializedConnector, 'UnmappedOutlookPollEvent'],
+                [specializedConnector, 'CalendarGetOnChangedItemsV3'],
                 [unmappedConnector, 'OnCustomPollEvent'],
             ] as const) {
                 const responses: ConnectorTriggerPickerResponse[] = [];
