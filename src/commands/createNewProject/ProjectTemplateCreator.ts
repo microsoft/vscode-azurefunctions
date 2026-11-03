@@ -14,7 +14,9 @@ import {
     type ConnectorTriggerProjectHandoff,
 } from '../../connectorTrigger/connectorTriggerProjectHandoff';
 import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
+import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
 import {
@@ -78,9 +80,16 @@ export class ProjectTemplateCreator {
         actionContext.telemetry.properties.language = language;
         actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
 
-        const connectorTriggerTemplate = options.connectorTriggerHandoff ?
+        const isGenericConnectorTrigger = !!options.connectorTriggerHandoff &&
+            isGenericConnectorTriggerTemplate(template, language);
+        const connectorTriggerTemplate =
+            options.connectorTriggerHandoff && !isGenericConnectorTrigger ?
             getConnectorTriggerTemplate(template) :
             undefined;
+        if (options.connectorTriggerHandoff) {
+            actionContext.telemetry.properties.connectorTriggerTemplate =
+                isGenericConnectorTrigger ? 'generic' : 'specialized';
+        }
 
         const gitReference = this.resolveGitReference(template);
         const specificFolder = template.folderPath && template.folderPath !== '.' ?
@@ -165,12 +174,19 @@ export class ProjectTemplateCreator {
                 // git init is optional.
             }
 
-            if (options.connectorTriggerHandoff && connectorTriggerTemplate) {
-                await materializeConnectorTriggerTemplate(
-                    projectPath,
-                    connectorTriggerTemplate,
-                    options.connectorTriggerHandoff.operationId,
-                );
+            if (options.connectorTriggerHandoff) {
+                if (isGenericConnectorTrigger) {
+                    await materializeGenericConnectorTriggerProject(
+                        projectPath,
+                        language,
+                    );
+                } else if (connectorTriggerTemplate) {
+                    await materializeConnectorTriggerTemplate(
+                        projectPath,
+                        connectorTriggerTemplate,
+                        options.connectorTriggerHandoff.operationId,
+                    );
+                }
                 await writeConnectorTriggerProjectHandoff(
                     projectPath,
                     options.connectorTriggerHandoff,

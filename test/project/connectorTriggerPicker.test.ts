@@ -781,6 +781,166 @@ suite('Connector trigger picker', () => {
         }]);
     });
 
+    test('uses language genericApp when no specialized operation is available', async () => {
+        const azureContext = createAzureContext();
+        const subscriptionContext = {
+            subscriptionId: azureContext.subscriptionId,
+            subscriptionDisplayName: azureContext.subscriptionName,
+            tenantId: 'tenant-one',
+            environment: {
+                name: 'AzureCloud',
+                resourceManagerEndpointUrl: 'https://management.azure.com/',
+            },
+        } as ISubscriptionContext;
+        const specializedConnector: ConnectorTriggerOption = {
+            id: 'office365',
+            label: 'Office 365 Outlook',
+        };
+        const unmappedConnector: ConnectorTriggerOption = {
+            id: 'customconnector',
+            label: 'Custom Connector',
+        };
+        const specializedTemplate = createProjectTemplate(
+            'office365-connector-trigger-typescript',
+            'Office 365 Outlook Connector Triggers',
+            'connector',
+            ProjectLanguage.TypeScript,
+        );
+        const genericTemplates = new Map<ProjectLanguage, {
+            id: string;
+            repositoryUrl: string;
+            gitRef: string;
+        }>([
+            [ProjectLanguage.CSharp, {
+                id: 'generic-connector-trigger-csharp',
+                repositoryUrl: 'https://github.com/Azure-Samples/functions-connectors-net',
+                gitRef: '01698c55fd05899cc15aa540ab86f8103cb0d5fe',
+            }],
+            [ProjectLanguage.TypeScript, {
+                id: 'generic-connector-trigger-typescript',
+                repositoryUrl: 'https://github.com/Azure-Samples/functions-connectors-typescript',
+                gitRef: '3bb7fff156eb1856d16cc8488599a2f28fbd8522',
+            }],
+            [ProjectLanguage.Python, {
+                id: 'generic-connector-trigger-python',
+                repositoryUrl: 'https://github.com/Azure-Samples/functions-connectors-python',
+                gitRef: 'fecf4d0666e84e07291355ac9e40904397bf6749',
+            }],
+        ]);
+        const createSelectedProject = (
+            ConnectorTriggerPickerController.prototype as unknown as {
+                createSelectedProject(
+                    this: {
+                        azureContext: ConnectorTriggerAzureContext;
+                        launchOptions: ConnectorTriggerPickerLaunchOptions;
+                        postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
+                        projectCreator: Pick<
+                            ProjectTemplateCreator,
+                            'addConnectorTrigger' | 'createProject'
+                        >;
+                        subscriptionContext: ISubscriptionContext;
+                        templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
+                    },
+                    context: IActionContext,
+                    selection: {
+                        azureContext: ConnectorTriggerAzureContext;
+                        connector: ConnectorTriggerOption;
+                        operation: ConnectorTriggerCatalog['operations'][number];
+                    },
+                ): Promise<void>;
+            }
+        ).createSelectedProject;
+
+        for (const [language, expectedTemplate] of genericTemplates) {
+            for (const [connector, operationId] of [
+                [specializedConnector, 'UnmappedOutlookPollEvent'],
+                [unmappedConnector, 'OnCustomPollEvent'],
+            ] as const) {
+                const responses: ConnectorTriggerPickerResponse[] = [];
+                const createdProjects: {
+                    template: IProjectTemplate;
+                    options: ProjectTemplateCreationOptions | undefined;
+                }[] = [];
+                const controller = {
+                    azureContext,
+                    launchOptions: {
+                        isProjectWizard: true,
+                        language,
+                        initialLocation: 'C:\\connector-project',
+                        initialFilters: {
+                            language,
+                            resource: 'connector',
+                            useCase: 'connector',
+                        },
+                    },
+                    postMessage: async (message: ConnectorTriggerPickerResponse) => {
+                        responses.push(message);
+                    },
+                    projectCreator: {
+                        addConnectorTrigger: async () => undefined,
+                        createProject: async (
+                            _context: IActionContext,
+                            template: IProjectTemplate,
+                            _language: string,
+                            _location: string,
+                            _entryPoint: string | undefined,
+                            options: ProjectTemplateCreationOptions | undefined,
+                        ) => {
+                            createdProjects.push({ template, options });
+                        },
+                    },
+                    subscriptionContext,
+                    templateProvider: {
+                        getTemplates: async () => [specializedTemplate],
+                    },
+                };
+
+                await createSelectedProject.call(
+                    controller,
+                    await createTestActionContext(),
+                    {
+                        azureContext,
+                        connector,
+                        operation: {
+                            id: operationId,
+                            connectorId: connector.id,
+                            label: operationId,
+                            isWebhook: false,
+                            isNotification: true,
+                        },
+                    },
+                );
+
+                assert.deepStrictEqual(responses, [{
+                    command: 'projectCreationStarted',
+                }]);
+                assert.strictEqual(createdProjects.length, 1);
+                assert.strictEqual(
+                    createdProjects[0].template.id,
+                    expectedTemplate.id,
+                );
+                assert.strictEqual(
+                    createdProjects[0].template.repositoryUrl,
+                    expectedTemplate.repositoryUrl,
+                );
+                assert.strictEqual(createdProjects[0].template.folderPath, 'genericApp');
+                assert.strictEqual(
+                    createdProjects[0].template.gitRef,
+                    expectedTemplate.gitRef,
+                );
+                assert.deepStrictEqual(
+                    createdProjects[0].options?.connectorTriggerHandoff?.connectorId,
+                    connector.id,
+                );
+                assert.deepStrictEqual(
+                    createdProjects[0].options?.connectorTriggerHandoff?.operationId,
+                    operationId,
+                );
+                assert.strictEqual(createdProjects[0].template.connectorTrigger, undefined);
+            }
+        }
+    });
+
     test('escapes initial data and allows HTTPS API-provided icons', () => {
         const template = "before _initialData: 'don't'\nafter";
 

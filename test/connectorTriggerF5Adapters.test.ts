@@ -24,6 +24,7 @@ import {
     LiveConnectorSubscriptionResolver,
 } from '../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import {
+    getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
     getPollingConnectorBindingsFromFunctionJson,
     selectPollingConnectorBinding,
@@ -105,6 +106,14 @@ suite('Connector Trigger F5 production adapters', () => {
             functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
         });
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(`
+            connectorTrigger<Record<string, unknown>>('ConnectorTriggerFunction', {
+                deliveryMode: 'Poll',
+                connection: 'ConnectorNamespace',
+                triggerConfigName: '%ConnectorTriggerConfigName%',
+                handler: async () => {}
+            });
+        `), ['ConnectorTriggerFunction']);
         assert.throws(
             () => selectPollingConnectorBinding(
                 [...csharp, ...csharp.map(item => ({ ...item, triggerConfigSettingName: 'Other' }))],

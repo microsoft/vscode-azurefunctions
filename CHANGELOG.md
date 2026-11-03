@@ -7,6 +7,7 @@
 
 ### Fixed
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
+* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Keep all live polling connector events selectable and use pinned generic connector samples when no specialized template owns the event
 
 ## 1.22.2 - 2026-09-25
 

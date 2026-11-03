@@ -37,6 +37,16 @@ export async function ensureConnectorTriggerPollProject(
 }
 
 async function ensureCSharpProject(projectPath: string): Promise<void> {
+    await updateCSharpConnectorExtension(projectPath);
+    await AzExtFsExtra.writeFile(
+        path.join(projectPath, `${generatedFunctionName}.cs`),
+        getCSharpFunction(),
+    );
+}
+
+export async function updateCSharpConnectorExtension(
+    projectPath: string,
+): Promise<void> {
     const entries = await AzExtFsExtra.readDirectory(projectPath);
     const projectFile = entries.find(entry =>
         entry.type === FileType.File &&
@@ -59,10 +69,6 @@ async function ensureCSharpProject(projectPath: string): Promise<void> {
             packagePattern,
             (_match, prefix: string, suffix: string) => `${prefix}1.0.0${suffix}`,
         ),
-    );
-    await AzExtFsExtra.writeFile(
-        path.join(projectPath, `${generatedFunctionName}.cs`),
-        getCSharpFunction(),
     );
 }
 
@@ -99,8 +105,18 @@ async function ensurePythonProject(projectPath: string): Promise<void> {
         functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}${getPythonFunction(lineEnding)}`;
     }
     await AzExtFsExtra.writeFile(functionAppPath, functionApp);
+    await updatePythonFunctionsSdk(projectPath);
+}
 
+export async function updatePythonFunctionsSdk(
+    projectPath: string,
+): Promise<void> {
+    const requirementsPath = path.join(projectPath, requirementsFileName);
+    if (!await AzExtFsExtra.pathExists(requirementsPath)) {
+        throw createUnsupportedTemplateError();
+    }
     let requirements = (await AzExtFsExtra.readFile(requirementsPath)).toString();
+    const lineEnding = requirements.includes('\r\n') ? '\r\n' : '\n';
     const azureFunctionsPattern = /^azure-functions(?:[<>=!~].*)?$/im;
     requirements = azureFunctionsPattern.test(requirements) ?
         requirements.replace(azureFunctionsPattern, 'azure-functions>=2.4.0b1') :

@@ -99,6 +99,24 @@
                 : `Subscription ${String(index + 1).padStart(3, '0')}`,
         }));
         const filteredSubscriptions = subscriptions.slice(0, 50);
+        const officeConnector = {
+            id: 'office365',
+            label: 'Office 365 Outlook',
+        };
+        const officeOperations = [
+            ['OnNewEmailV3', 'When a new email arrives'],
+            ['OnFlaggedEmailV4', 'When an email is flagged'],
+            ['OnNewMentionMeEmailV3', 'When an email mentions me'],
+            ['CalendarGetOnNewItemsV3', 'When a calendar item is created'],
+            ['OnUpcomingEventsV3', 'When an event is upcoming'],
+            ['UnmappedOutlookPollEvent', 'When an unmapped Outlook event occurs'],
+        ].map(([id, label]) => ({
+            connectorId: officeConnector.id,
+            id,
+            isNotification: true,
+            isWebhook: false,
+            label,
+        }));
         const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
         const vscodeApi = {
             getState: () => undefined,
@@ -125,6 +143,29 @@
                             { name: 'westcentralus', label: 'West Central US' },
                             { name: 'eastus2', label: 'East US 2' },
                         ],
+                    }));
+                } else if (message.command === 'selectRegion') {
+                    queueMicrotask(() => {
+                        postResponse({
+                            command: 'azureContextSelected',
+                            azureContext: {
+                                subscriptionId: message.subscriptionId,
+                                subscriptionName: filteredSubscriptions[0].label,
+                                region: message.region,
+                                regionDisplayName: 'West Central US',
+                            },
+                        });
+                        postResponse({
+                            command: 'catalogLoaded',
+                            connectors: [officeConnector],
+                            operations: [],
+                        });
+                    });
+                } else if (message.command === 'loadConnectorOperations') {
+                    queueMicrotask(() => postResponse({
+                        command: 'connectorOperationsLoaded',
+                        connectorId: message.connectorId,
+                        operations: officeOperations,
                     }));
                 }
             },
@@ -179,6 +220,30 @@
                     await waitFor(() =>
                         document.querySelectorAll('[role="option"]').length === 101);
                 }
+            } else if (automation === 'events') {
+                postResponse({
+                    command: 'azureContextSelected',
+                    azureContext: {
+                        subscriptionId: subscriptions[0].id,
+                        subscriptionName: subscriptions[0].label,
+                        region: 'westcentralus',
+                        regionDisplayName: 'West Central US',
+                    },
+                });
+                postResponse({
+                    command: 'catalogLoaded',
+                    connectors: [officeConnector],
+                    operations: [],
+                });
+                const connectorButton = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes(officeConnector.label)));
+                connectorButton.click();
+                await waitFor(() =>
+                    document.body.textContent.includes('UnmappedOutlookPollEvent') ||
+                    document.body.textContent.includes(
+                        'When an unmapped Outlook event occurs',
+                    ));
             }
         }
     </script>

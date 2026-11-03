@@ -6,7 +6,10 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../localize';
-import { findPollingConnectorBindings } from './connectorTriggerBindings';
+import {
+    findConnectorTriggerRegistrations,
+    findPollingConnectorBindings,
+} from './connectorTriggerBindings';
 import {
     type IConnectorTriggerTemplate,
     type IConnectorTriggerTemplateOperation,
@@ -56,8 +59,12 @@ export async function materializeConnectorTriggerTemplate(
         }
     }
 
+    const registrations = await findConnectorTriggerRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
-    if (bindings.length !== 1 || bindings[0].functionName !== selected.functionName) {
+    if (registrations.length !== 1 ||
+        registrations[0] !== selected.functionName ||
+        bindings.length !== 1 ||
+        bindings[0].functionName !== selected.functionName) {
         throw new Error(localize(
             'connectorTriggerMaterializationInvalid',
             'The selected connector event template did not produce exactly one matching Poll trigger.',

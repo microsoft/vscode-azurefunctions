@@ -53,19 +53,47 @@ suite('Connector trigger picker Azure context UX', () => {
         label: 'Office 365 Outlook',
     };
     const operation: ConnectorTriggerOperationOption = {
-        id: 'OnNewEmail',
+        id: 'OnNewEmailV3',
         connectorId: connector.id,
         label: 'When a new email arrives',
         isWebhook: false,
         isNotification: true,
     };
+    const outlookOperations: ConnectorTriggerOperationOption[] = [
+        operation,
+        {
+            ...operation,
+            id: 'OnFlaggedEmailV4',
+            label: 'When an email is flagged',
+        },
+        {
+            ...operation,
+            id: 'OnNewMentionMeEmailV3',
+            label: 'When an email mentions me',
+        },
+        {
+            ...operation,
+            id: 'CalendarGetOnNewItemsV3',
+            label: 'When a calendar item is created',
+        },
+        {
+            ...operation,
+            id: 'OnUpcomingEventsV3',
+            label: 'When an event is upcoming',
+        },
+        {
+            ...operation,
+            id: 'UnmappedOutlookPollEvent',
+            label: 'When an unmapped Outlook event occurs',
+        },
+    ];
 
     test('keeps valid selections when the live catalog is refreshed', () => {
         assert.deepStrictEqual(
             reconcileConnectorTriggerSelection({
                 activeStep: 2,
                 connectorId: 'OFFICE365',
-                operationId: 'onnewemail',
+                operationId: 'onnewemailv3',
             }, [connector], [operation]),
             {
                 activeStep: 2,
@@ -401,7 +429,7 @@ suite('Connector trigger picker Azure context UX', () => {
             listConnectorOperations: async (_context, selectedContext, connectorId) => {
                 sequence.push(`operations:${connectorId}`);
                 assert.deepStrictEqual(selectedContext, azureContext);
-                return [operation];
+                return outlookOperations;
             },
         });
 
@@ -468,7 +496,7 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.deepStrictEqual(responses, [{
             command: 'connectorOperationsLoaded',
             connectorId: connector.id,
-            operations: [operation],
+            operations: outlookOperations,
         }]);
     });
 
@@ -652,11 +680,17 @@ function createOwnedTemplate(): IProjectTemplate {
         languages: [ProjectLanguage.TypeScript],
         repositoryUrl: 'https://example.invalid/office365',
         connectorTrigger: {
-            operations: [{
-                operationId: 'OnNewEmail',
-                functionName: 'OnNewEmail',
-                ownedPaths: ['src/functions/onNewEmail.ts'],
-            }],
+            operations: [
+                'OnNewEmailV3',
+                'OnFlaggedEmailV4',
+                'OnNewMentionMeEmailV3',
+                'CalendarGetOnNewItemsV3',
+                'OnUpcomingEventsV3',
+            ].map(operationId => ({
+                operationId,
+                functionName: operationId,
+                ownedPaths: [`src/functions/${operationId}.ts`],
+            })),
         },
     };
 }

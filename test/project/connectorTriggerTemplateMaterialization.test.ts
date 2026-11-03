@@ -18,11 +18,14 @@ import {
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
     connectorTriggerProjectHandoffVersion,
+    readConnectorTriggerProjectHandoff,
     type ConnectorTriggerProjectHandoff,
 } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
 import {
+    findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getPollingConnectorBindings,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
@@ -32,10 +35,14 @@ import {
     type ITemplateManifest,
 } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
+import { cpUtils } from '../../src/utils/cpUtils';
 import { envUtils } from '../../src/utils/envUtils';
 
 const realTemplateTestsEnabled = envUtils.isEnvironmentVariableSet(
     process.env.AZFUNC_TEST_REAL_CONNECTOR_TEMPLATES,
+);
+const buildGenericTemplateTestsEnabled = envUtils.isEnvironmentVariableSet(
+    process.env.AZFUNC_TEST_BUILD_GENERIC_TEMPLATES,
 );
 
 suite('Connector Trigger template materialization', () => {
@@ -423,6 +430,65 @@ suite('Connector Trigger template materialization', () => {
             }
         },
     );
+
+    (realTemplateTestsEnabled ? test : test.skip)(
+        'genericApp templates materialize unmapped selections',
+        async function (this: Mocha.Context): Promise<void> {
+            this.timeout(10 * 60 * 1000);
+            const cases = [
+                ProjectLanguage.CSharp,
+                ProjectLanguage.TypeScript,
+                ProjectLanguage.Python,
+            ];
+            const selections = [{
+                connectorId: 'office365',
+                operationId: 'UnmappedOutlookPollEvent',
+            }, {
+                connectorId: 'customconnector',
+                operationId: 'OnCustomPollEvent',
+            }];
+
+            for (const language of cases) {
+                const template = getGenericConnectorTriggerTemplate(language);
+                assert.ok(template, `Missing generic template for ${language}`);
+                for (let index = 0; index < selections.length; index++) {
+                    const selection = selections[index];
+                    const destination = path.join(
+                        projectPath,
+                        `${template.id}-${index}`,
+                    );
+                    const creator = createIntegrationCreator(index === 0);
+                    const handoff = createHandoff(
+                        selection.connectorId,
+                        selection.operationId,
+                    );
+                    try {
+                        await creator.createProject(
+                            await createTestActionContext(),
+                            template,
+                            language,
+                            destination,
+                            'details',
+                            { connectorTriggerHandoff: handoff },
+                        );
+                    } catch (error) {
+                        throw new Error(
+                            `Generic template failed for ${language} case ${index}.`,
+                            { cause: error },
+                        );
+                    }
+                    await assertGenericMaterialized(
+                        destination,
+                        language,
+                        handoff,
+                    );
+                    if (index === 0 && buildGenericTemplateTestsEnabled) {
+                        await buildGenericTemplate(destination, language);
+                    }
+                }
+            }
+        },
+    );
 });
 
 function createTestCreator(onDownload?: () => void): TestableProjectTemplateCreator {
@@ -516,6 +582,10 @@ async function assertMaterializedOperation(
         true,
     );
     assert.deepStrictEqual(
+        await findConnectorTriggerRegistrations(root),
+        [selected.functionName],
+    );
+    assert.deepStrictEqual(
         await findPollingConnectorBindings(root),
         [{
             connectionSettingName: 'ConnectorNamespace',
@@ -523,6 +593,110 @@ async function assertMaterializedOperation(
             triggerConfigSettingName,
         }],
     );
+}
+
+async function assertGenericMaterialized(
+    root: string,
+    language: ProjectLanguage,
+    handoff: ConnectorTriggerProjectHandoff,
+): Promise<void> {
+    assert.deepStrictEqual(
+        await findConnectorTriggerRegistrations(root),
+        ['ConnectorTriggerFunction'],
+    );
+    assert.deepStrictEqual(
+        await findPollingConnectorBindings(root),
+        [{
+            connectionSettingName: 'ConnectorNamespace',
+            functionName: 'ConnectorTriggerFunction',
+            triggerConfigSettingName: 'ConnectorTriggerConfigName',
+        }],
+    );
+    assert.deepStrictEqual(
+        await readConnectorTriggerProjectHandoff(root),
+        handoff,
+    );
+    assert.strictEqual(
+        await AzExtFsExtra.pathExists(path.join(root, 'host.json')),
+        true,
+    );
+
+    if (language === ProjectLanguage.TypeScript) {
+        const functionsPath = path.join(root, 'src', 'functions');
+        assert.deepStrictEqual(
+            (await AzExtFsExtra.readDirectory(functionsPath)).map(entry => entry.name),
+            ['connectorTriggerFunction.ts'],
+        );
+        const source = (await AzExtFsExtra.readFile(
+            path.join(functionsPath, 'connectorTriggerFunction.ts'),
+        )).toString();
+        assert.match(source, /type GenericConnectorItem = Record<string, unknown>/);
+        assert.ok(!source.includes('OnGeneric'));
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(path.join(root, 'infra', 'main.bicep')),
+            true,
+        );
+    } else if (language === ProjectLanguage.Python) {
+        const source = (await AzExtFsExtra.readFile(
+            path.join(root, 'function_app.py'),
+        )).toString();
+        const requirements = (await AzExtFsExtra.readFile(
+            path.join(root, 'requirements.txt'),
+        )).toString();
+        assert.match(source, /payloads: List\[str\]/);
+        assert.ok(!source.includes('OnGeneric'));
+        assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(path.join(root, 'azure.yaml')),
+            true,
+        );
+    } else {
+        const source = (await AzExtFsExtra.readFile(
+            path.join(root, 'GenericFunctions.cs'),
+        )).toString();
+        const project = (await AzExtFsExtra.readFile(
+            path.join(root, 'functions-connectors-net.csproj'),
+        )).toString();
+        assert.match(source, /\]\s*string payload\)/);
+        assert.ok(!source.includes('OnGeneric'));
+        assert.match(
+            project,
+            /Microsoft\.Azure\.Functions\.Worker\.Extensions\.Connector"\s+Version="1\.0\.0"/,
+        );
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(path.join(root, 'Program.cs')),
+            true,
+        );
+    }
+}
+
+async function buildGenericTemplate(
+    root: string,
+    language: ProjectLanguage,
+): Promise<void> {
+    if (language === ProjectLanguage.TypeScript) {
+        await cpUtils.executeCommand(undefined, root, 'npm', ['install']);
+        await cpUtils.executeCommand(
+            undefined,
+            root,
+            'node',
+            [path.join('node_modules', 'typescript', 'bin', 'tsc')],
+        );
+    } else if (language === ProjectLanguage.Python) {
+        await cpUtils.executeCommand(
+            undefined,
+            root,
+            'python',
+            ['-m', 'compileall', '-q', '.'],
+        );
+    } else {
+        await cpUtils.executeCommand(
+            undefined,
+            root,
+            'dotnet',
+            ['build', '--nologo'],
+        );
+    }
 }
 
 async function createOperationFixture(root: string): Promise<void> {
