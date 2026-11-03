@@ -117,6 +117,9 @@ export interface ConnectorTriggerPickerViewModel {
         hideWebhookOnlyConnectors: string;
         webhookOnlyDescription: string;
         webhookEventUnavailable: string;
+        webhookDiscoveryDescription: string;
+        webhookNoneLoaded: string;
+        webhookNoSearchResults: string;
         connectorPageTitle: string;
         connectorPageDescription: string;
         connectorSearchPlaceholder: string;

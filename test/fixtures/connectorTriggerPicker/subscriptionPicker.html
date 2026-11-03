@@ -78,6 +78,9 @@
             hideWebhookOnlyConnectors: 'Hide webhook-only connectors',
             webhookOnlyDescription: 'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
             webhookEventUnavailable: 'Webhook authoring is not available yet.',
+            webhookDiscoveryDescription: 'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
+            webhookNoneLoaded: 'No webhook-only connectors have been found in the event metadata loaded so far.',
+            webhookNoSearchResults: 'No webhook-only connectors match your search.',
             connectorPageTitle: 'Choose a connector',
             connectorPageDescription: 'Find the service that will start your function, then choose an event.',
             connectorSearchPlaceholder: 'Search connectors...',
@@ -194,6 +197,30 @@
             creativeCloudConnector,
             kustoConnector,
         ];
+        const initialFeaturedConnectors = [
+            officeConnector,
+            { id: 'sharepointonline', label: 'SharePoint' },
+            { id: 'onedriveforbusiness', label: 'OneDrive for Business' },
+            { id: 'teams', label: 'Microsoft Teams' },
+            { id: 'planner', label: 'Planner' },
+            { id: 'salesforce', label: 'Salesforce' },
+            { id: 'visualstudio-team-services', label: 'Azure DevOps' },
+            { id: 'dataflows', label: 'Power Query Dataflows' },
+        ];
+        const initialOtherConnectors = [
+            adobeSignConnector,
+            creativeCloudConnector,
+            azureBlobConnector,
+            kustoConnector,
+            ...Array.from({ length: 1671 }, (_, index) => ({
+                id: `other-connector-${index + 1}`,
+                label: `Other Connector ${String(index + 1).padStart(4, '0')}`,
+            })),
+        ];
+        const initialCatalogConnectors = [
+            ...initialFeaturedConnectors,
+            ...initialOtherConnectors,
+        ];
         const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
         const vscodeApi = {
             getState: () => undefined,
@@ -261,8 +288,7 @@
         render('connectorTriggerPicker', vscodeApi);
 
         const automation = new URLSearchParams(location.search).get('auto');
-        if (automation) {
-            const waitFor = async predicate => {
+        const waitFor = async predicate => {
                 for (let index = 0; index < 120; index++) {
                     const value = predicate();
                     if (value) {
@@ -271,18 +297,52 @@
                     await new Promise(resolve => setTimeout(resolve, 25));
                 }
                 throw new Error(`Timed out while preparing fixture automation: ${automation}`);
-            };
-            const input = await waitFor(() => {
-                const element = document.querySelector('[role="combobox"]');
-                return element && !element.disabled ? element : undefined;
-            });
-            input.click();
-            const firstOption = await waitFor(() =>
-                document.querySelector('[role="option"]'));
-            firstOption.click();
+        };
+        if (automation === 'initial-webhook') {
             await waitFor(() =>
-                !document.querySelector('[role="listbox"]') &&
-                document.querySelector('select')?.options.length === 3);
+                window.fixtureMessages.some(message =>
+                    message.command === 'initialize'));
+            postResponse({
+                command: 'azureContextSelected',
+                azureContext: {
+                    subscriptionId: subscriptions[0].id,
+                    subscriptionName: subscriptions[0].label,
+                    region: 'westcentralus',
+                    regionDisplayName: 'West Central US',
+                },
+            });
+            postResponse({
+                command: 'catalogLoaded',
+                connectors: initialCatalogConnectors,
+                operations: [],
+            });
+            await waitFor(() =>
+                document.body.textContent.includes('Other connectors (1675)'));
+        } else if (automation) {
+            const directCatalogAutomation = [
+                'classified-empty',
+                'events',
+                'nonfeatured',
+                'webhook',
+            ].includes(automation);
+            let input;
+            if (directCatalogAutomation) {
+                await waitFor(() =>
+                    window.fixtureMessages.some(message =>
+                        message.command === 'initialize'));
+            } else {
+                input = await waitFor(() => {
+                    const element = document.querySelector('[role="combobox"]');
+                    return element && !element.disabled ? element : undefined;
+                });
+                input.click();
+                const firstOption = await waitFor(() =>
+                    document.querySelector('[role="option"]'));
+                firstOption.click();
+                await waitFor(() =>
+                    !document.querySelector('[role="listbox"]') &&
+                    document.querySelector('select')?.options.length === 3);
+            }
 
             if (automation === 'open' || automation === 'all') {
                 input.click();
@@ -399,6 +459,43 @@
                             button.textContent.includes(adobeSignConnector.label) ||
                             button.textContent.includes(creativeCloudConnector.label)
                         )).length === 2);
+            } else if (automation === 'classified-empty') {
+                postResponse({
+                    command: 'azureContextSelected',
+                    azureContext: {
+                        subscriptionId: subscriptions[0].id,
+                        subscriptionName: subscriptions[0].label,
+                        region: 'westcentralus',
+                        regionDisplayName: 'West Central US',
+                    },
+                });
+                postResponse({
+                    command: 'catalogLoaded',
+                    connectors: [officeConnector, kustoConnector],
+                    operations: [],
+                });
+                const otherToggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Other connectors')));
+                otherToggle.click();
+                const connectorButton = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes(kustoConnector.label)));
+                connectorButton.click();
+                await waitFor(() =>
+                    document.body.textContent.includes('No triggers are available'));
+                const changeConnector = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Change connector')));
+                changeConnector.click();
+                const webhookToggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Webhook only (0)')));
+                webhookToggle.click();
+                await waitFor(() =>
+                    document.body.textContent.includes(
+                        'No webhook-only connectors have been found',
+                    ));
             }
         }
     </script>

@@ -401,6 +401,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const displayedOtherConnectors = connectorSearch.trim() ?
         connectorGroups.other :
         connectorGroups.other.slice(0, connectorLimit);
+    const connectorSearchActive = !!connectorSearch.trim();
+    const classifiedConnectorCount = connectors.filter(connector =>
+        connector.eventSupport &&
+        connector.eventSupport !== 'unknown').length;
     const webhookOnlyConnectorsVisible = shouldExpandOtherConnectors(
         connectorSearch,
         webhookOnlyConnectorsExpanded,
@@ -631,43 +635,18 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                                 }
                                             </section>
                                         }
-                                        {connectorGroups.webhookOnly.length > 0 &&
-                                            <section className="other-connectors webhook-only-connectors">
-                                                <button
-                                                    type="button"
-                                                    className="other-connectors-toggle"
-                                                    aria-controls="webhook-only-connectors-grid"
-                                                    aria-expanded={webhookOnlyConnectorsVisible}
-                                                    aria-label={webhookOnlyConnectorsVisible ?
-                                                        viewModel.labels.hideWebhookOnlyConnectors :
-                                                        viewModel.labels.showWebhookOnlyConnectors}
-                                                    disabled={!!connectorSearch.trim()}
-                                                    onClick={() => setWebhookOnlyConnectorsExpanded(
-                                                        expanded => !expanded,
-                                                    )}
-                                                >
-                                                    <span
-                                                        className={`codicon codicon-chevron-${webhookOnlyConnectorsVisible ? 'down' : 'right'}`}
-                                                        aria-hidden="true"
-                                                    />
-                                                    {format(
-                                                        viewModel.labels.webhookOnlyConnectors,
-                                                        connectorGroups.webhookOnly.length.toString(),
-                                                    )}
-                                                </button>
-                                                {webhookOnlyConnectorsVisible &&
-                                                    <div id="webhook-only-connectors-grid">
-                                                        <ConnectorTilePicker
-                                                            label={viewModel.labels.webhookOnlyConnectors}
-                                                            options={connectorGroups.webhookOnly}
-                                                            unavailableLabel={viewModel.labels.unavailable}
-                                                            value={selectedConnectorId}
-                                                            onChange={selectConnector}
-                                                        />
-                                                    </div>
-                                                }
-                                            </section>
-                                        }
+                                        <WebhookOnlyConnectorGroup
+                                            classifiedConnectorCount={classifiedConnectorCount}
+                                            expanded={webhookOnlyConnectorsVisible}
+                                            labels={viewModel.labels}
+                                            options={connectorGroups.webhookOnly}
+                                            searchActive={connectorSearchActive}
+                                            value={selectedConnectorId}
+                                            onChange={selectConnector}
+                                            onToggle={() => setWebhookOnlyConnectorsExpanded(
+                                                expanded => !expanded,
+                                            )}
+                                        />
                                     </>
                     }
                 </section>
@@ -693,6 +672,72 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 />
             }
         </main>
+    );
+}
+
+export function WebhookOnlyConnectorGroup({
+    classifiedConnectorCount,
+    expanded,
+    labels,
+    options,
+    searchActive,
+    value,
+    onChange,
+    onToggle,
+}: {
+    classifiedConnectorCount: number;
+    expanded: boolean;
+    labels: ConnectorTriggerPickerViewModel['labels'];
+    options: readonly ConnectorTriggerOption[];
+    searchActive: boolean;
+    value: string;
+    onChange: (value: string) => void;
+    onToggle: () => void;
+}): JSX.Element {
+    const emptyMessage = searchActive ?
+        labels.webhookNoSearchResults :
+        classifiedConnectorCount > 0 ?
+            labels.webhookNoneLoaded :
+            labels.webhookDiscoveryDescription;
+    return (
+        <section className="other-connectors webhook-only-connectors">
+            <button
+                type="button"
+                className="other-connectors-toggle"
+                aria-controls="webhook-only-connectors-grid"
+                aria-expanded={expanded}
+                aria-label={expanded ?
+                    labels.hideWebhookOnlyConnectors :
+                    labels.showWebhookOnlyConnectors}
+                disabled={searchActive}
+                onClick={onToggle}
+            >
+                <span
+                    className={`codicon codicon-chevron-${expanded ? 'down' : 'right'}`}
+                    aria-hidden="true"
+                />
+                {format(
+                    labels.webhookOnlyConnectors,
+                    options.length.toString(),
+                )}
+            </button>
+            {expanded &&
+                <div id="webhook-only-connectors-grid">
+                    {options.length > 0 ?
+                        <ConnectorTilePicker
+                            label={labels.webhookOnlyConnectors}
+                            options={options}
+                            unavailableLabel={labels.unavailable}
+                            value={value}
+                            onChange={onChange}
+                        /> :
+                        <p className="status-text" role="status">
+                            {emptyMessage}
+                        </p>
+                    }
+                </div>
+            }
+        </section>
     );
 }
 

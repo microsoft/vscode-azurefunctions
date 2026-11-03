@@ -426,6 +426,18 @@ suite('Connector trigger picker', () => {
             viewModel.labels.webhookOnlyDescription,
             'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
         );
+        assert.strictEqual(
+            viewModel.labels.webhookDiscoveryDescription,
+            'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
+        );
+        assert.strictEqual(
+            viewModel.labels.webhookNoneLoaded,
+            'No webhook-only connectors have been found in the event metadata loaded so far.',
+        );
+        assert.strictEqual(
+            viewModel.labels.webhookNoSearchResults,
+            'No webhook-only connectors match your search.',
+        );
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {

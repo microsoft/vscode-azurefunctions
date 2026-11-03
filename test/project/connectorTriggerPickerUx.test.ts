@@ -33,6 +33,7 @@ import {
     getSubscriptionModeActionLabel,
     shouldPreserveSubscriptionSelection,
     shouldRequestAzureSignIn,
+    WebhookOnlyConnectorGroup,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     reconcileConnectorTriggerSelection,
@@ -193,6 +194,38 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(html.includes('When a new agreement is created'));
         assert.ok(html.includes('disabled=""'));
         assert.ok(!html.includes(labels.useTemplate));
+    });
+
+    test('renders distinct initial, classified-empty, and search-empty webhook groups', () => {
+        const labels = createConnectorTriggerPickerViewModel('python').labels;
+        const renderGroup = (
+            classifiedConnectorCount: number,
+            searchActive: boolean,
+        ): string => renderToStaticMarkup(createElement(
+            WebhookOnlyConnectorGroup,
+            {
+                classifiedConnectorCount,
+                expanded: true,
+                labels,
+                options: [],
+                searchActive,
+                value: '',
+                onChange: () => undefined,
+                onToggle: () => undefined,
+            },
+        ));
+
+        const initial = renderGroup(0, false);
+        assert.ok(initial.includes('Webhook only (0)'));
+        assert.ok(initial.includes(labels.webhookDiscoveryDescription));
+
+        const classifiedEmpty = renderGroup(1, false);
+        assert.ok(classifiedEmpty.includes(labels.webhookNoneLoaded));
+        assert.ok(!classifiedEmpty.includes(labels.webhookDiscoveryDescription));
+
+        const searchEmpty = renderGroup(1, true);
+        assert.ok(searchEmpty.includes(labels.webhookNoSearchResults));
+        assert.ok(!searchEmpty.includes(labels.webhookNoneLoaded));
     });
 
     test('renders both dropdowns while signed out with Location disabled', () => {

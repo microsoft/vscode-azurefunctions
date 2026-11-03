@@ -91,6 +91,18 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerWebhookEventUnavailable',
                 'Webhook authoring is not available yet.',
             ),
+            webhookDiscoveryDescription: localize(
+                'connectorTriggerWebhookDiscoveryDescription',
+                'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
+            ),
+            webhookNoneLoaded: localize(
+                'connectorTriggerWebhookNoneLoaded',
+                'No webhook-only connectors have been found in the event metadata loaded so far.',
+            ),
+            webhookNoSearchResults: localize(
+                'connectorTriggerWebhookNoSearchResults',
+                'No webhook-only connectors match your search.',
+            ),
             connectorPageTitle: localize('connectorTriggerChooseConnector', 'Choose a connector'),
             connectorPageDescription: localize('connectorTriggerChooseConnectorDescription', 'Find the service that will start your function, then choose an event.'),
             connectorSearchPlaceholder: localize('connectorTriggerSearchConnectors', 'Search connectors...'),
