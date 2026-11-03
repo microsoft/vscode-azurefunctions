@@ -103,6 +103,10 @@
             id: 'office365',
             label: 'Office 365 Outlook',
         };
+        const azureBlobConnector = {
+            id: 'azureblob',
+            label: 'Azure Blob Storage',
+        };
         const officeOperations = [
             ['OnNewEmailV3', 'When a new email arrives'],
             ['OnFlaggedEmailV4', 'When an email is flagged'],
@@ -120,6 +124,17 @@
             isWebhook: false,
             label,
         }));
+        const operationMap = {
+            office365: officeOperations,
+            azureblob: [{
+                connectorId: azureBlobConnector.id,
+                id: 'OnUpdatedFiles_V2',
+                isNotification: false,
+                isWebhook: false,
+                label: 'When a blob is added or modified (properties only) (V2)',
+                description: 'This operation triggers a flow when blobs change.',
+            }],
+        };
         const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
         const vscodeApi = {
             getState: () => undefined,
@@ -160,7 +175,7 @@
                         });
                         postResponse({
                             command: 'catalogLoaded',
-                            connectors: [officeConnector],
+                            connectors: [officeConnector, azureBlobConnector],
                             operations: [],
                         });
                     });
@@ -168,7 +183,7 @@
                     queueMicrotask(() => postResponse({
                         command: 'connectorOperationsLoaded',
                         connectorId: message.connectorId,
-                        operations: officeOperations,
+                        operations: operationMap[message.connectorId] ?? [],
                     }));
                 }
             },
@@ -235,7 +250,7 @@
                 });
                 postResponse({
                     command: 'catalogLoaded',
-                    connectors: [officeConnector],
+                    connectors: [officeConnector, azureBlobConnector],
                     operations: [],
                 });
                 const connectorButton = await waitFor(() =>
@@ -246,6 +261,34 @@
                     document.body.textContent.includes('CalendarGetOnChangedItemsV3') ||
                     document.body.textContent.includes(
                         'When an event is added, updated or deleted (V3)',
+                    ));
+            } else if (automation === 'nonfeatured') {
+                postResponse({
+                    command: 'azureContextSelected',
+                    azureContext: {
+                        subscriptionId: subscriptions[0].id,
+                        subscriptionName: subscriptions[0].label,
+                        region: 'westcentralus',
+                        regionDisplayName: 'West Central US',
+                    },
+                });
+                postResponse({
+                    command: 'catalogLoaded',
+                    connectors: [officeConnector, azureBlobConnector],
+                    operations: [],
+                });
+                const toggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Other connectors')));
+                toggle.click();
+                const connectorButton = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes(azureBlobConnector.label)));
+                connectorButton.click();
+                await waitFor(() =>
+                    document.body.textContent.includes('OnUpdatedFiles_V2') ||
+                    document.body.textContent.includes(
+                        'When a blob is added or modified',
                     ));
             }
         }

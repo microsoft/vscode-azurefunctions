@@ -9,11 +9,19 @@ import {
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
     ConnectorTriggerDataClient,
     type ConnectorArmClient,
     type ConnectorSubscription,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
+import { cpUtils } from '../../src/utils/cpUtils';
+import { envUtils } from '../../src/utils/envUtils';
+
+const liveCatalogTestsEnabled = envUtils.isEnvironmentVariableSet(
+    process.env.AZFUNC_TEST_LIVE_CONNECTOR_CATALOG,
+);
 
 suite('Connector trigger data client', () => {
     test('uses filtered subscriptions by default and loads all on request', async () => {
@@ -95,6 +103,143 @@ suite('Connector trigger data client', () => {
             region: 'US Gov Virginia',
             regionDisplayName: 'US Gov Virginia',
         });
+
+        test('preserves real nonfeatured Poll operation shapes', async () => {
+            const fixture = JSON.parse(await fs.promises.readFile(
+                path.join(
+                    __dirname,
+                    '..',
+                    '..',
+                    'test',
+                    'fixtures',
+                    'connectorTriggerPicker',
+                    'nonFeaturedOperations.json',
+                ),
+                'utf8',
+            )) as Record<string, unknown>;
+            const client = new ConnectorTriggerDataClient(
+                async () => [createSubscription()],
+                async () => ({
+                    async get(url: string): Promise<unknown> {
+                        const connectorId = /\/managedApis\/([^/]+)\/apiOperations/.exec(url)?.[1];
+                        assert.ok(connectorId);
+                        return fixture[decodeURIComponent(connectorId)];
+                    },
+                }),
+            );
+            const context = await createTestActionContext();
+            const azureContext = {
+                subscriptionId: 'sub-one',
+                subscriptionName: 'Subscription One',
+                region: 'usgovvirginia',
+                regionDisplayName: 'US Gov Virginia',
+            };
+
+            assert.deepStrictEqual(
+                (await client.listConnectorOperations(
+                    context,
+                    azureContext,
+                    'azureblob',
+                )).map(operation => operation.id),
+                ['OnUpdatedFiles_V2'],
+            );
+            assert.deepStrictEqual(
+                (await client.listConnectorOperations(
+                    context,
+                    azureContext,
+                    'rss',
+                )).map(operation => operation.id),
+                ['OnNewFeed'],
+            );
+            assert.deepStrictEqual(
+                (await client.listConnectorOperations(
+                    context,
+                    azureContext,
+                    'sftpwithssh',
+                )).map(operation => operation.id),
+                ['OnUpdatedFile', 'OnUpdatedFiles'],
+            );
+        });
+
+        (liveCatalogTestsEnabled ? test : test.skip)(
+            'loads featured and nonfeatured Poll events through the production client',
+            async function (this: Mocha.Context): Promise<void> {
+                this.timeout(3 * 60 * 1000);
+                const account = JSON.parse(await cpUtils.executeCommand(
+                    undefined,
+                    undefined,
+                    'az',
+                    ['account', 'show', '--only-show-errors', '--output', 'json'],
+                )) as {
+                    environmentName: string;
+                    id: string;
+                    name: string;
+                };
+                assert.strictEqual(account.environmentName, 'AzureCloud');
+                const client = new ConnectorTriggerDataClient(
+                    async () => [createSubscription(
+                        account.id,
+                        account.name,
+                        account.environmentName,
+                        'https://management.azure.com/',
+                    )],
+                    async () => ({
+                        async get(url: string): Promise<unknown> {
+                            return JSON.parse(await cpUtils.executeCommand(
+                                undefined,
+                                undefined,
+                                'az',
+                                [
+                                    'rest',
+                                    '--only-show-errors',
+                                    '--method',
+                                    'get',
+                                    '--url',
+                                    url,
+                                    '--output',
+                                    'json',
+                                ],
+                            ));
+                        },
+                    }),
+                );
+                const context = await createTestActionContext();
+                const azureContext = {
+                    subscriptionId: account.id,
+                    subscriptionName: account.name,
+                    region: 'westcentralus',
+                    regionDisplayName: 'West Central US',
+                };
+                const counts = new Map<string, number>();
+                for (const connectorId of [
+                    'office365',
+                    'azureblob',
+                    'github',
+                    'slack',
+                    'dropbox',
+                    'rss',
+                    'sftpwithssh',
+                ]) {
+                    counts.set(
+                        connectorId,
+                        (await client.listConnectorOperations(
+                            context,
+                            azureContext,
+                            connectorId,
+                        )).length,
+                    );
+                }
+                assert.deepStrictEqual(Object.fromEntries(counts), {
+                    office365: 9,
+                    azureblob: 1,
+                    github: 3,
+                    slack: 1,
+                    dropbox: 4,
+                    rss: 1,
+                    sftpwithssh: 2,
+                });
+            },
+        );
 
         assert.strictEqual(result.source, 'live');
         assert.deepStrictEqual(

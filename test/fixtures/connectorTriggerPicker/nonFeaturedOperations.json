@@ -1,0 +1,97 @@
+{
+  "azureblob": {
+    "value": [
+      {
+        "name": "OnUpdatedFiles_V2",
+        "properties": {
+          "summary": "When a blob is added or modified (properties only) (V2)",
+          "description": "This operation triggers a flow when one or more blobs are added or modified in a container.",
+          "visibility": "important",
+          "trigger": "batch",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFiles",
+            "revision": 2
+          },
+          "api": {
+            "name": "azureblob",
+            "displayName": "Azure Blob Storage"
+          }
+        }
+      }
+    ]
+  },
+  "rss": {
+    "value": [
+      {
+        "name": "OnNewFeed",
+        "properties": {
+          "summary": "When a feed item is published",
+          "description": "This operation triggers a workflow when a new item is published in an RSS feed.",
+          "visibility": "important",
+          "trigger": "batch",
+          "triggerHint": "To see it work now, publish an item to the RSS feed.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnNewFeed",
+            "revision": 1
+          },
+          "api": {
+            "name": "rss",
+            "displayName": "RSS"
+          }
+        }
+      }
+    ]
+  },
+  "sftpwithssh": {
+    "value": [
+      {
+        "name": "OnUpdatedFile",
+        "properties": {
+          "summary": "When a file is added or modified",
+          "description": "This operation triggers a flow when a file is added or modified in a folder.",
+          "visibility": "important",
+          "trigger": "single",
+          "triggerHint": "To see it work now, add or change a file in the folder you selected.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFile",
+            "revision": 1
+          },
+          "api": {
+            "name": "sftpwithssh",
+            "displayName": "SFTP - SSH"
+          }
+        }
+      },
+      {
+        "name": "OnUpdatedFiles",
+        "properties": {
+          "summary": "When files are added or modified (properties only)",
+          "description": "This operation triggers a flow when a file is added or modified in a folder and returns metadata.",
+          "visibility": "important",
+          "trigger": "batch",
+          "triggerHint": "To see it work now, add or change some files in the folder you selected.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFiles",
+            "revision": 1
+          },
+          "api": {
+            "name": "sftpwithssh",
+            "displayName": "SFTP - SSH"
+          }
+        }
+      }
+    ]
+  }
+}

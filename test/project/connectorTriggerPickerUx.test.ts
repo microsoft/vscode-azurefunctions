@@ -500,6 +500,58 @@ suite('Connector trigger picker Azure context UX', () => {
         }]);
     });
 
+    test('loads real nonfeatured Poll events through the controller', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const azureContext = createAzureContext();
+        const azureBlobConnector = {
+            id: 'azureblob',
+            label: 'Azure Blob Storage',
+        };
+        const azureBlobOperation: ConnectorTriggerOperationOption = {
+            id: 'OnUpdatedFiles_V2',
+            connectorId: azureBlobConnector.id,
+            label: 'When a blob is added or modified (properties only) (V2)',
+            description: 'This operation triggers a flow when blobs change.',
+            isWebhook: false,
+            isNotification: false,
+        };
+        const controller = createTestController({
+            responses,
+            listConnectorOperations: async (
+                _context,
+                selectedContext,
+                connectorId,
+            ) => {
+                assert.deepStrictEqual(selectedContext, azureContext);
+                assert.strictEqual(connectorId, azureBlobConnector.id);
+                return [azureBlobOperation];
+            },
+        });
+        controller.azureContext = azureContext;
+        controller.subscriptionContext = createSubscriptionContext();
+        controller.catalogs.set('sub-one:usgovvirginia', {
+            catalog: {
+                connectors: [connector, azureBlobConnector],
+                operations: [],
+            },
+        });
+
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: azureBlobConnector.id,
+        });
+
+        assert.deepStrictEqual(responses, [{
+            command: 'connectorOperationsLoaded',
+            connectorId: azureBlobConnector.id,
+            operations: [azureBlobOperation],
+        }]);
+        assert.deepStrictEqual(
+            controller.catalogs.get('sub-one:usgovvirginia')?.catalog.operations,
+            [azureBlobOperation],
+        );
+    });
+
     test('requires fresh dropdown selections after authentication changes', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         let invalidationCount = 0;
