@@ -16,6 +16,9 @@ on:
       - main
       - rel/*
 
+permissions:
+  contents: read
+
 jobs:
   Build:
       # Use template from https://github.com/microsoft/vscode-azuretools/tree/main/.github/workflows
