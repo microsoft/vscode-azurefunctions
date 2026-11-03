@@ -78,9 +78,14 @@
             hideWebhookOnlyConnectors: 'Hide webhook-only connectors',
             webhookOnlyDescription: 'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
             webhookEventUnavailable: 'Webhook authoring is not available yet.',
-            webhookDiscoveryDescription: 'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
-            webhookNoneLoaded: 'No webhook-only connectors have been found in the event metadata loaded so far.',
+            webhookDiscoveryDescription: 'Webhook-only connectors will appear here as live event discovery completes.',
+            webhookNoneLoaded: 'No webhook-only connectors were found in the event metadata checked so far.',
             webhookNoSearchResults: 'No webhook-only connectors match your search.',
+            connectorDiscoveryProgress: 'Checking live event metadata: {0} of {1} connectors checked.',
+            connectorDiscoveryComplete: 'Live event discovery complete.',
+            connectorDiscoveryPartial: 'Live event discovery is incomplete: {0} of {1} connectors checked.',
+            connectorDiscoveryFailures: '{0} connectors could not be checked and are not included.',
+            retryConnectorDiscovery: 'Retry failed checks',
             connectorPageTitle: 'Choose a connector',
             connectorPageDescription: 'Find the service that will start your function, then choose an event.',
             connectorSearchPlaceholder: 'Search connectors...',
@@ -221,6 +226,35 @@
             ...initialFeaturedConnectors,
             ...initialOtherConnectors,
         ];
+        const automaticClassifications = [
+            ...initialFeaturedConnectors.map(connector => ({
+                connectorId: connector.id,
+                eventSupport: 'poll',
+            })),
+            {
+                connectorId: azureBlobConnector.id,
+                eventSupport: 'poll',
+            },
+            {
+                connectorId: adobeSignConnector.id,
+                eventSupport: 'webhook-only',
+            },
+            {
+                connectorId: creativeCloudConnector.id,
+                eventSupport: 'webhook-only',
+            },
+            {
+                connectorId: kustoConnector.id,
+                eventSupport: 'none',
+            },
+            ...initialOtherConnectors
+                .filter(connector => connector.id.startsWith('other-connector-'))
+                .map(connector => ({
+                    connectorId: connector.id,
+                    eventSupport: 'none',
+                })),
+        ];
+        const automation = new URLSearchParams(location.search).get('auto');
         const postResponse = data => window.dispatchEvent(new MessageEvent('message', { data }));
         const vscodeApi = {
             getState: () => undefined,
@@ -261,9 +295,37 @@
                         });
                         postResponse({
                             command: 'catalogLoaded',
-                            connectors: catalogConnectors,
+                            connectors: automation === 'automatic-discovery'
+                                ? initialCatalogConnectors
+                                : catalogConnectors,
                             operations: [],
                         });
+                        if (automation === 'automatic-discovery') {
+                            postResponse({
+                                command: 'connectorDiscoveryProgress',
+                                classifications: [],
+                                failed: 0,
+                                inProgress: true,
+                                processed: 0,
+                                total: initialCatalogConnectors.length,
+                            });
+                            setTimeout(() => postResponse({
+                                command: 'connectorDiscoveryProgress',
+                                classifications: automaticClassifications.slice(0, 9),
+                                failed: 0,
+                                inProgress: true,
+                                processed: 9,
+                                total: initialCatalogConnectors.length,
+                            }), 20);
+                            setTimeout(() => postResponse({
+                                command: 'connectorDiscoveryProgress',
+                                classifications: automaticClassifications.slice(9),
+                                failed: 0,
+                                inProgress: false,
+                                processed: initialCatalogConnectors.length,
+                                total: initialCatalogConnectors.length,
+                            }), 40);
+                        }
                     });
                 } else if (message.command === 'loadConnectorOperations') {
                     queueMicrotask(() => postResponse({
@@ -287,7 +349,6 @@
         );
         render('connectorTriggerPicker', vscodeApi);
 
-        const automation = new URLSearchParams(location.search).get('auto');
         const waitFor = async predicate => {
                 for (let index = 0; index < 120; index++) {
                     const value = predicate();
@@ -298,7 +359,48 @@
                 }
                 throw new Error(`Timed out while preparing fixture automation: ${automation}`);
         };
-        if (automation === 'initial-webhook') {
+        if (automation === 'automatic-discovery-capture') {
+            await waitFor(() =>
+                window.fixtureMessages.some(message =>
+                    message.command === 'initialize'));
+            postResponse({
+                command: 'azureContextSelected',
+                azureContext: {
+                    subscriptionId: subscriptions[0].id,
+                    subscriptionName: subscriptions[0].label,
+                    region: 'westcentralus',
+                    regionDisplayName: 'West Central US',
+                },
+            });
+            postResponse({
+                command: 'locationsLoaded',
+                subscriptionId: subscriptions[0].id,
+                locations: [
+                    { name: 'westcentralus', label: 'West Central US' },
+                    { name: 'eastus2', label: 'East US 2' },
+                ],
+            });
+            postResponse({
+                command: 'catalogLoaded',
+                connectors: initialCatalogConnectors,
+                operations: [],
+            });
+            postResponse({
+                command: 'connectorDiscoveryProgress',
+                classifications: automaticClassifications,
+                failed: 0,
+                inProgress: false,
+                processed: initialCatalogConnectors.length,
+                total: initialCatalogConnectors.length,
+            });
+            const webhookToggle = await waitFor(() =>
+                [...document.querySelectorAll('button')].find(button =>
+                    button.textContent.includes('Webhook only (2)')));
+            webhookToggle.click();
+            await waitFor(() =>
+                document.body.textContent.includes(adobeSignConnector.label) &&
+                document.body.textContent.includes(creativeCloudConnector.label));
+        } else if (automation === 'initial-webhook') {
             await waitFor(() =>
                 window.fixtureMessages.some(message =>
                     message.command === 'initialize'));
@@ -344,7 +446,25 @@
                     document.querySelector('select')?.options.length === 3);
             }
 
-            if (automation === 'open' || automation === 'all') {
+            if (automation === 'automatic-discovery') {
+                const region = await waitFor(() => {
+                    const element = document.querySelector('select');
+                    return element && !element.disabled ? element : undefined;
+                });
+                region.value = 'westcentralus';
+                region.dispatchEvent(new Event('change', { bubbles: true }));
+                await waitFor(() =>
+                    document.body.textContent.includes('Webhook only (2)') &&
+                    document.body.textContent.includes('Other connectors (1)') &&
+                    document.body.textContent.includes('Live event discovery complete.'));
+                const webhookToggle = await waitFor(() =>
+                    [...document.querySelectorAll('button')].find(button =>
+                        button.textContent.includes('Webhook only (2)')));
+                webhookToggle.click();
+                await waitFor(() =>
+                    document.body.textContent.includes(adobeSignConnector.label) &&
+                    document.body.textContent.includes(creativeCloudConnector.label));
+            } else if (automation === 'open' || automation === 'all') {
                 input.click();
                 const options = await waitFor(() => {
                     const values = [...document.querySelectorAll('[role="option"]')];
@@ -375,6 +495,17 @@
                     connectors: catalogConnectors,
                     operations: [],
                 });
+                postResponse({
+                    command: 'connectorDiscoveryProgress',
+                    classifications: [{
+                        connectorId: officeConnector.id,
+                        eventSupport: 'poll',
+                    }],
+                    failed: 0,
+                    inProgress: true,
+                    processed: 1,
+                    total: catalogConnectors.length,
+                });
                 const connectorButton = await waitFor(() =>
                     [...document.querySelectorAll('button')].find(button =>
                         button.textContent.includes(officeConnector.label)));
@@ -398,6 +529,17 @@
                     command: 'catalogLoaded',
                     connectors: catalogConnectors,
                     operations: [],
+                });
+                postResponse({
+                    command: 'connectorDiscoveryProgress',
+                    classifications: [{
+                        connectorId: azureBlobConnector.id,
+                        eventSupport: 'poll',
+                    }],
+                    failed: 0,
+                    inProgress: true,
+                    processed: 1,
+                    total: catalogConnectors.length,
                 });
                 const toggle = await waitFor(() =>
                     [...document.querySelectorAll('button')].find(button =>
@@ -427,10 +569,33 @@
                     connectors: catalogConnectors,
                     operations: [],
                 });
-                const otherToggle = await waitFor(() =>
+                postResponse({
+                    command: 'connectorDiscoveryProgress',
+                    classifications: [{
+                        connectorId: officeConnector.id,
+                        eventSupport: 'poll',
+                    }, {
+                        connectorId: azureBlobConnector.id,
+                        eventSupport: 'poll',
+                    }, {
+                        connectorId: adobeSignConnector.id,
+                        eventSupport: 'webhook-only',
+                    }, {
+                        connectorId: creativeCloudConnector.id,
+                        eventSupport: 'webhook-only',
+                    }, {
+                        connectorId: kustoConnector.id,
+                        eventSupport: 'none',
+                    }],
+                    failed: 0,
+                    inProgress: false,
+                    processed: catalogConnectors.length,
+                    total: catalogConnectors.length,
+                });
+                const webhookToggle = await waitFor(() =>
                     [...document.querySelectorAll('button')].find(button =>
-                        button.textContent.includes('Other connectors')));
-                otherToggle.click();
+                        button.textContent.includes('Webhook only (2)')));
+                webhookToggle.click();
                 for (const webhookConnector of [
                     adobeSignConnector,
                     creativeCloudConnector,
@@ -448,10 +613,6 @@
                             button.textContent.includes('Change connector')));
                     changeConnector.click();
                 }
-                const webhookToggle = await waitFor(() =>
-                    [...document.querySelectorAll('button')].find(button =>
-                        button.textContent.includes('Webhook only (2)')));
-                webhookToggle.click();
                 await waitFor(() =>
                     [...document.querySelectorAll('button')].filter(button =>
                         button.getAttribute('role') === 'radio' &&
@@ -474,27 +635,27 @@
                     connectors: [officeConnector, kustoConnector],
                     operations: [],
                 });
-                const otherToggle = await waitFor(() =>
-                    [...document.querySelectorAll('button')].find(button =>
-                        button.textContent.includes('Other connectors')));
-                otherToggle.click();
-                const connectorButton = await waitFor(() =>
-                    [...document.querySelectorAll('button')].find(button =>
-                        button.textContent.includes(kustoConnector.label)));
-                connectorButton.click();
-                await waitFor(() =>
-                    document.body.textContent.includes('No triggers are available'));
-                const changeConnector = await waitFor(() =>
-                    [...document.querySelectorAll('button')].find(button =>
-                        button.textContent.includes('Change connector')));
-                changeConnector.click();
+                postResponse({
+                    command: 'connectorDiscoveryProgress',
+                    classifications: [{
+                        connectorId: officeConnector.id,
+                        eventSupport: 'poll',
+                    }, {
+                        connectorId: kustoConnector.id,
+                        eventSupport: 'none',
+                    }],
+                    failed: 0,
+                    inProgress: false,
+                    processed: 2,
+                    total: 2,
+                });
                 const webhookToggle = await waitFor(() =>
                     [...document.querySelectorAll('button')].find(button =>
                         button.textContent.includes('Webhook only (0)')));
                 webhookToggle.click();
                 await waitFor(() =>
                     document.body.textContent.includes(
-                        'No webhook-only connectors have been found',
+                        'No webhook-only connectors were found',
                     ));
             }
         }

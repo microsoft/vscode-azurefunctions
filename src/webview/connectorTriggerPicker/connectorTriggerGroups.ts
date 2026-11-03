@@ -23,9 +23,9 @@ export function partitionConnectorOptions(
     other: ConnectorTriggerOption[];
     webhookOnly: ConnectorTriggerOption[];
 } {
+    const supported = options.filter(option => option.eventSupport === 'poll');
     const remaining = new Map(
-        options
-            .filter(option => option.eventSupport !== 'webhook-only')
+        supported
             .map(option => [normalizeConnectorIdentity(option.id), option]),
     );
     const featured: ConnectorTriggerOption[] = [];
@@ -41,8 +41,7 @@ export function partitionConnectorOptions(
 
     return {
         featured,
-        other: options.filter(option =>
-            option.eventSupport !== 'webhook-only' &&
+        other: supported.filter(option =>
             remaining.has(normalizeConnectorIdentity(option.id))),
         webhookOnly: options.filter(option =>
             option.eventSupport === 'webhook-only'),

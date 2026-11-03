@@ -77,6 +77,11 @@ export interface ConnectorTriggerOperationOption {
     availability?: ConnectorTriggerAvailability;
 }
 
+export interface ConnectorTriggerDiscoveryClassification {
+    connectorId: string;
+    eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'>;
+}
+
 export interface ConnectorTriggerAzureContextDisplay {
     subscriptionId: string;
     subscriptionName: string;
@@ -120,6 +125,11 @@ export interface ConnectorTriggerPickerViewModel {
         webhookDiscoveryDescription: string;
         webhookNoneLoaded: string;
         webhookNoSearchResults: string;
+        connectorDiscoveryProgress: string;
+        connectorDiscoveryComplete: string;
+        connectorDiscoveryPartial: string;
+        connectorDiscoveryFailures: string;
+        retryConnectorDiscovery: string;
         connectorPageTitle: string;
         connectorPageDescription: string;
         connectorSearchPlaceholder: string;
@@ -161,6 +171,7 @@ export type ConnectorTriggerPickerMessage =
         command: 'loadConnectorOperations';
         connectorId: string;
     }
+    | { command: 'retryConnectorDiscovery' }
     | { command: 'loadCatalog' }
     | {
         command: 'continue';
@@ -205,6 +216,14 @@ export type ConnectorTriggerPickerResponse =
         message: string;
     }
     | {
+        command: 'connectorDiscoveryProgress';
+        classifications: ConnectorTriggerDiscoveryClassification[];
+        failed: number;
+        inProgress: boolean;
+        processed: number;
+        total: number;
+    }
+    | {
         command: 'projectCreationStarted';
     }
     | {
@@ -232,6 +251,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         message.command === 'signIn' ||
         message.command === 'loadAllSubscriptions' ||
         message.command === 'loadFilteredSubscriptions' ||
+        message.command === 'retryConnectorDiscovery' ||
         message.command === 'loadCatalog') {
         return true;
     }
@@ -314,6 +334,30 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             typeof message.connectorId === 'string' &&
             'message' in message &&
             typeof message.message === 'string';
+    }
+
+    if (message.command === 'connectorDiscoveryProgress') {
+        return 'classifications' in message &&
+            Array.isArray(message.classifications) &&
+            message.classifications.every(classification =>
+                !!classification &&
+                typeof classification === 'object' &&
+                'connectorId' in classification &&
+                typeof classification.connectorId === 'string' &&
+                'eventSupport' in classification &&
+                (
+                    classification.eventSupport === 'none' ||
+                    classification.eventSupport === 'poll' ||
+                    classification.eventSupport === 'webhook-only'
+                )) &&
+            'failed' in message &&
+            typeof message.failed === 'number' &&
+            'inProgress' in message &&
+            typeof message.inProgress === 'boolean' &&
+            'processed' in message &&
+            typeof message.processed === 'number' &&
+            'total' in message &&
+            typeof message.total === 'number';
     }
 
     if (message.command === 'projectCreationStarted') {

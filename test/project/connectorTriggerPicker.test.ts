@@ -428,34 +428,64 @@ suite('Connector trigger picker', () => {
         );
         assert.strictEqual(
             viewModel.labels.webhookDiscoveryDescription,
-            'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
+            'Webhook-only connectors will appear here as live event discovery completes.',
         );
         assert.strictEqual(
             viewModel.labels.webhookNoneLoaded,
-            'No webhook-only connectors have been found in the event metadata loaded so far.',
+            'No webhook-only connectors were found in the event metadata checked so far.',
         );
         assert.strictEqual(
             viewModel.labels.webhookNoSearchResults,
             'No webhook-only connectors match your search.',
         );
+        assert.strictEqual(
+            viewModel.labels.connectorDiscoveryProgress,
+            'Checking live event metadata: {0} of {1} connectors checked.',
+        );
+        assert.strictEqual(
+            viewModel.labels.connectorDiscoveryComplete,
+            'Live event discovery complete.',
+        );
+        assert.strictEqual(
+            viewModel.labels.connectorDiscoveryPartial,
+            'Live event discovery is incomplete: {0} of {1} connectors checked.',
+        );
+        assert.strictEqual(
+            viewModel.labels.connectorDiscoveryFailures,
+            '{0} connectors could not be checked and are not included.',
+        );
+        assert.strictEqual(
+            viewModel.labels.retryConnectorDiscovery,
+            'Retry failed checks',
+        );
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {
         const connectors: ConnectorTriggerOption[] = [
-            { id: 'salesforce', label: 'Salesforce' },
-            { id: 'custom-office-helper', label: 'Office 365 helper' },
-            { id: 'dataflows', label: 'Power Query Dataflows' },
-            { id: 'teams', label: 'Microsoft Teams' },
-            { id: 'OFFICE365', label: 'OFFICE 365 OUTLOOK' },
-            { id: 'github', label: 'GitHub' },
-            { id: 'sharepointonline', label: 'SharePoint' },
-            { id: 'visualstudio-team-services', label: 'Azure DevOps' },
-            { id: 'planner', label: 'Planner' },
-            { id: 'onedriveforbusiness', label: 'OneDrive for Business' },
+            { id: 'salesforce', label: 'Salesforce', eventSupport: 'poll' },
+            { id: 'custom-office-helper', label: 'Office 365 helper', eventSupport: 'poll' },
+            { id: 'dataflows', label: 'Power Query Dataflows', eventSupport: 'poll' },
+            { id: 'teams', label: 'Microsoft Teams', eventSupport: 'poll' },
+            { id: 'OFFICE365', label: 'OFFICE 365 OUTLOOK', eventSupport: 'poll' },
+            { id: 'github', label: 'GitHub', eventSupport: 'poll' },
+            { id: 'sharepointonline', label: 'SharePoint', eventSupport: 'poll' },
+            { id: 'visualstudio-team-services', label: 'Azure DevOps', eventSupport: 'poll' },
+            { id: 'planner', label: 'Planner', eventSupport: 'poll' },
+            { id: 'onedriveforbusiness', label: 'OneDrive for Business', eventSupport: 'poll' },
             {
                 id: 'adobesign',
                 label: 'Adobe Acrobat Sign',
                 eventSupport: 'webhook-only',
+            },
+            {
+                id: 'kusto',
+                label: 'Azure Data Explorer',
+                eventSupport: 'none',
+            },
+            {
+                id: 'pending',
+                label: 'Pending metadata',
+                eventSupport: 'unknown',
             },
         ];
 
@@ -478,6 +508,13 @@ suite('Connector trigger picker', () => {
         assert.deepStrictEqual(groups.webhookOnly.map(connector => connector.id), [
             'adobesign',
         ]);
+        assert.ok(![
+            ...groups.featured,
+            ...groups.other,
+            ...groups.webhookOnly,
+        ].some(connector =>
+            connector.id === 'kusto' ||
+            connector.id === 'pending'));
         assert.strictEqual(shouldExpandOtherConnectors('', false), false);
         assert.strictEqual(shouldExpandOtherConnectors('', true), true);
         assert.strictEqual(shouldExpandOtherConnectors('github', false), true);
@@ -1014,6 +1051,9 @@ suite('Connector trigger picker', () => {
             connectorId: 'office365',
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
+            command: 'retryConnectorDiscovery',
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
@@ -1056,6 +1096,17 @@ suite('Connector trigger picker', () => {
             command: 'catalogLoaded',
             connectors: [],
             operations: [],
+        }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'connectorDiscoveryProgress',
+            classifications: [{
+                connectorId: 'office365',
+                eventSupport: 'poll',
+            }],
+            failed: 1,
+            inProgress: true,
+            processed: 2,
+            total: 3,
         }), true);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsLoaded',

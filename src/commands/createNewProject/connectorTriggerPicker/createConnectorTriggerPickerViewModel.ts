@@ -93,15 +93,35 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             ),
             webhookDiscoveryDescription: localize(
                 'connectorTriggerWebhookDiscoveryDescription',
-                'Open a connector to load its live event metadata. Webhook-only connectors will appear here when discovered.',
+                'Webhook-only connectors will appear here as live event discovery completes.',
             ),
             webhookNoneLoaded: localize(
                 'connectorTriggerWebhookNoneLoaded',
-                'No webhook-only connectors have been found in the event metadata loaded so far.',
+                'No webhook-only connectors were found in the event metadata checked so far.',
             ),
             webhookNoSearchResults: localize(
                 'connectorTriggerWebhookNoSearchResults',
                 'No webhook-only connectors match your search.',
+            ),
+            connectorDiscoveryProgress: localize(
+                'connectorTriggerDiscoveryProgress',
+                'Checking live event metadata: {0} of {1} connectors checked.',
+            ),
+            connectorDiscoveryComplete: localize(
+                'connectorTriggerDiscoveryComplete',
+                'Live event discovery complete.',
+            ),
+            connectorDiscoveryPartial: localize(
+                'connectorTriggerDiscoveryPartial',
+                'Live event discovery is incomplete: {0} of {1} connectors checked.',
+            ),
+            connectorDiscoveryFailures: localize(
+                'connectorTriggerDiscoveryFailures',
+                '{0} connectors could not be checked and are not included.',
+            ),
+            retryConnectorDiscovery: localize(
+                'connectorTriggerRetryDiscovery',
+                'Retry failed checks',
             ),
             connectorPageTitle: localize('connectorTriggerChooseConnector', 'Choose a connector'),
             connectorPageDescription: localize('connectorTriggerChooseConnectorDescription', 'Find the service that will start your function, then choose an event.'),
