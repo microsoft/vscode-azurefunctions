@@ -414,6 +414,14 @@ suite('Connector trigger picker', () => {
             'Select a region',
         );
         assert.strictEqual(
+            viewModel.labels.recommendedRegions,
+            'Recommended',
+        );
+        assert.strictEqual(
+            viewModel.labels.otherRegions,
+            'Other',
+        );
+        assert.strictEqual(
             viewModel.labels.showAllSubscriptions,
             'Show all subscriptions...',
         );
@@ -1090,8 +1098,24 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'locationsLoaded',
             subscriptionId: 'sub-one',
-            locations: [{ name: 'eastus2', label: 'East US 2' }],
+            locations: [{
+                name: 'eastus2',
+                label: 'East US 2',
+                regionCategory: 'Recommended',
+            }, {
+                name: 'westcentralus',
+                label: 'West Central US',
+            }],
         }), true);
+        assert.strictEqual(isConnectorTriggerPickerResponse({
+            command: 'locationsLoaded',
+            subscriptionId: 'sub-one',
+            locations: [{
+                name: 'eastus2',
+                label: 'East US 2',
+                regionCategory: 1,
+            }],
+        }), false);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'catalogLoaded',
             connectors: [],

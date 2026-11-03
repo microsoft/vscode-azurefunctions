@@ -37,6 +37,7 @@ import {
 } from './ConnectorTriggerPickerViewModel';
 
 const connectorPageSize = 60;
+const recommendedRegionCategory = 'recommended';
 const showAllSubscriptionsValue = '__showAllSubscriptions__';
 const useFilteredSubscriptionsValue = '__useFilteredSubscriptions__';
 
@@ -890,6 +891,7 @@ export function AzureContextFields({
         showingAllSubscriptions,
         labels,
     );
+    const locationGroups = partitionConnectorLocations(locations);
     const requestSignIn = (
         event: MouseEvent<HTMLElement> |
         KeyboardEvent<HTMLElement>,
@@ -985,15 +987,44 @@ export function AzureContextFields({
                     <option value="">
                         {locationsLoading ? labels.loadingRegions : labels.selectRegion}
                     </option>
-                    {locations.map(location =>
-                        <option key={location.name} value={location.name}>
-                            {location.label}
-                        </option>
-                    )}
+                    {locationGroups.recommended.length > 0 &&
+                        <optgroup label={labels.recommendedRegions}>
+                            {locationGroups.recommended.map(location =>
+                                <option key={location.name} value={location.name}>
+                                    {location.label}
+                                </option>
+                            )}
+                        </optgroup>
+                    }
+                    {locationGroups.other.length > 0 &&
+                        <optgroup label={labels.otherRegions}>
+                            {locationGroups.other.map(location =>
+                                <option key={location.name} value={location.name}>
+                                    {location.label}
+                                </option>
+                            )}
+                        </optgroup>
+                    }
                 </select>
             </label>
         </div>
     );
+}
+
+export function partitionConnectorLocations(
+    locations: readonly ConnectorTriggerLocationOption[],
+): {
+    recommended: ConnectorTriggerLocationOption[];
+    other: ConnectorTriggerLocationOption[];
+} {
+    return {
+        recommended: locations.filter(location =>
+            location.regionCategory?.toLowerCase() ===
+            recommendedRegionCategory),
+        other: locations.filter(location =>
+            location.regionCategory?.toLowerCase() !==
+            recommendedRegionCategory),
+    };
 }
 
 export function shouldRequestAzureSignIn(

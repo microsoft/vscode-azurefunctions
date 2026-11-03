@@ -191,6 +191,7 @@ export class ConnectorTriggerDataClient {
             unique.set(name.toLowerCase(), {
                 name,
                 label: location.displayName?.trim() || name,
+                regionCategory: location.metadata?.regionCategory,
             });
         }
         return [...unique.values()].sort((left, right) =>

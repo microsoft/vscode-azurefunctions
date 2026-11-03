@@ -65,8 +65,22 @@ suite('Connector trigger data client', () => {
             async context => {
                 locationContexts.push(context);
                 return [
-                    createLocation('usgovvirginia', 'US Gov Virginia'),
-                    createLocation('usgovarizona', 'US Gov Arizona'),
+                    createLocation(
+                        'usgovvirginia',
+                        'US Gov Virginia',
+                        'Other',
+                    ),
+                    createLocation(
+                        'usgovarizona',
+                        'US Gov Arizona',
+                        'Recommended',
+                    ),
+                    createLocation('usgovtexas', 'US Gov Texas'),
+                    createLocation(
+                        'usgovarizona',
+                        'US Gov Arizona',
+                        'Recommended',
+                    ),
                 ];
             },
         );
@@ -81,11 +95,28 @@ suite('Connector trigger data client', () => {
                 'sub-one',
             ),
             [
-                { name: 'usgovarizona', label: 'US Gov Arizona' },
-                { name: 'usgovvirginia', label: 'US Gov Virginia' },
+                {
+                    name: 'usgovarizona',
+                    label: 'US Gov Arizona',
+                    regionCategory: 'Recommended',
+                },
+                {
+                    name: 'usgovtexas',
+                    label: 'US Gov Texas',
+                    regionCategory: undefined,
+                },
+                {
+                    name: 'usgovvirginia',
+                    label: 'US Gov Virginia',
+                    regionCategory: 'Other',
+                },
             ],
         );
         assert.strictEqual(locationContexts[0].subscriptionId, 'sub-one');
+        assert.strictEqual(
+            locationContexts[0].environment.resourceManagerEndpointUrl,
+            'https://management.usgovcloudapi.net/',
+        );
     });
 
     test('loads the full live catalog and defers events until connector selection', async () => {
@@ -551,10 +582,15 @@ function createSubscription(
     };
 }
 
-function createLocation(name: string, displayName: string): AzExtLocation {
+function createLocation(
+    name: string,
+    displayName: string,
+    regionCategory?: string,
+): AzExtLocation {
     return {
         displayName,
         id: `/subscriptions/sub-one/locations/${name}`,
+        metadata: regionCategory ? { regionCategory } : undefined,
         name,
     };
 }

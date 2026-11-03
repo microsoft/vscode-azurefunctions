@@ -39,6 +39,7 @@ import {
     reconcileConnectorTriggerSelection,
 } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
 import {
+    type ConnectorTriggerLocationOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
     type ConnectorTriggerPickerResponse,
@@ -321,6 +322,52 @@ suite('Connector trigger picker Azure context UX', () => {
             getSubscriptionModeActionLabel(true, labels),
             labels.useFilteredSubscriptions,
         );
+    });
+
+    test('groups locations by shared recommendation metadata and preserves selection', () => {
+        const labels = createConnectorTriggerPickerViewModel('python').labels;
+        const locations = [{
+            name: 'westus',
+            label: 'West US',
+            regionCategory: 'Other',
+        }, {
+            name: 'eastus',
+            label: 'East US',
+            regionCategory: 'Recommended',
+        }, {
+            name: 'centralus',
+            label: 'Central US',
+        }] as (ConnectorTriggerLocationOption & {
+            regionCategory?: string;
+        })[];
+        const html = renderToStaticMarkup(createElement(AzureContextFields, {
+            labels,
+            locations,
+            locationsLoading: false,
+            selectedRegion: 'westus',
+            selectedSubscriptionId: 'sub-one',
+            signInRequired: false,
+            showingAllSubscriptions: false,
+            subscriptions: [{ id: 'sub-one', label: 'Subscription One' }],
+            subscriptionsLoading: false,
+            onRequestSignIn: () => undefined,
+            onShowAllSubscriptions: () => undefined,
+            onUseFilteredSubscriptions: () => undefined,
+            onSelectRegion: () => undefined,
+            onSelectSubscription: () => undefined,
+        }));
+
+        assert.match(
+            html,
+            /<optgroup label="Recommended">.*value="eastus".*<\/optgroup>.*<optgroup label="Other">/s,
+        );
+        assert.match(
+            html,
+            /<option value="westus" selected="">West US<\/option>/,
+        );
+        assert.strictEqual((html.match(/value="eastus"/g) ?? []).length, 1);
+        assert.strictEqual((html.match(/value="westus"/g) ?? []).length, 1);
+        assert.strictEqual((html.match(/value="centralus"/g) ?? []).length, 1);
     });
 
     test('filters a large subscription list by display name or ID', () => {

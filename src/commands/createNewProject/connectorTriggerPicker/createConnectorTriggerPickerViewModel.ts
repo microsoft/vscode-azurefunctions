@@ -54,6 +54,14 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerLoadingRegions',
                 'Loading regions...',
             ),
+            recommendedRegions: localize(
+                'connectorTriggerRecommendedRegions',
+                'Recommended',
+            ),
+            otherRegions: localize(
+                'connectorTriggerOtherRegions',
+                'Other',
+            ),
             liveCatalogSource: localize(
                 'connectorTriggerLiveCatalogSource',
                 'Browsing connectors available in the selected Azure subscription and region.',

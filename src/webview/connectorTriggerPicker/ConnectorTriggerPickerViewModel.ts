@@ -37,6 +37,7 @@ export interface ConnectorTriggerSubscriptionOption {
 export interface ConnectorTriggerLocationOption {
     name: string;
     label: string;
+    regionCategory?: string;
 }
 
 export type ConnectorTriggerInputType =
@@ -109,6 +110,8 @@ export interface ConnectorTriggerPickerViewModel {
         selectRegion: string;
         loadingSubscriptions: string;
         loadingRegions: string;
+        recommendedRegions: string;
+        otherRegions: string;
         liveCatalogSource: string;
         selectionUnavailable: string;
         unavailable: string;
@@ -300,7 +303,8 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
         return 'subscriptionId' in message &&
             typeof message.subscriptionId === 'string' &&
             'locations' in message &&
-            Array.isArray(message.locations);
+            Array.isArray(message.locations) &&
+            message.locations.every(isConnectorTriggerLocationOption);
     }
 
     if (message.command === 'azureContextSelected') {
@@ -382,6 +386,21 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
         ) &&
         'message' in message &&
         typeof message.message === 'string';
+}
+
+function isConnectorTriggerLocationOption(
+    value: unknown,
+): value is ConnectorTriggerLocationOption {
+    return !!value &&
+        typeof value === 'object' &&
+        'name' in value &&
+        typeof value.name === 'string' &&
+        'label' in value &&
+        typeof value.label === 'string' &&
+        (
+            !('regionCategory' in value) ||
+            typeof value.regionCategory === 'string'
+        );
 }
 
 function isConnectorTriggerAzureContextDisplay(

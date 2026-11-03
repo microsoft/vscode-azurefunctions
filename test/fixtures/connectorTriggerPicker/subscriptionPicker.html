@@ -65,6 +65,8 @@
             selectRegion: 'Select a region',
             loadingSubscriptions: 'Loading subscriptions...',
             loadingRegions: 'Loading regions...',
+            recommendedRegions: 'Recommended',
+            otherRegions: 'Other',
             liveCatalogSource: 'Browsing connectors available in the selected Azure subscription and region.',
             selectionUnavailable: 'The previous connector or event is no longer available in the live catalog. Choose another selection.',
             unavailable: 'Unavailable in the selected Azure catalog',
@@ -278,8 +280,16 @@
                         command: 'locationsLoaded',
                         subscriptionId: message.subscriptionId,
                         locations: [
-                            { name: 'westcentralus', label: 'West Central US' },
-                            { name: 'eastus2', label: 'East US 2' },
+                            {
+                                name: 'westcentralus',
+                                label: 'West Central US',
+                                regionCategory: 'Other',
+                            },
+                            {
+                                name: 'eastus2',
+                                label: 'East US 2',
+                                regionCategory: 'Recommended',
+                            },
                         ],
                     }));
                 } else if (message.command === 'selectRegion') {
@@ -376,8 +386,16 @@
                 command: 'locationsLoaded',
                 subscriptionId: subscriptions[0].id,
                 locations: [
-                    { name: 'westcentralus', label: 'West Central US' },
-                    { name: 'eastus2', label: 'East US 2' },
+                    {
+                        name: 'westcentralus',
+                        label: 'West Central US',
+                        regionCategory: 'Other',
+                    },
+                    {
+                        name: 'eastus2',
+                        label: 'East US 2',
+                        regionCategory: 'Recommended',
+                    },
                 ],
             });
             postResponse({
