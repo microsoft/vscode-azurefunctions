@@ -48,6 +48,7 @@ export namespace cliFeedUtils {
             displayName: string;
             description?: string;
             hidden: boolean;
+            endOfLifeDate?: string;
         },
         sdk: {
             name: string;

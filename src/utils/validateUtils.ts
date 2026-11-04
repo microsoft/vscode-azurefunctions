@@ -5,7 +5,7 @@
 
 export namespace validateUtils {
     export function isAlphanumericWithHypens(value: string): boolean {
-        return /^[a-zA-z0-9]([-a-zA-z0-9]*[a-zA-z0-9])?$/.test(value);
+        return /^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$/.test(value);
     }
 
     export function isLowerCaseAlphanumericWithHypens(value: string): boolean {

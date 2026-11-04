@@ -40,8 +40,7 @@ function normalizeRange(range: string): string | undefined {
     const match = range.match(/\[(\d+(?:\.\d+\.\d+)?|\d+)\.\*,\s*(\d+\.\d+\.\d+)\)/) ||
         range.match(/\[(\d+\.\d+\.\d+),\s*(\d+\.\d+\.\d+)\)/);
     if (match) {
-        const lower = match[1].includes('*') ? match[1].replace('*', '0.0.0') : match[1];
-        return `>=${lower} <${match[2]}`;
+        return `>=${match[1]} <${match[2]}`;
     }
     return undefined;
 }

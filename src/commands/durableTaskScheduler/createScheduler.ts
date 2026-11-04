@@ -16,24 +16,12 @@ import { type DurableTaskSchedulerClient, DurableTaskSchedulerSku } from "../../
 import { type DurableTaskSchedulerDataBranchProvider } from "../../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider";
 import { createActivityContext } from "../../utils/activityUtils";
 import { withCancellation } from "../../utils/cancellation";
+import { SchedulerNamingStep } from "./SchedulerNamingStep";
 
 interface ICreateSchedulerContext extends ISubscriptionActionContext, ILocationWizardContext, IResourceGroupWizardContext, ExecuteActivityContext {
     subscription?: AzureSubscription;
     schedulerSku?: DurableTaskSchedulerSku;
     schedulerName?: string;
-}
-
-class SchedulerNamingStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
-    async prompt(wizardContext: ICreateSchedulerContext): Promise<void> {
-        wizardContext.schedulerName = await wizardContext.ui.showInputBox({
-            prompt: localize('schedulerNamingStepPrompt', 'Enter a name for the new scheduler')
-        });
-        wizardContext.relatedNameTask = Promise.resolve(wizardContext.schedulerName);
-    }
-
-    shouldPrompt(wizardContext: ICreateSchedulerContext): boolean {
-        return !wizardContext.schedulerName;
-    }
 }
 
 class SchedulerSkuStep extends AzureWizardPromptStep<ICreateSchedulerContext> {
