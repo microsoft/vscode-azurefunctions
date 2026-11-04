@@ -86,7 +86,13 @@ Repository-wide rules apply to implementation, refactoring, debugging, pull requ
   - `npm test` for extension integration behavior; use existing Mocha grep support for focused tests.
 - Documentation-only changes need no build unless generated or validated documentation affected.
 
+## Pull request descriptions
+
+Follow [Pull requests and reviews](../README.md#pull-requests-and-reviews): keep the body to `Fixes #<issue>` lines (or `Fixes owner/repo#number` for cross-repository issues), a human-readable one- or two-line reason, and labeled **Before** and **After** screenshots showing the same scenario without and with the candidate changes. If no issue is linked, say so; never invent one. Use real screenshots with secrets and sensitive customer data, including resource names and user paths, redacted. State capture/execution blockers and unverified behavior explicitly; for documentation-only or nonvisual changes, explain why screenshots do not apply and provide relevant nonvisual evidence instead.
+
 ## Pull request review
+
+First exercise the changed scenario without the candidate changes and capture a baseline screenshot, then exercise the same scenario with them and capture a screenshot demonstrating the feature or fix. Use an isolated checkout or build without disturbing existing work. Never fabricate evidence or claim verification that was not performed. Report blockers and unverified behavior explicitly; explain screenshot inapplicability for documentation-only or nonvisual changes and use relevant diff, test, or other nonvisual evidence. Redact evidence as required above. Screenshots do not replace regression tests or the technical checks below.
 
 Review concrete correctness, reliability, compatibility, security, UX regressions; skip formatting enforced by TypeScript, ESLint, formatting tools.
 
@@ -103,4 +109,4 @@ For each changed flow, verify:
 - Regression tests reproducing changed behavior without unnecessary live services.
 - `main.js` untouched.
 
-Report only findings with triggering scenario and observable impact. State file/line, severity, failure mode, smallest viable fix. Avoid speculative warnings, generic advice, praise, summaries unless requested. Verify assumptions against local code and relevant `microsoft/vscode-azuretools` behavior.
+Report only findings with triggering scenario and observable impact. Write each finding as one human-readable line with file/line, severity, failure mode, and smallest viable fix; attach a real screenshot showing any reported bug, or explicitly state the capture blocker or nonvisual applicability and supporting evidence. Avoid speculative warnings, generic advice, praise, summaries unless requested. Verify assumptions against local code and relevant `microsoft/vscode-azuretools` behavior.

@@ -109,6 +109,19 @@ There are a couple of ways you can contribute to this repo:
   * To build, press <kbd>F1</kbd> and type in `Tasks: Run Build Task`.
   * Debug: press <kbd>F5</kbd> to start debugging the extension.
 
+### Pull requests and reviews
+
+Keep PR descriptions brief:
+
+* `Fixes #<issue>` for each issue fixed; use `Fixes owner/repo#number` for another repository. If no issue is linked, say so rather than inventing one.
+* A human-readable one- or two-line reason for the change.
+* **Before:** a real screenshot reproducing the bug or showing the missing feature without the candidate changes.
+* **After:** a real screenshot of the same scenario demonstrating the fix or feature with the candidate changes.
+
+Reviews must first exercise that scenario without the candidate changes and capture a baseline screenshot, then exercise it with the candidate changes and capture a screenshot demonstrating the result. Use an isolated checkout or build; do not overwrite existing work. Screenshots supplement, not replace, regression tests and technical review.
+
+Write each finding as one human-readable line describing the scenario and impact, with a file/line reference, severity, and smallest viable fix; attach a real screenshot showing any reported bug. Redact secrets and sensitive customer data, including resource names and user paths, from all evidence before sharing. Never fabricate screenshots or claim unperformed verification. If execution or capture is blocked, state the blocker and what remains unverified. For documentation-only or nonvisual changes, explain why screenshots do not apply and provide relevant diff, test, or other nonvisual evidence instead.
+
 ### Legal
 
 Before we can accept your pull request you will need to sign a **Contribution License Agreement**. All you need to do is to submit a pull request, then the PR will get appropriately labelled (e.g. `cla-required`, `cla-norequired`, `cla-signed`, `cla-already-signed`). If you already signed the agreement we will continue with reviewing the PR, otherwise system will tell you how you can sign the CLA. Once you sign the CLA all future PR's will be labeled as `cla-signed`.
