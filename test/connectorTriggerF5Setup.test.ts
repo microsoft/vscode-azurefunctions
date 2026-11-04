@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
+    AzExtFsExtra,
     UserCancelledError,
     createTestActionContext,
     type IActionContext,
@@ -11,6 +12,8 @@ import {
     type PromptResult,
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     type ConnectorTriggerConnection,
@@ -31,6 +34,8 @@ import {
     isValidConnectorPollingEndpoint,
     runConnectorTriggerF5Setup,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
+import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
+import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 const projectPath = 'C:\\test\\connector-project';
 const binding: ConnectorTriggerLocalBinding = {
@@ -240,6 +245,117 @@ suite('Connector Trigger F5 setup', () => {
         assert.doesNotMatch(JSON.stringify(first), /subscription-id|tenant-id|connector-project/i);
     });
 
+    test('resolves the Outlook folder tree through its concrete dynamicInvoke open path', async () => {
+        const state = createGatewayState();
+        const namespace = createNamespace('gateway');
+        const connection = createConnection('connection', 'Connected');
+        state.namespace = namespace;
+        state.connection = connection;
+        let dynamicRequest: ConnectorTriggerDynamicInvokeRequest | undefined;
+        const gateway = createGateway(state, {
+            onDynamicInvoke: request => {
+                dynamicRequest = request;
+                return {
+                    response: {
+                        statusCode: 200,
+                        body: {
+                            value: [
+                                { Id: 'inbox-id', DisplayName: 'Inbox' },
+                                { Id: 'archive-id', DisplayName: 'Archive' },
+                            ],
+                        },
+                    },
+                };
+            },
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createOutlookSwagger(),
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const operation = await resolver.resolveOperation(context, {
+            handoff,
+            namespace,
+            connection,
+        });
+        const folderInput = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+
+        assert.strictEqual(folderInput.dynamic?.kind, 'tree');
+        const resolution = await resolver.resolveDynamicInput(context, {
+            handoff,
+            namespace,
+            connection,
+            operation,
+            input: folderInput,
+            values: {},
+        });
+
+        assert.deepStrictEqual(dynamicRequest, {
+            request: {
+                method: 'GET',
+                path: '/OnFilePickerOpen',
+                queries: {
+                    operation: 'MailFolders',
+                },
+            },
+        });
+        assert.deepStrictEqual(resolution.options, [
+            { label: 'Inbox', value: 'inbox-id' },
+            { label: 'Archive', value: 'archive-id' },
+        ]);
+    });
+
+    test('treats a valid persisted handoff as authoritative without source scanning', async () => {
+        const tempProject = path.join(os.tmpdir(), `connector-f5-${Date.now()}`);
+        await AzExtFsExtra.ensureDir(tempProject);
+        await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
+            IsEncrypted: false,
+            Values: {
+                ['ConnectorNamespace__pollingEndpoint']:
+                    'https://example.logic.azure.com/api/connectorGateways/gateway-id',
+                OnNewEmailTriggerConfigName: 'trigger-config-name',
+            },
+        });
+        let completed = 0;
+        const fail = async (): Promise<never> => assert.fail('Azure setup must not run for valid settings.');
+        const dependencies: ConnectorTriggerF5Dependencies = {
+            bindingResolver: {
+                resolve: async () => binding,
+            },
+            gateway: {
+                listNamespaces: fail,
+                ensureNamespace: fail,
+                listConnections: fail,
+                ensureConnection: fail,
+                getConnection: fail,
+                getConsentLink: fail,
+                dynamicInvoke: fail,
+                ensureConnectionAccessPolicies: fail,
+                createOrUpdateTriggerConfig: fail,
+            },
+            handoffStore: {
+                read: async () => handoff,
+                markComplete: async () => {
+                    completed += 1;
+                },
+            },
+            operationResolver: {
+                resolveOperation: fail,
+                resolveDynamicInput: fail,
+                serializeParameters: () => assert.fail('Parameters must not be serialized.'),
+            },
+        };
+
+        try {
+            const context = await createContext(new ScriptedUi([], [], []));
+            await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
+
+            assert.strictEqual(completed, 1);
+            assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
+            assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
 });
 
 interface GatewayState {
@@ -408,6 +524,84 @@ function createOperationInputs(): ConnectorTriggerInputDefinition[] {
             required: true,
         },
     ];
+}
+
+function createOutlookSwagger(): unknown {
+    return {
+        paths: {
+            '/{connectionId}/v3/Mail/OnNewEmail': {
+                get: {
+                    operationId: 'OnNewEmailV3',
+                    parameters: [
+                        {
+                            name: 'connectionId',
+                            in: 'path',
+                            required: true,
+                            type: 'string',
+                            ['x-ms-visibility']: 'internal',
+                        },
+                        {
+                            name: 'folderPath',
+                            in: 'query',
+                            required: false,
+                            type: 'string',
+                            default: 'Inbox',
+                            ['x-ms-summary']: 'Folder',
+                            ['x-ms-dynamic-tree']: {
+                                settings: {
+                                    canSelectParentNodes: true,
+                                    canSelectLeafNodes: false,
+                                },
+                                open: {
+                                    operationId: 'OnFilePickerOpen',
+                                    itemsPath: 'value',
+                                    itemValuePath: 'Id',
+                                    itemTitlePath: 'DisplayName',
+                                    parameters: {
+                                        operation: {
+                                            value: 'MailFolders',
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
+            '/{connectionId}/OnFilePickerOpen': {
+                get: {
+                    operationId: 'OnFilePickerOpen',
+                    parameters: [],
+                },
+            },
+        },
+    };
+}
+
+function createNamespace(name: string): ConnectorTriggerNamespace {
+    return {
+        id: `/connectorGateways/${name}`,
+        name,
+        resourceGroupName: 'resource-group',
+        location: handoff.region,
+        identity: {
+            principalId: 'namespace-principal',
+            tenantId: handoff.subscription.tenantId,
+        },
+    };
+}
+
+function createConnection(name: string, status: string): ConnectorTriggerConnection {
+    return {
+        id: `/connections/${name}`,
+        name,
+        connectorId: handoff.connectorId,
+        status,
+        createdBy: {
+            objectId: 'developer-object',
+            tenantId: handoff.subscription.tenantId,
+        },
+    };
 }
 
 function createRuntime(): ConnectorTriggerF5Runtime {
