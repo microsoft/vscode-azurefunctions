@@ -195,4 +195,41 @@ suite('Connector Namespace wizard steps', () => {
         assert.deepStrictEqual(context.valuesToMask, ['test-namespace']);
         assert.strictEqual(step.shouldExecute(context), false);
     });
+
+    for (const scenario of [
+        { name: 'an existing resource group', newResourceGroupName: undefined },
+        { name: 'a newly created resource group', newResourceGroupName: 'selected-rg' },
+        { name: 'an existing resource group after creation is denied', newResourceGroupName: 'denied-rg' },
+    ]) {
+        test(`uses ${scenario.name} once the resource group is resolved`, async () => {
+            const createdResource: GenericResource = {
+                id: '/subscriptions/sub/resourceGroups/selected-rg/providers/Microsoft.Web/connectorGateways/test-namespace',
+                name: 'test-namespace',
+                location: 'eastus',
+            };
+            const client: ConnectorNamespaceClient = {
+                isNameAvailable: async () => true,
+                create: async (_context, resourceGroupName, namespaceName, location) => {
+                    assert.strictEqual(resourceGroupName, 'selected-rg');
+                    assert.strictEqual(namespaceName, 'test-namespace');
+                    assert.strictEqual(location, 'eastus');
+                    return createdResource;
+                },
+            };
+            const context = {
+                resourceGroup: { name: 'selected-rg', location: 'eastus' },
+                newResourceGroupName: scenario.newResourceGroupName,
+                newConnectorNamespaceName: 'test-namespace',
+                _location: {
+                    name: 'eastus',
+                    displayName: 'East US',
+                },
+                valuesToMask: [],
+            } as unknown as IConnectorNamespaceWizardContext;
+
+            await new ConnectorNamespaceCreateStep(client).execute(context, { report: () => undefined });
+
+            assert.strictEqual(context.connectorNamespace, createdResource);
+        });
+    }
 });

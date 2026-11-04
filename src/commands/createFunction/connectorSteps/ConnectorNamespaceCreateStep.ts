@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStepWithActivityOutput, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStepWithActivityOutput, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { localize } from '../../../localize';
 import { AzureConnectorNamespaceClient, type ConnectorNamespaceClient } from './ConnectorNamespaceClient';
@@ -35,7 +35,7 @@ export class ConnectorNamespaceCreateStep<T extends IConnectorNamespaceWizardCon
 
         context.connectorNamespace = await this._client.create(
             context,
-            context.newResourceGroupName ?? nonNullValueAndProp(context.resourceGroup, 'name'),
+            context.resourceGroup?.name ?? nonNullProp(context, 'newResourceGroupName'),
             namespaceName,
             nonNullProp(await LocationListStep.getLocation(context), 'name'),
         );
