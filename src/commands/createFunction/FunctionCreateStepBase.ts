@@ -31,7 +31,7 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
     if (cachedFunc) {
         try {
-            runPostFunctionCreateSteps(cachedFunc);
+            await runPostFunctionCreateSteps(cachedFunc);
         } finally {
             await ext.context.globalState.update(cacheKey, undefined);
         }
@@ -127,14 +127,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             }
         }
 
-        if (context.openBehavior) {
-            // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            await ext.context.globalState.update(cacheKey, cachedFunc);
-            // Delete cached information if the extension host was not restarted after 5 seconds
-            setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
-        }
-
-        runPostFunctionCreateSteps(cachedFunc);
+        await openCreatedFunction(cachedFunc, !!context.openBehavior);
     }
 
     public shouldExecute(context: T): boolean {
@@ -142,9 +135,19 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 }
 
-function runPostFunctionCreateSteps(func: ICachedFunction): void {
-    // Don't wait
-    void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+export async function openCreatedFunction(func: ICachedFunction, cache: boolean): Promise<void> {
+    if (cache) {
+        // OpenFolderStep can restart the extension host, so activation opens the cached file.
+        const globalState = ext.context.globalState;
+        await globalState.update(cacheKey, func);
+        setTimeout(() => { void globalState.update(cacheKey, undefined); }, 5 * 1000);
+    }
+
+    await runPostFunctionCreateSteps(func);
+}
+
+async function runPostFunctionCreateSteps(func: ICachedFunction): Promise<void> {
+    await callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
         context.telemetry.suppressIfSuccessful = true;
 
         // If function creation created a new file, open it in an editor...
