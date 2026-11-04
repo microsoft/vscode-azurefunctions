@@ -111,7 +111,7 @@ There are a couple of ways you can contribute to this repo:
 
 ### Creation and deployment workflow telemetry
 
-This integration uses published `@microsoft/vscode-azext-utils` 5.1.0 from merged [microsoft/vscode-azuretools#2418](https://github.com/microsoft/vscode-azuretools/pull/2418). App Service 6.0.0 still lacks deployment/task telemetry and the optional `tryRunPreDeployTask` retry argument. A compatible published App Service release and dependency update remain required for a complete build; historical local-artifact tests do not satisfy that dependency.
+This integration uses the published `@microsoft/vscode-azext-utils` 5.1.0 and `@microsoft/vscode-azext-azureappservice` 6.1.0 workflow telemetry APIs from [microsoft/vscode-azuretools#2418](https://github.com/microsoft/vscode-azuretools/pull/2418) and [microsoft/vscode-azuretools#2426](https://github.com/microsoft/vscode-azuretools/pull/2426).
 
 The root events are `azureFunctions.createNewProject`, `azureFunctions.createNewProjectWithDockerfile`, `azureFunctions.templateGallery.createProject`, `azureFunctions.deploy`, `azureFunctions.deployProject`, `azureFunctions.deploySlot`, `azureFunctions.redeploy`, and `azureFunctions.deployByFunctionAppId`. The additive shared schema (`workflowSchemaVersion=1`) identifies the bounded `workflow` and `command`, generated `workflowRunId` and `attemptId`, `isWorkflowRoot`, and observed `stage`/`outcome`. Nested actions have a `parentAttemptId`; deployment stages and real retries are not additional user workflows. Registered literal step identities are independent of wizard runtime UUIDs. Unregistered template-supplied step names remain `unknown`.
 
