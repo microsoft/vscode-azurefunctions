@@ -43,6 +43,8 @@ Repository-wide rules apply to implementation, refactoring, debugging, pull requ
 
 ### Azure clients and resources
 
+- Interactive Azure sign-in is owned by Azure Resources, which uses `@microsoft/vscode-azext-azureauth` and VS Code's built-in Microsoft Authentication provider (`vscode.authentication`). Functions consumes its authenticated subscription context; do not introduce independent Microsoft sessions, Azure CLI/`DefaultAzureCredential` fallbacks, or an Azure Account extension dependency to fix sign-in.
+- Preserve the selected account/tenant, subscription, cloud/environment and resource scopes when passing context to shared clients. Public Azure uses `microsoft`; sovereign/custom clouds use `microsoft-sovereign-cloud`. CLI sign-in and explicit CI/federated test authentication are not proof of an interactive VS Code session. See `AGENTS.md` for the ownership trace and diagnostics.
 - Use existing client factory from `src/utils/azureClients.ts` or shared Azure Tools packages. Never instantiate `@azure/arm-*` clients directly in feature code.
 - New extension-specific ARM clients belong in `src/utils/azureClients.ts`; keep runtime SDK imports dynamic, module-scope SDK imports type-only.
 - Pass `ISubscriptionActionContext` or `[IActionContext, ISubscriptionContext | AzExtTreeItem]` to supported factories; never manually copy credentials.
