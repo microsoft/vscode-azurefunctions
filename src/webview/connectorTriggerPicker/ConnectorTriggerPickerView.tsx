@@ -41,20 +41,6 @@ const recommendedRegionCategory = 'recommended';
 const showAllSubscriptionsValue = '__showAllSubscriptions__';
 const useFilteredSubscriptionsValue = '__useFilteredSubscriptions__';
 
-interface ConnectorDiscoveryState {
-    failed: number;
-    inProgress: boolean;
-    processed: number;
-    total: number;
-}
-
-const initialConnectorDiscoveryState: ConnectorDiscoveryState = {
-    failed: 0,
-    inProgress: false,
-    processed: 0,
-    total: 0,
-};
-
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
@@ -81,8 +67,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [connectorSearch, setConnectorSearch] = useState('');
     const [connectorLimit, setConnectorLimit] = useState(connectorPageSize);
     const [otherConnectorsExpanded, setOtherConnectorsExpanded] = useState(false);
-    const [webhookOnlyConnectorsExpanded, setWebhookOnlyConnectorsExpanded] =
-        useState(false);
     const [selectedConnectorId, setSelectedConnectorId] = useState('');
     const [selectedOperationId, setSelectedOperationId] = useState('');
     const [operationsLoading, setOperationsLoading] = useState(false);
@@ -91,8 +75,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
     const [loadError, setLoadError] = useState<string>();
-    const [connectorDiscovery, setConnectorDiscovery] =
-        useState<ConnectorDiscoveryState>(initialConnectorDiscoveryState);
 
     const initialize = useCallback(() => {
         setSubscriptionsLoading(true);
@@ -114,14 +96,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         vscodeApi.postMessage({ command: 'loadCatalog' });
     }, [azureContext, initialize, vscodeApi]);
 
-    const retryConnectorDiscovery = useCallback(() => {
-        setConnectorDiscovery(current => ({
-            ...current,
-            inProgress: true,
-        }));
-        vscodeApi.postMessage({ command: 'retryConnectorDiscovery' });
-    }, [vscodeApi]);
-
     const signIn = useCallback(() => {
         if (signInRequestPendingRef.current) {
             return;
@@ -142,7 +116,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setCatalogWarning(undefined);
         setConnectors([]);
         setOperations([]);
-        setConnectorDiscovery(initialConnectorDiscoveryState);
         selectedConnectorIdRef.current = '';
         setSelectedConnectorId('');
         setSelectedOperationId('');
@@ -180,7 +153,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setCatalogWarning(undefined);
         setConnectors([]);
         setOperations([]);
-        setConnectorDiscovery(initialConnectorDiscoveryState);
         selectedConnectorIdRef.current = '';
         setSelectedConnectorId('');
         setSelectedOperationId('');
@@ -225,7 +197,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setSelectionUnavailable(false);
                 setConnectors([]);
                 setOperations([]);
-                setConnectorDiscovery(initialConnectorDiscoveryState);
                 setCatalogLoading(false);
                 setConnectorSearch('');
                 setConnectorLimit(connectorPageSize);
@@ -266,7 +237,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setSelectionUnavailable(false);
                 setConnectors([]);
                 setOperations([]);
-                setConnectorDiscovery(initialConnectorDiscoveryState);
                 setCatalogLoading(false);
                 setSelectedConnectorId('');
                 setSelectedOperationId('');
@@ -293,7 +263,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogLoaded(false);
                 setConnectors([]);
                 setOperations([]);
-                setConnectorDiscovery(initialConnectorDiscoveryState);
                 setSelectedConnectorId('');
                 setSelectedOperationId('');
                 selectedConnectorIdRef.current = '';
@@ -306,40 +275,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setCatalogWarning(message.warning);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
-                setConnectorDiscovery({
-                    failed: 0,
-                    inProgress: message.connectors.length > 0,
-                    processed: message.connectors.filter(connector =>
-                        connector.eventSupport &&
-                        connector.eventSupport !== 'unknown').length,
-                    total: message.connectors.length,
-                });
-            } else if (message.command === 'connectorDiscoveryProgress') {
-                if (message.classifications.length > 0) {
-                    const classifications = new Map(
-                        message.classifications.map(classification => [
-                            classification.connectorId.toLocaleLowerCase(),
-                            classification.eventSupport,
-                        ]),
-                    );
-                    setConnectors(current => current.map(connector => {
-                        const eventSupport = classifications.get(
-                            connector.id.toLocaleLowerCase(),
-                        );
-                        return eventSupport ?
-                            {
-                                ...connector,
-                                eventSupport,
-                            } :
-                            connector;
-                    }));
-                }
-                setConnectorDiscovery({
-                    failed: message.failed,
-                    inProgress: message.inProgress,
-                    processed: message.processed,
-                    total: message.total,
-                });
             } else if (message.command === 'connectorOperationsLoaded') {
                 if (!equalsIgnoreCase(
                     message.connectorId,
@@ -460,8 +395,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     );
     const visibleConnectorCount =
         connectorGroups.featured.length +
-        connectorGroups.other.length +
-        connectorGroups.webhookOnly.length;
+        connectorGroups.other.length;
     const otherConnectorsVisible = shouldExpandOtherConnectors(
         connectorSearch,
         otherConnectorsExpanded,
@@ -469,11 +403,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const displayedOtherConnectors = connectorSearch.trim() ?
         connectorGroups.other :
         connectorGroups.other.slice(0, connectorLimit);
-    const connectorSearchActive = !!connectorSearch.trim();
-    const webhookOnlyConnectorsVisible = shouldExpandOtherConnectors(
-        connectorSearch,
-        webhookOnlyConnectorsExpanded,
-    );
 
     const selectConnector = (connectorId: string) => {
         if (connectors.find(connector =>
@@ -511,7 +440,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const selectOperation = (operationId: string) => {
         const operation = connectorOperations.find(item => item.id === operationId);
         if (!operation ||
-            operation.isWebhook ||
             operation.availability === 'unavailable') {
             return;
         }
@@ -580,43 +508,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                             <span>
                                 {azureContext.subscriptionName} · {azureContext.regionDisplayName}
                             </span>
-                            {connectorDiscovery.total > 0 &&
-                                <span className="connector-discovery-status" role="status">
-                                    {connectorDiscovery.inProgress ?
-                                        format(
-                                            viewModel.labels.connectorDiscoveryProgress,
-                                            connectorDiscovery.processed.toString(),
-                                            connectorDiscovery.total.toString(),
-                                        ) :
-                                        connectorDiscovery.failed > 0 ?
-                                            format(
-                                                viewModel.labels.connectorDiscoveryPartial,
-                                                (
-                                                    connectorDiscovery.processed -
-                                                    connectorDiscovery.failed
-                                                ).toString(),
-                                                connectorDiscovery.total.toString(),
-                                            ) :
-                                            viewModel.labels.connectorDiscoveryComplete}
-                                </span>
-                            }
-                            {connectorDiscovery.failed > 0 &&
-                                <span className="connector-discovery-failures warning-text">
-                                    {format(
-                                        viewModel.labels.connectorDiscoveryFailures,
-                                        connectorDiscovery.failed.toString(),
-                                    )}
-                                    {!connectorDiscovery.inProgress &&
-                                        <Button
-                                            appearance="subtle"
-                                            size="small"
-                                            onClick={retryConnectorDiscovery}
-                                        >
-                                            {viewModel.labels.retryConnectorDiscovery}
-                                        </Button>
-                                    }
-                                </span>
-                            }
                             {catalogWarning &&
                                 <span className="warning-text">{catalogWarning}</span>
                             }
@@ -737,18 +628,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                                 }
                                             </section>
                                         }
-                                        <WebhookOnlyConnectorGroup
-                                            discoveryInProgress={connectorDiscovery.inProgress}
-                                            expanded={webhookOnlyConnectorsVisible}
-                                            labels={viewModel.labels}
-                                            options={connectorGroups.webhookOnly}
-                                            searchActive={connectorSearchActive}
-                                            value={selectedConnectorId}
-                                            onChange={selectConnector}
-                                            onToggle={() => setWebhookOnlyConnectorsExpanded(
-                                                expanded => !expanded,
-                                            )}
-                                        />
                                     </>
                     }
                 </section>
@@ -766,7 +645,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     projectCreationError={projectCreationError}
                     selectedOperationId={selectedOperationId}
                     templateUnavailable={selectedCatalogItemUnavailable}
-                    webhookOnly={selectedConnector.eventSupport === 'webhook-only'}
                     onChangeConnector={() => setActiveStep(1)}
                     onSelectOperation={selectOperation}
                     onRetryOperations={retryConnectorOperations}
@@ -774,72 +652,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 />
             }
         </main>
-    );
-}
-
-export function WebhookOnlyConnectorGroup({
-    discoveryInProgress,
-    expanded,
-    labels,
-    options,
-    searchActive,
-    value,
-    onChange,
-    onToggle,
-}: {
-    discoveryInProgress: boolean;
-    expanded: boolean;
-    labels: ConnectorTriggerPickerViewModel['labels'];
-    options: readonly ConnectorTriggerOption[];
-    searchActive: boolean;
-    value: string;
-    onChange: (value: string) => void;
-    onToggle: () => void;
-}): JSX.Element {
-    const emptyMessage = searchActive ?
-        labels.webhookNoSearchResults :
-        discoveryInProgress ?
-            labels.webhookDiscoveryDescription :
-            labels.webhookNoneLoaded;
-    return (
-        <section className="other-connectors webhook-only-connectors">
-            <button
-                type="button"
-                className="other-connectors-toggle"
-                aria-controls="webhook-only-connectors-grid"
-                aria-expanded={expanded}
-                aria-label={expanded ?
-                    labels.hideWebhookOnlyConnectors :
-                    labels.showWebhookOnlyConnectors}
-                disabled={searchActive}
-                onClick={onToggle}
-            >
-                <span
-                    className={`codicon codicon-chevron-${expanded ? 'down' : 'right'}`}
-                    aria-hidden="true"
-                />
-                {format(
-                    labels.webhookOnlyConnectors,
-                    options.length.toString(),
-                )}
-            </button>
-            {expanded &&
-                <div id="webhook-only-connectors-grid">
-                    {options.length > 0 ?
-                        <ConnectorTilePicker
-                            label={labels.webhookOnlyConnectors}
-                            options={options}
-                            unavailableLabel={labels.unavailable}
-                            value={value}
-                            onChange={onChange}
-                        /> :
-                        <p className="status-text" role="status">
-                            {emptyMessage}
-                        </p>
-                    }
-                </div>
-            }
-        </section>
     );
 }
 

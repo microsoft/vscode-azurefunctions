@@ -33,7 +33,6 @@ import {
     getSubscriptionModeActionLabel,
     shouldPreserveSubscriptionSelection,
     shouldRequestAzureSignIn,
-    WebhookOnlyConnectorGroup,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     reconcileConnectorTriggerSelection,
@@ -151,7 +150,6 @@ suite('Connector trigger picker Azure context UX', () => {
             projectCreationError: '',
             selectedOperationId: operation.id,
             templateUnavailable: false,
-            webhookOnly: false,
             onChangeConnector: () => undefined,
             onRetryOperations: () => undefined,
             onSelectOperation: () => undefined,
@@ -164,7 +162,7 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(!html.includes('Folder parameter must not render'));
     });
 
-    test('renders webhook-only events as read-only and unsupported', () => {
+    test('renders webhook events as selectable with unsupported creation status', () => {
         const labels = createConnectorTriggerPickerViewModel('python').labels;
         const html = renderToStaticMarkup(createElement(ConnectorEventStep, {
             connector: {
@@ -179,59 +177,28 @@ suite('Connector trigger picker Azure context UX', () => {
                 label: 'When a new agreement is created',
                 isWebhook: true,
                 isNotification: false,
-                availability: 'unavailable',
             }],
             operationsError: '',
             operationsLoading: false,
             projectCreating: false,
             projectCreationDetail: '',
             projectCreationError: '',
-            selectedOperationId: '',
+            selectedOperationId: 'CreateWebhookForAgreementCreatedEvent',
             templateUnavailable: false,
-            webhookOnly: true,
             onChangeConnector: () => undefined,
             onRetryOperations: () => undefined,
-            onSelectOperation: () => assert.fail('Webhook event must be read-only.'),
-            onUseTemplate: () => assert.fail('Webhook event must not be creatable.'),
+            onSelectOperation: () => undefined,
+            onUseTemplate: () => undefined,
         }));
 
-        assert.ok(html.includes(labels.webhookOnlyDescription));
-        assert.ok(html.includes(labels.webhookEventUnavailable));
+        assert.ok(html.includes(labels.webhookEventDelivery));
         assert.ok(html.includes('When a new agreement is created'));
-        assert.ok(html.includes('disabled=""'));
-        assert.ok(!html.includes(labels.useTemplate));
-    });
-
-    test('renders distinct initial, classified-empty, and search-empty webhook groups', () => {
-        const labels = createConnectorTriggerPickerViewModel('python').labels;
-        const renderGroup = (
-            discoveryInProgress: boolean,
-            searchActive: boolean,
-        ): string => renderToStaticMarkup(createElement(
-            WebhookOnlyConnectorGroup,
-            {
-                discoveryInProgress,
-                expanded: true,
-                labels,
-                options: [],
-                searchActive,
-                value: '',
-                onChange: () => undefined,
-                onToggle: () => undefined,
-            },
-        ));
-
-        const initial = renderGroup(true, false);
-        assert.ok(initial.includes('Webhook only (0)'));
-        assert.ok(initial.includes(labels.webhookDiscoveryDescription));
-
-        const classifiedEmpty = renderGroup(false, false);
-        assert.ok(classifiedEmpty.includes(labels.webhookNoneLoaded));
-        assert.ok(!classifiedEmpty.includes(labels.webhookDiscoveryDescription));
-
-        const searchEmpty = renderGroup(false, true);
-        assert.ok(searchEmpty.includes(labels.webhookNoSearchResults));
-        assert.ok(!searchEmpty.includes(labels.webhookNoneLoaded));
+        assert.ok(!html.includes('disabled=""'));
+        assert.ok(html.includes(labels.useTemplate));
+        assert.match(
+            html,
+            /<button type="button" class="event-card selected webhook">/,
+        );
     });
 
     test('renders both dropdowns while signed out with Location disabled', () => {
@@ -592,7 +559,6 @@ suite('Connector trigger picker Azure context UX', () => {
             'subscription:sub-one',
             'locations:sub-one',
             'catalog:usgovvirginia',
-            'operations:office365',
         ]);
         assert.deepStrictEqual(responses, [{
             command: 'azureContextSelected',
@@ -606,23 +572,6 @@ suite('Connector trigger picker Azure context UX', () => {
             command: 'catalogLoaded',
             connectors: [connector],
             operations: [],
-        }, {
-            command: 'connectorDiscoveryProgress',
-            classifications: [],
-            failed: 0,
-            inProgress: true,
-            processed: 0,
-            total: 1,
-        }, {
-            command: 'connectorDiscoveryProgress',
-            classifications: [{
-                connectorId: connector.id,
-                eventSupport: 'poll',
-            }],
-            failed: 0,
-            inProgress: false,
-            processed: 1,
-            total: 1,
         }]);
 
         responses.length = 0;
@@ -697,7 +646,7 @@ suite('Connector trigger picker Azure context UX', () => {
         );
     });
 
-    test('automatically classifies a fresh catalog without connector selection', async () => {
+    test('does not request operation metadata before connector selection', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         const connectors: ConnectorTriggerOption[] = [
             connector,
@@ -768,33 +717,43 @@ suite('Connector trigger picker Azure context UX', () => {
             region: 'usgovvirginia',
         });
 
-        assert.deepStrictEqual(
-            requestedConnectorIds.sort(),
-            connectors.map(item => item.id).sort(),
-        );
+        assert.deepStrictEqual(requestedConnectorIds, []);
         assert.deepStrictEqual(
             controller.catalogs
                 .get('sub-one:usgovvirginia')
                 ?.catalog.connectors
                 .map(item => [item.id, item.eventSupport]),
             [
-                [connector.id, 'poll'],
-                ['adobesign', 'webhook-only'],
-                ['kusto', 'none'],
+                [connector.id, undefined],
+                ['adobesign', undefined],
+                ['kusto', undefined],
                 ['failedconnector', undefined],
             ],
         );
+        assert.deepStrictEqual(responses.map(response => response.command), [
+            'azureContextSelected',
+            'catalogLoaded',
+        ]);
     });
 
-    test('bounds automatic discovery and reuses operation requests on selection', async () => {
+    test('loads only the selected connector and reuses in-flight and cached metadata', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
-        const connectors = Array.from({ length: 25 }, (_, index) => ({
-            id: `connector-${index}`,
-            label: `Connector ${index}`,
-        }));
+        const connectors = [{
+            id: 'selected',
+            label: 'Selected connector',
+        }, {
+            id: 'untouched',
+            label: 'Untouched connector',
+        }];
         const requestCounts = new Map<string, number>();
-        let activeRequests = 0;
-        let maxActiveRequests = 0;
+        let resolveSelected:
+            ((metadata: ConnectorTriggerOperationMetadataResult) => void) |
+            undefined;
+        const selectedRequest = new Promise<ConnectorTriggerOperationMetadataResult>(
+            resolve => {
+                resolveSelected = resolve;
+            },
+        );
         const controller = createTestController({
             responses,
             catalogLoader: async () => ({
@@ -812,20 +771,8 @@ suite('Connector trigger picker Azure context UX', () => {
                     connectorId,
                     (requestCounts.get(connectorId) ?? 0) + 1,
                 );
-                activeRequests += 1;
-                maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
-                await new Promise(resolve => setTimeout(resolve, 5));
-                activeRequests -= 1;
-                return {
-                    pollOperations: [{
-                        id: `Poll${connectorId}`,
-                        connectorId,
-                        label: `Poll ${connectorId}`,
-                        isWebhook: false,
-                        isNotification: false,
-                    }],
-                    webhookOperations: [],
-                };
+                assert.strictEqual(connectorId, 'selected');
+                return await selectedRequest;
             },
         });
         controller.subscriptionContext = createSubscriptionContext();
@@ -840,47 +787,51 @@ suite('Connector trigger picker Azure context UX', () => {
             region: 'usgovvirginia',
         });
 
-        assert.ok(maxActiveRequests > 1);
-        assert.ok(maxActiveRequests <= 8);
-        assert.deepStrictEqual(
-            [...requestCounts.values()],
-            Array.from({ length: connectors.length }, () => 1),
-        );
-        assert.ok(controller.catalogs
-            .get('sub-one:usgovvirginia')
-            ?.catalog.connectors.every(item => item.eventSupport === 'poll'));
-        const finalProgress = responses.at(-1);
-        assert.ok(finalProgress?.command === 'connectorDiscoveryProgress');
-        assert.deepStrictEqual({
-            failed: finalProgress.failed,
-            inProgress: finalProgress.inProgress,
-            processed: finalProgress.processed,
-            total: finalProgress.total,
-        }, {
-            failed: 0,
-            inProgress: false,
-            processed: connectors.length,
-            total: connectors.length,
+        assert.deepStrictEqual(Object.fromEntries(requestCounts), {});
+        responses.length = 0;
+        const firstLoad = callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: 'selected',
         });
-        const classifiedConnectorIds = responses.flatMap(response =>
-            response.command === 'connectorDiscoveryProgress' ?
-                response.classifications.map(item => item.connectorId) :
-                []);
-        assert.deepStrictEqual(
-            classifiedConnectorIds.sort(),
-            connectors.map(item => item.id).sort(),
+        const secondLoad = callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: 'selected',
+        });
+        while (!requestCounts.has('selected')) {
+            await Promise.resolve();
+        }
+        resolveSelected?.({
+            pollOperations: [{
+                id: 'OnSelectedItem',
+                connectorId: 'selected',
+                label: 'When an item is selected',
+                isWebhook: false,
+                isNotification: false,
+            }],
+            webhookOperations: [],
+        });
+        await Promise.all([firstLoad, secondLoad]);
+        assert.deepStrictEqual(Object.fromEntries(requestCounts), {
+            selected: 1,
+        });
+        assert.strictEqual(
+            responses.filter(response =>
+                response.command === 'connectorOperationsLoaded').length,
+            2,
         );
 
         responses.length = 0;
         await callHandleMessage(controller, {
             command: 'loadConnectorOperations',
-            connectorId: connectors[0].id,
+            connectorId: 'selected',
         });
-        assert.strictEqual(requestCounts.get(connectors[0].id), 1);
+        assert.deepStrictEqual(Object.fromEntries(requestCounts), {
+            selected: 1,
+        });
         assert.strictEqual(responses[0]?.command, 'connectorOperationsLoaded');
     });
 
-    test('retries failed automatic discovery without repeating successful requests', async () => {
+    test('retries only the selected connector after a metadata failure', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         const requestCounts = new Map<string, number>();
         const connectors = [
@@ -934,47 +885,37 @@ suite('Connector trigger picker Azure context UX', () => {
             subscriptionId: 'sub-one',
             region: 'usgovvirginia',
         });
-        const failedProgress = responses.at(-1);
-        assert.strictEqual(
-            failedProgress?.command,
-            'connectorDiscoveryProgress',
-        );
-        assert.strictEqual(
-            failedProgress?.command === 'connectorDiscoveryProgress' ?
-                failedProgress.failed :
-                undefined,
-            1,
-        );
+        assert.deepStrictEqual(Object.fromEntries(requestCounts), {});
+        responses.length = 0;
 
         await callHandleMessage(controller, {
-            command: 'retryConnectorDiscovery',
+            command: 'loadConnectorOperations',
+            connectorId: 'retryconnector',
         });
-
+        assert.strictEqual(responses[0]?.command, 'connectorOperationsFailed');
+        responses.length = 0;
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: 'retryconnector',
+        });
         assert.deepStrictEqual(Object.fromEntries(requestCounts), {
-            office365: 1,
             retryconnector: 2,
         });
-        assert.strictEqual(
-            controller.connectorDiscoveryFailures.size,
-            0,
-        );
-        assert.ok(controller.catalogs
-            .get('sub-one:usgovvirginia')
-            ?.catalog.connectors.every(item => item.eventSupport === 'poll'));
         assert.deepStrictEqual(responses.at(-1), {
-            command: 'connectorDiscoveryProgress',
-            classifications: [{
+            command: 'connectorOperationsLoaded',
+            connectorId: 'retryconnector',
+            eventSupport: 'poll',
+            operations: [{
+                id: 'Pollretryconnector',
                 connectorId: 'retryconnector',
-                eventSupport: 'poll',
+                label: 'Poll retryconnector',
+                isWebhook: false,
+                isNotification: false,
             }],
-            failed: 0,
-            inProgress: false,
-            processed: 2,
-            total: 2,
         });
     });
 
-    test('does not apply stale automatic discovery after the Azure context changes', async () => {
+    test('does not apply stale selected metadata after the Azure context changes', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         let resolveOldRequest:
             ((metadata: ConnectorTriggerOperationMetadataResult) => void) |
@@ -1031,16 +972,25 @@ suite('Connector trigger picker Azure context UX', () => {
             label: 'East US 2',
         }]);
 
-        const firstSelection = callHandleMessage(controller, {
+        await callHandleMessage(controller, {
             command: 'selectRegion',
             subscriptionId: 'sub-one',
             region: 'usgovvirginia',
+        });
+        responses.length = 0;
+        const oldLoad = callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: 'oldconnector',
         });
         await oldRequestStarted;
         await callHandleMessage(controller, {
             command: 'selectRegion',
             subscriptionId: 'sub-one',
             region: 'eastus2',
+        });
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: 'newconnector',
         });
         resolveOldRequest?.({
             pollOperations: [{
@@ -1052,7 +1002,7 @@ suite('Connector trigger picker Azure context UX', () => {
             }],
             webhookOperations: [],
         });
-        await firstSelection;
+        await oldLoad;
 
         assert.strictEqual(controller.azureContext?.region, 'eastus2');
         assert.deepStrictEqual([...controller.catalogs.keys()], [
@@ -1066,15 +1016,14 @@ suite('Connector trigger picker Azure context UX', () => {
             [['newconnector', 'poll']],
         );
         assert.ok(!responses.some(response =>
-            response.command === 'connectorDiscoveryProgress' &&
-            response.classifications.some(classification =>
-                classification.connectorId === 'oldconnector')));
+            response.command === 'connectorOperationsLoaded' &&
+            response.connectorId === 'oldconnector'));
     });
 
     (liveCatalogTestsEnabled ? test : test.skip)(
-        'automatically classifies the live regional catalog without connector selection',
+        'loads one selected live connector without background operation requests',
         async function (this: Mocha.Context): Promise<void> {
-            this.timeout(10 * 60 * 1000);
+            this.timeout(3 * 60 * 1000);
             const subscriptionId = process.env.AZFUNC_TEST_SUBSCRIPTION_ID;
             const accessToken = process.env.AZFUNC_TEST_ARM_TOKEN;
             assert.ok(subscriptionId);
@@ -1089,8 +1038,6 @@ suite('Connector trigger picker Azure context UX', () => {
                 },
             } as ISubscriptionContext;
             const operationConnectorIds = new Set<string>();
-            let activeOperationRequests = 0;
-            let maxActiveOperationRequests = 0;
             const client = new ConnectorTriggerDataClient(
                 async () => [{
                     subscriptionDisplayName:
@@ -1106,32 +1053,21 @@ suite('Connector trigger picker Azure context UX', () => {
                             operationConnectorIds.add(
                                 decodeURIComponent(operationMatch[1]),
                             );
-                            activeOperationRequests += 1;
-                            maxActiveOperationRequests = Math.max(
-                                maxActiveOperationRequests,
-                                activeOperationRequests,
+                        }
+                        const response = await fetch(url, {
+                            headers: {
+                                Authorization: `Bearer ${accessToken}`,
+                            },
+                        });
+                        if (!response.ok) {
+                            throw Object.assign(
+                                new Error(
+                                    `ARM request failed with status ${response.status}.`,
+                                ),
+                                { statusCode: response.status },
                             );
                         }
-                        try {
-                            const response = await fetch(url, {
-                                headers: {
-                                    Authorization: `Bearer ${accessToken}`,
-                                },
-                            });
-                            if (!response.ok) {
-                                throw Object.assign(
-                                    new Error(
-                                        `ARM request failed with status ${response.status}.`,
-                                    ),
-                                    { statusCode: response.status },
-                                );
-                            }
-                            return await response.json();
-                        } finally {
-                            if (operationMatch) {
-                                activeOperationRequests -= 1;
-                            }
-                        }
+                        return await response.json();
                     },
                 }),
             );
@@ -1152,8 +1088,6 @@ suite('Connector trigger picker Azure context UX', () => {
                 name: 'westcentralus',
                 label: 'West Central US',
             }]);
-            const startedAt = Date.now();
-
             await callHandleMessage(controller, {
                 command: 'selectRegion',
                 subscriptionId,
@@ -1164,70 +1098,36 @@ suite('Connector trigger picker Azure context UX', () => {
                 .get(`${subscriptionId}:westcentralus`)
                 ?.catalog;
             assert.ok(catalog);
-            const finalProgress = [...responses].reverse().find(response =>
-                response.command === 'connectorDiscoveryProgress' &&
-                !response.inProgress);
-            assert.ok(
-                finalProgress?.command === 'connectorDiscoveryProgress',
-            );
-            assert.strictEqual(finalProgress.total, catalog.connectors.length);
-            assert.strictEqual(
-                finalProgress.processed,
-                finalProgress.total,
-            );
-            assert.strictEqual(
-                operationConnectorIds.size,
-                catalog.connectors.length,
-            );
-            assert.ok(maxActiveOperationRequests > 1);
-            assert.ok(maxActiveOperationRequests <= 8);
-            const support = new Map(catalog.connectors.map(item => [
-                item.id.toLowerCase(),
-                item.eventSupport,
-            ]));
-            assert.strictEqual(support.get('adobesign'), 'webhook-only');
-            assert.strictEqual(
-                support.get('adobecreativecloud'),
-                'webhook-only',
-            );
-            assert.strictEqual(support.get('azureblob'), 'poll');
-            assert.strictEqual(support.get('github'), 'poll');
-            assert.strictEqual(support.get('rss'), 'poll');
-            assert.strictEqual(support.get('kusto'), 'none');
-            const supportCounts = {
-                none: catalog.connectors.filter(item =>
-                    item.eventSupport === 'none').length,
-                poll: catalog.connectors.filter(item =>
-                    item.eventSupport === 'poll').length,
-                unknown: catalog.connectors.filter(item =>
-                    !item.eventSupport ||
-                    item.eventSupport === 'unknown').length,
-                webhookOnly: catalog.connectors.filter(item =>
-                    item.eventSupport === 'webhook-only').length,
-            };
-            assert.strictEqual(
-                supportCounts.none +
-                supportCounts.poll +
-                supportCounts.unknown +
-                supportCounts.webhookOnly,
-                catalog.connectors.length,
-            );
-            assert.strictEqual(
-                supportCounts.unknown,
-                finalProgress.failed,
-            );
-            console.log(JSON.stringify({
-                durationMs: Date.now() - startedAt,
-                failed: finalProgress.failed,
-                maxConcurrency: maxActiveOperationRequests,
-                operationRequests: operationConnectorIds.size,
-                supportCounts,
-                total: finalProgress.total,
-            }));
+            assert.ok(catalog.connectors.length > 1000);
+            assert.deepStrictEqual([...operationConnectorIds], []);
+            assert.ok(!responses.some(response =>
+                response.command === 'connectorOperationsLoaded'));
+
+            responses.length = 0;
+            await callHandleMessage(controller, {
+                command: 'loadConnectorOperations',
+                connectorId: 'adobesign',
+            });
+            assert.deepStrictEqual([...operationConnectorIds], ['adobesign']);
+            assert.strictEqual(responses[0]?.command, 'connectorOperationsLoaded');
+            if (responses[0]?.command === 'connectorOperationsLoaded') {
+                assert.strictEqual(responses[0].eventSupport, 'webhook-only');
+                assert.strictEqual(responses[0].operations.length, 7);
+                assert.ok(responses[0].operations.every(operation =>
+                    operation.isWebhook));
+            }
+
+            responses.length = 0;
+            await callHandleMessage(controller, {
+                command: 'loadConnectorOperations',
+                connectorId: 'adobesign',
+            });
+            assert.deepStrictEqual([...operationConnectorIds], ['adobesign']);
+            assert.strictEqual(responses[0]?.command, 'connectorOperationsLoaded');
         },
     );
 
-    test('classifies webhook-only connectors after authoritative lazy loading', async () => {
+    test('loads and caches selectable webhook operations after connector selection', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         const azureContext = createAzureContext();
         const adobeConnector = {
@@ -1280,17 +1180,11 @@ suite('Connector trigger picker Azure context UX', () => {
             command: 'connectorOperationsLoaded',
             connectorId: adobeConnector.id,
             eventSupport: 'webhook-only',
-            operations: webhookOperations.map(webhookOperation => ({
-                ...webhookOperation,
-                availability: 'unavailable',
-            })),
+            operations: webhookOperations,
         }]);
         assert.deepStrictEqual(
             controller.catalogs.get('sub-one:usgovvirginia')?.catalog.operations,
-            webhookOperations.map(webhookOperation => ({
-                ...webhookOperation,
-                availability: 'unavailable',
-            })),
+            webhookOperations,
         );
         assert.strictEqual(
             controller.connectorEventSupport.get(
@@ -1314,8 +1208,64 @@ suite('Connector trigger picker Azure context UX', () => {
         });
         assert.deepStrictEqual(responses, [{
             command: 'projectCreationFailed',
-            message: 'The selected connector or event is no longer available. Choose another selection.',
+            message: 'Webhook Connector Triggers are not supported yet. Choose a polling event.',
         }]);
+    });
+
+    test('loads both polling and webhook events for a mixed connector', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const azureContext = createAzureContext();
+        const mixedConnector = {
+            id: 'github',
+            label: 'GitHub',
+        };
+        const pollOperation: ConnectorTriggerOperationOption = {
+            id: 'OnNewIssue',
+            connectorId: mixedConnector.id,
+            label: 'When a new issue is created',
+            isWebhook: false,
+            isNotification: false,
+        };
+        const webhookOperation: ConnectorTriggerOperationOption = {
+            id: 'SubscribePushWebhook',
+            connectorId: mixedConnector.id,
+            label: 'When code is pushed',
+            isWebhook: true,
+            isNotification: false,
+        };
+        const controller = createTestController({
+            responses,
+            listConnectorOperationMetadata: async () => ({
+                pollOperations: [pollOperation],
+                webhookOperations: [webhookOperation],
+            }),
+        });
+        controller.azureContext = azureContext;
+        controller.subscriptionContext = createSubscriptionContext();
+        controller.catalogs.set('sub-one:usgovvirginia', {
+            catalog: {
+                connectors: [mixedConnector],
+                operations: [],
+            },
+        });
+
+        await callHandleMessage(controller, {
+            command: 'loadConnectorOperations',
+            connectorId: mixedConnector.id,
+        });
+
+        assert.deepStrictEqual(responses, [{
+            command: 'connectorOperationsLoaded',
+            connectorId: mixedConnector.id,
+            eventSupport: 'poll',
+            operations: [pollOperation, webhookOperation],
+        }]);
+        assert.deepStrictEqual(
+            controller.catalogs
+                .get('sub-one:usgovvirginia')
+                ?.catalog.operations,
+            [pollOperation, webhookOperation],
+        );
     });
 
     test('does not classify action-only or failed loads as webhook-only', async () => {
@@ -1424,7 +1374,6 @@ interface TestableConnectorTriggerPickerController {
     azureContextRevision: number;
     catalogGeneration: number;
     catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
-    catalogDiscoveryRequests: Map<string, Promise<void>>;
     catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
     catalogLoader: ConnectorTriggerCatalogLoader;
     dataClient: Pick<
@@ -1437,7 +1386,6 @@ interface TestableConnectorTriggerPickerController {
         | 'listConnectorOperations'
         | 'listSubscriptions'
     >;
-    connectorDiscoveryFailures: Set<string>;
     connectorEventSupport: Map<string, 'none' | 'poll' | 'webhook-only'>;
     controllerDisposed: boolean;
     locations: Map<string, { name: string; label: string }[]>;
@@ -1483,10 +1431,8 @@ function createTestController(
         azureContextRevision: 0,
         catalogGeneration: 0,
         catalogs: new Map(),
-        catalogDiscoveryRequests: new Map(),
         catalogLoadRequests: new Map(),
         catalogLoader: options.catalogLoader ?? (async () => assert.fail('Unexpected catalog load.')),
-        connectorDiscoveryFailures: new Set(),
         connectorEventSupport: new Map(),
         controllerDisposed: false,
         dataClient: {

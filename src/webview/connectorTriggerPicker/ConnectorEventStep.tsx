@@ -23,7 +23,6 @@ interface ConnectorEventStepProps {
     projectCreationError: string;
     selectedOperationId: string;
     templateUnavailable: boolean;
-    webhookOnly: boolean;
     onChangeConnector: () => void;
     onRetryOperations: () => void;
     onSelectOperation: (operationId: string) => void;
@@ -41,7 +40,6 @@ export function ConnectorEventStep({
     projectCreationError,
     selectedOperationId,
     templateUnavailable,
-    webhookOnly,
     onChangeConnector,
     onRetryOperations,
     onSelectOperation,
@@ -92,12 +90,6 @@ export function ConnectorEventStep({
                 {selectedOperation ? ` ${format(labels.eventSelected, selectedOperation.label)}` : ''}
             </p>
 
-            {webhookOnly &&
-                <p className="warning-text" role="status">
-                    {labels.webhookOnlyDescription}
-                </p>
-            }
-
             {operationsLoading ?
                 <p className="status-text">{labels.loadingEvents}</p> :
                 operationsError ?
@@ -114,19 +106,20 @@ export function ConnectorEventStep({
                         <button
                             key={operation.id}
                             type="button"
-                            className={`event-card${selectedOperationId === operation.id ? ' selected' : ''}${operation.availability === 'unavailable' ? ' unavailable' : ''}`}
+                            className={`event-card${selectedOperationId === operation.id ? ' selected' : ''}${operation.isWebhook ? ' webhook' : ''}${operation.availability === 'unavailable' ? ' unavailable' : ''}`}
                             disabled={operation.availability === 'unavailable'}
                             onClick={() => onSelectOperation(operation.id)}
                         >
                             <span>
                                 <strong>{operation.label}</strong>
                                 {operation.description && <small>{operation.description}</small>}
+                                <small className={operation.isWebhook ? 'warning-text' : undefined}>
+                                    {operation.isWebhook ?
+                                        labels.webhookEventDelivery :
+                                        labels.pollingEventDelivery}
+                                </small>
                                 {operation.availability === 'unavailable' &&
-                                    <small>
-                                        {webhookOnly ?
-                                            labels.webhookEventUnavailable :
-                                            labels.unavailable}
-                                    </small>
+                                    <small>{labels.unavailable}</small>
                                 }
                             </span>
                             <span className="codicon codicon-chevron-right" aria-hidden="true" />

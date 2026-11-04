@@ -179,16 +179,6 @@ select {
     }
 }
 
-.connector-discovery-failures {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    button {
-        min-width: max-content;
-    }
-}
-
 .status-text,
 .warning-text {
     margin: 8px 0 0;
@@ -456,6 +446,10 @@ select {
     &.selected {
         border-color: var(--vscode-focusBorder);
         background: var(--vscode-list-inactiveSelectionBackground);
+    }
+
+    &.webhook {
+        border-left: 3px solid var(--vscode-editorWarning-foreground, var(--vscode-focusBorder));
     }
 
     strong,

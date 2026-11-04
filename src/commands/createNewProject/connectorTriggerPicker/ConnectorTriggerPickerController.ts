@@ -25,7 +25,6 @@ import { ProjectTemplateProvider } from '../../../templates/projectTemplates/Pro
 import {
     isConnectorTriggerPickerMessage,
     type ConnectorTriggerLocationOption,
-    type ConnectorTriggerDiscoveryClassification,
     type ConnectorTriggerEventSupport,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerPickerResponse,
@@ -73,11 +72,7 @@ export type ConnectorTriggerSignIn = () => Promise<unknown>;
 export type ConnectorTriggerCommandExecutor =
     (command: string) => Thenable<unknown>;
 
-const connectorDiscoveryConcurrency = 8;
-const connectorDiscoveryProgressInterval = 20;
-
 interface ConnectorOperationLoadResult {
-    classificationChanged: boolean;
     eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'>;
     operations: ConnectorTriggerOperationOption[];
 }
@@ -88,8 +83,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private readonly catalogLoadRequests = new Map<string, Promise<ConnectorTriggerCatalogLoadResult>>();
     private readonly connectorEventSupport =
         new Map<string, Exclude<ConnectorTriggerEventSupport, 'unknown'>>();
-    private readonly connectorDiscoveryFailures = new Set<string>();
-    private readonly catalogDiscoveryRequests = new Map<string, Promise<void>>();
     private readonly operationLoadRequests =
         new Map<string, Promise<ConnectorOperationLoadResult | undefined>>();
     private readonly projectCreator: ProjectTemplateCreator;
@@ -135,7 +128,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.registerDisposable(this.onDisposed(() => {
             this.controllerDisposed = true;
             this.catalogGeneration += 1;
-            this.catalogDiscoveryRequests.clear();
             this.operationLoadRequests.clear();
             if (ConnectorTriggerPickerController.currentController === this) {
                 ConnectorTriggerPickerController.currentController = undefined;
@@ -255,19 +247,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
 
-        if (message.command === 'retryConnectorDiscovery') {
-            const catalog = this.catalogs.get(getCatalogKey(azureContext))?.catalog;
-            if (catalog) {
-                await this.discoverConnectorOperations(
-                    actionContext,
-                    azureContext,
-                    catalog,
-                    true,
-                );
-            }
-            return;
-        }
-
         if (message.command === 'loadConnectorOperations') {
             await this.loadConnectorOperations(
                 actionContext,
@@ -310,13 +289,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
 
         if (operation.isWebhook) {
-            await this.postMessage({
-                command: 'projectCreationFailed',
-                message: localize(
-                    'connectorTriggerDeliveryUnavailableForCreation',
-                    'The selected delivery mode is not available.',
-                ),
-            });
+            await this.postWebhookCreationUnsupported();
             return;
         }
 
@@ -466,9 +439,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.catalogGeneration += 1;
         this.catalogs.clear();
         this.catalogLoadRequests.clear();
-        this.catalogDiscoveryRequests.clear();
         this.connectorEventSupport.clear();
-        this.connectorDiscoveryFailures.clear();
         this.operationLoadRequests.clear();
         await this.postMessage({
             command: 'azureContextSelected',
@@ -485,9 +456,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.locations.clear();
         this.catalogs.clear();
         this.catalogLoadRequests.clear();
-        this.catalogDiscoveryRequests.clear();
         this.connectorEventSupport.clear();
-        this.connectorDiscoveryFailures.clear();
         this.operationLoadRequests.clear();
     }
 
@@ -497,10 +466,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         connectorId: string,
         forceRefresh = false,
     ): Promise<void> {
-        const catalogKey = getCatalogKey(azureContext);
-        const wasDiscoveryFailure = this.connectorDiscoveryFailures.has(
-            getConnectorRequestKey(catalogKey, connectorId),
-        );
         try {
             const result = await this.ensureConnectorOperations(
                 actionContext,
@@ -517,17 +482,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 eventSupport: result.eventSupport,
                 operations: result.operations.map(removeOperationInputs),
             });
-            if (result.classificationChanged && wasDiscoveryFailure) {
-                await this.postConnectorDiscoveryProgress(
-                    azureContext,
-                    this.catalogs.get(catalogKey)?.catalog,
-                    this.catalogDiscoveryRequests.has(catalogKey),
-                    [{
-                        connectorId,
-                        eventSupport: result.eventSupport,
-                    }],
-                );
-            }
         } catch (error) {
             if (!this.isCurrentCatalogContext(azureContext)) {
                 return;
@@ -560,7 +514,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const existingSupport = this.connectorEventSupport.get(requestKey);
         if (!forceRefresh && existingSupport) {
             return {
-                classificationChanged: false,
                 eventSupport: existingSupport,
                 operations: catalog.operations.filter(operation =>
                     equalsIgnoreCase(operation.connectorId, connectorId)),
@@ -599,232 +552,46 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         requestKey: string,
         generation: number,
     ): Promise<ConnectorOperationLoadResult | undefined> {
-        try {
-            const metadata = await this.dataClient.listConnectorOperationMetadata(
-                actionContext,
-                azureContext,
-                connectorId,
-            );
-            if (!this.isCurrentCatalog(
-                azureContext,
-                catalog,
-                generation,
-            )) {
-                return undefined;
-            }
-
-            const eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'> =
-                metadata.pollOperations.length > 0 ?
-                    'poll' :
-                    metadata.webhookOperations.length > 0 ?
-                        'webhook-only' :
-                        'none';
-            const operations = eventSupport === 'webhook-only' ?
-                metadata.webhookOperations.map(operation => ({
-                    ...operation,
-                    availability: 'unavailable' as const,
-                })) :
-                metadata.pollOperations;
-            this.connectorEventSupport.set(requestKey, eventSupport);
-            this.connectorDiscoveryFailures.delete(requestKey);
-            catalog.operations = [
-                ...catalog.operations.filter(operation =>
-                    !equalsIgnoreCase(operation.connectorId, connectorId)),
-                ...operations,
-            ];
-            catalog.connectors = catalog.connectors.map(connector =>
-                equalsIgnoreCase(connector.id, connectorId) ?
-                    {
-                        ...connector,
-                        eventSupport,
-                    } :
-                    connector);
-            return {
-                classificationChanged: true,
-                eventSupport,
-                operations,
-            };
-        } catch (error) {
-            if (this.isCurrentCatalog(
-                azureContext,
-                catalog,
-                generation,
-            )) {
-                this.connectorDiscoveryFailures.add(requestKey);
-            }
-            throw error;
-        }
-    }
-
-    private async discoverConnectorOperations(
-        actionContext: IActionContext,
-        azureContext: ConnectorTriggerAzureContext,
-        catalog: ConnectorTriggerCatalog,
-        retryFailedOnly = false,
-    ): Promise<void> {
-        const catalogKey = getCatalogKey(azureContext);
-        const existingRequest = this.catalogDiscoveryRequests.get(catalogKey);
-        if (existingRequest) {
-            await existingRequest;
-            return;
-        }
-
-        const generation = this.catalogGeneration;
-        const request = this.runConnectorDiscovery(
+        const metadata = await this.dataClient.listConnectorOperationMetadata(
             actionContext,
             azureContext,
-            catalog,
-            generation,
-            retryFailedOnly,
+            connectorId,
         );
-        this.catalogDiscoveryRequests.set(catalogKey, request);
-        try {
-            await request;
-        } finally {
-            if (this.catalogDiscoveryRequests.get(catalogKey) === request) {
-                this.catalogDiscoveryRequests.delete(catalogKey);
-            }
-        }
-    }
-
-    private async runConnectorDiscovery(
-        actionContext: IActionContext,
-        azureContext: ConnectorTriggerAzureContext,
-        catalog: ConnectorTriggerCatalog,
-        generation: number,
-        retryFailedOnly: boolean,
-    ): Promise<void> {
-        const catalogKey = getCatalogKey(azureContext);
-        const connectors = catalog.connectors.filter(connector => {
-            const requestKey = getConnectorRequestKey(catalogKey, connector.id);
-            return retryFailedOnly ?
-                this.connectorDiscoveryFailures.has(requestKey) :
-                !this.connectorEventSupport.has(requestKey);
-        });
-        for (const connector of connectors) {
-            this.connectorDiscoveryFailures.delete(
-                getConnectorRequestKey(catalogKey, connector.id),
-            );
-        }
-        await this.postConnectorDiscoveryProgress(
-            azureContext,
-            catalog,
-            connectors.length > 0,
-            [],
-        );
-        if (connectors.length === 0) {
-            return;
-        }
-
-        let nextConnectorIndex = 0;
-        let processedInRun = 0;
-        let pendingClassifications: ConnectorTriggerDiscoveryClassification[] = [];
-        let progressPosts = Promise.resolve();
-        const queueProgress = (inProgress: boolean): void => {
-            const classifications = pendingClassifications;
-            pendingClassifications = [];
-            progressPosts = progressPosts.then(async () => {
-                await this.postConnectorDiscoveryProgress(
-                    azureContext,
-                    catalog,
-                    inProgress,
-                    classifications,
-                );
-            });
-        };
-        const worker = async (): Promise<void> => {
-            while (this.isCurrentCatalog(
-                azureContext,
-                catalog,
-                generation,
-            )) {
-                const connectorIndex = nextConnectorIndex;
-                nextConnectorIndex += 1;
-                if (connectorIndex >= connectors.length) {
-                    return;
-                }
-
-                const connector = connectors[connectorIndex];
-                try {
-                    const result = await this.ensureConnectorOperations(
-                        actionContext,
-                        azureContext,
-                        connector.id,
-                    );
-                    if (result?.classificationChanged) {
-                        pendingClassifications.push({
-                            connectorId: connector.id,
-                            eventSupport: result.eventSupport,
-                        });
-                    }
-                } catch {
-                    // Individual failures remain unknown and are reported by count.
-                }
-                processedInRun += 1;
-                if (processedInRun % connectorDiscoveryProgressInterval === 0) {
-                    queueProgress(true);
-                }
-            }
-        };
-        await Promise.all(Array.from(
-            {
-                length: Math.min(
-                    connectorDiscoveryConcurrency,
-                    connectors.length,
-                ),
-            },
-            worker,
-        ));
         if (!this.isCurrentCatalog(
             azureContext,
             catalog,
             generation,
         )) {
-            return;
+            return undefined;
         }
-        queueProgress(false);
-        await progressPosts;
-        actionContext.telemetry.measurements.connectorDiscoveryTotal =
-            catalog.connectors.length;
-        actionContext.telemetry.measurements.connectorDiscoveryFailed =
-            this.getConnectorDiscoveryFailureCount(catalogKey, catalog);
-    }
 
-    private async postConnectorDiscoveryProgress(
-        azureContext: ConnectorTriggerAzureContext,
-        catalog: ConnectorTriggerCatalog | undefined,
-        inProgress: boolean,
-        classifications: ConnectorTriggerDiscoveryClassification[],
-    ): Promise<void> {
-        if (!catalog || !this.isCurrentCatalogContext(azureContext)) {
-            return;
-        }
-        const catalogKey = getCatalogKey(azureContext);
-        const failed = this.getConnectorDiscoveryFailureCount(
-            catalogKey,
-            catalog,
-        );
-        const classified = catalog.connectors.filter(connector =>
-            connector.eventSupport &&
-            connector.eventSupport !== 'unknown').length;
-        await this.postMessage({
-            command: 'connectorDiscoveryProgress',
-            classifications,
-            failed,
-            inProgress,
-            processed: classified + failed,
-            total: catalog.connectors.length,
-        });
-    }
-
-    private getConnectorDiscoveryFailureCount(
-        catalogKey: string,
-        catalog: ConnectorTriggerCatalog,
-    ): number {
-        return catalog.connectors.filter(connector =>
-            this.connectorDiscoveryFailures.has(
-                getConnectorRequestKey(catalogKey, connector.id),
-            )).length;
+        const eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'> =
+            metadata.pollOperations.length > 0 ?
+                'poll' :
+                metadata.webhookOperations.length > 0 ?
+                    'webhook-only' :
+                    'none';
+        const operations = [
+            ...metadata.pollOperations,
+            ...metadata.webhookOperations,
+        ];
+        this.connectorEventSupport.set(requestKey, eventSupport);
+        catalog.operations = [
+            ...catalog.operations.filter(operation =>
+                !equalsIgnoreCase(operation.connectorId, connectorId)),
+            ...operations,
+        ];
+        catalog.connectors = catalog.connectors.map(connector =>
+            equalsIgnoreCase(connector.id, connectorId) ?
+                {
+                    ...connector,
+                    eventSupport,
+                } :
+                connector);
+        return {
+            eventSupport,
+            operations,
+        };
     }
 
     private isCurrentCatalog(
@@ -851,6 +618,16 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         });
     }
 
+    private async postWebhookCreationUnsupported(): Promise<void> {
+        await this.postMessage({
+            command: 'projectCreationFailed',
+            message: localize(
+                'connectorTriggerWebhookCreationUnsupported',
+                'Webhook Connector Triggers are not supported yet. Choose a polling event.',
+            ),
+        });
+    }
+
     private async postLoadFailed(
         actionContext: IActionContext,
         scope: 'azureContext' | 'subscriptions' | 'locations' | 'catalog',
@@ -873,9 +650,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const catalogKey = getCatalogKey(azureContext);
         if (forceRefresh) {
             this.catalogGeneration += 1;
-            this.catalogDiscoveryRequests.clear();
             this.connectorEventSupport.clear();
-            this.connectorDiscoveryFailures.clear();
             this.operationLoadRequests.clear();
         }
         let request: Promise<ConnectorTriggerCatalogLoadResult> | undefined;
@@ -883,11 +658,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             const cachedResult = this.catalogs.get(catalogKey);
             if (cachedResult && !forceRefresh) {
                 await this.postCatalogLoaded(cachedResult);
-                await this.discoverConnectorOperations(
-                    actionContext,
-                    azureContext,
-                    cachedResult.catalog,
-                );
                 return;
             }
 
@@ -905,11 +675,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             this.catalogs.set(catalogKey, result);
             this.catalogLoadRequests.delete(catalogKey);
             await this.postCatalogLoaded(result);
-            await this.discoverConnectorOperations(
-                actionContext,
-                azureContext,
-                result.catalog,
-            );
         } catch (error) {
             if (request && this.catalogLoadRequests.get(catalogKey) !== request) {
                 return;
@@ -938,6 +703,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         actionContext: IActionContext,
         selection: ConnectorTriggerProjectSelection,
     ): Promise<void> {
+        if (selection.operation.isWebhook) {
+            await this.postWebhookCreationUnsupported();
+            return;
+        }
+
         const projectPath = this.launchOptions.initialLocation;
         if (!projectPath) {
             await this.postMessage({

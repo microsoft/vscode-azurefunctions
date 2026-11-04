@@ -79,69 +79,25 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             otherConnectors: localize('connectorTriggerOtherConnectors', 'Other connectors ({0})'),
             showOtherConnectors: localize('connectorTriggerShowOtherConnectors', 'Show other connectors'),
             hideOtherConnectors: localize('connectorTriggerHideOtherConnectors', 'Hide other connectors'),
-            webhookOnlyConnectors: localize(
-                'connectorTriggerWebhookOnlyConnectors',
-                'Webhook only ({0})',
-            ),
-            showWebhookOnlyConnectors: localize(
-                'connectorTriggerShowWebhookOnlyConnectors',
-                'Show webhook-only connectors',
-            ),
-            hideWebhookOnlyConnectors: localize(
-                'connectorTriggerHideWebhookOnlyConnectors',
-                'Hide webhook-only connectors',
-            ),
-            webhookOnlyDescription: localize(
-                'connectorTriggerWebhookOnlyDescription',
-                'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
-            ),
-            webhookEventUnavailable: localize(
-                'connectorTriggerWebhookEventUnavailable',
-                'Webhook authoring is not available yet.',
-            ),
-            webhookDiscoveryDescription: localize(
-                'connectorTriggerWebhookDiscoveryDescription',
-                'Webhook-only connectors will appear here as live event discovery completes.',
-            ),
-            webhookNoneLoaded: localize(
-                'connectorTriggerWebhookNoneLoaded',
-                'No webhook-only connectors were found in the event metadata checked so far.',
-            ),
-            webhookNoSearchResults: localize(
-                'connectorTriggerWebhookNoSearchResults',
-                'No webhook-only connectors match your search.',
-            ),
-            connectorDiscoveryProgress: localize(
-                'connectorTriggerDiscoveryProgress',
-                'Checking live event metadata: {0} of {1} connectors checked.',
-            ),
-            connectorDiscoveryComplete: localize(
-                'connectorTriggerDiscoveryComplete',
-                'Live event discovery complete.',
-            ),
-            connectorDiscoveryPartial: localize(
-                'connectorTriggerDiscoveryPartial',
-                'Live event discovery is incomplete: {0} of {1} connectors checked.',
-            ),
-            connectorDiscoveryFailures: localize(
-                'connectorTriggerDiscoveryFailures',
-                '{0} connectors could not be checked and are not included.',
-            ),
-            retryConnectorDiscovery: localize(
-                'connectorTriggerRetryDiscovery',
-                'Retry failed checks',
-            ),
             connectorPageTitle: localize('connectorTriggerChooseConnector', 'Choose a connector'),
             connectorPageDescription: localize('connectorTriggerChooseConnectorDescription', 'Find the service that will start your function, then choose an event.'),
             connectorSearchPlaceholder: localize('connectorTriggerSearchConnectors', 'Search connectors...'),
             connectorCount: localize('connectorTriggerConnectorCount', '{0} connectors'),
             showMoreConnectors: localize('connectorTriggerShowMoreConnectors', 'Show more connectors'),
             loadingConnectors: localize('connectorTriggerLoadingConnectors', 'Loading connectors...'),
-            noConnectors: localize('connectorTriggerNoConnectors', 'No connectors with trigger operations are available in this catalog.'),
+            noConnectors: localize('connectorTriggerNoConnectors', 'No connectors are available in this catalog.'),
             eventPageTitle: localize('connectorTriggerChooseEvent', 'Choose an event'),
             eventPageDescription: localize('connectorTriggerChooseEventDescription', 'Select the event that will start your function.'),
             eventSearchPlaceholder: localize('connectorTriggerSearchEvents', 'Search events...'),
             loadingEvents: localize('connectorTriggerLoadingEvents', 'Loading events...'),
+            pollingEventDelivery: localize(
+                'connectorTriggerPollingEventDelivery',
+                'Polling',
+            ),
+            webhookEventDelivery: localize(
+                'connectorTriggerWebhookEventDelivery',
+                'Webhook - creation is not supported yet',
+            ),
             eventCount: localize('connectorTriggerEventCount', 'Showing {0} of {1} events.'),
             eventSelected: localize('connectorTriggerEventSelected', 'Selected: {0}'),
             changeConnector: localize('connectorTriggerChangeConnector', 'Change connector'),

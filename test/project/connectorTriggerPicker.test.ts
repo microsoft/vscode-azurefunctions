@@ -430,42 +430,13 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
-        assert.strictEqual(viewModel.labels.webhookOnlyConnectors, 'Webhook only ({0})');
         assert.strictEqual(
-            viewModel.labels.webhookOnlyDescription,
-            'This connector only exposes webhook triggers. Webhook authoring is not available yet.',
+            viewModel.labels.pollingEventDelivery,
+            'Polling',
         );
         assert.strictEqual(
-            viewModel.labels.webhookDiscoveryDescription,
-            'Webhook-only connectors will appear here as live event discovery completes.',
-        );
-        assert.strictEqual(
-            viewModel.labels.webhookNoneLoaded,
-            'No webhook-only connectors were found in the event metadata checked so far.',
-        );
-        assert.strictEqual(
-            viewModel.labels.webhookNoSearchResults,
-            'No webhook-only connectors match your search.',
-        );
-        assert.strictEqual(
-            viewModel.labels.connectorDiscoveryProgress,
-            'Checking live event metadata: {0} of {1} connectors checked.',
-        );
-        assert.strictEqual(
-            viewModel.labels.connectorDiscoveryComplete,
-            'Live event discovery complete.',
-        );
-        assert.strictEqual(
-            viewModel.labels.connectorDiscoveryPartial,
-            'Live event discovery is incomplete: {0} of {1} connectors checked.',
-        );
-        assert.strictEqual(
-            viewModel.labels.connectorDiscoveryFailures,
-            '{0} connectors could not be checked and are not included.',
-        );
-        assert.strictEqual(
-            viewModel.labels.retryConnectorDiscovery,
-            'Retry failed checks',
+            viewModel.labels.webhookEventDelivery,
+            'Webhook - creation is not supported yet',
         );
     });
 
@@ -513,17 +484,10 @@ suite('Connector trigger picker', () => {
         assert.deepStrictEqual(groups.other.map(connector => connector.id), [
             'custom-office-helper',
             'github',
-        ]);
-        assert.deepStrictEqual(groups.webhookOnly.map(connector => connector.id), [
             'adobesign',
+            'kusto',
+            'pending',
         ]);
-        assert.ok(![
-            ...groups.featured,
-            ...groups.other,
-            ...groups.webhookOnly,
-        ].some(connector =>
-            connector.id === 'kusto' ||
-            connector.id === 'pending'));
         assert.strictEqual(shouldExpandOtherConnectors('', false), false);
         assert.strictEqual(shouldExpandOtherConnectors('', true), true);
         assert.strictEqual(shouldExpandOtherConnectors('github', false), true);
@@ -887,6 +851,127 @@ suite('Connector trigger picker', () => {
         }]);
     });
 
+    test('blocks webhook creation before schema, template, creator, or handoff work', async () => {
+        const azureContext = createAzureContext();
+        const connector: ConnectorTriggerOption = {
+            id: 'adobesign',
+            label: 'Adobe Acrobat Sign',
+        };
+        const operation: ConnectorTriggerCatalog['operations'][number] = {
+            id: 'CreateWebhookForAgreementCreatedEvent',
+            connectorId: connector.id,
+            label: 'When a new agreement is created',
+            isWebhook: true,
+            isNotification: false,
+        };
+        const subscriptionContext = {
+            subscriptionId: azureContext.subscriptionId,
+            subscriptionDisplayName: azureContext.subscriptionName,
+            tenantId: 'tenant-one',
+            environment: {
+                name: 'AzureCloud',
+                resourceManagerEndpointUrl: 'https://management.azure.com/',
+            },
+        } as ISubscriptionContext;
+        const methods = ConnectorTriggerPickerController.prototype as unknown as {
+            createSelectedProject(
+                this: unknown,
+                context: IActionContext,
+                selection: {
+                    azureContext: ConnectorTriggerAzureContext;
+                    connector: ConnectorTriggerOption;
+                    operation: ConnectorTriggerCatalog['operations'][number];
+                },
+            ): Promise<void>;
+            handleMessage(
+                this: unknown,
+                message: unknown,
+                context: IActionContext,
+            ): Promise<void>;
+        };
+
+        for (const isProjectWizard of [true, false]) {
+            const responses: ConnectorTriggerPickerResponse[] = [];
+            let schemaRequests = 0;
+            let templateRequests = 0;
+            let creatorCalls = 0;
+            const controller = Object.assign(
+                Object.create(ConnectorTriggerPickerController.prototype),
+                {
+                    azureContext,
+                    catalogs: new Map([[`${azureContext.subscriptionId}:${azureContext.region}`, {
+                        catalog: {
+                            connectors: [connector],
+                            operations: [operation],
+                        },
+                    }]]),
+                    catalogLoadRequests: new Map(),
+                    dataClient: {
+                        getConnectorOperationOutputMetadata: async () => {
+                            schemaRequests += 1;
+                            return { limitation: 'definition-unavailable' as const };
+                        },
+                    },
+                    launchOptions: {
+                        isProjectWizard,
+                        language: ProjectLanguage.TypeScript,
+                        initialLocation: 'C:\\connector-project',
+                        initialFilters: {
+                            language: 'typescript',
+                            resource: 'connector',
+                            useCase: 'connector',
+                        },
+                    },
+                    postMessage: async (message: ConnectorTriggerPickerResponse) => {
+                        responses.push(message);
+                    },
+                    projectCreator: {
+                        addConnectorTrigger: async () => {
+                            creatorCalls += 1;
+                        },
+                        createProject: async () => {
+                            creatorCalls += 1;
+                        },
+                    },
+                    subscriptionContext,
+                    templateProvider: {
+                        getTemplates: async () => {
+                            templateRequests += 1;
+                            return [];
+                        },
+                    },
+                },
+            );
+            const context = await createTestActionContext();
+
+            await methods.createSelectedProject.call(controller, context, {
+                azureContext,
+                connector,
+                operation,
+            });
+            await methods.handleMessage.call(controller, {
+                command: 'continue',
+                connectorId: connector.id,
+                operationId: operation.id,
+            }, context);
+
+            assert.deepStrictEqual(responses, [{
+                command: 'projectCreationFailed',
+                message: 'Webhook Connector Triggers are not supported yet. Choose a polling event.',
+            }, {
+                command: 'projectCreationFailed',
+                message: 'Webhook Connector Triggers are not supported yet. Choose a polling event.',
+            }]);
+            assert.strictEqual(schemaRequests, 0);
+            assert.strictEqual(templateRequests, 0);
+            assert.strictEqual(creatorCalls, 0);
+            assert.strictEqual(
+                context.telemetry.properties.connectorSelected,
+                undefined,
+            );
+        }
+    });
+
     test('uses language genericApp when no specialized operation is available', async () => {
         const azureContext = createAzureContext();
         const subscriptionContext = {
@@ -1109,7 +1194,7 @@ suite('Connector trigger picker', () => {
         }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'retryConnectorDiscovery',
-        }), true);
+        }), false);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
             connectorId: 'sharepointonline',
@@ -1180,7 +1265,7 @@ suite('Connector trigger picker', () => {
             inProgress: true,
             processed: 2,
             total: 3,
-        }), true);
+        }), false);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsLoaded',
             connectorId: 'office365',
