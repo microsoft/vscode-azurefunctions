@@ -23,9 +23,25 @@ interface ICachedFunction {
     newFilePath: string;
     isHttpTrigger: boolean;
     isMcpTrigger: boolean;
+    workflowCorrelation?: ICachedWorkflowCorrelation;
+}
+
+interface ICachedWorkflowCorrelation {
+    workflowRunId: string;
+    parentAttemptId: string;
 }
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
+
+function isWorkflowCorrelation(value: unknown): value is ICachedWorkflowCorrelation {
+    if (!value || typeof value !== 'object' || !('workflowRunId' in value) || !('parentAttemptId' in value)) {
+        return false;
+    }
+
+    const generatedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+    return [value.workflowRunId, value.parentAttemptId].every(id =>
+        typeof id === 'string' && id.length === 36 && generatedId.test(id));
+}
 
 export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
@@ -128,6 +144,13 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         }
 
         if (context.openBehavior) {
+            const workflowCorrelation = {
+                workflowRunId: context.telemetry.properties.workflowRunId,
+                parentAttemptId: context.telemetry.properties.attemptId,
+            };
+            if (isWorkflowCorrelation(workflowCorrelation)) {
+                cachedFunc.workflowCorrelation = workflowCorrelation;
+            }
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
             await ext.context.globalState.update(cacheKey, cachedFunc);
             // Delete cached information if the extension host was not restarted after 5 seconds
@@ -148,6 +171,11 @@ function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActi
         if (parentContext?.telemetry.properties.workflowRunId) {
             initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'unknown' }, parentContext);
             context.valuesToMask.push(...parentContext.valuesToMask);
+        } else if (isWorkflowCorrelation(func.workflowCorrelation)) {
+            // Restart replay links diagnostics only; the original workflow's outcome and timing cannot be resumed.
+            context.telemetry.properties.workflowRunId = func.workflowCorrelation.workflowRunId;
+            context.telemetry.properties.parentAttemptId = func.workflowCorrelation.parentAttemptId;
+            context.telemetry.properties.isWorkflowRoot = 'false';
         }
         context.telemetry.suppressIfSuccessful = true;
 
