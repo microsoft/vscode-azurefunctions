@@ -22,6 +22,10 @@ import {
     type ConnectorTriggerProjectHandoff,
 } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
+import {
+    parseConnectorTriggerOutputMetadata,
+    type ConnectorTriggerOutputMetadata,
+} from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
@@ -478,8 +482,13 @@ suite('Connector Trigger template materialization', () => {
                 ProjectLanguage.Python,
             ];
             const selections = [{
-                connectorId: 'office365',
-                operationId: 'CalendarGetOnChangedItemsV3',
+                connectorId: 'act',
+                fixture: 'actTrigNewContactSwagger.json',
+                operationId: 'TrigNewContact',
+            }, {
+                connectorId: 'rss',
+                fixture: 'rssOnNewFeedSwagger.json',
+                operationId: 'OnNewFeed',
             }, {
                 connectorId: 'customconnector',
                 operationId: 'OnCustomPollEvent',
@@ -499,6 +508,14 @@ suite('Connector Trigger template materialization', () => {
                         selection.connectorId,
                         selection.operationId,
                     );
+                    const outputMetadata = selection.fixture ?
+                        parseConnectorTriggerOutputMetadata(
+                            await readConnectorFixture(selection.fixture),
+                            selection.operationId,
+                        ) :
+                        {
+                            limitation: 'definition-unavailable' as const,
+                        };
                     try {
                         await creator.createProject(
                             await createTestActionContext(),
@@ -506,7 +523,10 @@ suite('Connector Trigger template materialization', () => {
                             language,
                             destination,
                             'details',
-                            { connectorTriggerHandoff: handoff },
+                            {
+                                connectorTriggerHandoff: handoff,
+                                connectorTriggerOutputMetadata: outputMetadata,
+                            },
                         );
                     } catch (error) {
                         throw new Error(
@@ -518,8 +538,9 @@ suite('Connector Trigger template materialization', () => {
                         destination,
                         language,
                         handoff,
+                        outputMetadata,
                     );
-                    if (index === 0 && buildGenericTemplateTestsEnabled) {
+                    if (index < 2 && buildGenericTemplateTestsEnabled) {
                         await buildGenericTemplate(destination, language);
                     }
                 }
@@ -594,6 +615,21 @@ async function readBundledManifest(): Promise<ITemplateManifest> {
     )) as ITemplateManifest;
 }
 
+async function readConnectorFixture(name: string): Promise<unknown> {
+    return JSON.parse(await fs.promises.readFile(
+        path.join(
+            __dirname,
+            '..',
+            '..',
+            'test',
+            'fixtures',
+            'connectorTriggerPicker',
+            name,
+        ),
+        'utf8',
+    ));
+}
+
 async function assertMaterializedOperation(
     root: string,
     template: IProjectTemplate,
@@ -636,6 +672,7 @@ async function assertGenericMaterialized(
     root: string,
     language: ProjectLanguage,
     handoff: ConnectorTriggerProjectHandoff,
+    outputMetadata: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const identity = getConnectorTriggerEventIdentity(
         handoff.connectorId,
@@ -696,12 +733,18 @@ async function assertGenericMaterialized(
                 packageJson.dependencies?.['@typespec/ts-http-runtime'],
                 '0.3.9',
             );
+        } else if (outputMetadata.schema) {
+            assert.ok(source.includes(
+                `interface ${outputMetadata.schema.modelName}For${identity.pascalName}`,
+            ));
+            assert.ok(!source.includes('Record<string, unknown>'));
+            assert.ok(readme.includes(outputMetadata.schema.schemaName));
         } else {
             assert.match(
                 source,
                 new RegExp(`type ${identity.pascalName}Item = Record<string, unknown>`),
             );
-            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+            assert.ok(readme.includes('Output schema definition-unavailable'));
         }
         assert.ok(!source.includes('OnGeneric'));
         assert.strictEqual(
@@ -726,9 +769,16 @@ async function assertGenericMaterialized(
             assert.ok(source.includes('"ActionType": "action_type"'));
             assert.ok(!source.includes('IsDeleted'));
             assert.match(requirements, /^azure-connectors==0\.1\.0$/m);
+        } else if (outputMetadata.schema) {
+            assert.ok(source.includes(
+                `class ${outputMetadata.schema.modelName}For${identity.pascalName}:`,
+            ));
+            assert.ok(source.includes('payloads: List[str]'));
+            assert.ok(readme.includes(outputMetadata.schema.schemaName));
+            assert.ok(!requirements.includes('azure-connectors'));
         } else {
             assert.ok(!requirements.includes('azure-connectors'));
-            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+            assert.ok(readme.includes('Output schema definition-unavailable'));
         }
         assert.strictEqual(
             await AzExtFsExtra.pathExists(path.join(root, 'azure.yaml')),
@@ -753,10 +803,18 @@ async function assertGenericMaterialized(
             assert.ok(source.includes(identity.payloadModel.csharp.payloadType));
             assert.ok(project.includes(identity.payloadModel.csharp.packageName));
             assert.ok(!source.includes('string payload'));
+        } else if (outputMetadata.schema) {
+            assert.match(source, /\]\s*string payload\)/);
+            assert.ok(source.includes(
+                `class ${outputMetadata.schema.modelName}For${identity.pascalName}`,
+            ));
+            assert.ok(source.includes('JsonSerializer.Deserialize'));
+            assert.ok(readme.includes(outputMetadata.schema.schemaName));
+            assert.ok(!project.includes('Azure.Connectors.Sdk'));
         } else {
             assert.match(source, /\]\s*string payload\)/);
             assert.ok(!project.includes('Azure.Connectors.Sdk'));
-            assert.ok(readme.includes('not mapped to a concrete SDK model'));
+            assert.ok(readme.includes('Output schema definition-unavailable'));
         }
         assert.ok(!source.includes('OnGeneric'));
         assert.strictEqual(

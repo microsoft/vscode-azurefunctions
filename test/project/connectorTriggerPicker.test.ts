@@ -32,6 +32,7 @@ import {
     type ProjectTemplateCreationOptions,
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import { type ConnectorTriggerProjectHandoff } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { type ConnectorTriggerOutputMetadata } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import {
     partitionConnectorOptions,
     shouldExpandOtherConnectors,
@@ -663,6 +664,14 @@ suite('Connector trigger picker', () => {
             language: string;
             location: string;
             handoff: ConnectorTriggerProjectHandoff;
+            outputMetadata: ConnectorTriggerOutputMetadata | undefined;
+        }[] = [];
+        const outputMetadata: ConnectorTriggerOutputMetadata = {
+            limitation: 'unsupported-output-schema',
+        };
+        const outputRequests: {
+            connectorId: string;
+            operationId: string;
         }[] = [];
         const responses: ConnectorTriggerPickerResponse[] = [];
         interface TestableConnectorTriggerPickerController {
@@ -671,6 +680,10 @@ suite('Connector trigger picker', () => {
             subscriptionContext: ISubscriptionContext | undefined;
             catalogs: Map<string, ConnectorTriggerCatalogLoadResult>;
             catalogLoadRequests: Map<string, Promise<ConnectorTriggerCatalogLoadResult>>;
+            dataClient: Pick<
+                ConnectorTriggerDataClient,
+                'getConnectorOperationOutputMetadata'
+            >;
             templateProvider: Pick<ProjectTemplateProvider, 'getTemplates'>;
             projectCreator: Pick<
                 ProjectTemplateCreator,
@@ -719,6 +732,17 @@ suite('Connector trigger picker', () => {
             catalogs: new Map([[`${azureContext.subscriptionId}:${azureContext.region}`, {
                 catalog,
             }]]),
+            dataClient: {
+                getConnectorOperationOutputMetadata: async (
+                    _context,
+                    _selectedContext,
+                    connectorId,
+                    operationId,
+                ) => {
+                    outputRequests.push({ connectorId, operationId });
+                    return outputMetadata;
+                },
+            },
             templateProvider: {
                 getTemplates: async () => [template],
             },
@@ -728,8 +752,14 @@ suite('Connector trigger picker', () => {
                     language,
                     location,
                     handoff,
+                    selectedOutputMetadata,
                 ) => {
-                    addedTriggers.push({ language, location, handoff });
+                    addedTriggers.push({
+                        language,
+                        location,
+                        handoff,
+                        outputMetadata: selectedOutputMetadata,
+                    });
                 },
                 createProject: async (
                     _context,
@@ -798,6 +828,7 @@ suite('Connector trigger picker', () => {
                 },
             },
         }]);
+        assert.deepStrictEqual(outputRequests, []);
 
         connector.availability = 'unavailable';
         await controllerMethods.handleMessage.call(testableController, {
@@ -848,6 +879,11 @@ suite('Connector trigger picker', () => {
                 connectorId: connector.id,
                 operationId: catalog.operations[0].id,
             },
+            outputMetadata,
+        }]);
+        assert.deepStrictEqual(outputRequests, [{
+            connectorId: connector.id,
+            operationId: catalog.operations[0].id,
         }]);
     });
 
@@ -902,6 +938,10 @@ suite('Connector trigger picker', () => {
                 createSelectedProject(
                     this: {
                         azureContext: ConnectorTriggerAzureContext;
+                        dataClient: Pick<
+                            ConnectorTriggerDataClient,
+                            'getConnectorOperationOutputMetadata'
+                        >;
                         launchOptions: ConnectorTriggerPickerLaunchOptions;
                         postMessage(message: ConnectorTriggerPickerResponse): Promise<void>;
                         projectCreator: Pick<
@@ -933,6 +973,11 @@ suite('Connector trigger picker', () => {
                 }[] = [];
                 const controller = {
                     azureContext,
+                    dataClient: {
+                        getConnectorOperationOutputMetadata: async () => ({
+                            limitation: 'definition-unavailable' as const,
+                        }),
+                    },
                     launchOptions: {
                         isProjectWizard: true,
                         language,
@@ -1005,6 +1050,10 @@ suite('Connector trigger picker', () => {
                 assert.deepStrictEqual(
                     createdProjects[0].options?.connectorTriggerHandoff?.operationId,
                     operationId,
+                );
+                assert.deepStrictEqual(
+                    createdProjects[0].options?.connectorTriggerOutputMetadata,
+                    { limitation: 'definition-unavailable' },
                 );
                 assert.strictEqual(createdProjects[0].template.connectorTrigger, undefined);
             }

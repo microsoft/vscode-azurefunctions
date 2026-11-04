@@ -17,6 +17,7 @@ import {
     connectorTriggerProjectHandoffVersion,
     type ConnectorTriggerProjectHandoff,
 } from '../../../connectorTrigger/connectorTriggerProjectHandoff';
+import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
 import { type IProjectTemplate } from '../../../templates/projectTemplates/IProjectTemplate';
@@ -969,11 +970,18 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 subscriptionContext,
             );
             if (!this.launchOptions.isProjectWizard) {
+                const outputMetadata =
+                    await getConnectorOperationOutputMetadata(
+                        this.dataClient,
+                        actionContext,
+                        selection,
+                    );
                 await this.projectCreator.addConnectorTrigger(
                     actionContext,
                     this.launchOptions.language,
                     projectPath,
                     handoff,
+                    outputMetadata,
                 );
                 return;
             }
@@ -996,6 +1004,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 this.launchOptions.language,
             );
             let template: IProjectTemplate;
+            let outputMetadata: ConnectorTriggerOutputMetadata | undefined;
             if (materializableTemplates.length === 0) {
                 if (!genericTemplate) {
                     throw new Error(localize(
@@ -1007,6 +1016,12 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     ));
                 }
                 template = genericTemplate;
+                outputMetadata =
+                    await getConnectorOperationOutputMetadata(
+                        this.dataClient,
+                        actionContext,
+                        selection,
+                    );
             } else {
                 template = materializableTemplates.length === 1 ?
                     materializableTemplates[0] :
@@ -1027,6 +1042,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 'details',
                 {
                     connectorTriggerHandoff: handoff,
+                    ...(outputMetadata ?
+                        { connectorTriggerOutputMetadata: outputMetadata } :
+                        {}),
                 },
             );
         } catch (error) {
@@ -1113,6 +1131,29 @@ function removeOperationInputs(
     const pickerOperation = { ...operation };
     delete pickerOperation.inputDefinitions;
     return pickerOperation;
+}
+
+async function getConnectorOperationOutputMetadata(
+    dataClient: ConnectorTriggerDataClient,
+    actionContext: IActionContext,
+    selection: ConnectorTriggerProjectSelection,
+): Promise<ConnectorTriggerOutputMetadata> {
+    try {
+        const metadata =
+            await dataClient.getConnectorOperationOutputMetadata(
+                actionContext,
+                selection.azureContext,
+                selection.connector.id,
+                selection.operation.id,
+            );
+        actionContext.telemetry.properties.connectorOutputSchema =
+            metadata.schema ? 'typed' : metadata.limitation;
+        return metadata;
+    } catch {
+        actionContext.telemetry.properties.connectorOutputSchema =
+            'definition-unavailable';
+        return { limitation: 'definition-unavailable' };
+    }
 }
 
 function createProjectHandoff(

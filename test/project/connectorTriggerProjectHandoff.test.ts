@@ -23,6 +23,7 @@ import {
     type ConnectorTriggerProjectHandoff,
     type ConnectorTriggerProjectHandoffErrorCode,
 } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { parseConnectorTriggerOutputMetadata } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import { ProjectLanguage } from '../../src/constants';
 import {
     TemplateCategory,
@@ -141,7 +142,22 @@ suite('Connector trigger project handoff', () => {
     });
 
     test('ProjectTemplateCreator adds a Connector Trigger to an existing supported project', async () => {
-        const handoff = createHandoff();
+        const handoff = createHandoff('act', 'TrigNewContact');
+        const outputMetadata = parseConnectorTriggerOutputMetadata(
+            JSON.parse(await fs.promises.readFile(
+                path.join(
+                    __dirname,
+                    '..',
+                    '..',
+                    'test',
+                    'fixtures',
+                    'connectorTriggerPicker',
+                    'actTrigNewContactSwagger.json',
+                ),
+                'utf8',
+            )),
+            handoff.operationId,
+        );
         let projectCreated = false;
         const creator = new ProjectTemplateCreator({
             onProjectCreated: () => {
@@ -154,12 +170,19 @@ suite('Connector trigger project handoff', () => {
             ProjectLanguage.TypeScript,
             projectPath,
             handoff,
+            outputMetadata,
         );
 
         assert.strictEqual(projectCreated, true);
         assert.strictEqual(
             await AzExtFsExtra.pathExists(
                 path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
+            ),
+            false,
+        );
+        assert.strictEqual(
+            await AzExtFsExtra.pathExists(
+                path.join(projectPath, 'src', 'functions', 'trigNewContactFunction.ts'),
             ),
             true,
         );
@@ -247,7 +270,10 @@ suite('Connector trigger project handoff', () => {
     }
 });
 
-function createHandoff(): ConnectorTriggerProjectHandoff {
+function createHandoff(
+    connectorId = 'office365',
+    operationId = 'OnNewEmail',
+): ConnectorTriggerProjectHandoff {
     return {
         version: connectorTriggerProjectHandoffVersion,
         subscription: {
@@ -259,8 +285,8 @@ function createHandoff(): ConnectorTriggerProjectHandoff {
             },
         },
         region: 'usgovvirginia',
-        connectorId: 'office365',
-        operationId: 'OnNewEmail',
+        connectorId,
+        operationId,
     };
 }
 

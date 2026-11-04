@@ -19,6 +19,15 @@ import {
     type ConnectorTriggerPayloadModel,
 } from './connectorTriggerEventIdentity';
 import {
+    getConnectorTriggerOutputModelName,
+    getCSharpOutputModelDefinition,
+    getPythonOutputFieldName,
+    getPythonOutputModelDefinition,
+    getTypeScriptOutputModelDefinition,
+    type ConnectorTriggerOutputMetadata,
+    type ConnectorTriggerOutputSchema,
+} from './connectorTriggerOutputSchema';
+import {
     updateCSharpConnectorExtension,
     updatePythonFunctionsSdk,
 } from './ensureConnectorTriggerPollProject';
@@ -39,6 +48,7 @@ export async function materializeGenericConnectorTriggerProject(
     projectPath: string,
     language: string,
     handoff: ConnectorTriggerProjectHandoff,
+    outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const identity = getConnectorTriggerEventIdentity(
         handoff.connectorId,
@@ -46,13 +56,25 @@ export async function materializeGenericConnectorTriggerProject(
     );
     switch (language) {
         case ProjectLanguage.CSharp:
-            await materializeCSharpProject(projectPath, identity);
+            await materializeCSharpProject(
+                projectPath,
+                identity,
+                outputMetadata,
+            );
             break;
         case ProjectLanguage.TypeScript:
-            await materializeTypeScriptProject(projectPath, identity);
+            await materializeTypeScriptProject(
+                projectPath,
+                identity,
+                outputMetadata,
+            );
             break;
         case ProjectLanguage.Python:
-            await materializePythonProject(projectPath, identity);
+            await materializePythonProject(
+                projectPath,
+                identity,
+                outputMetadata,
+            );
             break;
         default:
             throw new Error(localize(
@@ -62,7 +84,13 @@ export async function materializeGenericConnectorTriggerProject(
             ));
     }
 
-    await writeEventReadme(projectPath, language, handoff.connectorId, identity);
+    await writeEventReadme(
+        projectPath,
+        language,
+        handoff.connectorId,
+        identity,
+        outputMetadata,
+    );
     const registrations = await findConnectorTriggerRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
     if (registrations.length !== 1 ||
@@ -80,6 +108,7 @@ export async function materializeGenericConnectorTriggerProject(
 async function materializeCSharpProject(
     projectPath: string,
     identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
 ): Promise<void> {
     await updateCSharpConnectorExtension(projectPath);
     const projectFile = await getCSharpProjectFile(projectPath);
@@ -100,7 +129,7 @@ async function materializeCSharpProject(
     }
     await AzExtFsExtra.writeFile(
         path.join(projectPath, identity.csharpFileName),
-        getCSharpFunction(identity),
+        getCSharpFunction(identity, outputMetadata),
     );
 
     const renamedProjectFile = path.join(projectPath, `${identity.pascalName}.csproj`);
@@ -121,6 +150,7 @@ async function materializeCSharpProject(
 async function materializeTypeScriptProject(
     projectPath: string,
     identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
 ): Promise<void> {
     const functionsPath = path.join(projectPath, 'src', 'functions');
     if (await AzExtFsExtra.pathExists(functionsPath)) {
@@ -132,7 +162,7 @@ async function materializeTypeScriptProject(
     await AzExtFsExtra.ensureDir(functionsPath);
     await AzExtFsExtra.writeFile(
         path.join(functionsPath, identity.typescriptFileName),
-        getTypeScriptFunction(identity),
+        getTypeScriptFunction(identity, outputMetadata),
     );
     await updateJsonName(
         path.join(projectPath, 'package.json'),
@@ -151,12 +181,16 @@ async function materializeTypeScriptProject(
 async function materializePythonProject(
     projectPath: string,
     identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
 ): Promise<void> {
     const functionAppPath = path.join(projectPath, 'function_app.py');
     if (!await AzExtFsExtra.pathExists(functionAppPath)) {
         throw createUnsupportedTemplateError();
     }
-    await AzExtFsExtra.writeFile(functionAppPath, getPythonFunction(identity));
+    await AzExtFsExtra.writeFile(
+        functionAppPath,
+        getPythonFunction(identity, outputMetadata),
+    );
     await updatePythonFunctionsSdk(projectPath);
     if (identity.payloadModel?.python) {
         await addPythonRequirement(
@@ -298,12 +332,21 @@ async function writeEventReadme(
     language: string,
     connectorId: string,
     identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
 ): Promise<void> {
     const model = identity.payloadModel;
+    const outputSchema = model ? undefined : outputMetadata?.schema;
     const payloadDescription = model ?
         `The public connector definition returns \`${model.collectionSchemaName}.value[]\` items typed as \`${model.schemaName}\`.` :
-        'The public connector definition is not mapped to a concrete SDK model in this extension, so the generated handler retains the language generic payload type.';
-    const languageDescription = getLanguagePayloadDescription(language, model);
+        outputSchema ?
+            `The selected connector definition returns \`${outputSchema.schemaName}\` items from \`${outputSchema.collectionPath}\`.` :
+            `Output schema ${outputMetadata?.limitation ?? 'definition-unavailable'}; the generated handler retains the language generic payload type.`;
+    const languageDescription = getLanguagePayloadDescription(
+        language,
+        identity,
+        model,
+        outputSchema,
+    );
     await AzExtFsExtra.writeFile(
         path.join(projectPath, 'README.md'),
         `# ${identity.operationId} Connector Trigger
@@ -326,7 +369,9 @@ Connector parameters and authenticated dynamic values remain deferred to the Azu
 
 function getLanguagePayloadDescription(
     language: string,
+    identity: ConnectorTriggerEventIdentity,
     model: ConnectorTriggerPayloadModel | undefined,
+    outputSchema: ConnectorTriggerOutputSchema | undefined,
 ): string {
     if (language === ProjectLanguage.CSharp && model?.csharp) {
         return `The C# binding uses the operation-specific SDK payload \`${model.csharp.payloadType}\` from \`${model.csharp.packageName}\`.`;
@@ -337,17 +382,60 @@ function getLanguagePayloadDescription(
     if (language === ProjectLanguage.Python && model?.python) {
         return `The Python Poll binding receives raw event strings, unwraps \`outputs.body.value[]\`, preserves schema wire casing, and constructs \`${model.python.importName}\` dataclass instances from \`${model.python.packageName}\`.`;
     }
+    if (outputSchema) {
+        const modelName = getConnectorTriggerOutputModelName(
+            identity.pascalName,
+            outputSchema,
+        );
+        if (language === ProjectLanguage.CSharp) {
+            return `The C# Connector binding keeps the supported raw string envelope and deserializes \`${outputSchema.collectionPath}\` into local \`${modelName}\` models.`;
+        }
+        if (language === ProjectLanguage.TypeScript) {
+            return `The TypeScript Connector handler types normalized event items as the local \`${modelName}\` interface.`;
+        }
+        if (language === ProjectLanguage.Python) {
+            return `The Python Poll binding keeps its raw event strings, unwraps \`${outputSchema.collectionPath}\`, and constructs local \`${modelName}\` dataclass instances.`;
+        }
+    }
     return 'The generated handler uses the language generic connector payload without inventing operation-specific fields.';
 }
 
-function getCSharpFunction(identity: ConnectorTriggerEventIdentity): string {
+function getCSharpFunction(
+    identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
+): string {
     const csharpModel = identity.payloadModel?.csharp;
+    const outputSchema = csharpModel ? undefined : outputMetadata?.schema;
+    const localModelName = outputSchema ?
+        getConnectorTriggerOutputModelName(identity.pascalName, outputSchema) :
+        undefined;
     const modelUsing = csharpModel ? `using ${csharpModel.namespace};\n` : '';
+    const schemaUsings = outputSchema ?
+        `using System.Collections.Generic;\n` +
+        `using System.Text.Json;\n` +
+        `using System.Text.Json.Serialization;\n` :
+        '';
     const payloadType = csharpModel?.payloadType ?? 'string';
-    const returnValue = csharpModel ?
-        'System.Text.Json.JsonSerializer.Serialize(payload)' :
-        'payload';
-    return `${modelUsing}using Microsoft.Azure.Functions.Worker;
+    const runBody = csharpModel ?
+        `        logger.LogInformation("${identity.operationId} connector event received.");
+        return System.Text.Json.JsonSerializer.Serialize(payload);` :
+        outputSchema && localModelName ?
+            `${getCSharpLocalRunBody(identity, outputSchema, localModelName)}
+        return payload;` :
+            `        // Output schema ${outputMetadata?.limitation ?? 'definition-unavailable'}; retaining the raw Connector envelope.
+        logger.LogInformation("${identity.operationId} connector event received.");
+        return payload;`;
+    const helpers = outputSchema && localModelName ?
+        getCSharpLocalEnvelopeDefinitions(
+            identity,
+            outputSchema,
+            localModelName,
+        ) :
+        '';
+    const localModel = outputSchema && localModelName ?
+        getCSharpOutputModelDefinition(outputSchema, localModelName) :
+        '';
+    return `${modelUsing}${schemaUsings}using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Connector;
 using Microsoft.Extensions.Logging;
 
@@ -371,21 +459,34 @@ public sealed class ${identity.csharpClassName}
             TriggerConfigName = "%${identity.triggerConfigSettingName}%")]
         ${payloadType} payload)
     {
-        logger.LogInformation("${identity.operationId} connector event received.");
-        return ${returnValue};
+${runBody}
     }
+${helpers ? `\n${indentText(helpers, '    ')}\n` : ''}
 }
+
+${localModel}
 `;
 }
 
-function getTypeScriptFunction(identity: ConnectorTriggerEventIdentity): string {
+function getTypeScriptFunction(
+    identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
+): string {
     const model = identity.payloadModel?.typescript;
+    const outputSchema = model ? undefined : outputMetadata?.schema;
+    const localModelName = outputSchema ?
+        getConnectorTriggerOutputModelName(identity.pascalName, outputSchema) :
+        undefined;
     const typeImport = model ?
         `import type { ${model.importName} } from '${model.importPath}';\n` :
         '';
-    const itemType = model?.importName ?? `${identity.pascalName}Item`;
-    const genericType = model ?
-        '' :
+    const itemType = model?.importName ??
+        localModelName ??
+        `${identity.pascalName}Item`;
+    const genericType = model || localModelName ?
+        localModelName && outputSchema ?
+            `${getTypeScriptOutputModelDefinition(outputSchema, localModelName)}\n\n` :
+            '' :
         `type ${itemType} = Record<string, unknown>;\n\n`;
     return `import { InvocationContext } from '@azure/functions';
 import {
@@ -418,12 +519,23 @@ connectorTrigger<${itemType}>(
 `;
 }
 
-function getPythonFunction(identity: ConnectorTriggerEventIdentity): string {
+function getPythonFunction(
+    identity: ConnectorTriggerEventIdentity,
+    outputMetadata: ConnectorTriggerOutputMetadata | undefined,
+): string {
     const model = identity.payloadModel?.python;
+    const outputSchema = model ? undefined : outputMetadata?.schema;
+    const localModelName = outputSchema ?
+        getConnectorTriggerOutputModelName(identity.pascalName, outputSchema) :
+        undefined;
     const modelImport = model ?
         `from ${model.importPath} import ${model.importName}\n` :
         '';
-    const helpers = model ? getPythonModelHelpers(model, identity) : '';
+    const helpers = model ?
+        getPythonModelHelpers(model, identity) :
+        outputSchema && localModelName ?
+            getPythonLocalModelHelpers(outputSchema, identity, localModelName) :
+            '';
     const handlerBody = model ?
         `    items: List[${model.importName}] = []\n` +
         `    for item in _normalize_poll_items(payloads):\n` +
@@ -431,11 +543,18 @@ function getPythonFunction(identity: ConnectorTriggerEventIdentity): string {
         `        if event is not None:\n` +
         `            items.append(event)\n` +
         `    logging.info("${identity.functionName} received %s typed item(s).", len(items))\n` :
-        `    logging.info("${identity.functionName} received %s connector event(s).", len(payloads))\n`;
+        outputSchema && localModelName ?
+            `    items = _normalize_${identity.pythonFunctionName}_items(payloads)\n` +
+            `    logging.info("${identity.functionName} received %s typed item(s).", len(items))\n` :
+            `    # Output schema ${outputMetadata?.limitation ?? 'definition-unavailable'}; retaining raw Connector envelopes.\n` +
+            `    logging.info("${identity.functionName} received %s connector event(s).", len(payloads))\n`;
+    const schemaImports = outputSchema ?
+        'from dataclasses import dataclass\nfrom typing import Any, Dict, List, Optional\n' :
+        '';
     return `# Copyright (c) .NET Foundation. All rights reserved.
 # Licensed under the MIT License.
 
-${model ? 'import json\nfrom typing import Any, List\n' : 'from typing import List\n'}
+${model ? 'import json\nfrom typing import Any, List\n' : outputSchema ? `import json\n${schemaImports}` : 'from typing import List\n'}
 import azure.functions as func
 import logging
 ${modelImport}
@@ -512,6 +631,140 @@ def _to_${identity.pythonFunctionName}_item(
 `;
 }
 
+function getCSharpLocalRunBody(
+    identity: ConnectorTriggerEventIdentity,
+    schema: ConnectorTriggerOutputSchema,
+    modelName: string,
+): string {
+    const getBodyName = `Get${identity.pascalName}Body`;
+    if (schema.collectionPath === 'body.value') {
+        const responseName = `${identity.pascalName}ResponseBody`;
+        return `        var body = ${getBodyName}(payload);
+        var response = body.HasValue && body.Value.ValueKind == JsonValueKind.Object ?
+            body.Value.Deserialize<${responseName}>() :
+            null;
+        var items = response?.Value ?? new List<${modelName}>();
+        logger.LogInformation("${identity.operationId} received {ItemCount} item(s).", items.Count);`;
+    }
+    return `        var body = ${getBodyName}(payload);
+        var items = body.HasValue && body.Value.ValueKind == JsonValueKind.Array ?
+            body.Value.Deserialize<List<${modelName}>>() ?? new List<${modelName}>() :
+            new List<${modelName}>();
+        logger.LogInformation("${identity.operationId} received {ItemCount} item(s).", items.Count);`;
+}
+
+function getCSharpLocalEnvelopeDefinitions(
+    identity: ConnectorTriggerEventIdentity,
+    schema: ConnectorTriggerOutputSchema,
+    modelName: string,
+): string {
+    const envelopeName = `${identity.pascalName}ConnectorEnvelope`;
+    const outputsName = `${identity.pascalName}ConnectorOutputs`;
+    const getBodyName = `Get${identity.pascalName}Body`;
+    const responseBody = schema.collectionPath === 'body.value' ?
+        `
+private sealed class ${identity.pascalName}ResponseBody
+{
+    [JsonPropertyName("value")]
+    public List<${modelName}>? Value { get; set; }
+}
+` :
+        '';
+    return `private static JsonElement? ${getBodyName}(string payload)
+{
+    var envelope = JsonSerializer.Deserialize<${envelopeName}>(payload);
+    var body = envelope?.Outputs?.Body;
+    if (!body.HasValue)
+    {
+        return null;
+    }
+    if (body.Value.ValueKind != JsonValueKind.String)
+    {
+        return body;
+    }
+    var encodedBody = body.Value.GetString();
+    if (string.IsNullOrWhiteSpace(encodedBody))
+    {
+        return null;
+    }
+    using var document = JsonDocument.Parse(encodedBody);
+    return document.RootElement.Clone();
+}
+
+private sealed class ${envelopeName}
+{
+    [JsonPropertyName("outputs")]
+    public ${outputsName}? Outputs { get; set; }
+}
+
+private sealed class ${outputsName}
+{
+    [JsonPropertyName("body")]
+    public JsonElement? Body { get; set; }
+}
+${responseBody}`;
+}
+
+function getPythonLocalModelHelpers(
+    schema: ConnectorTriggerOutputSchema,
+    identity: ConnectorTriggerEventIdentity,
+    modelName: string,
+): string {
+    const constantName = `_${identity.pythonFunctionName.toUpperCase()}_WIRE_PROPERTIES`;
+    const wireProperties = schema.properties.map(property =>
+        `    ${JSON.stringify(property.name)}: ` +
+        `${JSON.stringify(getPythonOutputFieldName(property.name))},`,
+    ).join('\n');
+    const collection = schema.collectionPath === 'body.value' ?
+        `        if isinstance(body, dict) and isinstance(body.get("value"), list):
+            raw_items.extend(body["value"])
+` :
+        `        if isinstance(body, list):
+            raw_items.extend(body)
+`;
+    return `${getPythonOutputModelDefinition(schema, modelName)}
+
+
+${constantName} = {
+${wireProperties}
+}
+
+
+def _decode_${identity.pythonFunctionName}_json(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return None
+
+
+def _normalize_${identity.pythonFunctionName}_items(
+    payloads: List[str],
+) -> List[${modelName}]:
+    raw_items: List[Any] = []
+    for payload in payloads:
+        envelope = _decode_${identity.pythonFunctionName}_json(payload)
+        if not isinstance(envelope, dict):
+            continue
+        outputs = envelope.get("outputs")
+        if not isinstance(outputs, dict):
+            continue
+        body = _decode_${identity.pythonFunctionName}_json(outputs.get("body"))
+${collection}    return [
+        ${modelName}(**{
+            property_name: item[wire_name]
+            for wire_name, property_name in ${constantName}.items()
+            if wire_name in item
+        })
+        for item in raw_items
+        if isinstance(item, dict)
+    ]
+
+
+`;
+}
+
 function createUnsupportedTemplateError(): Error {
     return new Error(localize(
         'genericConnectorTriggerTemplateUnsupported',
@@ -521,4 +774,8 @@ function createUnsupportedTemplateError(): Error {
 
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function indentText(value: string, indent: string): string {
+    return value.split(/\r?\n/).map(line => `${indent}${line}`).join('\n');
 }

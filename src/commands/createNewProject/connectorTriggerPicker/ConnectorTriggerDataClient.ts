@@ -19,6 +19,10 @@ import {
     ConnectorNamespaceResourceType,
     webProvider,
 } from '../../../constants';
+import {
+    parseConnectorTriggerOutputMetadata,
+    type ConnectorTriggerOutputMetadata,
+} from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
@@ -32,6 +36,7 @@ import { requestUtils } from '../../../utils/requestUtils';
 
 const managedApiCatalogApiVersion = '2016-06-01';
 const managedApiOperationsApiVersion = '2016-06-01';
+const managedApiSwaggerApiVersion = '2022-09-01-preview';
 
 export interface ConnectorTriggerCatalog {
     connectors: ConnectorTriggerOption[];
@@ -429,6 +434,52 @@ export class ConnectorTriggerDataClient {
             throw new Error(localize(
                 'connectorEventsLoadFailed',
                 'Unable to load events for the selected connector.',
+            ), { cause: error });
+        }
+    }
+
+    public async getConnectorOperationOutputMetadata(
+        context: IActionContext,
+        azureContext: ConnectorTriggerAzureContext,
+        connectorId: string,
+        operationId: string,
+    ): Promise<ConnectorTriggerOutputMetadata> {
+        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        maskSubscriptionContext(context, subscription.context);
+        maskValues(
+            context,
+            azureContext.region,
+            azureContext.regionDisplayName,
+        );
+        const location = normalizeLocation(azureContext.region);
+        if (!location) {
+            throw new Error(localize(
+                'connectorRegionUnavailable',
+                'Select a valid Azure region for Connector Triggers.',
+            ));
+        }
+
+        const clientContext = Object.assign({}, context, subscription.context);
+        const client = await this.armClientFactory(clientContext);
+        const endpoint = getResourceManagerEndpoint(subscription.context);
+        const swaggerUrl = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+            `/managedApis/${encodeURIComponent(connectorId)}`,
+            {
+                'api-version': managedApiSwaggerApiVersion,
+                export: 'true',
+            },
+        );
+        try {
+            return parseConnectorTriggerOutputMetadata(
+                await client.get(swaggerUrl),
+                operationId,
+            );
+        } catch (error) {
+            throw new Error(localize(
+                'connectorOutputSchemaLoadFailed',
+                'Unable to load the selected connector event output definition.',
             ), { cause: error });
         }
     }

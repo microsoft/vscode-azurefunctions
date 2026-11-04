@@ -1429,6 +1429,7 @@ interface TestableConnectorTriggerPickerController {
     catalogLoader: ConnectorTriggerCatalogLoader;
     dataClient: Pick<
         ConnectorTriggerDataClient,
+        | 'getConnectorOperationOutputMetadata'
         | 'getSubscriptionContext'
         | 'invalidateSubscriptions'
         | 'listLocations'
@@ -1458,6 +1459,8 @@ interface TestControllerOptions {
     responses: ConnectorTriggerPickerResponse[];
     catalogLoader?: ConnectorTriggerCatalogLoader;
     getSubscriptionContext?: (subscriptionId: string) => Promise<ISubscriptionContext>;
+    getConnectorOperationOutputMetadata?:
+        ConnectorTriggerDataClient['getConnectorOperationOutputMetadata'];
     invalidateSubscriptions?: () => void;
     listLocations?: (
         context: IActionContext,
@@ -1487,6 +1490,9 @@ function createTestController(
         connectorEventSupport: new Map(),
         controllerDisposed: false,
         dataClient: {
+            getConnectorOperationOutputMetadata:
+                options.getConnectorOperationOutputMetadata ??
+                (async () => ({ limitation: 'definition-unavailable' })),
             getSubscriptionContext: options.getSubscriptionContext ??
                 (async () => createSubscriptionContext()),
             invalidateSubscriptions: options.invalidateSubscriptions ?? (() => undefined),

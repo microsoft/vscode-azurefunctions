@@ -1,0 +1,77 @@
+{
+  "properties": {
+    "swagger": {
+      "swagger": "2.0",
+      "paths": {
+        "/{connectionId}/OnNewFeed": {
+          "get": {
+            "operationId": "OnNewFeed",
+            "x-ms-trigger": "batch",
+            "responses": {
+              "200": {
+                "description": "OK",
+                "schema": {
+                  "$ref": "#/definitions/TriggerBatchResponse[FeedItem]"
+                }
+              }
+            }
+          }
+        }
+      },
+      "definitions": {
+        "TriggerBatchResponse[FeedItem]": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/FeedItem"
+              }
+            }
+          }
+        },
+        "FeedItem": {
+          "required": [
+            "title"
+          ],
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "primaryLink": {
+              "type": "string"
+            },
+            "links": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "updatedOn": {
+              "type": "string"
+            },
+            "publishDate": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "copyright": {
+              "type": "string"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

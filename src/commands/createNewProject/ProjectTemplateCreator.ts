@@ -13,6 +13,7 @@ import {
     writeConnectorTriggerProjectHandoff,
     type ConnectorTriggerProjectHandoff,
 } from '../../connectorTrigger/connectorTriggerProjectHandoff';
+import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
 import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
@@ -40,6 +41,7 @@ export interface ProjectTemplateCreatorCallbacks {
 
 export interface ProjectTemplateCreationOptions {
     connectorTriggerHandoff?: ConnectorTriggerProjectHandoff;
+    connectorTriggerOutputMetadata?: ConnectorTriggerOutputMetadata;
 }
 
 export class ProjectTemplateCreator {
@@ -52,9 +54,15 @@ export class ProjectTemplateCreator {
         language: string,
         projectPath: string,
         handoff: ConnectorTriggerProjectHandoff,
+        outputMetadata?: ConnectorTriggerOutputMetadata,
     ): Promise<void> {
         this.reportProgress('Adding Connector Trigger...');
-        await ensureConnectorTriggerPollProject(projectPath, language);
+        await ensureConnectorTriggerPollProject(
+            projectPath,
+            language,
+            handoff,
+            outputMetadata,
+        );
         await writeConnectorTriggerProjectHandoff(projectPath, handoff);
         actionContext.telemetry.properties.result = 'Succeeded';
         this.callbacks.onProjectCreated?.();
@@ -180,6 +188,7 @@ export class ProjectTemplateCreator {
                         projectPath,
                         language,
                         options.connectorTriggerHandoff,
+                        options.connectorTriggerOutputMetadata,
                     );
                 } else if (connectorTriggerTemplate) {
                     await materializeConnectorTriggerTemplate(

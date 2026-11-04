@@ -112,7 +112,9 @@ const payloadModels = new Map<string, ConnectorTriggerPayloadModel>([
 export function getConnectorTriggerEventIdentity(
     connectorId: string,
     operationId: string,
+    instance = 1,
 ): ConnectorTriggerEventIdentity {
+    const instanceSuffix = instance > 1 ? instance.toString() : '';
     const tokens = splitIdentifier(operationId);
     const safeTokens = tokens.length > 0 ? tokens : ['Connector', 'Event'];
     let pascalName = safeTokens.map(toPascalToken).join('');
@@ -121,20 +123,25 @@ export function getConnectorTriggerEventIdentity(
         pascalName = `Connector${pascalName}`;
         needsPrefix = true;
     }
+    pascalName = `${pascalName}${instanceSuffix}`;
 
     const operationName = operationId.trim();
-    const functionName =
+    const baseFunctionName =
         /^[A-Za-z][A-Za-z\d_-]*$/.test(operationName) &&
         !windowsReservedNames.test(operationName) ?
             operationName :
-            pascalName;
+            pascalName.replace(new RegExp(`${instanceSuffix}$`), '');
+    const functionName = `${baseFunctionName}${instanceSuffix}`;
     const camelName = `${pascalName[0].toLowerCase()}${pascalName.slice(1)}`;
     const basePackageName = safeTokens
         .map(token => token.toLowerCase())
         .join('-');
-    const packageName = needsPrefix || windowsReservedNames.test(basePackageName) ?
+    const baseSafePackageName = needsPrefix || windowsReservedNames.test(basePackageName) ?
         `connector-${basePackageName}` :
         basePackageName;
+    const packageName = instanceSuffix ?
+        `${baseSafePackageName}-${instanceSuffix}` :
+        baseSafePackageName;
     const pythonBaseName = [
         ...(needsPrefix ? ['connector'] : []),
         ...safeTokens.map(token => token.toLowerCase()),
@@ -151,7 +158,7 @@ export function getConnectorTriggerEventIdentity(
         pascalName,
         payloadModel: payloadModels.get(getPayloadKey(connectorId, operationId)),
         projectName: camelName,
-        pythonFunctionName: `${pythonBaseName}_function`,
+        pythonFunctionName: `${pythonBaseName}${instanceSuffix ? `_${instanceSuffix}` : ''}_function`,
         triggerConfigSettingName: `${functionName}TriggerConfigName`,
         typescriptFileName: `${camelName}Function.ts`,
     };

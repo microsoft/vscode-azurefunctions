@@ -299,6 +299,54 @@ suite('Connector trigger data client', () => {
         );
     });
 
+    test('loads the selected live output schema without scanning other connectors', async () => {
+        const requests: string[] = [];
+        const fixture = JSON.parse(await fs.promises.readFile(
+            path.join(
+                __dirname,
+                '..',
+                '..',
+                'test',
+                'fixtures',
+                'connectorTriggerPicker',
+                'actTrigNewContactSwagger.json',
+            ),
+            'utf8',
+        )) as unknown;
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(url: string): Promise<unknown> {
+                    requests.push(url);
+                    return fixture;
+                },
+            }),
+        );
+
+        const metadata = await client.getConnectorOperationOutputMetadata(
+            await createTestActionContext(),
+            {
+                subscriptionId: 'sub-one',
+                subscriptionName: 'Subscription One',
+                region: 'usgovvirginia',
+                regionDisplayName: 'US Gov Virginia',
+            },
+            'act',
+            'TrigNewContact',
+        );
+
+        assert.strictEqual(metadata.schema?.schemaName, 'act.web.api.models.Contact');
+        assert.strictEqual(metadata.schema?.collectionPath, 'body');
+        assert.strictEqual(requests.length, 1);
+        const request = new URL(requests[0]);
+        assert.match(request.pathname, /\/managedApis\/act$/);
+        assert.strictEqual(
+            request.searchParams.get('api-version'),
+            '2022-09-01-preview',
+        );
+        assert.strictEqual(request.searchParams.get('export'), 'true');
+    });
+
     (liveCatalogTestsEnabled ? test : test.skip)(
         'loads featured and nonfeatured Poll events through the production client',
         async function (this: Mocha.Context): Promise<void> {
@@ -403,6 +451,23 @@ suite('Connector trigger data client', () => {
                 poll: 0,
                 webhook: 0,
             });
+            const actOutput =
+                await client.getConnectorOperationOutputMetadata(
+                    context,
+                    azureContext,
+                    'act',
+                    'TrigNewContact',
+                );
+            assert.strictEqual(
+                actOutput.schema?.schemaName,
+                'act.web.api.models.Contact',
+            );
+            assert.strictEqual(actOutput.schema?.collectionPath, 'body');
+            assert.strictEqual(
+                actOutput.schema?.properties.find(property =>
+                    property.name === 'customFields')?.type.kind,
+                'map',
+            );
         },
     );
 
