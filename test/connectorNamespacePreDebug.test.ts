@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { getPollingConnectorConnectionPrefixes, getPollingConnectorConnectionPrefixesFromFunctionJson, isValidPollingEndpoint } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import {
+    getPollingConnectorConnectionPrefixes,
+    getPollingConnectorConnectionPrefixesFromFunctionJson,
+    isValidPollingEndpoint,
+    isValidTriggerConfigReference,
+} from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 suite('Connector Namespace pre-debug validation', () => {
     test('detects C# polling connector trigger connection', () => {
@@ -76,5 +81,13 @@ suite('Connector Namespace pre-debug validation', () => {
         assert.equal(isValidPollingEndpoint('connector-namespace-host'), false);
         assert.equal(isValidPollingEndpoint(''), false);
         assert.equal(isValidPollingEndpoint(undefined), false);
+    });
+
+    test('validates Trigger Config references', () => {
+        assert.equal(isValidTriggerConfigReference('on-new-email-config'), true);
+        assert.equal(isValidTriggerConfigReference('/subscriptions/sub/triggerConfigs/config'), true);
+        assert.equal(isValidTriggerConfigReference('<trigger-config-name>'), false);
+        assert.equal(isValidTriggerConfigReference(''), false);
+        assert.equal(isValidTriggerConfigReference(undefined), false);
     });
 });

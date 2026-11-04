@@ -292,9 +292,10 @@ export function registerFuncHostTaskEvents(): void {
                     task.logs.splice(0, task.logs.length - maxLogEntries);
                 }
 
-                // Fallback for dotnet-isolated debug when no --json-output-file is configured: parse the
-                // worker PID directly from the terminal output so pickFuncProcess can still attach.
-                if (!task.workerPidFile && task.workerProcessId === undefined && chunk.includes(workerStartupName)) {
+                // Fallback for dotnet-isolated debug: parse the worker PID straight out of the terminal
+                // output. Kept armed even when --json-output-file is configured, so a file func never
+                // writes degrades to this instead of hanging until pickProcessTimeout.
+                if (task.workerProcessId === undefined && chunk.includes(workerStartupName)) {
                     let obj: unknown;
                     try { obj = JSON.parse(chunk); } catch { /* not full JSON, try regex below */ }
                     if (

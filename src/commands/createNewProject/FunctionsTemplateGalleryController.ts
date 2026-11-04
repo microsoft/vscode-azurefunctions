@@ -3,25 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
-import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../templates/projectTemplates/ProjectTemplateProvider';
-import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
-import { extractZip } from '../../utils/zipUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { projectOpenBehaviorSetting } from '../../constants';
-import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
-import { OpenBehaviorStep } from './OpenBehaviorStep';
-import { OpenFolderStep } from './OpenFolderStep';
+import { ProjectTemplateCreator } from './ProjectTemplateCreator';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -39,6 +31,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private static webviewVariablesRegistered = false;
 
     private readonly templateProvider: ProjectTemplateProvider;
+    private readonly projectCreator: ProjectTemplateCreator;
     private isPanelDisposed = false;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
@@ -46,6 +39,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, options: TemplateGalleryLaunchOptions) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
+        this.projectCreator = new ProjectTemplateCreator({
+            onProjectCreated: () => this.disposePanelIfOpen(),
+            onUserCancelled: () => this.postMessageToWebview({
+                type: 'projectCreationFailed',
+                error: '',
+            }),
+            reportProgress: detail => this.sendProgress(detail),
+        });
         this.initialLocation = options.initialLocation;
         this.initialFilters = options.initialFilters;
 
@@ -141,143 +142,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
-            actionContext.telemetry.properties.templateId = template.id;
-            actionContext.telemetry.properties.templateName = template.displayName;
-            actionContext.telemetry.properties.language = language;
-            actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
-
-            const projectPath = location;
-            const branch = template.branch || 'main';
-            const specificFolder = template.folderPath && template.folderPath !== '.' ? template.folderPath : undefined;
-            const tempDir = path.join(os.tmpdir(), `azfunc-template-${Date.now()}`);
-
-            // If the chosen project path already contains "real" user-visible content,
-            // confirm with the user before clobbering.
-            await this.confirmTargetNotEmpty(actionContext, projectPath);
-
-            try {
-                const gitInstalled = await this.isGitInstalled();
-                actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
-
-                if (gitInstalled) {
-                    if (specificFolder) {
-                        this.sendProgress('Cloning template (sparse)...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
-                            '--branch', branch, template.repositoryUrl, tempDir]);
-                        await cpUtils.executeCommand(undefined, tempDir,
-                            'git', ['sparse-checkout', 'set', specificFolder]);
-
-                        const sourceDir = path.join(tempDir, specificFolder);
-                        if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                            throw new Error(`Template folder "${specificFolder}" not found in repository`);
-                        }
-                        this.sendProgress('Setting up project files...');
-                        await AzExtFsExtra.ensureDir(projectPath);
-                        await this.copyDirectory(sourceDir, projectPath);
-                    } else {
-                        this.sendProgress('Cloning template repository...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
-
-                        let sourceDir = tempDir;
-                        if (template.subdirectory) {
-                            sourceDir = path.join(tempDir, template.subdirectory);
-                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
-                            }
-                        }
-                        this.sendProgress('Setting up project files...');
-                        await AzExtFsExtra.ensureDir(projectPath);
-                        await this.copyDirectory(sourceDir, projectPath);
-                    }
-                } else {
-                    this.sendProgress('Downloading template (git not found, using zip)...');
-                    await this.downloadAndExtractZip(actionContext, template.repositoryUrl, branch, tempDir);
-
-                    this.sendProgress('Setting up project files...');
-                    let sourceDir = tempDir;
-                    if (specificFolder) {
-                        sourceDir = path.join(tempDir, specificFolder);
-                    } else if (template.subdirectory) {
-                        sourceDir = path.join(tempDir, template.subdirectory);
-                    }
-                    await AzExtFsExtra.ensureDir(projectPath);
-                    await this.copyDirectory(sourceDir, projectPath);
-                }
-
-                this.sendProgress('Initializing git repository...');
-                // Remove the cloned template's git history so the user gets a fresh repo
-                // without the original author's commits.
-                const gitDir = path.join(projectPath, '.git');
-                try {
-                    if (await AzExtFsExtra.pathExists(gitDir)) {
-                        await AzExtFsExtra.deleteResource(gitDir, { recursive: true });
-                    }
-                } catch {
-                    // Best-effort; continue with git init anyway
-                }
-                try {
-                    await cpUtils.executeCommandLine(undefined, projectPath, 'git init');
-                } catch {
-                    // git init is optional
-                }
-
-                actionContext.telemetry.properties.result = 'Succeeded';
-
-                // Open the README in the editor before disposing the webview so the user
-                // doesn't see an empty editor pane between dispose and the project opening.
-                await this.tryOpenReadme(projectPath);
-
-                this.disposePanelIfOpen();
-
-                void vscode.window.showInformationMessage(
-                    localize('projectCreated', 'Project created successfully at {0}', projectPath),
-                );
-
-                // Match the classic wizard's post-create behavior: prompt the user how to
-                // open the newly created project (Open in current/new window, or Add to
-                // workspace) and then act on it via the shared OpenFolderStep. This keeps
-                // both flows consistent and reuses the same telemetry / activity output.
-                await this.promptAndOpenProject(actionContext, projectPath);
-            } finally {
-                try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
-            }
+            await this.projectCreator.createProject(
+                actionContext,
+                template,
+                language,
+                location,
+                entryPoint,
+            );
         });
-    }
-
-    private async promptAndOpenProject(actionContext: IActionContext, projectPath: string): Promise<void> {
-        // If the freshly-created project is already part of the open workspace,
-        // there's nothing to open.
-        const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
-        if (alreadyOpen) {
-            return;
-        }
-
-        const wizardContext = Object.assign({}, actionContext, {
-            projectPath,
-            workspacePath: projectPath,
-            workspaceFolder: undefined,
-            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
-        }) as Partial<IProjectWizardContext> & IActionContext;
-
-        const wizard = new AzureWizard<IProjectWizardContext>(wizardContext as IProjectWizardContext, {
-            title: localize('openProject', 'Open new project'),
-            promptSteps: [new OpenBehaviorStep()],
-            executeSteps: [new OpenFolderStep()],
-        });
-
-        try {
-            await wizard.prompt();
-            await wizard.execute();
-        } catch (err) {
-            if (err instanceof UserCancelledError) {
-                // User dismissed the open-behavior picker — files are already on disk,
-                // so just leave them in place. No need to surface an error.
-                return;
-            }
-            throw err;
-        }
     }
 
     // ── Optional overrides ──
@@ -351,130 +223,6 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         } catch {
             // Panel was already disposed between the flag check and the call;
             // safe to ignore.
-        }
-    }
-
-    /**
-     * If `projectPath` already contains "real" user-visible content, prompt the
-     * user with a modal warning before continuing. Hidden / metadata entries
-     * (`.vscode`, `.git`, `.DS_Store`, `Thumbs.db`, etc.) are ignored — they
-     * don't conflict with the cloned template files.
-     *
-     * If the user cancels, posts a silent `projectCreationFailed` message to
-     * the webview so it returns to the gallery without showing an error, then
-     * re-throws `UserCancelledError` so telemetry records the cancellation.
-     */
-    private async confirmTargetNotEmpty(actionContext: IActionContext, projectPath: string): Promise<void> {
-        if (!projectPath || !await AzExtFsExtra.pathExists(projectPath)) {
-            return;
-        }
-        let existing: string[];
-        try {
-            existing = await fs.promises.readdir(projectPath);
-        } catch {
-            existing = [];
-        }
-        const ignoredNames = new Set(['Thumbs.db', 'desktop.ini', '.DS_Store']);
-        const significant = existing.filter(name => !name.startsWith('.') && !ignoredNames.has(name));
-        if (significant.length === 0) {
-            return;
-        }
-        actionContext.telemetry.properties.nonEmptyTarget = 'true';
-        const proceed: vscode.MessageItem = { title: localize('proceedAnyway', 'Create here anyway') };
-        try {
-            // Modal dialogs add an automatic "Cancel" button — only pass the affirmative action.
-            await actionContext.ui.showWarningMessage(
-                localize('targetNotEmpty', 'The selected folder "{0}" is not empty. Existing files may be overwritten. Do you want to create this template here?', projectPath),
-                { modal: true, stepName: 'targetNotEmpty' },
-                proceed,
-            );
-        } catch (err) {
-            if (err instanceof UserCancelledError) {
-                this.postMessageToWebview({ type: 'projectCreationFailed', error: '' });
-            }
-            throw err;
-        }
-    }
-
-    private async tryOpenReadme(projectPath: string): Promise<void> {
-        // Try common README filename casings; first match wins.
-        const candidates = ['README.md', 'README.MD', 'Readme.md', 'readme.md'];
-        for (const name of candidates) {
-            const readmePath = path.join(projectPath, name);
-            if (await AzExtFsExtra.pathExists(readmePath)) {
-                try {
-                    await vscode.commands.executeCommand(
-                        'markdown.showPreview',
-                        vscode.Uri.file(readmePath),
-                    );
-                } catch {
-                    // Fall back to opening the raw markdown if preview is unavailable.
-                    try {
-                        await vscode.window.showTextDocument(vscode.Uri.file(readmePath), {
-                            preview: false,
-                            viewColumn: vscode.ViewColumn.Active,
-                        });
-                    } catch {
-                        // Give up silently — README is best-effort.
-                    }
-                }
-                return;
-            }
-        }
-    }
-
-    private async isGitInstalled(): Promise<boolean> {
-        try {
-            await cpUtils.executeCommandLine(undefined, undefined, 'git --version');
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    private buildZipUrl(repositoryUrl: string, branch: string): string {
-        const base = repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '');
-        return `${base}/archive/refs/heads/${branch}.zip`;
-    }
-
-    private async downloadAndExtractZip(context: IActionContext, repositoryUrl: string, branch: string, destDir: string): Promise<void> {
-        const zipUrl = this.buildZipUrl(repositoryUrl, branch);
-        const zipPath = `${destDir}.zip`;
-
-        try {
-            await requestUtils.downloadFile(context, zipUrl, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
-        } catch (err) {
-            throw new Error(localize('zipDownloadFailed', 'Failed to download template zip: {0}', parseError(err).message), { cause: err });
-        }
-
-        try {
-            await extractZip(zipPath, path.dirname(destDir));
-        } finally {
-            if (await AzExtFsExtra.pathExists(zipPath)) {
-                await AzExtFsExtra.deleteResource(zipPath, { recursive: false });
-            }
-        }
-
-        const repoName = repositoryUrl.replace(/\.git$/, '').split('/').pop() || 'template';
-        const extractedFolder = path.join(path.dirname(destDir), `${repoName}-${branch}`);
-        if (await AzExtFsExtra.pathExists(extractedFolder)) {
-            await this.copyDirectory(extractedFolder, destDir);
-            await AzExtFsExtra.deleteResource(extractedFolder, { recursive: true });
-        }
-    }
-
-    private async copyDirectory(source: string, destination: string): Promise<void> {
-        const entries = await AzExtFsExtra.readDirectory(source);
-        for (const entry of entries) {
-            const sourcePath = path.join(source, entry.name);
-            const destPath = path.join(destination, entry.name);
-
-            if (entry.type === vscode.FileType.Directory) {
-                await AzExtFsExtra.ensureDir(destPath);
-                await this.copyDirectory(sourcePath, destPath);
-            } else if (entry.type === vscode.FileType.File) {
-                await AzExtFsExtra.copy(sourcePath, destPath, { overwrite: true });
-            }
         }
     }
 
