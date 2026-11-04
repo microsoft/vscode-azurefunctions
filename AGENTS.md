@@ -20,6 +20,18 @@ Trace behavior end-to-end before editing:
 
 `package.json` contribution or API call -> registration -> command/wizard -> shared service/tree model -> refresh/output -> tests.
 
+## Azure authentication ownership
+
+Interactive Azure authentication follows this chain:
+
+`Functions -> Azure Resources extension -> @microsoft/vscode-azext-azureauth -> vscode.authentication -> built-in Microsoft Authentication provider`.
+
+- `src/extension.ts` acquires the legacy Azure Resources host API (`ext.rgApi`) and current API (`ext.rgApiV2`). Azure Resources owns Azure account/subscription selection and supplies authenticated subscription objects; Functions does not implement a separate Azure sign-in provider.
+- `src/FunctionAppResolver.ts` receives `ISubscriptionContext` from Azure Resources. `src/tree/SubscriptionTreeItem.ts` passes the selected subscription to Azure client factories. `src/utils/azureClients.ts` delegates to shared `createAzureClient`/`createAzureSubscriptionClient`, which use the supplied credentials and cloud endpoint.
+- The shared auth package implements account/subscription discovery and session-backed credentials. Its `getSessionFromVSCode` helper calls `vscode.authentication.getSession` with the configured provider, resource scopes and tenant. Public Azure uses provider ID `microsoft`; sovereign/custom clouds use `microsoft-sovereign-cloud`.
+- Durable Task Scheduler uses the current API's `AzureSubscription.authentication`: `src/tree/durableTaskScheduler/DurableTaskSchedulerClient.ts` requests a session through that object rather than creating another credential chain.
+- For sign-in/session failures, trace Azure Resources and the auth package before changing Functions command code. Inspect VS Code's **Microsoft Authentication** logs (`Developer: Show Logs...`); check the selected account, tenant, cloud and requested audience without recording tokens or account identifiers. Successful `az login` does not establish a VS Code Microsoft Authentication session. Explicit CI/federated test providers are separate from this interactive flow.
+
 ## Command wiring
 
 - Change command title, visibility, menu, keybinding, setting, activation, or `when` clause in `package.json`, `package.nls.json`.

@@ -4,6 +4,13 @@ applyTo: "src/commands/createFunctionApp/**,src/commands/createFunction/durableS
 
 # Azure workflow instructions
 
+## Authenticated Azure context
+
+- Azure Resources supplies the selected subscription and authentication; its `@microsoft/vscode-azext-azureauth` provider delegates sessions to VS Code Microsoft Authentication. `src/extension.ts` wires both legacy and current Azure Resources APIs; this extension is an auth consumer, not the sign-in owner.
+- Legacy flows use the resource/tree `ISubscriptionContext` with shared client factories (`src/utils/azureClients.ts`). Durable Task Scheduler's current API flow passes `AzureSubscription.authentication` to `DurableTaskSchedulerClient`, which calls `getSession()` for requests. Preserve these paths rather than substituting CLI credentials or caching access tokens.
+- Diagnose failures at the responsible layer: selection/context in Azure Resources, session/scopes/tenant in the shared auth package and VS Code Microsoft Authentication logs, then endpoint/authorization in the service operation. A management-plane session does not imply consent for every resource audience, nor does `az login` sign in the VS Code provider.
+- `createFunctionApp/AuthenticationPromptStep.ts` configures the created app's resource authentication (managed identity versus connection strings); it does not select the developer's VS Code sign-in mechanism.
+
 ## Create a Function App
 
 Commands: `azureFunctions.createFunctionApp`, `azureFunctions.createFunctionAppAdvanced`; deployment may enter this flow.

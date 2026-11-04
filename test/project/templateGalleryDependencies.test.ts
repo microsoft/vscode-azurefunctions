@@ -75,6 +75,40 @@ suite('Project npm dependencies', () => {
         return controller;
     }
 
+    for (const gitInstalled of [true, false]) {
+        test(`passes the C# function file to the post-create opener after ${gitInstalled ? 'git' : 'zip'} copy`, async () => {
+            const events: string[] = [];
+            const controller = createController(gitInstalled, events);
+            const functionRelativePath = path.join('src', 'api', 'HttpTrigger.cs');
+            const writeTemplate = async (directory: string): Promise<void> => {
+                const appPath = path.join(directory, 'src', 'api');
+                await AzExtFsExtra.ensureDir(appPath);
+                await AzExtFsExtra.writeJSON(path.join(appPath, 'host.json'), { version: '2.0' });
+                await fs.promises.writeFile(path.join(directory, functionRelativePath), '[Function("HttpTrigger")]');
+                await fs.promises.writeFile(path.join(appPath, 'Program.cs'), 'var host = new HostBuilder().Build();');
+            };
+            controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => writeTemplate(destination);
+            cpUtils.executeCommand = async (_output, _cwd, command, args) => {
+                assert.strictEqual(command, 'git');
+                assert.ok(Array.isArray(args));
+                const destination = args[args.length - 1];
+                assert.ok(typeof destination === 'string');
+                await writeTemplate(destination);
+                return '';
+            };
+            let opened = false;
+            controller['promptAndOpenProject'] = async (_context, location, functionFile) => {
+                assert.strictEqual(location, projectPath);
+                assert.strictEqual(functionFile, Uri.file(path.join(projectPath, functionRelativePath)).fsPath);
+                opened = true;
+            };
+
+            await controller['createProject'](template, ProjectLanguage.CSharp, projectPath);
+
+            assert.ok(opened);
+        });
+    }
+
     for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.TypeScript]) {
         for (const installSucceeds of [true, false]) {
             test(`Classic ${language} ${installSucceeds ? 'installs dependencies' : 'warns and continues when npm fails'}`, async () => {

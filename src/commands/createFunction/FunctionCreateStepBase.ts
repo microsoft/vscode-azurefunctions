@@ -47,7 +47,7 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
     if (cachedFunc) {
         try {
-            runPostFunctionCreateSteps(cachedFunc);
+            await runPostFunctionCreateSteps(cachedFunc);
         } finally {
             await ext.context.globalState.update(cacheKey, undefined);
         }
@@ -143,21 +143,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             }
         }
 
-        if (context.openBehavior) {
-            const workflowCorrelation = {
-                workflowRunId: context.telemetry.properties.workflowRunId,
-                parentAttemptId: context.telemetry.properties.attemptId,
-            };
-            if (isWorkflowCorrelation(workflowCorrelation)) {
-                cachedFunc.workflowCorrelation = workflowCorrelation;
-            }
-            // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            await ext.context.globalState.update(cacheKey, cachedFunc);
-            // Delete cached information if the extension host was not restarted after 5 seconds
-            setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
-        }
-
-        runPostFunctionCreateSteps(cachedFunc, context);
+        await openCreatedFunction(cachedFunc, !!context.openBehavior, context);
     }
 
     public shouldExecute(context: T): boolean {
@@ -165,9 +151,29 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 }
 
-function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActionContext): void {
-    // Don't wait
-    void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+export async function openCreatedFunction(func: ICachedFunction, cache: boolean, parentContext?: IActionContext): Promise<void> {
+    if (parentContext?.telemetry.properties.workflowRunId) {
+        const workflowCorrelation = {
+            workflowRunId: parentContext.telemetry.properties.workflowRunId,
+            parentAttemptId: parentContext.telemetry.properties.attemptId,
+        };
+        if (isWorkflowCorrelation(workflowCorrelation)) {
+            func.workflowCorrelation = workflowCorrelation;
+        }
+    }
+
+    if (cache) {
+        // OpenFolderStep can restart the extension host, so activation opens the cached file.
+        const globalState = ext.context.globalState;
+        await globalState.update(cacheKey, func);
+        setTimeout(() => { void globalState.update(cacheKey, undefined); }, 5 * 1000);
+    }
+
+    await runPostFunctionCreateSteps(func, parentContext);
+}
+
+async function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActionContext): Promise<void> {
+    await callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
         if (parentContext?.telemetry.properties.workflowRunId) {
             initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'unknown' }, parentContext);
             context.valuesToMask.push(...parentContext.valuesToMask);
