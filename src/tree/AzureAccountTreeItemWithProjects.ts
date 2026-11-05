@@ -84,7 +84,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         if (!hasLocalProject && children.length > 0 && children[0] instanceof GenericTreeItem) {
             const ti: GenericTreeItem = new GenericTreeItem(this, {
-                label: localize('createNewProject', 'Create New Project...'),
+                label: localize('createFunction', 'Create Function...'),
                 commandId: 'azureFunctions.createFunction',
                 contextValue: 'createNewProject',
                 iconPath: treeUtils.getThemedIconPath('CreateNewProject')

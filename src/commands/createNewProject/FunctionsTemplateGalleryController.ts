@@ -18,14 +18,15 @@ import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
 import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
+import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
+import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+import { createNewProjectInternal } from './createNewProject';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -44,6 +45,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
+    private isCreatingProject = false;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
 
@@ -52,6 +54,10 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         this.templateProvider = new ProjectTemplateProvider();
         this.initialLocation = options.initialLocation;
         this.initialFilters = options.initialFilters;
+        this.panel.webview.options = {
+            ...this.panel.webview.options,
+            enableCommandUris: ['azureFunctions.useClassicTemplateFeed'],
+        };
 
         this.registerDisposable(
             this.onDisposed(() => {
@@ -59,6 +65,33 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 FunctionsTemplateGalleryController.currentController = undefined;
             }),
         );
+    }
+
+    public async useClassicTemplateFeed(
+        actionContext: IActionContext,
+        createClassicProject: typeof createNewProjectInternal = createNewProjectInternal,
+    ): Promise<void> {
+        if (this.isCreatingProject) {
+            throw new Error(localize('templateGalleryCreationInProgress', 'Wait for project creation to finish before switching to the classic template feed.'));
+        }
+        this.isCreatingProject = true;
+        try {
+            await updateGlobalSetting(classicTemplateFeedSetting, true);
+            actionContext.telemetry.properties.classicTemplateFeed = 'true';
+            this.disposePanelIfOpen();
+            await createClassicProject(actionContext, { folderPath: this.initialLocation });
+        } finally {
+            this.isCreatingProject = false;
+        }
+    }
+
+    protected override getDocumentTemplate(webview?: vscode.Webview): string {
+        const message = vscode.l10n.t('Looking for the previous experience?');
+        const link = vscode.l10n.t('Use the classic template feed');
+        const banner = `<div role="note" style="padding: 12px 20px; background: var(--vscode-editorWidget-background); border-bottom: 1px solid var(--vscode-widget-border); color: var(--vscode-foreground);">
+            ${escapeHtml(message)} <a href="command:azureFunctions.useClassicTemplateFeed" style="color: var(--vscode-textLink-foreground);">${escapeHtml(link)}</a>
+        </div>`;
+        return super.getDocumentTemplate(webview).replace('<body>', `<body>${banner}`);
     }
 
     public static createOrShow(context: vscode.ExtensionContext, options: TemplateGalleryLaunchOptions = {}): FunctionsTemplateGalleryController {
@@ -143,6 +176,18 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     protected async createProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
+        if (this.isCreatingProject) {
+            throw new Error(localize('templateGalleryProjectAlreadyCreating', 'Wait for the current project creation operation to finish before starting another.'));
+        }
+        this.isCreatingProject = true;
+        try {
+            await this.createTemplateProject(sharedTemplate, language, location, entryPoint);
+        } finally {
+            this.isCreatingProject = false;
+        }
+    }
+
+    private async createTemplateProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
             actionContext.telemetry.properties.templateId = template.id;
@@ -505,6 +550,18 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
+}
+
+function escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, character => {
+        switch (character) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            default: return '&#39;';
+        }
+    });
 }
 
 function areInitialFiltersEqual(existing: InitialTemplateFilters | undefined, current: InitialTemplateFilters | undefined): boolean {

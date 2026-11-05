@@ -3,81 +3,218 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import { routeCreateNewProject } from '../../src/commands/createNewProject/createNewProject';
-
-type ProjectCreationExperience = 'classic' | 'templateGallery';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { createFunctionFromCommand, createFunctionInternal } from '../../src/commands/createFunction/createFunction';
+import { createNewProjectFromCommand, routeCreateNewProject } from '../../src/commands/createNewProject/createNewProject';
+import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
+import { classicTemplateFeedSetting, ProjectLanguage } from '../../src/constants';
+import { ext } from '../../src/extensionVariables';
+import { FuncVersion } from '../../src/FuncVersion';
+import { CentralTemplateProvider } from '../../src/templates/CentralTemplateProvider';
+import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase';
+import { LocalProjectTreeItem } from '../../src/tree/localProject/LocalProjectTreeItem';
+import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
+import { runWithFuncSetting } from '../runWithSetting';
 
 suite('Create New Project experience', () => {
-    test('routes Classic Create to the template feed', async () => {
-        const { context, promptState } = createContext('classic');
+    test('opens the template gallery by default without an experience prompt', async () => {
+        const context = await createTestActionContext();
         const { calls, handlers } = createHandlers();
 
-        await routeCreateNewProject(context, {}, handlers);
-
-        assert.deepStrictEqual(promptState.items, [
-            {
-                label: 'Classic Create',
-                description: 'Template Feed',
-            },
-            {
-                label: 'New Create',
-                description: 'Template Gallery',
-            },
-        ]);
-        assert.strictEqual(calls.classic, 1);
-        assert.strictEqual(calls.templateGallery, 0);
-        assert.strictEqual(context.telemetry.properties.projectCreationExperience, 'classic');
-        assert.strictEqual(context.telemetry.properties.flow, undefined);
-    });
-
-    test('routes New Create to the Template Gallery', async () => {
-        const { context } = createContext('templateGallery');
-        const { calls, handlers } = createHandlers();
-
-        await routeCreateNewProject(context, {}, handlers);
+        await routeCreateNewProject(context, { classicTemplateFeed: false }, handlers);
 
         assert.strictEqual(calls.classic, 0);
         assert.strictEqual(calls.templateGallery, 1);
         assert.strictEqual(context.telemetry.properties.projectCreationExperience, 'templateGallery');
+        assert.strictEqual(context.telemetry.properties.classicTemplateFeed, 'false');
         assert.strictEqual(context.telemetry.properties.flow, 'templateGallery');
     });
 
-    test('bypasses the selector for explicit classic paths', async () => {
-        for (const options of [{ templateId: 'HttpTrigger' }, { startFromScratch: true }]) {
-            const { context, promptState } = createContext('classic');
+    test('uses the classic template feed when the user setting is enabled', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, true, async () => {
+            const context = await createTestActionContext();
             const { calls, handlers } = createHandlers();
 
-            await routeCreateNewProject(context, options, handlers);
+            await routeCreateNewProject(context, {}, handlers);
 
-            assert.strictEqual(promptState.count, 0);
+            assert.strictEqual(calls.classic, 1);
+            assert.strictEqual(calls.templateGallery, 0);
+            assert.strictEqual(context.telemetry.properties.projectCreationExperience, 'classic');
+            assert.strictEqual(context.telemetry.properties.classicTemplateFeed, 'true');
+        });
+    });
+
+    test('returns to the gallery when the classic setting is disabled', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const context = await createTestActionContext();
+            const { calls, handlers } = createHandlers();
+
+            await routeCreateNewProject(context, {}, handlers);
+
+            assert.strictEqual(calls.classic, 0);
+            assert.strictEqual(calls.templateGallery, 1);
+        });
+    });
+
+    test('preserves explicit classic paths even when the gallery is the default', async () => {
+        for (const options of [{ templateId: 'HttpTrigger' }, { startFromScratch: true }]) {
+            const context = await createTestActionContext();
+            const { calls, handlers } = createHandlers();
+
+            await routeCreateNewProject(context, { ...options, classicTemplateFeed: false }, handlers);
+
             assert.strictEqual(calls.classic, 1);
             assert.strictEqual(calls.templateGallery, 0);
         }
     });
 });
 
-function createContext(selection: ProjectCreationExperience): {
-    context: IActionContext;
-    promptState: { count: number; items: { label: string; description: string | undefined }[] };
-} {
-    const promptState = { count: 0, items: [] as { label: string; description: string | undefined }[] };
-    const context = {
-        telemetry: { properties: {} },
-        ui: {
-            showQuickPick: async (picks: IAzureQuickPickItem<ProjectCreationExperience>[]) => {
-                promptState.count += 1;
-                promptState.items = picks.map(pick => ({ label: pick.label, description: pick.description }));
-                const selectionPick = picks.find(pick => pick.data === selection);
-                assert.ok(selectionPick);
-                return selectionPick;
-            },
-        },
-    } as unknown as IActionContext;
+suite('Unified Create Function', () => {
+    let folderPath: string;
+    let originalContext: vscode.ExtensionContext;
+    const originalFetchTemplates = FunctionsTemplateGalleryController.prototype['fetchTemplates'];
 
-    return { context, promptState };
-}
+    setup(async () => {
+        originalContext = ext.context;
+        const extension = vscode.extensions.getExtension('ms-azuretools.vscode-azurefunctions');
+        assert.ok(extension);
+        ext.context = { ...originalContext, extensionPath: extension.extensionPath };
+        folderPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc unified creation '));
+        FunctionsTemplateGalleryController.prototype['fetchTemplates'] = async () => ({ templates: [], defaultLocation: folderPath });
+    });
+
+    teardown(async () => {
+        FunctionsTemplateGalleryController.currentController?.panel.dispose();
+        FunctionsTemplateGalleryController.prototype['fetchTemplates'] = originalFetchTemplates;
+        ext.context = originalContext;
+        await AzExtFsExtra.deleteResource(folderPath, { recursive: true, useTrash: false });
+    });
+
+    test('opens the gallery for an empty folder and preserves the selected target', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            await createFunctionFromCommand(await createTestActionContext(), folderPath);
+
+            const controller = FunctionsTemplateGalleryController.currentController;
+            assert.ok(controller);
+            assert.strictEqual(controller['initialLocation'], folderPath);
+            assert.deepStrictEqual(await fs.promises.readdir(folderPath), []);
+        });
+    });
+
+    test('keeps the API new-project handoff separate from the gallery', async () => {
+        let target: string | undefined;
+        await createFunctionInternal(await createTestActionContext(), { folderPath }, async (_context, options) => {
+            target = options.folderPath;
+        });
+
+        assert.strictEqual(target, folderPath);
+        assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+    });
+
+    test('preserves the selected tree folder rather than choosing another workspace', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const node: LocalProjectTreeItem = Object.assign(Object.create(LocalProjectTreeItem.prototype), {
+                preCompiledProjectPath: folderPath,
+                effectiveProjectPath: path.join(folderPath, 'bin'),
+            });
+
+            await createFunctionFromCommand(await createTestActionContext(), node);
+
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController?.['initialLocation'], folderPath);
+        });
+    });
+
+    test('keeps the old project command working as an alias', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            await createNewProjectFromCommand(await createTestActionContext(), folderPath);
+
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController?.['initialLocation'], folderPath);
+        });
+    });
+
+    test('keeps existing projects in the function template feed', async () => {
+        await fs.promises.writeFile(path.join(folderPath, 'host.json'), '{}');
+        const context = await createTestActionContext();
+        const provider = new CentralTemplateProvider();
+        provider.getFunctionTemplates = async () => [{
+            id: 'HttpTrigger', name: 'HTTP trigger', language: ProjectLanguage.Python,
+            isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false,
+            templateSchemaVersion: TemplateSchemaVersion.v1,
+        }];
+        ext.templateProvider.registerActionVariable(provider, context);
+        const selectionReached = new Error('Reached function template selection');
+        let placeHolder: string | undefined;
+        context.ui.showQuickPick = async (_picks, options) => {
+            placeHolder = options.placeHolder;
+            throw selectionReached;
+        };
+        try {
+            await assert.rejects(
+                createFunctionFromCommand(context, folderPath, undefined, undefined, undefined, ProjectLanguage.Python, FuncVersion.v4),
+                error => error === selectionReached,
+            );
+            assert.ok(placeHolder?.startsWith('Select a template for your function'));
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+        } finally {
+            provider.dispose();
+        }
+    });
+
+    test('shows a top banner with only the classic-switch command enabled', () => {
+        const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        const html = controller.panel.webview.html;
+
+        const bannerPosition = html.indexOf('Looking for the previous experience?');
+        assert.ok(bannerPosition >= 0 && bannerPosition < html.indexOf('<div id="root">'));
+        assert.ok(html.includes('href="command:azureFunctions.useClassicTemplateFeed"'));
+        assert.ok(html.includes('Use the classic template feed'));
+        assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed']);
+    });
+
+    test('switching saves the preference, closes the gallery, and keeps the target folder', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+            let target: string | undefined;
+
+            await controller.useClassicTemplateFeed(await createTestActionContext(), async (_context, options) => {
+                assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
+                assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+                target = options.folderPath;
+            });
+
+            assert.strictEqual(target, folderPath);
+            assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
+        });
+    });
+
+    test('does not switch experiences or save a preference during project creation', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+            controller['isCreatingProject'] = true;
+
+            await assert.rejects(
+                controller.useClassicTemplateFeed(await createTestActionContext(), async () => assert.fail('Must not start classic creation')),
+                /Wait for project creation to finish/,
+            );
+
+            assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), false);
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController, controller);
+            await assert.rejects(
+                controller['createProject']({
+                    id: 'test', displayName: 'Test', shortDescription: 'Test',
+                    repositoryUrl: 'https://github.com/Azure/azure-functions-templates', languages: ['Python'],
+                }, 'Python', folderPath),
+                /Wait for the current project creation operation/,
+            );
+            assert.deepStrictEqual(await fs.promises.readdir(folderPath), []);
+        });
+    });
+});
 
 function createHandlers(): {
     calls: { classic: number; templateGallery: number };

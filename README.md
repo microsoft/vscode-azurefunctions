@@ -14,17 +14,15 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 ## Create your first serverless app
 
-1. Select the button to create a new project in the Azure Resources explorer
+1. Select **Create Function...** in the Azure Workspace explorer or command palette.
 
-    ![createNewProject](resources/readme/createFunction.png)
+1. In the template gallery, select an HTTP trigger template and your desired programming language.
+1. Select a new, _empty_ folder to contain your project and create the project.
+1. If the selected folder is not already open, select "Open in current window" to open it.
 
-1. Select a new, _empty_ folder to contain your project
-1. Select your desired programming language
-1. Select "HTTP trigger" for your project's first function
-1. Use "HttpTrigger1" as the function name
-1. Select "Anonymous" for the authorization level, which enables anyone to call your function endpoint without a key.
-    > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
-1. If the selected folder is not already open, select "Open in current window" to open it
+**Create Function...** adds a function using the template feed when a Functions project already exists in the selected folder. Otherwise, it opens the template gallery to create a project.
+
+To use the previous project creation wizard, select **Use the classic template feed** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. Disable the setting to return to the gallery.
 
 ## Run the serverless app locally
 

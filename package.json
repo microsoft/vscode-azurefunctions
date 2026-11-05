@@ -223,6 +223,12 @@
                 "enablement": "!virtualWorkspace"
             },
             {
+                "command": "azureFunctions.useClassicTemplateFeed",
+                "title": "%azureFunctions.useClassicTemplateFeed%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.createSlot",
                 "title": "%azureFunctions.createSlot%",
                 "category": "Azure Functions"
@@ -525,10 +531,6 @@
                 {
                     "command": "azureFunctions.createFunction",
                     "group": "1_projects@1"
-                },
-                {
-                    "command": "azureFunctions.createNewProject",
-                    "group": "1_projects@2"
                 },
                 {
                     "command": "azureFunctions.createNewProjectWithDockerfile",
@@ -966,6 +968,14 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.useClassicTemplateFeed",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.deployByFunctionAppId",
                     "when": "never"
@@ -1518,6 +1528,12 @@
                         "type": "number",
                         "default": 24,
                         "description": "%azureFunctions.projectTemplates.cacheExpirationHours%"
+                    },
+                    "azureFunctions.classicTemplateFeed": {
+                        "type": "boolean",
+                        "default": false,
+                        "scope": "application",
+                        "description": "%azureFunctions.classicTemplateFeed%"
                     },
                     "azureFunctions.enableTemplateGallery": {
                         "type": "boolean",

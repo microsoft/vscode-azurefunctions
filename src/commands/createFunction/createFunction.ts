@@ -7,16 +7,18 @@ import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils'
 import { type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
-import { type LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
+import { LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
 import { createActivityContext } from '../../utils/activityUtils';
 import { durableUtils } from '../../utils/durableUtils';
 import { getContainingWorkspace, getRootWorkspaceFolder } from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import type * as api from '../../vscode-azurefunctions.api';
-import { createNewProjectInternal } from '../createNewProject/createNewProject';
+import { createNewProjectInternal, routeCreateNewProject } from '../createNewProject/createNewProject';
+import { FunctionsTemplateGalleryController } from '../createNewProject/FunctionsTemplateGalleryController';
 import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
@@ -33,23 +35,38 @@ export async function createFunctionFromCommand(
     language?: ProjectLanguage,
     version?: FuncVersion): Promise<void> {
 
-    if (folderPath && typeof folderPath !== 'string') {
+    if (folderPath instanceof LocalProjectTreeItem) {
+        folderPath = folderPath.preCompiledProjectPath || folderPath.effectiveProjectPath;
+    } else if (folderPath && typeof folderPath !== 'string') {
         folderPath = undefined;
     }
 
     await createFunctionInternal(context, {
-        // if a tree element has been selected, it will be passed into the `folderProject` parameter as a BranchDataItemWrapper
         folderPath: typeof folderPath === 'string' ? folderPath : undefined,
-        // if *multiple* tree elements are selected, they will be passed as an array as the `language` parameter as an array of BranchDataItemWrapper
         templateId: typeof templateId === 'string' ? templateId : undefined,
         functionName,
         functionSettings,
         language: <api.ProjectLanguage>language,
         version: <api.ProjectVersion>version
+    }, async (actionContext, options) => {
+        await routeCreateNewProject(actionContext, {
+            templateId: options.templateId,
+            startFromScratch: options.language !== undefined || options.version !== undefined ||
+                options.functionName !== undefined || options.functionSettings !== undefined,
+        }, {
+            createClassicProject: async () => await createNewProjectInternal(actionContext, options),
+            showTemplateGallery: () => {
+                FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: options.folderPath });
+            },
+        });
     });
 }
 
-export async function createFunctionInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
+export async function createFunctionInternal(
+    context: IActionContext,
+    options: api.ICreateFunctionOptions,
+    createProject: typeof createNewProjectInternal = createNewProjectInternal,
+): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
 
@@ -66,7 +83,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     if (!projectPath) {
         // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
         context.telemetry.properties.noWorkspaceResult = 'createNewProject';
-        await createNewProjectInternal(context, options);
+        await createProject(context, { ...options, folderPath: workspacePath });
         return;
     }
 
