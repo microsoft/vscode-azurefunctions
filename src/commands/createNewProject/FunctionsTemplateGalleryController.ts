@@ -21,6 +21,7 @@ import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
 import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
+import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { installNodeDependencies } from './installNodeDependencies';
@@ -196,6 +197,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private async createTemplateProject(sharedTemplate: ISharedProjectTemplate, language: string, location: string, entryPoint?: ProjectCreationEntryPoint): Promise<void> {
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
+            actionContext.errorHandling.rethrow = true;
             actionContext.telemetry.properties.templateId = template.id;
             actionContext.telemetry.properties.templateName = template.displayName;
             actionContext.telemetry.properties.language = language;
@@ -271,6 +273,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     }
                 }
 
+                await this.initializeProjectForVSCode(actionContext, projectPath, language);
+
                 this.sendProgress('Initializing git repository...');
                 // Remove the cloned template's git history so the user gets a fresh repo
                 // without the original author's commits.
@@ -310,6 +314,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
             }
         });
+    }
+
+    private async initializeProjectForVSCode(actionContext: IActionContext, projectPath: string, language: string): Promise<void> {
+        this.sendProgress(localize('initializingGalleryProject', 'Initializing project for VS Code...'));
+        const projectLanguage = Object.values(ProjectLanguage).find(value => value === language);
+        await initProjectForVSCode(actionContext, projectPath, projectLanguage, { useProjectFolderAsWorkspace: true });
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {

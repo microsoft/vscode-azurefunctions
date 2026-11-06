@@ -14,13 +14,15 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 ## Create your first serverless app
 
-1. Select **Create Function...** in the Azure Workspace explorer or command palette.
+1. Select **Create New Function Project...** in the Azure Workspace explorer or command palette.
 
 1. In the template gallery, select an HTTP trigger template and your desired programming language.
 1. Select a new, _empty_ folder to contain your project and create the project.
 1. If the selected folder is not already open, select "Open in current window" to open it.
 
-**Create Function...** adds a function using the template feed when a Functions project already exists in the selected folder. Otherwise, it opens the template gallery to create a project.
+**Create New Function Project...** opens the template gallery, even when a Functions project is already open. Gallery-created projects are initialized for VS Code before opening, including their language, tasks, and debugging configuration.
+
+**Create Function...** adds a function to an existing Functions project using the classic template feed, including projects created from the gallery. If no Functions project exists in the selected folder, it opens project creation.
 
 To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. Disable the setting to return to the gallery.
 

@@ -529,6 +529,10 @@
         "menus": {
             "azureFunctions.submenus.workspaceActions": [
                 {
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@0"
+                },
+                {
                     "command": "azureFunctions.createFunction",
                     "group": "1_projects@1"
                 },
@@ -970,10 +974,6 @@
             "commandPalette": [
                 {
                     "command": "azureFunctions.useClassicTemplateFeed",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.createNewProject",
                     "when": "never"
                 },
                 {
@@ -1566,7 +1566,7 @@
                         "id": "create",
                         "title": "%azureFunctions.walkthrough.functionsStart.create.title%",
                         "completionEvents": [
-                            "onCommand:azureFunctions.createFunction"
+                            "onCommand:azureFunctions.createNewProject"
                         ],
                         "description": "%azureFunctions.walkthrough.functionsStart.create.description%",
                         "media": {

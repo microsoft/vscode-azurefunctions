@@ -10,6 +10,7 @@ import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
+import { isPathEqual } from '../../utils/fs';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
@@ -17,7 +18,7 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, options?: { useProjectFolderAsWorkspace?: boolean }): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
     if (fsPath === undefined) {
@@ -34,6 +35,9 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         }
     } else {
         workspaceFolder = getContainingWorkspace(fsPath);
+        if (options?.useProjectFolderAsWorkspace && workspaceFolder && !isPathEqual(workspaceFolder.uri.fsPath, fsPath)) {
+            workspaceFolder = undefined;
+        }
         workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
     }
 

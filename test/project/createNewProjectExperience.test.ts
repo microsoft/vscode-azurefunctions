@@ -20,6 +20,7 @@ import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase'
 import { LocalProjectTreeItem } from '../../src/tree/localProject/LocalProjectTreeItem';
 import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
 import { runWithFuncSetting } from '../runWithSetting';
+import { getTestWorkspaceFolder } from '../global.test';
 
 suite('Create New Project experience', () => {
     test('opens the template gallery by default without an experience prompt', async () => {
@@ -129,12 +130,60 @@ suite('Unified Create Function', () => {
         });
     });
 
-    test('keeps the old project command working as an alias', async () => {
+    test('opens the project gallery even when the target already contains a Functions project', async () => {
         await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            await fs.promises.writeFile(path.join(folderPath, 'host.json'), '{}');
             await createNewProjectFromCommand(await createTestActionContext(), folderPath);
 
             assert.strictEqual(FunctionsTemplateGalleryController.currentController?.['initialLocation'], folderPath);
         });
+    });
+
+    test('keeps both creation commands visible in the command palette and workspace actions', async () => {
+        const manifest = await AzExtFsExtra.readJSON<{
+            contributes: { menus: Record<string, { command: string; when?: string }[]> };
+        }>(path.join(ext.context.extensionPath, 'package.json'));
+        for (const command of ['azureFunctions.createNewProject', 'azureFunctions.createFunction']) {
+            assert.ok(!manifest.contributes.menus.commandPalette.some(item => item.command === command && item.when === 'never'));
+            assert.ok(manifest.contributes.menus['azureFunctions.submenus.workspaceActions'].some(item => item.command === command));
+        }
+    });
+
+    test('adds functions through the classic feed after gallery initialization without another initialization prompt', async () => {
+        const workspacePath = getTestWorkspaceFolder();
+        const context = await createTestActionContext();
+        const provider = new CentralTemplateProvider();
+        const selectionReached = new Error('Reached function template selection');
+        provider.getFunctionTemplates = async () => [{
+            id: 'HttpTrigger', name: 'HTTP trigger', language: ProjectLanguage.TypeScript,
+            isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false,
+            templateSchemaVersion: TemplateSchemaVersion.v2,
+        }];
+        ext.templateProvider.registerActionVariable(provider, context);
+        let placeHolder: string | undefined;
+        context.ui.showQuickPick = async (_picks, options) => {
+            placeHolder = options.placeHolder;
+            throw selectionReached;
+        };
+        try {
+            await AzExtFsExtra.writeJSON(path.join(workspacePath, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(workspacePath, 'package.json'), {
+                dependencies: { '@azure/functions': '^4.0.0' },
+            });
+            const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
+            controller['sendProgress'] = () => undefined;
+            await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
+                await controller['initializeProjectForVSCode'](await createTestActionContext(), workspacePath, ProjectLanguage.TypeScript);
+            });
+            await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+                await assert.rejects(createFunctionFromCommand(context, workspacePath), error => error === selectionReached);
+            });
+            assert.ok(placeHolder?.startsWith('Select a template for your function'));
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+        } finally {
+            provider.dispose();
+            await AzExtFsExtra.emptyDir(workspacePath);
+        }
     });
 
     test('unwraps an Azure Resources tree selection without losing the target folder', async () => {
@@ -147,6 +196,36 @@ suite('Unified Create Function', () => {
 
             assert.strictEqual(FunctionsTemplateGalleryController.currentController?.['initialLocation'], folderPath);
         });
+    });
+
+    test('initializes a gallery app inside an existing workspace without changing the parent project', async () => {
+        const workspacePath = getTestWorkspaceFolder();
+        const galleryPath = path.join(workspacePath, 'new-project');
+        try {
+            await AzExtFsExtra.writeJSON(path.join(workspacePath, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.ensureDir(path.join(workspacePath, '.vscode'));
+            const parentSettings = { 'editor.tabSize': 3 };
+            await AzExtFsExtra.writeJSON(path.join(workspacePath, '.vscode', 'settings.json'), parentSettings);
+            await AzExtFsExtra.ensureDir(galleryPath);
+            await AzExtFsExtra.writeJSON(path.join(galleryPath, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(galleryPath, 'package.json'), {
+                dependencies: { '@azure/functions': '^4.0.0' },
+            });
+            const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
+            controller['sendProgress'] = () => undefined;
+
+            await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
+                await controller['initializeProjectForVSCode'](await createTestActionContext(), galleryPath, ProjectLanguage.TypeScript);
+            });
+
+            const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(galleryPath, '.vscode', 'settings.json'));
+            assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+            assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
+            assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(workspacePath, '.vscode', 'settings.json')), parentSettings);
+            assert.ok(!await AzExtFsExtra.pathExists(path.join(workspacePath, '.vscode', 'tasks.json')));
+        } finally {
+            await AzExtFsExtra.emptyDir(workspacePath);
+        }
     });
 
     test('keeps existing projects in the function template feed', async () => {
