@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, createTestActionContext, registerTelemetryHandler, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { TemplateGalleryController } from '@microsoft/vscode-azext-webview';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -34,6 +35,7 @@ suite('Create New Project experience', () => {
         assert.strictEqual(context.telemetry.properties.projectCreationExperience, 'templateGallery');
         assert.strictEqual(context.telemetry.properties.classicTemplateFeed, 'false');
         assert.strictEqual(context.telemetry.properties.flow, 'templateGallery');
+        assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'default');
     });
 
     test('uses the classic template feed when the user setting is enabled', async () => {
@@ -47,6 +49,7 @@ suite('Create New Project experience', () => {
             assert.strictEqual(calls.templateGallery, 0);
             assert.strictEqual(context.telemetry.properties.projectCreationExperience, 'classic');
             assert.strictEqual(context.telemetry.properties.classicTemplateFeed, 'true');
+            assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'savedPreference');
         });
     });
 
@@ -71,6 +74,7 @@ suite('Create New Project experience', () => {
 
             assert.strictEqual(calls.classic, 1);
             assert.strictEqual(calls.templateGallery, 0);
+            assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'explicitArguments');
         }
     });
 });
@@ -78,6 +82,8 @@ suite('Create New Project experience', () => {
 suite('Unified Create Function', () => {
     let folderPath: string;
     let originalContext: vscode.ExtensionContext;
+    let telemetryHook: vscode.Disposable;
+    let events: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
     const originalFetchTemplates = FunctionsTemplateGalleryController.prototype['fetchTemplates'];
 
     setup(async () => {
@@ -87,10 +93,15 @@ suite('Unified Create Function', () => {
         ext.context = { ...originalContext, extensionPath: extension.extensionPath };
         folderPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc unified creation '));
         FunctionsTemplateGalleryController.prototype['fetchTemplates'] = async () => ({ templates: [], defaultLocation: folderPath });
+        events = [];
+        telemetryHook = registerTelemetryHandler(context => {
+            events.push({ name: context.callbackId, properties: { ...context.telemetry.properties }, measurements: { ...context.telemetry.measurements } });
+        });
     });
 
     teardown(async () => {
         FunctionsTemplateGalleryController.currentController?.panel.dispose();
+        telemetryHook.dispose();
         FunctionsTemplateGalleryController.prototype['fetchTemplates'] = originalFetchTemplates;
         ext.context = originalContext;
         await AzExtFsExtra.deleteResource(folderPath, { recursive: true, useTrash: false });
@@ -180,6 +191,9 @@ suite('Unified Create Function', () => {
             });
             assert.ok(placeHolder?.startsWith('Select a template for your function'));
             assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+            assert.strictEqual(context.telemetry.properties.functionCreationExperience, 'classic');
+            assert.strictEqual(context.telemetry.properties.functionCreationRouteReason, 'existingProject');
+            assert.strictEqual(context.telemetry.properties.functionLanguage, ProjectLanguage.TypeScript);
         } finally {
             provider.dispose();
             await AzExtFsExtra.emptyDir(workspacePath);
@@ -268,6 +282,9 @@ suite('Unified Create Function', () => {
         assert.ok(html.includes('role="note"'));
         assert.ok(html.includes('aria-hidden="true" focusable="false"'));
         assert.ok(html.includes('--vscode-inputValidation-infoBackground'));
+        assert.ok(html.includes('border-left: 4px solid var(--vscode-editorInfo-foreground)'));
+        assert.ok(html.includes('<strong style="font-size: 14px;">Prefer the classic experience?</strong>'));
+        assert.ok(html.includes('--vscode-button-secondaryBackground'));
         assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed']);
     });
 
@@ -275,8 +292,9 @@ suite('Unified Create Function', () => {
         await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
             const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
             let target: string | undefined;
+            const context = await createTestActionContext();
 
-            await controller.useClassicTemplateFeed(await createTestActionContext(), async (_context, options) => {
+            await controller.useClassicTemplateFeed(context, async (_context, options) => {
                 assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
                 assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
                 target = options.folderPath;
@@ -284,7 +302,106 @@ suite('Unified Create Function', () => {
 
             assert.strictEqual(target, folderPath);
             assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
+            assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'galleryBanner');
+            assert.strictEqual(context.telemetry.properties.classicPreferenceSaved, 'true');
+            assert.strictEqual(context.telemetry.properties.classicSwitchStage, 'complete');
+            await Promise.resolve();
+            assert.ok(events.some(event => event.name.endsWith('.closed') && event.properties.reason === 'classic'));
         });
+    });
+
+    test('distinguishes gallery open, reuse, abandonment, and closing during creation', async () => {
+        const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        assert.strictEqual(FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath }), controller);
+        controller.panel.dispose();
+        await Promise.resolve();
+        assert.deepStrictEqual(events.filter(event => event.name.endsWith('.opened')).map(event => event.properties.reused), ['false', 'true']);
+        const abandoned = events.find(event => event.name.endsWith('.closed'));
+        assert.strictEqual(abandoned?.properties.reason, 'abandoned');
+        assert.ok(abandoned && typeof abandoned.measurements.galleryDuration === 'number' && abandoned.measurements.galleryDuration >= 0);
+
+        const creating = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        creating['isCreatingProject'] = true;
+        creating.panel.dispose();
+        await Promise.resolve();
+        assert.ok(events.some(event => event.name.endsWith('.closed') && event.properties.reason === 'closedDuringCreation'));
+    });
+
+    test('keeps the saved classic preference distinct from canceling the classic wizard', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+            await callWithTelemetryAndErrorHandling('azureFunctions.useClassicTemplateFeed', async context => {
+                await controller.useClassicTemplateFeed(context, async () => { throw new UserCancelledError(); });
+            });
+            const switched = events.find(event => event.name === 'azureFunctions.useClassicTemplateFeed');
+            assert.strictEqual(switched?.properties.classicPreferenceSaved, 'true');
+            assert.strictEqual(switched?.properties.classicSwitchStage, 'classicWizard');
+            assert.strictEqual(switched?.properties.result, 'Canceled');
+            assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+        });
+    });
+
+    test('records catalog counts and only reports template IDs from the loaded catalog', async () => {
+        const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        controller['templateProvider'].getTemplates = async context => {
+            context.telemetry.properties.manifestSource = 'cache';
+            return [{
+                id: 'official-template', displayName: 'Official', shortDescription: '', categories: [],
+                repositoryUrl: 'https://github.com/Azure/azure-functions-templates', languages: [ProjectLanguage.Python],
+            }];
+        };
+        await originalFetchTemplates.call(controller);
+        await originalFetchTemplates.call(controller);
+        controller['onTemplateSelected']('official-template');
+        controller['onTemplateSelected']('private-user-input');
+        await Promise.resolve();
+        const loads = events.filter(event => event.name.endsWith('.getTemplates'));
+        assert.deepStrictEqual(loads.map(event => event.properties.catalogRequest), ['initial', 'reload']);
+        assert.ok(loads.every(event => event.measurements.templateCount === 1 && event.properties.manifestSource === 'cache'));
+        assert.deepStrictEqual(events.filter(event => event.name.endsWith('.templateSelected')).map(event => event.properties.templateId), ['official-template', 'unknown']);
+        assert.ok(!JSON.stringify(events).includes('private-user-input'));
+        assert.ok(!JSON.stringify(events).includes(folderPath));
+    });
+
+    test('records folder picker cancellation separately from project creation', async () => {
+        const browse = TemplateGalleryController.prototype['browseFolder'];
+        TemplateGalleryController.prototype['browseFolder'] = async () => undefined;
+        try {
+            const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+            assert.strictEqual(await controller['browseFolder'](), undefined);
+            assert.ok(events.some(event => event.name.endsWith('.browseFolder') && event.properties.outcome === 'canceled'));
+            assert.ok(!events.some(event => event.name.endsWith('.projectCreated')));
+        } finally {
+            TemplateGalleryController.prototype['browseFolder'] = browse;
+        }
+    });
+
+    test('records a bounded fallback reason rather than the manifest fetch error text', async () => {
+        const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        const provider = controller['templateProvider'];
+        provider['getCachedManifest'] = async () => undefined;
+        provider['fetchManifestFromRemote'] = async () => { throw new Error('private-user-input'); };
+        provider['getBundledManifest'] = async () => ({ version: '1', generatedAt: '', templates: [] });
+        const context = await createTestActionContext();
+
+        await provider.getManifest(context);
+
+        assert.strictEqual(context.telemetry.properties.manifestSource, 'bundled');
+        assert.strictEqual(context.telemetry.properties.manifestFetchFailed, 'true');
+        assert.strictEqual(context.telemetry.properties.manifestFetchError, undefined);
+        assert.ok(!JSON.stringify(context.telemetry).includes('private-user-input'));
+    });
+
+    test('dismissing the post-create opener is not a canceled project creation', async () => {
+        const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+        const context = await createTestActionContext();
+        context.ui.showQuickPick = async () => { throw new UserCancelledError(); };
+        await runWithFuncSetting('projectOpenBehavior', undefined, async () => {
+            await controller['promptAndOpenProject'](context, folderPath);
+        });
+        assert.strictEqual(context.telemetry.properties.openBehavior, 'canceled');
+        assert.ok(events.some(event => event.name.endsWith('.openBehavior') && event.properties.openBehavior === 'canceled'));
     });
 
     test('does not switch experiences or save a preference during project creation', async () => {

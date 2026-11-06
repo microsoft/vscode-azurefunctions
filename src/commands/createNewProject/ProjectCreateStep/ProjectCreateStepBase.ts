@@ -24,6 +24,8 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
         await AzExtFsExtra.ensureDir(context.projectPath);
 
         await this.executeCore(context, progress);
+        context.telemetry.properties.projectCreated = 'true';
+        context.telemetry.measurements.projectsCreated = 1;
 
         if (await gitUtils.isGitInstalled(context.workspacePath) && !await gitUtils.isInsideRepo(context.workspacePath)) {
             await gitUtils.gitInit(context.workspacePath);

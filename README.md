@@ -134,6 +134,8 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 ## Telemetry
 
+Project and function creation telemetry distinguishes the gallery and classic experiences, template selection, creation outcomes and cancellations, dependency installation, VS Code initialization, and opening behavior. Gallery telemetry uses template IDs from the loaded official catalog and known language/experience values; it does not collect template display names, folder paths, search text, or Copilot prompts. Closing a gallery during creation is recorded separately from cancellation, since closing the panel does not stop file creation.
+
 VS Code collects usage data and sends it to Microsoft to help improve our products and services. Read our [privacy statement](https://go.microsoft.com/fwlink/?LinkID=521839) to learn more. If you don’t wish to send usage data to Microsoft, you can set the `telemetry.enableTelemetry` setting to `false`. Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
 
 ## Lifecycle

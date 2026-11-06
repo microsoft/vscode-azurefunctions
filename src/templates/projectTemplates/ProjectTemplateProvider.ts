@@ -116,7 +116,7 @@ export class ProjectTemplateProvider {
         } catch (error) {
             // If remote fetch fails, try bundled fallback
             context.telemetry.properties.manifestSource = 'bundled';
-            context.telemetry.properties.manifestFetchError = parseError(error).message;
+            context.telemetry.properties.manifestFetchFailed = 'true';
 
             ext.outputChannel.appendLog(localize('manifestFetchFailed', 'Could not fetch template manifest from remote: {0}. Using bundled templates.', parseError(error).message));
 

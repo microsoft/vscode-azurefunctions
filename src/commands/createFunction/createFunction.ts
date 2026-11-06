@@ -92,7 +92,10 @@ export async function createFunctionInternal(
         return;
     }
 
+    context.telemetry.properties.functionCreationExperience = 'classic';
+    context.telemetry.properties.functionCreationRouteReason = 'existingProject';
     const { language, languageModel, version, templateSchemaVersion } = await verifyInitForVSCode(context, projectPath, options.language, options.languageModel, options.version);
+    context.telemetry.properties.functionLanguage = language;
 
     if (language === ProjectLanguage.Go) {
         // Go projects scaffold an initial function during "Create New Project" via `func init --worker-runtime go`.
@@ -128,4 +131,6 @@ export async function createFunctionInternal(
     });
     await wizard.prompt();
     await wizard.execute();
+    context.telemetry.properties.functionCreated = 'true';
+    context.telemetry.measurements.functionsCreated = 1;
 }

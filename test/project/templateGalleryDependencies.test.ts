@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, TestOutputChannel } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, registerOnActionStartHandler, registerTelemetryHandler, TestOutputChannel, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { Uri } from 'vscode';
+import { Uri, type Disposable } from 'vscode';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { installNodeDependencies } from '../../src/commands/createNewProject/installNodeDependencies';
@@ -28,6 +28,8 @@ suite('Project npm dependencies', () => {
     let originalOutputChannel: typeof ext.outputChannel;
     let projectPath: string;
     let logs: string[];
+    let telemetryHook: Disposable;
+    let telemetryEvents: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
 
     setup(async () => {
         projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc gallery npm '));
@@ -36,6 +38,10 @@ suite('Project npm dependencies', () => {
         const outputChannel = new TestOutputChannel();
         outputChannel.appendLog = message => { logs.push(message); };
         ext.outputChannel = outputChannel;
+        telemetryEvents = [];
+        telemetryHook = registerTelemetryHandler(context => {
+            telemetryEvents.push({ name: context.callbackId, properties: { ...context.telemetry.properties }, measurements: { ...context.telemetry.measurements } });
+        });
         cpUtils.executeCommandLine = async (_output, cwd, command) => {
             assert.strictEqual(cwd, projectPath);
             assert.strictEqual(command, 'git init');
@@ -47,6 +53,7 @@ suite('Project npm dependencies', () => {
         cpUtils.executeCommand = originalExecuteCommand;
         cpUtils.executeCommandLine = originalExecuteCommandLine;
         ext.outputChannel = originalOutputChannel;
+        telemetryHook.dispose();
         await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
     });
 
@@ -61,6 +68,7 @@ suite('Project npm dependencies', () => {
 
     function createController(gitInstalled: boolean, events: string[]): FunctionsTemplateGalleryController {
         const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
+        controller['templateIds'] = new Set([template.id]);
         controller['isGitInstalled'] = async () => gitInstalled;
         controller['sendProgress'] = message => { events.push(message); };
         controller['tryOpenReadme'] = async () => { events.push('readme'); };
@@ -135,6 +143,18 @@ suite('Project npm dependencies', () => {
                 });
 
                 assert.ok(opened);
+                const created = telemetryEvents.find(event => event.name.endsWith('.projectCreated'));
+                assert.ok(created);
+                assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.createProjectStarted')).length, 1);
+                assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.projectCreated')).length, 1);
+                assert.strictEqual(created.properties.creationOutcome, 'succeeded');
+                assert.strictEqual(created.properties.vscodeInitialized, 'true');
+                assert.strictEqual(created.properties.templateId, template.id);
+                assert.strictEqual(created.properties.templateName, undefined);
+                assert.strictEqual(created.measurements.projectsCreated, 1);
+                assert.ok(typeof created.measurements.initializeVSCodeDuration === 'number' && created.measurements.initializeVSCodeDuration >= 0);
+                assert.strictEqual(created.measurements.initializeVSCodeCount, 1);
+                assert.ok(!telemetryEvents.some(event => Object.values(event.properties).some(value => typeof value === 'string' && value.includes(projectPath))));
             });
         }
     }
@@ -153,6 +173,35 @@ suite('Project npm dependencies', () => {
         assert.ok(!events.includes('readme'));
         assert.ok(!events.includes('open'));
         assert.strictEqual(controller['isCreatingProject'], false);
+        const failed = telemetryEvents.find(event => event.name.endsWith('.createProject'));
+        assert.strictEqual(failed?.properties.creationOutcome, 'failed');
+        assert.strictEqual(failed?.properties.creationStage, 'initializeVSCode');
+        assert.strictEqual(failed?.properties.projectCreated, undefined);
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('records canceled nonempty-folder confirmation without counting a created project', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'keep.txt'), 'existing');
+        const controller = createController(false, []);
+        controller['postMessageToWebview'] = () => undefined;
+        const cancellation = registerOnActionStartHandler(context => {
+            if (context.callbackId === 'azureFunctions.templateGallery.createProject') {
+                context.ui.showWarningMessage = async () => { throw new UserCancelledError('targetNotEmpty'); };
+            }
+        });
+        try {
+            await controller['createProject'](template, ProjectLanguage.TypeScript, projectPath);
+            const canceled = telemetryEvents.find(event => event.name.endsWith('.createProject'));
+            assert.strictEqual(canceled?.properties.creationOutcome, 'canceled');
+            assert.strictEqual(canceled?.properties.creationStage, 'confirmTarget');
+            assert.strictEqual(canceled?.properties.result, 'Canceled');
+            assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.createProjectStarted')).length, 1);
+            assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+            assert.strictEqual(await fs.promises.readFile(path.join(projectPath, 'keep.txt'), 'utf8'), 'existing');
+            assert.strictEqual(controller['isCreatingProject'], false);
+        } finally {
+            cancellation.dispose();
+        }
     });
 
     for (const gitInstalled of [true, false]) {
@@ -223,6 +272,9 @@ suite('Project npm dependencies', () => {
                 await step.executeCore(context, { report: () => undefined });
 
                 assert.strictEqual(installs, 1);
+                assert.strictEqual(context.telemetry.measurements.npmInstallCount, 1);
+                assert.ok(typeof context.telemetry.measurements.npmInstallDuration === 'number' && context.telemetry.measurements.npmInstallDuration >= 0);
+                assert.strictEqual(context.telemetry.properties.npmInstallSucceeded, String(installSucceeds));
                 assert.deepStrictEqual(logs, installSucceeds ? [] : ['WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.']);
                 if (language === ProjectLanguage.TypeScript) {
                     assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'tsconfig.json')));

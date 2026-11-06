@@ -16,6 +16,7 @@ import { ProjectTemplateProvider } from '../../templates/projectTemplates/Projec
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
@@ -47,6 +48,10 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private readonly templateProvider: ProjectTemplateProvider;
     private isPanelDisposed = false;
     private isCreatingProject = false;
+    private closeReason: 'abandoned' | 'projectCreated' | 'classic' | 'replaced' = 'abandoned';
+    private readonly openedAt = Date.now();
+    private templateIds = new Set<string>();
+    private catalogRequests = 0;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
 
@@ -64,6 +69,10 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             this.onDisposed(() => {
                 this.isPanelDisposed = true;
                 FunctionsTemplateGalleryController.currentController = undefined;
+                void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.closed', actionContext => {
+                    actionContext.telemetry.properties.reason = this.closeReason === 'abandoned' && this.isCreatingProject ? 'closedDuringCreation' : this.closeReason;
+                    actionContext.telemetry.measurements.galleryDuration = (Date.now() - this.openedAt) / 1000;
+                });
             }),
         );
     }
@@ -76,11 +85,18 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             throw new Error(localize('templateGalleryCreationInProgress', 'Wait for project creation to finish before switching to the classic template feed.'));
         }
         this.isCreatingProject = true;
+        actionContext.telemetry.properties.projectCreationExperience = 'classic';
+        actionContext.telemetry.properties.projectCreationRouteReason = 'galleryBanner';
+        actionContext.telemetry.properties.classicSwitchStage = 'savingPreference';
         try {
             await updateGlobalSetting(classicTemplateFeedSetting, true);
             actionContext.telemetry.properties.classicTemplateFeed = 'true';
+            actionContext.telemetry.properties.classicPreferenceSaved = 'true';
+            this.closeReason = 'classic';
             this.disposePanelIfOpen();
+            actionContext.telemetry.properties.classicSwitchStage = 'classicWizard';
             await createClassicProject(actionContext, { folderPath: this.initialLocation });
+            actionContext.telemetry.properties.classicSwitchStage = 'complete';
         } finally {
             this.isCreatingProject = false;
         }
@@ -90,13 +106,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         const message = vscode.l10n.t('Prefer the classic experience?');
         const link = vscode.l10n.t('Switch to classic');
         const preference = vscode.l10n.t('Your preference will be saved for future projects.');
-        const banner = `<div role="note" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 20px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); color: var(--vscode-foreground); line-height: 20px;">
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 2px; color: var(--vscode-editorInfo-foreground);">
+        const banner = `<div role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
+            <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 16 16" style="flex: none; color: var(--vscode-editorInfo-foreground);">
                 <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/>
                 <path d="M8 7v4" stroke="currentColor" stroke-width="1.5"/>
                 <circle cx="8" cy="4.5" r=".75" fill="currentColor"/>
             </svg>
-            <div>${escapeHtml(message)} <a href="command:azureFunctions.useClassicTemplateFeed" style="color: var(--vscode-textLink-foreground); text-decoration: underline;">${escapeHtml(link)}</a>. ${escapeHtml(preference)}</div>
+            <div style="flex: 1; min-width: 180px;"><strong style="font-size: 14px;">${escapeHtml(message)}</strong><div>${escapeHtml(preference)}</div></div>
+            <a href="command:azureFunctions.useClassicTemplateFeed" style="display: inline-block; padding: 6px 12px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-button-border, transparent)); font-weight: 600; text-decoration: none; white-space: nowrap;">${escapeHtml(link)}</a>
         </div>`;
         return super.getDocumentTemplate(webview).replace('<body>', `<body>${banner}`);
     }
@@ -111,9 +128,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             const hasNewFilters = options.initialFilters !== undefined ||
                 !areInitialFiltersEqual(existing.initialFilters, options.initialFilters);
             if (hasNewLocation || hasNewFilters) {
+                existing.closeReason = 'replaced';
                 existing.panel.dispose();
             } else {
                 existing.revealToForeground();
+                void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
+                    actionContext.telemetry.properties.reused = 'true';
+                });
                 return existing;
             }
         }
@@ -135,6 +156,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         };
 
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, options);
+        void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
+            actionContext.telemetry.properties.reused = 'false';
+        });
         return FunctionsTemplateGalleryController.currentController;
     }
 
@@ -142,7 +166,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     protected async fetchTemplates(): Promise<{ templates: ISharedProjectTemplate[]; defaultLocation: string }> {
         return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.getTemplates', async (actionContext: IActionContext) => {
+            actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.properties.catalogRequest = this.catalogRequests++ === 0 ? 'initial' : 'reload';
             const templates = await this.templateProvider.getTemplates(actionContext);
+            this.templateIds = new Set(templates.map(template => template.id));
+            actionContext.telemetry.measurements.templateCount = templates.length;
             let defaultLocation = '';
             if (this.initialLocation) {
                 // Prefer the folder the user already picked in the classic wizard before
@@ -154,6 +182,21 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             }
             return { templates: templates as unknown as ISharedProjectTemplate[], defaultLocation };
         }) as { templates: ISharedProjectTemplate[]; defaultLocation: string };
+    }
+
+    protected override onTemplateSelected(templateId: string): void {
+        void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.templateSelected', actionContext => {
+            actionContext.telemetry.properties.templateId = this.telemetryTemplateId(templateId);
+        });
+    }
+
+    protected override async browseFolder(): Promise<string | undefined> {
+        return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.browseFolder', async actionContext => {
+            actionContext.errorHandling.rethrow = true;
+            const location = await super.browseFolder();
+            actionContext.telemetry.properties.outcome = location ? 'selected' : 'canceled';
+            return location;
+        });
     }
 
     protected async getReadme(template: ISharedProjectTemplate): Promise<string> {
@@ -198,10 +241,16 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         const template = sharedTemplate as unknown as IProjectTemplate;
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProject', async (actionContext: IActionContext) => {
             actionContext.errorHandling.rethrow = true;
-            actionContext.telemetry.properties.templateId = template.id;
-            actionContext.telemetry.properties.templateName = template.displayName;
-            actionContext.telemetry.properties.language = language;
-            actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
+            actionContext.valuesToMask.push(location, template.repositoryUrl);
+            actionContext.telemetry.maskEntireErrorMessage = true;
+            actionContext.telemetry.properties.templateId = this.telemetryTemplateId(template.id);
+            actionContext.telemetry.properties.language = telemetryLanguage(language);
+            actionContext.telemetry.properties.entryPoint = entryPoint === 'card' || entryPoint === 'details' ? entryPoint : 'unknown';
+            actionContext.telemetry.properties.creationStage = 'confirmTarget';
+            actionContext.telemetry.properties.creationOutcome = 'started';
+            await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.createProjectStarted', startedContext => {
+                Object.assign(startedContext.telemetry.properties, actionContext.telemetry.properties);
+            });
 
             const projectPath = location;
             const branch = template.branch || 'main';
@@ -210,9 +259,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
             // If the chosen project path already contains "real" user-visible content,
             // confirm with the user before clobbering.
-            await this.confirmTargetNotEmpty(actionContext, projectPath);
-
             try {
+                await this.confirmTargetNotEmpty(actionContext, projectPath);
+                actionContext.telemetry.properties.creationStage = 'download';
                 const gitInstalled = await this.isGitInstalled();
                 actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
@@ -231,6 +280,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                         }
                         this.sendProgress('Setting up project files...');
                         await AzExtFsExtra.ensureDir(projectPath);
+                        actionContext.telemetry.properties.creationStage = 'copy';
                         await this.copyDirectory(sourceDir, projectPath);
                     } else {
                         this.sendProgress('Cloning template repository...');
@@ -246,6 +296,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                         }
                         this.sendProgress('Setting up project files...');
                         await AzExtFsExtra.ensureDir(projectPath);
+                        actionContext.telemetry.properties.creationStage = 'copy';
                         await this.copyDirectory(sourceDir, projectPath);
                     }
                 } else {
@@ -260,10 +311,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                         sourceDir = path.join(tempDir, template.subdirectory);
                     }
                     await AzExtFsExtra.ensureDir(projectPath);
+                    actionContext.telemetry.properties.creationStage = 'copy';
                     await this.copyDirectory(sourceDir, projectPath);
                 }
 
                 if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
+                    actionContext.telemetry.properties.creationStage = 'dependencies';
                     for (const hostFile of await findFiles(projectPath, `**/${hostFileName}`)) {
                         const functionProjectPath = path.dirname(hostFile.fsPath);
                         if (await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
@@ -273,8 +326,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     }
                 }
 
-                await this.initializeProjectForVSCode(actionContext, projectPath, language);
+                actionContext.telemetry.properties.creationStage = 'initializeVSCode';
+                await telemetryUtils.runWithDurationTelemetry(actionContext, 'initializeVSCode', async () =>
+                    await this.initializeProjectForVSCode(actionContext, projectPath, language));
+                actionContext.telemetry.properties.vscodeInitialized = 'true';
 
+                actionContext.telemetry.properties.creationStage = 'gitInit';
                 this.sendProgress('Initializing git repository...');
                 // Remove the cloned template's git history so the user gets a fresh repo
                 // without the original author's commits.
@@ -288,16 +345,26 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 }
                 try {
                     await cpUtils.executeCommandLine(undefined, projectPath, 'git init');
+                    actionContext.telemetry.properties.gitInitialized = 'true';
                 } catch {
-                    // git init is optional
+                    actionContext.telemetry.properties.gitInitialized = 'false';
                 }
 
                 actionContext.telemetry.properties.result = 'Succeeded';
+                actionContext.telemetry.properties.creationOutcome = 'succeeded';
+                actionContext.telemetry.properties.creationStage = 'created';
+                actionContext.telemetry.properties.projectCreated = 'true';
+                await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.projectCreated', completedContext => {
+                    Object.assign(completedContext.telemetry.properties, actionContext.telemetry.properties);
+                    Object.assign(completedContext.telemetry.measurements, actionContext.telemetry.measurements);
+                    completedContext.telemetry.measurements.projectsCreated = 1;
+                });
 
                 // Open the README in the editor before disposing the webview so the user
                 // doesn't see an empty editor pane between dispose and the project opening.
                 await this.tryOpenReadme(projectPath);
 
+                this.closeReason = 'projectCreated';
                 this.disposePanelIfOpen();
 
                 void vscode.window.showInformationMessage(
@@ -309,7 +376,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 // workspace) and then act on it via the shared OpenFolderStep. This keeps
                 // both flows consistent and reuses the same telemetry / activity output.
                 const functionFile = await findTemplateFunctionFile(projectPath, language);
+                actionContext.telemetry.properties.creationStage = 'openProject';
                 await this.promptAndOpenProject(actionContext, projectPath, functionFile);
+                actionContext.telemetry.properties.creationStage = 'complete';
+            } catch (error) {
+                if (actionContext.telemetry.properties.projectCreated !== 'true') {
+                    actionContext.telemetry.properties.creationOutcome = error instanceof UserCancelledError ? 'canceled' : 'failed';
+                }
+                throw error;
             } finally {
                 try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
             }
@@ -332,6 +406,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         // there's nothing to open.
         const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
         if (alreadyOpen) {
+            await this.recordOpenBehavior(actionContext, 'AlreadyOpen');
             await openFunction(false);
             return;
         }
@@ -351,6 +426,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
         try {
             await wizard.prompt();
+            await this.recordOpenBehavior(actionContext, wizardContext.openBehavior);
             if (wizardContext.openBehavior !== 'DontOpen') {
                 await openFunction(true);
             }
@@ -360,6 +436,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             }
         } catch (err) {
             if (err instanceof UserCancelledError) {
+                await this.recordOpenBehavior(actionContext, 'canceled');
                 // User dismissed the open-behavior picker — files are already on disk,
                 // so just leave them in place. No need to surface an error.
                 return;
@@ -370,9 +447,20 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     // ── Optional overrides ──
 
+    private async recordOpenBehavior(actionContext: IActionContext, behavior: OpenBehavior | 'canceled' | undefined): Promise<void> {
+        const knownBehaviors: (OpenBehavior | 'canceled' | undefined)[] = ['AddToWorkspace', 'OpenInNewWindow', 'OpenInCurrentWindow', 'AlreadyOpen', 'DontOpen', 'canceled'];
+        const openBehavior = knownBehaviors.includes(behavior) ? behavior : 'unknown';
+        actionContext.telemetry.properties.openBehavior = openBehavior;
+        // Opening in the current window can restart the extension host.
+        await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openBehavior', context => {
+            context.telemetry.properties.openBehavior = openBehavior;
+        });
+    }
+
     protected override async continueInChat(prompt: string, language: string): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.continueInChat', async (actionContext: IActionContext) => {
-            actionContext.telemetry.properties.language = language;
+            actionContext.telemetry.properties.language = telemetryLanguage(language);
+            actionContext.valuesToMask.push(prompt);
 
             const chatQuery = [
                 `Please help me build an Azure Functions app.`,
@@ -419,11 +507,18 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     protected override async fetchCachedTemplates(): Promise<{ templates: ISharedProjectTemplate[]; defaultLocation: string } | undefined> {
-        await this.templateProvider.clearCache();
-        return await this.fetchTemplates();
+        return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.useCachedTemplates', async actionContext => {
+            actionContext.errorHandling.rethrow = true;
+            await this.templateProvider.clearCache();
+            return await this.fetchTemplates();
+        });
     }
 
     // ── Helpers ──
+
+    private telemetryTemplateId(templateId: string): string {
+        return this.templateIds?.has(templateId) ? templateId : 'unknown';
+    }
 
     /**
      * Dispose the webview panel only if it's still open. Calling
@@ -578,6 +673,16 @@ function escapeHtml(value: string): string {
             default: return '&#39;';
         }
     });
+}
+
+function telemetryLanguage(language: string): string {
+    if (language === 'CSharp') {
+        return ProjectLanguage.CSharp;
+    }
+    if (language === 'FSharp') {
+        return ProjectLanguage.FSharp;
+    }
+    return Object.values(ProjectLanguage).find(value => value === language) ?? 'unknown';
 }
 
 function areInitialFiltersEqual(existing: InitialTemplateFilters | undefined, current: InitialTemplateFilters | undefined): boolean {

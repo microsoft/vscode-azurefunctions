@@ -82,11 +82,13 @@ export async function routeCreateNewProject(
     context.telemetry.properties.classicTemplateFeed = String(!!useClassicTemplateFeed);
     if (options.startFromScratch || options.templateId !== undefined || useClassicTemplateFeed) {
         context.telemetry.properties.projectCreationExperience = 'classic';
+        context.telemetry.properties.projectCreationRouteReason = options.templateId !== undefined || options.startFromScratch ? 'explicitArguments' : 'savedPreference';
         await handlers.createClassicProject();
         return;
     }
 
     context.telemetry.properties.projectCreationExperience = 'templateGallery';
+    context.telemetry.properties.projectCreationRouteReason = 'default';
     context.telemetry.properties.flow = 'templateGallery';
     handlers.showTemplateGallery();
 }
