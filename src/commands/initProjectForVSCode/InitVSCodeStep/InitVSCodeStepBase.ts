@@ -12,6 +12,7 @@ import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
+import { telemetryUtils } from '../../../utils/telemetryUtils';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { type IExtensionsJson } from '../../../vsCodeConfig/extensions';
 import { getDebugConfigs, getLaunchVersion, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion, type ILaunchJson } from '../../../vsCodeConfig/launch';
@@ -44,7 +45,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         context.telemetry.properties.projectRuntime = version;
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
-        context.telemetry.properties.projectLanguage = language;
+        context.telemetry.properties.projectLanguage = telemetryUtils.getProjectLanguage(language);
 
         context.telemetry.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
 

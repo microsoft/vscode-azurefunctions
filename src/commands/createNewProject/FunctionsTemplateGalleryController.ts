@@ -81,6 +81,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         actionContext: IActionContext,
         createClassicProject: typeof createNewProjectInternal = createNewProjectInternal,
     ): Promise<void> {
+        actionContext.telemetry.maskEntireErrorMessage = true;
         if (this.isCreatingProject) {
             throw new Error(localize('templateGalleryCreationInProgress', 'Wait for project creation to finish before switching to the classic template feed.'));
         }
@@ -167,6 +168,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected async fetchTemplates(): Promise<{ templates: ISharedProjectTemplate[]; defaultLocation: string }> {
         return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.getTemplates', async (actionContext: IActionContext) => {
             actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.maskEntireErrorMessage = true;
             actionContext.telemetry.properties.catalogRequest = this.catalogRequests++ === 0 ? 'initial' : 'reload';
             const templates = await this.templateProvider.getTemplates(actionContext);
             this.templateIds = new Set(templates.map(template => template.id));
@@ -193,6 +195,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected override async browseFolder(): Promise<string | undefined> {
         return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.browseFolder', async actionContext => {
             actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.maskEntireErrorMessage = true;
             const location = await super.browseFolder();
             actionContext.telemetry.properties.outcome = location ? 'selected' : 'canceled';
             return location;
@@ -214,6 +217,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
         const markdown = await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.getReadme', async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
+            actionContext.telemetry.maskEntireErrorMessage = true;
             const response = await requestUtils.sendRequestWithExtTimeout(actionContext, { url, method: 'GET' });
             ext.outputChannel.appendLog(`README response: ${response.status}`);
             if (response.status < 200 || response.status >= 300) {
@@ -459,6 +463,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
 
     protected override async continueInChat(prompt: string, language: string): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.continueInChat', async (actionContext: IActionContext) => {
+            actionContext.telemetry.maskEntireErrorMessage = true;
             actionContext.telemetry.properties.language = telemetryLanguage(language);
             actionContext.valuesToMask.push(prompt);
 
@@ -509,6 +514,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected override async fetchCachedTemplates(): Promise<{ templates: ISharedProjectTemplate[]; defaultLocation: string } | undefined> {
         return await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.useCachedTemplates', async actionContext => {
             actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.maskEntireErrorMessage = true;
             await this.templateProvider.clearCache();
             return await this.fetchTemplates();
         });
@@ -682,7 +688,7 @@ function telemetryLanguage(language: string): string {
     if (language === 'FSharp') {
         return ProjectLanguage.FSharp;
     }
-    return Object.values(ProjectLanguage).find(value => value === language) ?? 'unknown';
+    return telemetryUtils.getProjectLanguage(language);
 }
 
 function areInitialFiltersEqual(existing: InitialTemplateFilters | undefined, current: InitialTemplateFilters | undefined): boolean {

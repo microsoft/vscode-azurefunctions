@@ -78,6 +78,7 @@ export async function routeCreateNewProject(
     options: ProjectCreationRouteOptions,
     handlers: ProjectCreationHandlers,
 ): Promise<void> {
+    context.telemetry.maskEntireErrorMessage = true;
     const useClassicTemplateFeed = options.classicTemplateFeed ?? getWorkspaceSetting<boolean>(classicTemplateFeedSetting);
     context.telemetry.properties.classicTemplateFeed = String(!!useClassicTemplateFeed);
     if (options.startFromScratch || options.templateId !== undefined || useClassicTemplateFeed) {
@@ -94,6 +95,7 @@ export async function routeCreateNewProject(
 }
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
+    context.telemetry.maskEntireErrorMessage = true;
     addLocalFuncTelemetry(context, undefined);
 
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);

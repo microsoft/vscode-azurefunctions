@@ -19,11 +19,20 @@ import { FuncVersion } from '../../src/FuncVersion';
 import { CentralTemplateProvider } from '../../src/templates/CentralTemplateProvider';
 import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase';
 import { LocalProjectTreeItem } from '../../src/tree/localProject/LocalProjectTreeItem';
+import { telemetryUtils } from '../../src/utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getTestWorkspaceFolder } from '../global.test';
 
 suite('Create New Project experience', () => {
+    test('telemetry privacy retains supported language categories and rejects arbitrary values', () => {
+        for (const language of Object.values(ProjectLanguage)) {
+            assert.strictEqual(telemetryUtils.getProjectLanguage(language), language);
+        }
+        assert.strictEqual(telemetryUtils.getProjectLanguage('synthetic-personal-value'), 'unknown');
+        assert.strictEqual(telemetryUtils.getProjectLanguage(undefined), 'unknown');
+    });
+
     test('opens the template gallery by default without an experience prompt', async () => {
         const context = await createTestActionContext();
         const { calls, handlers } = createHandlers();
@@ -75,6 +84,34 @@ suite('Create New Project experience', () => {
             assert.strictEqual(calls.classic, 1);
             assert.strictEqual(calls.templateGallery, 0);
             assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'explicitArguments');
+        }
+    });
+
+    test('telemetry privacy redacts classic-route error details without changing the local error', async () => {
+        const callbackId = 'azureFunctions.createNewProject';
+        const syntheticContent = 'synthetic-personal-value';
+        const error = new Error(`Could not find template "${syntheticContent}".`);
+        let properties: IActionContext['telemetry']['properties'] | undefined;
+        const hook = registerTelemetryHandler(context => {
+            if (context.callbackId === callbackId) {
+                properties = context.telemetry.properties;
+            }
+        });
+        try {
+            await assert.rejects(callWithTelemetryAndErrorHandling(callbackId, async context => {
+                context.errorHandling.suppressDisplay = true;
+                context.errorHandling.rethrow = true;
+                await routeCreateNewProject(context, { templateId: syntheticContent }, {
+                    createClassicProject: async () => { throw error; },
+                    showTemplateGallery: () => assert.fail('Must retain explicit classic routing'),
+                });
+            }), caught => caught === error);
+            assert.ok(properties);
+            assert.strictEqual(properties.result, 'Failed');
+            assert.ok(!Object.values(properties).some(value => typeof value === 'string' && value.includes(syntheticContent)));
+            assert.ok(error.message.includes(syntheticContent));
+        } finally {
+            hook.dispose();
         }
     });
 });
@@ -270,6 +307,28 @@ suite('Unified Create Function', () => {
         }
     });
 
+    test('telemetry privacy allowlists language from project settings before template selection', async () => {
+        await fs.promises.writeFile(path.join(folderPath, 'host.json'), '{}');
+        const context = await createTestActionContext();
+        const provider = new CentralTemplateProvider();
+        const selectionReached = new Error('Stop before template retrieval');
+        provider['getCachedProviders'] = async () => { throw selectionReached; };
+        ext.templateProvider.registerActionVariable(provider, context);
+        try {
+            await runWithFuncSetting('projectLanguage', 'synthetic-personal-value', async () => {
+                await assert.rejects(
+                    createFunctionInternal(context, { folderPath, version: FuncVersion.v4 }),
+                    error => error === selectionReached,
+                );
+            });
+            assert.strictEqual(context.telemetry.properties.functionLanguage, 'unknown');
+            assert.strictEqual(context.telemetry.properties.projectLanguage, 'unknown');
+            assert.ok(!Object.values(context.telemetry.properties).some(value => value === 'synthetic-personal-value'));
+        } finally {
+            provider.dispose();
+        }
+    });
+
     test('shows a top banner with only the classic-switch command enabled', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const html = controller.panel.webview.html;
@@ -333,12 +392,37 @@ suite('Unified Create Function', () => {
             await callWithTelemetryAndErrorHandling('azureFunctions.useClassicTemplateFeed', async context => {
                 await controller.useClassicTemplateFeed(context, async () => { throw new UserCancelledError(); });
             });
+
             const switched = events.find(event => event.name === 'azureFunctions.useClassicTemplateFeed');
             assert.strictEqual(switched?.properties.classicPreferenceSaved, 'true');
             assert.strictEqual(switched?.properties.classicSwitchStage, 'classicWizard');
             assert.strictEqual(switched?.properties.result, 'Canceled');
             assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
             assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
+        });
+    });
+
+    test('telemetry privacy redacts errors after switching from the gallery to classic', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+            let properties: IActionContext['telemetry']['properties'] | undefined;
+            const hook = registerTelemetryHandler(context => {
+                if (context.callbackId === 'azureFunctions.useClassicTemplateFeed') {
+                    properties = context.telemetry.properties;
+                }
+            });
+            try {
+                await callWithTelemetryAndErrorHandling('azureFunctions.useClassicTemplateFeed', async context => {
+                    context.errorHandling.suppressDisplay = true;
+                    await controller.useClassicTemplateFeed(context, async () => { throw new Error('synthetic-personal-value'); });
+                });
+                assert.ok(properties);
+                assert.strictEqual(properties.result, 'Failed');
+                assert.strictEqual(properties.classicPreferenceSaved, 'true');
+                assert.ok(!Object.values(properties).some(value => typeof value === 'string' && value.includes('synthetic-personal-value')));
+            } finally {
+                hook.dispose();
+            }
         });
     });
 

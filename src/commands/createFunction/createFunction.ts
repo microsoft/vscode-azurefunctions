@@ -14,6 +14,7 @@ import { localize } from '../../localize';
 import { LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
 import { createActivityContext } from '../../utils/activityUtils';
 import { durableUtils } from '../../utils/durableUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { getContainingWorkspace, getRootWorkspaceFolder } from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -72,6 +73,7 @@ export async function createFunctionInternal(
     options: api.ICreateFunctionOptions,
     createProject: typeof createNewProjectInternal = createNewProjectInternal,
 ): Promise<void> {
+    context.telemetry.maskEntireErrorMessage = true;
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
 
@@ -95,7 +97,7 @@ export async function createFunctionInternal(
     context.telemetry.properties.functionCreationExperience = 'classic';
     context.telemetry.properties.functionCreationRouteReason = 'existingProject';
     const { language, languageModel, version, templateSchemaVersion } = await verifyInitForVSCode(context, projectPath, options.language, options.languageModel, options.version);
-    context.telemetry.properties.functionLanguage = language;
+    context.telemetry.properties.functionLanguage = telemetryUtils.getProjectLanguage(language);
 
     if (language === ProjectLanguage.Go) {
         // Go projects scaffold an initial function during "Create New Project" via `func init --worker-runtime go`.
