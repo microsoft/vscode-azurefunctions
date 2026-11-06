@@ -86,10 +86,16 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
-        const message = vscode.l10n.t('Looking for the previous experience?');
-        const link = vscode.l10n.t('Use the classic template feed');
-        const banner = `<div role="note" style="padding: 12px 20px; background: var(--vscode-editorWidget-background); border-bottom: 1px solid var(--vscode-widget-border); color: var(--vscode-foreground);">
-            ${escapeHtml(message)} <a href="command:azureFunctions.useClassicTemplateFeed" style="color: var(--vscode-textLink-foreground);">${escapeHtml(link)}</a>
+        const message = vscode.l10n.t('Prefer the classic experience?');
+        const link = vscode.l10n.t('Switch to classic');
+        const preference = vscode.l10n.t('Your preference will be saved for future projects.');
+        const banner = `<div role="note" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 20px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); color: var(--vscode-foreground); line-height: 20px;">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 2px; color: var(--vscode-editorInfo-foreground);">
+                <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/>
+                <path d="M8 7v4" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="8" cy="4.5" r=".75" fill="currentColor"/>
+            </svg>
+            <div>${escapeHtml(message)} <a href="command:azureFunctions.useClassicTemplateFeed" style="color: var(--vscode-textLink-foreground); text-decoration: underline;">${escapeHtml(link)}</a>. ${escapeHtml(preference)}</div>
         </div>`;
         return super.getDocumentTemplate(webview).replace('<body>', `<body>${banner}`);
     }

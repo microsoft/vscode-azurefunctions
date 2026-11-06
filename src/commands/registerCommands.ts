@@ -127,7 +127,7 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.configureDeploymentSource', configureDeploymentSource);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.connectToGitHub', connectToGitHub);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.copyFunctionUrl', copyFunctionUrl);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunction', createFunctionFromCommand);
+    registerCommand('azureFunctions.createFunction', createFunctionFromCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);

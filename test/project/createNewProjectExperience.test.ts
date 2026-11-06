@@ -137,6 +137,18 @@ suite('Unified Create Function', () => {
         });
     });
 
+    test('unwraps an Azure Resources tree selection without losing the target folder', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const node: LocalProjectTreeItem = Object.assign(Object.create(LocalProjectTreeItem.prototype), {
+                preCompiledProjectPath: folderPath,
+            });
+
+            await createFunctionFromCommand(await createTestActionContext(), { unwrap: () => node }, [{ unwrap: () => node }]);
+
+            assert.strictEqual(FunctionsTemplateGalleryController.currentController?.['initialLocation'], folderPath);
+        });
+    });
+
     test('keeps existing projects in the function template feed', async () => {
         await fs.promises.writeFile(path.join(folderPath, 'host.json'), '{}');
         const context = await createTestActionContext();
@@ -169,10 +181,14 @@ suite('Unified Create Function', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const html = controller.panel.webview.html;
 
-        const bannerPosition = html.indexOf('Looking for the previous experience?');
+        const bannerPosition = html.indexOf('Prefer the classic experience?');
         assert.ok(bannerPosition >= 0 && bannerPosition < html.indexOf('<div id="root">'));
         assert.ok(html.includes('href="command:azureFunctions.useClassicTemplateFeed"'));
-        assert.ok(html.includes('Use the classic template feed'));
+        assert.ok(html.includes('Switch to classic'));
+        assert.ok(html.includes('Your preference will be saved for future projects.'));
+        assert.ok(html.includes('role="note"'));
+        assert.ok(html.includes('aria-hidden="true" focusable="false"'));
+        assert.ok(html.includes('--vscode-inputValidation-infoBackground'));
         assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed']);
     });
 

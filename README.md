@@ -22,7 +22,7 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 **Create Function...** adds a function using the template feed when a Functions project already exists in the selected folder. Otherwise, it opens the template gallery to create a project.
 
-To use the previous project creation wizard, select **Use the classic template feed** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. Disable the setting to return to the gallery.
+To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. Disable the setting to return to the gallery.
 
 ## Run the serverless app locally
 

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { isWrapper } from '@microsoft/vscode-azureresources-api';
 import { type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../FuncVersion';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
@@ -35,6 +36,10 @@ export async function createFunctionFromCommand(
     language?: ProjectLanguage,
     version?: FuncVersion): Promise<void> {
 
+    // Unwrap only the tree argument: unwrapArgs treats the legacy template ID as a multi-selection.
+    if (isWrapper(folderPath)) {
+        folderPath = folderPath.unwrap();
+    }
     if (folderPath instanceof LocalProjectTreeItem) {
         folderPath = folderPath.preCompiledProjectPath || folderPath.effectiveProjectPath;
     } else if (folderPath && typeof folderPath !== 'string') {
