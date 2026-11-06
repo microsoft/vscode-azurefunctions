@@ -31,7 +31,7 @@ import {
     ProjectTemplateCreator,
     type ProjectTemplateCreationOptions,
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
-import { type ConnectorTriggerProjectHandoff } from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { type ConnectorTriggerProjectMetadata } from '../../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { type ConnectorTriggerOutputMetadata } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import {
     partitionConnectorOptions,
@@ -627,7 +627,7 @@ suite('Connector trigger picker', () => {
         const addedTriggers: {
             language: string;
             location: string;
-            handoff: ConnectorTriggerProjectHandoff;
+            metadata: ConnectorTriggerProjectMetadata;
             outputMetadata: ConnectorTriggerOutputMetadata | undefined;
         }[] = [];
         const outputMetadata: ConnectorTriggerOutputMetadata = {
@@ -715,13 +715,13 @@ suite('Connector trigger picker', () => {
                     _context,
                     language,
                     location,
-                    handoff,
+                    metadata,
                     selectedOutputMetadata,
                 ) => {
                     addedTriggers.push({
                         language,
                         location,
-                        handoff,
+                        metadata,
                         outputMetadata: selectedOutputMetadata,
                     });
                 },
@@ -775,18 +775,8 @@ suite('Connector trigger picker', () => {
             location: 'C:\\connector-project',
             entryPoint: 'details',
             options: {
-                connectorTriggerHandoff: {
+                connectorTriggerMetadata: {
                     version: 1,
-                    subscription: {
-                        id: azureContext.subscriptionId,
-                        tenantId: selectedSubscriptionContext.tenantId,
-                        environment: {
-                            name: selectedSubscriptionContext.environment.name,
-                            resourceManagerEndpointUrl:
-                                selectedSubscriptionContext.environment.resourceManagerEndpointUrl,
-                        },
-                    },
-                    region: azureContext.region,
                     connectorId: connector.id,
                     operationId: catalog.operations[0].id,
                 },
@@ -828,18 +818,8 @@ suite('Connector trigger picker', () => {
         assert.deepStrictEqual(addedTriggers, [{
             language: ProjectLanguage.Python,
             location: 'C:\\connector-project',
-            handoff: {
+            metadata: {
                 version: 1,
-                subscription: {
-                    id: azureContext.subscriptionId,
-                    tenantId: selectedSubscriptionContext.tenantId,
-                    environment: {
-                        name: selectedSubscriptionContext.environment.name,
-                        resourceManagerEndpointUrl:
-                            selectedSubscriptionContext.environment.resourceManagerEndpointUrl,
-                    },
-                },
-                region: azureContext.region,
                 connectorId: connector.id,
                 operationId: catalog.operations[0].id,
             },
@@ -851,7 +831,7 @@ suite('Connector trigger picker', () => {
         }]);
     });
 
-    test('blocks webhook creation before schema, template, creator, or handoff work', async () => {
+    test('blocks webhook creation before schema, template, creator, or metadata work', async () => {
         const azureContext = createAzureContext();
         const connector: ConnectorTriggerOption = {
             id: 'adobesign',
@@ -1129,11 +1109,11 @@ suite('Connector trigger picker', () => {
                     expectedTemplate.gitRef,
                 );
                 assert.deepStrictEqual(
-                    createdProjects[0].options?.connectorTriggerHandoff?.connectorId,
+                    createdProjects[0].options?.connectorTriggerMetadata?.connectorId,
                     connector.id,
                 );
                 assert.deepStrictEqual(
-                    createdProjects[0].options?.connectorTriggerHandoff?.operationId,
+                    createdProjects[0].options?.connectorTriggerMetadata?.operationId,
                     operationId,
                 );
                 assert.deepStrictEqual(

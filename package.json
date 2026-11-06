@@ -1261,6 +1261,35 @@
                         "type": "string",
                         "description": "%azureFunctions.projectTemplateKey%"
                     },
+                    "azureFunctions.connectorTriggerProjects": {
+                        "scope": "resource",
+                        "type": "object",
+                        "default": {},
+                        "description": "%azureFunctions.connectorTriggerProjects%",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "version",
+                                "connectorId",
+                                "operationId"
+                            ],
+                            "properties": {
+                                "version": {
+                                    "type": "integer",
+                                    "enum": [1]
+                                },
+                                "connectorId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "operationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            }
+                        }
+                    },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",
                         "type": "string",

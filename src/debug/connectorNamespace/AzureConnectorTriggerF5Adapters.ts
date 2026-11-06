@@ -43,7 +43,7 @@ import {
     type ConnectorTriggerNamespace,
     type ConnectorTriggerNamespacePlan,
     type ConnectorTriggerOperationResolutionRequest,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerSetupTarget,
     type ConnectorTriggerSwaggerProvider,
 } from './connectorTriggerF5Contracts';
 
@@ -69,17 +69,17 @@ export class LiveConnectorSubscriptionResolver {
 
     public async resolve(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
     ): Promise<ConnectorGatewayClientContext> {
         maskValues(
             context,
-            handoff.subscription.id,
-            handoff.subscription.tenantId,
-            handoff.subscription.environment.name,
-            handoff.subscription.environment.resourceManagerEndpointUrl,
+            target.subscription.id,
+            target.subscription.tenantId,
+            target.subscription.environment.name,
+            target.subscription.environment.resourceManagerEndpointUrl,
         );
         const subscription = (await this.subscriptionsProvider())
-            .find(candidate => candidate.subscriptionId === handoff.subscription.id);
+            .find(candidate => candidate.subscriptionId === target.subscription.id);
         if (subscription) {
             maskValues(
                 context,
@@ -90,23 +90,23 @@ export class LiveConnectorSubscriptionResolver {
             );
         }
         const liveCloud = subscription ? normalizeCloud(subscription.environment.name) : undefined;
-        const persistedCloud = normalizeCloud(handoff.subscription.environment.name);
+        const selectedCloud = normalizeCloud(target.subscription.environment.name);
         const liveEndpoint = subscription ?
             normalizeEndpoint(subscription.environment.resourceManagerEndpointUrl) :
             undefined;
-        const persistedEndpoint =
-            normalizeEndpoint(handoff.subscription.environment.resourceManagerEndpointUrl);
+        const selectedEndpoint =
+            normalizeEndpoint(target.subscription.environment.resourceManagerEndpointUrl);
         if (!subscription ||
-            !equalsIgnoreCase(subscription.tenantId, handoff.subscription.tenantId) ||
+            !equalsIgnoreCase(subscription.tenantId, target.subscription.tenantId) ||
             !liveCloud ||
-            !persistedCloud ||
-            liveCloud !== persistedCloud ||
+            !selectedCloud ||
+            liveCloud !== selectedCloud ||
             !liveEndpoint ||
-            !persistedEndpoint ||
-            liveEndpoint !== persistedEndpoint) {
+            !selectedEndpoint ||
+            liveEndpoint !== selectedEndpoint) {
             throw new Error(localize(
                 'connectorTriggerSubscriptionMismatch',
-                'The saved Connector Trigger subscription is not available in the current Azure sign-in.',
+                'The selected Connector Trigger subscription is not available in the current Azure sign-in.',
             ));
         }
 
@@ -127,19 +127,19 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async listNamespaces(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
     ): Promise<ConnectorTriggerNamespace[]> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         return (await this.client.listNamespaces(liveContext))
             .map(resource => requireNamespace(resource));
     }
 
     public async ensureNamespace(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         plan: ConnectorTriggerNamespacePlan,
     ): Promise<ConnectorTriggerNamespace> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         const resourceGroupName = plan.kind === 'existing' ?
             plan.namespace.resourceGroupName :
             plan.resourceGroupName;
@@ -152,7 +152,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             namespaceName,
         );
         if (existing) {
-            return requireNamespace(existing);
+            return requireNamespaceInRegion(existing, target.region);
         }
         if (plan.kind === 'existing') {
             throw new Error(localize(
@@ -162,18 +162,18 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         }
 
         await this.providerVerifier(liveContext);
-        await this.ensureResourceGroup(liveContext, resourceGroupName, handoff.region);
+        await this.ensureResourceGroup(liveContext, resourceGroupName, target.region);
         try {
-            return requireNamespace(await this.client.createNamespace(
+            return requireNamespaceInRegion(await this.client.createNamespace(
                 liveContext,
                 resourceGroupName,
                 namespaceName,
                 {
-                    location: handoff.region,
+                    location: target.region,
                     identity: { type: 'SystemAssigned' },
                     properties: {},
                 },
-            ));
+            ), target.region);
         } catch (error) {
             const concurrentlyCreated = await this.client.getNamespace(
                 liveContext,
@@ -181,7 +181,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                 namespaceName,
             );
             if (concurrentlyCreated) {
-                return requireNamespace(concurrentlyCreated);
+                return requireNamespaceInRegion(concurrentlyCreated, target.region);
             }
             throw error;
         }
@@ -189,10 +189,10 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async listConnections(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
     ): Promise<ConnectorTriggerConnection[]> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         return (await this.client.listConnections(
             liveContext,
             namespace.resourceGroupName,
@@ -202,11 +202,11 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async ensureConnection(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         plan: ConnectorTriggerConnectionPlan,
     ): Promise<ConnectorTriggerConnection> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         const connectionName = plan.kind === 'existing' ?
             plan.connection.name :
             plan.connectionName;
@@ -218,7 +218,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         );
         if (existing) {
             const connection = requireConnection(existing);
-            if (!equalsIgnoreCase(connection.connectorId, handoff.connectorId)) {
+            if (!equalsIgnoreCase(connection.connectorId, target.connectorId)) {
                 throw new Error(localize(
                     'connectorConnectionTypeMismatch',
                     'The selected connector connection belongs to a different connector.',
@@ -241,7 +241,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             {
                 location: namespace.location,
                 properties: {
-                    connectorName: handoff.connectorId,
+                    connectorName: target.connectorId,
                     displayName: connectionName,
                 },
             },
@@ -250,11 +250,11 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async getConnection(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
     ): Promise<ConnectorTriggerConnection> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         const resource = await this.client.getConnection(
             liveContext,
             namespace.resourceGroupName,
@@ -272,11 +272,11 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async getConsentLink(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
     ): Promise<string> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         const redirectUrl = getConsentRedirectUrl(liveContext);
         const links = await this.client.listConsentLinks(
             liveContext,
@@ -304,7 +304,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async dynamicInvoke(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
@@ -316,7 +316,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             ...Object.values(request.request.headers ?? {}),
         );
         maskJsonValue(context, request.request.body);
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         return await this.client.dynamicInvoke(
             liveContext,
             namespace.resourceGroupName,
@@ -328,12 +328,12 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async ensureConnectionAccessPolicies(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
     ): Promise<void> {
-        const liveContext = await this.subscriptionResolver.resolve(context, handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
         for (const policy of policies) {
             const existing = await this.client.getConnectionAccessPolicy(
                 liveContext,
@@ -368,7 +368,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         for (const parameter of request.parameters) {
             maskJsonValue(context, parameter.value);
         }
-        const liveContext = await this.subscriptionResolver.resolve(context, request.handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, request.target);
         let resource = await this.client.createOrUpdateTriggerConfig(
             liveContext,
             request.namespace.resourceGroupName,
@@ -381,10 +381,10 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                     deliveryMode: request.deliveryMode,
                     type: request.type,
                     connectionDetails: {
-                        connectorName: request.handoff.connectorId,
+                        connectorName: request.target.connectorId,
                         connectionName: request.connection.name,
                     },
-                    operationName: request.handoff.operationId,
+                    operationName: request.target.operationId,
                     parameters: request.parameters,
                 },
             },
@@ -404,14 +404,14 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         context: IActionContext,
         request: ConnectorTriggerOperationResolutionRequest,
     ): Promise<unknown> {
-        const liveContext = await this.subscriptionResolver.resolve(context, request.handoff);
+        const liveContext = await this.subscriptionResolver.resolve(context, request.target);
         const client = await this.swaggerClientFactory(liveContext);
         const endpoint = liveContext.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
         const namespacePath =
             `/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
             `/resourceGroups/${encodeURIComponent(request.namespace.resourceGroupName)}` +
             `/providers/Microsoft.Web/connectorGateways/${encodeURIComponent(request.namespace.name)}` +
-            `/managedApis/${encodeURIComponent(request.handoff.connectorId)}`;
+            `/managedApis/${encodeURIComponent(request.target.connectorId)}`;
         const namespaceUrl = requestUtils.createRequestUrl(
             `${endpoint}${namespacePath}`,
             {
@@ -424,11 +424,11 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             return namespaceSwagger;
         }
 
-        const location = normalizeLocation(request.handoff.region);
+        const location = normalizeLocation(request.target.region);
         const locationUrl = requestUtils.createRequestUrl(
             `${endpoint}/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
             `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-            `/managedApis/${encodeURIComponent(request.handoff.connectorId)}`,
+            `/managedApis/${encodeURIComponent(request.target.connectorId)}`,
             {
                 'api-version': managedApiSwaggerApiVersion,
                 export: 'true',
@@ -462,7 +462,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 }
 
 async function getLiveSubscriptions(): Promise<ISubscriptionContext[]> {
-    return (await ext.rgApi.getSubscriptions(true)).map(subscription =>
+    return (await ext.rgApi.getSubscriptions(false)).map(subscription =>
         createSubscriptionContext(subscription));
 }
 
@@ -488,6 +488,17 @@ async function tryGetSwagger(
     } catch {
         return undefined;
     }
+}
+
+function requireNamespaceInRegion(resource: ConnectorGatewayResource, region: string): ConnectorTriggerNamespace {
+    const namespace = requireNamespace(resource);
+    if (normalizeLocation(namespace.location) !== normalizeLocation(region)) {
+        throw new Error(localize(
+            'connectorNamespaceRegionMismatch',
+            'The Connector Namespace is not in the selected region. Restart debugging and choose a namespace in that region or a different new name.',
+        ));
+    }
+    return namespace;
 }
 
 function requireNamespace(resource: ConnectorGatewayResource): ConnectorTriggerNamespace {

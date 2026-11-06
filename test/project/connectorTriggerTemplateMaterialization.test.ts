@@ -17,10 +17,10 @@ import {
     type ProjectTemplateCreationOptions,
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
-    connectorTriggerProjectHandoffVersion,
-    readConnectorTriggerProjectHandoff,
-    type ConnectorTriggerProjectHandoff,
-} from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+    connectorTriggerProjectMetadataVersion,
+    readConnectorTriggerProjectMetadata,
+    type ConnectorTriggerProjectMetadata,
+} from '../../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import {
     parseConnectorTriggerOutputMetadata,
@@ -205,7 +205,7 @@ suite('Connector Trigger template materialization', () => {
             ProjectLanguage.TypeScript,
             projectPath,
             'details',
-            { connectorTriggerHandoff: createHandoff() },
+            { connectorTriggerMetadata: createMetadata() },
         );
 
         const sourceFiles = await vscodeSourceFiles(projectPath);
@@ -238,7 +238,7 @@ suite('Connector Trigger template materialization', () => {
                 ProjectLanguage.TypeScript,
                 projectPath,
                 'details',
-                { connectorTriggerHandoff: createHandoff() },
+                { connectorTriggerMetadata: createMetadata() },
             ),
             /missing operation ownership metadata/,
         );
@@ -454,7 +454,7 @@ suite('Connector Trigger template materialization', () => {
                             destination,
                             'details',
                             {
-                                connectorTriggerHandoff: createHandoff(
+                                connectorTriggerMetadata: createMetadata(
                                     testCase.connectorId,
                                     testCase.operationId,
                                 ),
@@ -504,7 +504,7 @@ suite('Connector Trigger template materialization', () => {
                         `${template.id}-${index}`,
                     );
                     const creator = createIntegrationCreator(index === 0);
-                    const handoff = createHandoff(
+                    const metadata = createMetadata(
                         selection.connectorId,
                         selection.operationId,
                     );
@@ -524,7 +524,7 @@ suite('Connector Trigger template materialization', () => {
                             destination,
                             'details',
                             {
-                                connectorTriggerHandoff: handoff,
+                                connectorTriggerMetadata: metadata,
                                 connectorTriggerOutputMetadata: outputMetadata,
                             },
                         );
@@ -537,7 +537,7 @@ suite('Connector Trigger template materialization', () => {
                     await assertGenericMaterialized(
                         destination,
                         language,
-                        handoff,
+                        metadata,
                         outputMetadata,
                     );
                     if (index < 2 && buildGenericTemplateTestsEnabled) {
@@ -671,12 +671,12 @@ async function assertMaterializedOperation(
 async function assertGenericMaterialized(
     root: string,
     language: ProjectLanguage,
-    handoff: ConnectorTriggerProjectHandoff,
+    metadata: ConnectorTriggerProjectMetadata,
     outputMetadata: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const identity = getConnectorTriggerEventIdentity(
-        handoff.connectorId,
-        handoff.operationId,
+        metadata.connectorId,
+        metadata.operationId,
     );
     assert.deepStrictEqual(
         await findConnectorTriggerRegistrations(root),
@@ -691,8 +691,12 @@ async function assertGenericMaterialized(
         }],
     );
     assert.deepStrictEqual(
-        await readConnectorTriggerProjectHandoff(root),
-        handoff,
+        await readConnectorTriggerProjectMetadata(root),
+        metadata,
+    );
+    assert.strictEqual(
+        await AzExtFsExtra.pathExists(path.join(root, '.azurefunctions')),
+        false,
     );
     assert.strictEqual(
         await AzExtFsExtra.pathExists(path.join(root, 'host.json')),
@@ -703,6 +707,7 @@ async function assertGenericMaterialized(
     )).toString();
     assert.ok(readme.includes(identity.operationId));
     assert.ok(!readme.includes('OnGenericCustomConnectorEvent'));
+    assert.ok(readme.includes('azureFunctions.connectorTriggerProjects'));
 
     if (language === ProjectLanguage.TypeScript) {
         const functionsPath = path.join(root, 'src', 'functions');
@@ -977,21 +982,12 @@ function createTemplate(): IProjectTemplate {
     };
 }
 
-function createHandoff(
+function createMetadata(
     connectorId = 'office365',
     operationId = 'OnNewEmailV3',
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerProjectMetadata {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: 'subscription-id',
-            tenantId: 'tenant-id',
-            environment: {
-                name: 'AzureCloud',
-                resourceManagerEndpointUrl: 'https://management.azure.com/',
-            },
-        },
-        region: 'westcentralus',
+        version: connectorTriggerProjectMetadataVersion,
         connectorId,
         operationId,
     };

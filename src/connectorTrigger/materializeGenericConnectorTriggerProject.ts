@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType } from 'vscode';
-import { type ConnectorTriggerProjectHandoff } from './connectorTriggerProjectHandoff';
+import { type ConnectorTriggerProjectMetadata } from './connectorTriggerProjectMetadata';
 import { ProjectLanguage } from '../constants';
 import { localize } from '../localize';
 import {
@@ -47,12 +47,12 @@ const genericSampleSettings = [
 export async function materializeGenericConnectorTriggerProject(
     projectPath: string,
     language: string,
-    handoff: ConnectorTriggerProjectHandoff,
+    metadata: ConnectorTriggerProjectMetadata,
     outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const identity = getConnectorTriggerEventIdentity(
-        handoff.connectorId,
-        handoff.operationId,
+        metadata.connectorId,
+        metadata.operationId,
     );
     switch (language) {
         case ProjectLanguage.CSharp:
@@ -87,7 +87,7 @@ export async function materializeGenericConnectorTriggerProject(
     await writeEventReadme(
         projectPath,
         language,
-        handoff.connectorId,
+        metadata.connectorId,
         identity,
         outputMetadata,
     );
@@ -362,7 +362,7 @@ ${payloadDescription}
 
 ${languageDescription}
 
-Connector parameters and authenticated dynamic values remain deferred to the Azure Functions F5 setup flow. The selected connector and canonical operation ID are stored in the ignored local Connector Trigger handoff.
+Connector parameters and authenticated dynamic values remain deferred to the Azure Functions F5 setup flow. The selected connector and canonical operation ID are stored in the folder's \`azureFunctions.connectorTriggerProjects\` VS Code setting.
 `,
     );
 }

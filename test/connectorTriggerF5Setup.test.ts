@@ -12,9 +12,15 @@ import {
     type PromptResult,
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import {
+    readConnectorTriggerProjectMetadata,
+    writeConnectorTriggerProjectMetadata,
+} from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerDynamicInvokeRequest,
@@ -26,7 +32,12 @@ import {
     type ConnectorTriggerNamespace,
     type ConnectorTriggerOperationResolver,
     type ConnectorTriggerParameterValue,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerParameterRequest,
+    type ConnectorTriggerSetupTarget,
+    type ConnectorTriggerSetupPlan,
+    type ConnectorTriggerSetupRequest,
+    type ConnectorTriggerSetupSession,
+    type ConnectorTriggerProjectMetadata,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import {
     createConnectorTriggerResourceNames,
@@ -34,6 +45,8 @@ import {
     isValidConnectorPollingEndpoint,
     runConnectorTriggerF5Setup,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
+import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/ConnectorTriggerParameterForm';
+import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
@@ -42,7 +55,7 @@ const binding: ConnectorTriggerLocalBinding = {
     connectionSettingName: 'ConnectorNamespace',
     triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
 };
-const handoff: ConnectorTriggerProjectHandoff = {
+const target: ConnectorTriggerSetupTarget = {
     version: 1,
     subscription: {
         id: 'subscription-id',
@@ -55,6 +68,9 @@ const handoff: ConnectorTriggerProjectHandoff = {
     region: 'eastus',
     connectorId: 'office365',
     operationId: 'OnNewEmailV3',
+};
+const projectMetadata: ConnectorTriggerProjectMetadata = {
+    version: 1, connectorId: target.connectorId, operationId: target.operationId,
 };
 
 suite('Connector Trigger F5 setup', () => {
@@ -115,6 +131,20 @@ suite('Connector Trigger F5 setup', () => {
             }),
         };
         const dependencies = createDependencies(gateway, operationResolver, {
+            review: async (_context, plan) => {
+                assert.strictEqual(state.namespace, undefined);
+                assert.strictEqual(state.connection, undefined);
+                assert.strictEqual(accessConfigured, false);
+                assert.strictEqual(dynamicResolvedAfterAuthentication, false);
+                assert.strictEqual(writtenSettings.length, 0);
+                assert.strictEqual(plan.namespace.kind, 'create');
+                assert.strictEqual(plan.connection.kind, 'create');
+                assert.deepStrictEqual(plan.localSettings.map(setting => setting.name), [
+                    'ConnectorNamespace__pollingEndpoint',
+                    'OnNewEmailTriggerConfigName',
+                ]);
+                return true;
+            },
             markComplete: async () => {
                 completed += 1;
             },
@@ -123,7 +153,7 @@ suite('Connector Trigger F5 setup', () => {
             },
         });
 
-        await runConnectorTriggerF5Setup(context, projectPath, handoff, binding, dependencies);
+        await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
 
         assert.strictEqual(dynamicResolvedAfterAuthentication, true);
         assert.strictEqual(completed, 1);
@@ -178,7 +208,7 @@ suite('Connector Trigger F5 setup', () => {
         ));
 
         await assert.rejects(
-            runConnectorTriggerF5Setup(firstContext, projectPath, handoff, binding, dependencies),
+            runConnectorTriggerF5Setup(firstContext, projectPath, target, binding, dependencies),
             error => error instanceof UserCancelledError,
         );
         assert.strictEqual(state.namespaceCreateCount, 1);
@@ -188,7 +218,7 @@ suite('Connector Trigger F5 setup', () => {
 
         const secondUi = new ScriptedUi([], [], []);
         const secondContext = await createContext(secondUi);
-        await runConnectorTriggerF5Setup(secondContext, projectPath, handoff, binding, dependencies);
+        await runConnectorTriggerF5Setup(secondContext, projectPath, target, binding, dependencies);
 
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
@@ -234,9 +264,9 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(isValidConnectorPollingEndpoint('https://example.logic.azure.com/other'), false);
     });
 
-    test('generates stable resource names without exposing handoff identifiers', () => {
-        const first = createConnectorTriggerResourceNames(projectPath, handoff, binding);
-        const second = createConnectorTriggerResourceNames(projectPath, handoff, binding);
+    test('generates stable resource names without exposing target identifiers', () => {
+        const first = createConnectorTriggerResourceNames(projectPath, target, binding);
+        const second = createConnectorTriggerResourceNames(projectPath, target, binding);
 
         assert.deepStrictEqual(first, second);
         assert.match(first.namespaceName, /^func-connectors-[a-f0-9]{10}$/);
@@ -273,7 +303,7 @@ suite('Connector Trigger F5 setup', () => {
         });
         const context = await createContext(new ScriptedUi([], [], []));
         const operation = await resolver.resolveOperation(context, {
-            handoff,
+            target,
             namespace,
             connection,
         });
@@ -281,7 +311,7 @@ suite('Connector Trigger F5 setup', () => {
 
         assert.strictEqual(folderInput.dynamic?.kind, 'tree');
         const resolution = await resolver.resolveDynamicInput(context, {
-            handoff,
+            target,
             namespace,
             connection,
             operation,
@@ -304,7 +334,547 @@ suite('Connector Trigger F5 setup', () => {
         ]);
     });
 
-    test('treats a valid persisted handoff as authoritative without source scanning', async () => {
+    test('rejects unavailable event definitions but accepts a known parameterless event', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        for (const swagger of [
+            {},
+            { paths: {} },
+            { paths: { '/event': { get: { operationId: 'AnotherEvent' } } } },
+            {
+                paths: {
+                    '/event': {
+                        get: { operationId: target.operationId, parameters: 'unavailable' },
+                    },
+                },
+            },
+            {
+                paths: {
+                    '/event': {
+                        get: {
+                            operationId: target.operationId,
+                            parameters: [{ $ref: '#/parameters/Missing' }],
+                        },
+                    },
+                },
+            },
+            {
+                paths: {
+                    '/event': {
+                        get: {
+                            operationId: target.operationId,
+                            parameters: [{
+                                name: 'body',
+                                in: 'body',
+                                schema: {
+                                    type: 'object',
+                                    properties: { folder: { $ref: '#/definitions/Missing' } },
+                                },
+                            }],
+                        },
+                    },
+                },
+            },
+        ]) {
+            const resolver = createSwaggerResolver(swagger);
+            await assert.rejects(
+                resolver.resolveOperation(context, request),
+                /connector.*(definition|parameters)/i,
+            );
+        }
+
+        const resolver = createSwaggerResolver({
+            paths: { '/event': { get: { operationId: target.operationId, parameters: [] } } },
+        });
+        assert.deepStrictEqual((await resolver.resolveOperation(context, request)).inputs, []);
+    });
+
+    test('projects root-array dynamic values using metadata labels and typed IDs', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const resolver = createSwaggerResolver(
+            createDynamicValuesSwagger({
+                operationId: 'ListFolders',
+                itemValuePath: 'id',
+                itemTitlePath: 'properties/displayName',
+            }),
+            () => ({
+                response: {
+                    statusCode: '200',
+                    body: JSON.stringify([
+                        { id: 12, properties: { displayName: 'Inbox' } },
+                        { id: 34, properties: { displayName: 'Archive' } },
+                    ]),
+                },
+            }),
+        );
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        const operation = await resolver.resolveOperation(context, request);
+        const resolution = await resolver.resolveDynamicInput(context, {
+            ...request,
+            operation,
+            input: nonNullValue(operation.inputs[0]),
+            values: {},
+        });
+        assert.deepStrictEqual(resolution.options, [
+            { label: 'Inbox', value: 12 },
+            { label: 'Archive', value: 34 },
+        ]);
+    });
+
+    test('rejects malformed dynamic responses instead of treating them as empty choices', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        for (const response of [
+            { response: { statusCode: '403', body: { error: 'private-response' } } },
+            { response: { statusCode: 200, body: 'private-response' } },
+            { response: { statusCode: 200, body: { unexpected: [] } } },
+            { response: { statusCode: 200, body: { value: [{ unexpected: 'private-response' }] } } },
+            { response: { statusCode: 200, body: { value: [{ id: 'private-response' }] } } },
+        ]) {
+            const resolver = createSwaggerResolver(createDynamicValuesSwagger({
+                operationId: 'ListFolders',
+                itemsPath: 'value',
+                itemValuePath: 'id',
+                itemTitlePath: 'name',
+            }), () => response);
+            const operation = await resolver.resolveOperation(context, request);
+            await assert.rejects(
+                resolver.resolveDynamicInput(context, {
+                    ...request,
+                    operation,
+                    input: nonNullValue(operation.inputs[0]),
+                    values: {},
+                }),
+                error => error instanceof Error &&
+                    /connector.*(parameter|values)/i.test(error.message) &&
+                    !error.message.includes('private-response'),
+            );
+        }
+    });
+
+    test('does not request arbitrary text when a required dynamic list is empty', async () => {
+        const state = createGatewayState();
+        const gateway = createGateway(state, {
+            onDynamicInvoke: () => ({ response: { statusCode: 200, body: [] } }),
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createDynamicValuesSwagger({
+                operationId: 'ListFolders',
+                itemValuePath: 'id',
+                itemTitlePath: 'name',
+            }),
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => assert.fail('Empty required options cannot complete setup.'),
+            write: async () => assert.fail('Empty required options cannot write settings.'),
+        });
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies),
+            /no.*values.*(parameter|folder)|no.*(parameter|folder).*values/i,
+        );
+        assert.strictEqual(state.triggerParameters, undefined);
+        ui.assertConsumed();
+    });
+
+    test('prompts dependencies before dynamic values and preserves static parameter types', async () => {
+        const state = createGatewayState();
+        let invoked = false;
+        const gateway = createGateway(state, {
+            onDynamicInvoke: request => {
+                invoked = true;
+                assert.deepStrictEqual(request.request, {
+                    method: 'GET',
+                    path: '/mailboxes/mailbox%2Fname/folders',
+                });
+                return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+            },
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createDependentValuesSwagger(),
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        const operation = await resolver.resolveOperation(context, request);
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        assert.deepStrictEqual(folder.dynamic?.dependsOn, ['mailbox']);
+        await assert.rejects(resolver.resolveDynamicInput(context, {
+            ...request,
+            operation,
+            input: folder,
+            values: {},
+        }), /dependency.*value/i);
+        assert.strictEqual(invoked, false);
+
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/, [], 'Inbox', 'false', '0.5'],
+            ['mailbox/name', '1e3'],
+            [/Open Sign-in Page/],
+        );
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => undefined,
+            write: async () => undefined,
+        });
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
+        assert.deepStrictEqual(state.triggerParameters, [
+            { name: 'mailbox', value: 'mailbox/name' },
+            { name: 'folderPath', value: 'inbox-id' },
+            { name: 'includeAttachments', value: false },
+            { name: 'maxBatch', value: 1000 },
+            { name: 'minimumScore', value: 0.5 },
+        ]);
+        ui.assertConsumed();
+    });
+
+    test('rejects cyclic parameter dependencies before loading values or writing runtime configuration', async () => {
+        const inputs = createOperationInputs();
+        nonNullValue(inputs.find(input => input.name === 'requiredValue')).dynamic = {
+            kind: 'values',
+            dependsOn: ['folderPath'],
+            metadata: {},
+        };
+        const state = createGatewayState();
+        const dependencies = createDependencies(createGateway(state), {
+            resolveOperation: async () => ({ inputs }),
+            resolveDynamicInput: async () => assert.fail('Cyclic dependencies cannot load values.'),
+            serializeParameters: () => assert.fail('Cyclic dependencies cannot create a Trigger Config.'),
+        }, {
+            markComplete: async () => assert.fail('Cyclic dependencies cannot complete setup.'),
+            write: async () => assert.fail('Cyclic dependencies cannot write settings.'),
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies),
+            /dependency cycle/i,
+        );
+        assert.strictEqual(state.triggerParameters, undefined);
+        ui.assertConsumed();
+    });
+
+    test('uses body-schema tree metadata while separating browse IDs from selectable leaf values', async () => {
+        const itemMetadata = {
+            itemsPath: 'value',
+            itemValuePath: 'Path',
+            itemTitlePath: 'DisplayName',
+            itemIsParent: 'IsFolder',
+        };
+        const swagger = {
+            definitions: {
+                Body: {
+                    type: 'object',
+                    required: ['folderPath'],
+                    properties: {
+                        folderPath: {
+                            type: 'string',
+                            'x-ms-dynamic-tree': {
+                                settings: { canSelectParentNodes: false, canSelectLeafNodes: true },
+                                open: { operationId: 'OpenFolders', ...itemMetadata },
+                                browse: {
+                                    operationId: 'BrowseFolders',
+                                    ...itemMetadata,
+                                    parameters: { id: { selectedItemValuePath: 'Id' } },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            paths: {
+                '/event': {
+                    get: {
+                        operationId: target.operationId,
+                        parameters: [{ name: 'body', in: 'body', required: true, schema: { $ref: '#/definitions/Body' } }],
+                    },
+                },
+                '/folders': { get: { operationId: 'OpenFolders', parameters: [] } },
+                '/folders/{id}': {
+                    get: {
+                        operationId: 'BrowseFolders',
+                        parameters: [{ name: 'id', in: 'path', type: 'string', required: true }],
+                    },
+                },
+            },
+        };
+        const state = createGatewayState();
+        const requests: string[] = [];
+        const gateway = createGateway(state, {
+            onDynamicInvoke: request => {
+                requests.push(request.request.path);
+                return {
+                    response: {
+                        statusCode: 200,
+                        body: {
+                            value: request.request.path === '/folders' ?
+                                [{ Id: 'inbox-id', Path: '/mail/Inbox', DisplayName: 'Inbox', IsFolder: true }] :
+                                [{ Id: 'projects-id', Path: '/mail/Inbox/Projects', DisplayName: 'Projects', IsFolder: false }],
+                        },
+                    },
+                };
+            },
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => swagger,
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/, 'Inbox', 'Projects'],
+            [],
+            [/Open Sign-in Page/],
+        );
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => undefined,
+            write: async () => undefined,
+        });
+
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
+        assert.deepStrictEqual(requests, ['/folders', '/folders/inbox-id']);
+        assert.deepStrictEqual(state.triggerParameters, [{ name: 'folderPath', value: '/mail/Inbox/Projects' }]);
+        assert.strictEqual(ui.quickPickLabels.flat().some(label => /Select this folder/.test(label)), false);
+        ui.assertConsumed();
+    });
+
+    test('rejects unsupported dynamic metadata and keeps a safe actionable pre-debug error', async () => {
+        const state = createGatewayState();
+        const resolver = createSwaggerResolver(createDynamicValuesSwagger({
+            operationId: 'MissingOperation',
+        }));
+        const dependencies = createDependencies(createGateway(state), resolver, {
+            markComplete: async () => assert.fail('Invalid metadata cannot complete setup.'),
+            write: async () => assert.fail('Invalid metadata cannot write settings.'),
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        await assert.rejects(
+            validateConnectorNamespacePreDebug(await createContext(ui), projectPath, dependencies),
+            error => error instanceof Error &&
+                /unsupported dynamic metadata/i.test(error.message) &&
+                !error.message.includes(target.operationId) &&
+                !error.message.includes(projectPath),
+        );
+        assert.strictEqual(state.triggerParameters, undefined);
+        ui.assertConsumed();
+    });
+
+    test('can explicitly skip an optional empty dynamic list without entering arbitrary text', async () => {
+        const state = createGatewayState();
+        const gateway = createGateway(state, {
+            onDynamicInvoke: () => ({ response: { statusCode: 200, body: { value: [] } } }),
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createOutlookSwagger(),
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/, /Skip for now/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => undefined,
+            write: async () => undefined,
+        });
+
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
+        assert.deepStrictEqual(state.triggerParameters, []);
+        ui.assertConsumed();
+    });
+
+    test('reuses authentication after cancelling folder selection and supports folder Back navigation', async () => {
+        const state = createGatewayState();
+        let completed = 0;
+        let written = 0;
+        let invocations = 0;
+        const gateway = createGateway(state, {
+            onDynamicInvoke: request => {
+                invocations += 1;
+                return {
+                    response: {
+                        statusCode: 200,
+                        body: {
+                            value: request.request.path === '/OnFilePickerOpen' ? [
+                                { Id: 'inbox-id', DisplayName: 'Inbox', IsFolder: true },
+                                { Id: 'archive-id', DisplayName: 'Archive', IsFolder: true },
+                            ] : [],
+                        },
+                    },
+                };
+            },
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createOutlookSwagger(true),
+        });
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => {
+                completed += 1;
+            },
+            write: async () => {
+                written += 1;
+            },
+        });
+        const cancelledUi = new ScriptedUi(
+            [
+                /Create a new Connector Namespace/,
+                /Create a new connector connection/,
+                new UserCancelledError('connectorF5Parameter'),
+            ],
+            [],
+            [/Open Sign-in Page/],
+        );
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createContext(cancelledUi), projectPath, target, binding, dependencies),
+            error => error instanceof UserCancelledError,
+        );
+        assert.strictEqual(written, 0);
+        assert.strictEqual(completed, 0);
+        assert.strictEqual(state.triggerParameters, undefined);
+        cancelledUi.assertConsumed();
+
+        const retryUi = new ScriptedUi(['Inbox', /Back to previous folder/, 'Archive', /Select this folder/], [], []);
+        await runConnectorTriggerF5Setup(await createContext(retryUi), projectPath, target, binding, dependencies);
+        assert.deepStrictEqual(state.triggerParameters, [{ name: 'folderPath', value: 'archive-id' }]);
+        assert.strictEqual(invocations, 4);
+        assert.strictEqual(state.namespaceCreateCount, 1);
+        assert.strictEqual(state.connectionCreateCount, 1);
+        assert.strictEqual(written, 1);
+        assert.strictEqual(completed, 1);
+        retryUi.assertConsumed();
+    });
+
+    test('configures an authenticated nested Outlook folder from identity-only project metadata and selected provisioning scope', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-folders-'));
+        const source = `app.connectorTrigger('OnNewEmailV3', {
+    deliveryMode: 'Poll',
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%OnNewEmailTriggerConfigName%',
+    handler: async () => undefined,
+});
+`;
+        const state = createGatewayState();
+        const requests: ConnectorTriggerDynamicInvokeRequest[] = [];
+        let accessConfigured = false;
+        const gateway = createGateway(state, {
+            onAccessPolicies: () => {
+                accessConfigured = true;
+            },
+            onDynamicInvoke: request => {
+                assert.strictEqual(state.connection?.status, 'Connected');
+                assert.strictEqual(accessConfigured, true);
+                requests.push(request);
+                const parent = request.request.queries?.id;
+                const folders = request.request.path === '/OnFilePickerOpen' ?
+                    [{ Id: 'inbox-id', DisplayName: 'Inbox', IsFolder: true }] :
+                    parent === 'inbox-id' ?
+                        [{ Id: 'projects-id', DisplayName: 'Projects', IsFolder: true }] :
+                        [];
+                return { response: { statusCode: 200, body: { value: folders } } };
+            },
+        });
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => createOutlookSwagger(true),
+        });
+        const dependencies: ConnectorTriggerF5Dependencies = {
+            bindingResolver: new ProjectConnectorTriggerBindingResolver(),
+            gateway,
+            projectStore: {
+                read: readConnectorTriggerProjectMetadata,
+                markComplete: async () => undefined,
+            },
+            operationResolver: resolver,
+            openSetup: async (context, request) => createScriptedSetupSession(context, request, gateway, resolver),
+            runtime: createRuntime(),
+        };
+        const ui = new ScriptedUi(
+            [
+                /Create a new Connector Namespace/,
+                /Create a new connector connection/,
+                'Inbox',
+                'Projects',
+                /Select this folder/,
+            ],
+            [],
+            [/Open Sign-in Page/],
+        );
+        try {
+            await AzExtFsExtra.writeFile(path.join(tempProject, 'function.ts'), source);
+            await AzExtFsExtra.writeFile(path.join(tempProject, '.gitignore'), 'local.settings.json\n');
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
+                IsEncrypted: false,
+                Values: { UnrelatedSetting: 'keep-this-value' },
+            });
+            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            const metadataPath = path.join(tempProject, '.vscode', 'settings.json');
+            const metadataBefore = await fs.promises.readFile(metadataPath, 'utf8');
+            assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
+            assert.doesNotMatch(metadataBefore, /subscription|tenant|region|environment|management\.azure/);
+
+            await validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies);
+
+            assert.deepStrictEqual(requests.map(request => request.request), [
+                { method: 'GET', path: '/OnFilePickerOpen', queries: { operation: 'MailFolders' } },
+                {
+                    method: 'GET',
+                    path: '/OnFilePickerBrowse',
+                    queries: { operation: 'MailFolders', id: 'inbox-id' },
+                },
+                {
+                    method: 'GET',
+                    path: '/OnFilePickerBrowse',
+                    queries: { operation: 'MailFolders', id: 'projects-id' },
+                },
+            ]);
+            assert.deepStrictEqual(state.triggerParameters, [{ name: 'folderPath', value: 'projects-id' }]);
+            assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(tempProject, 'local.settings.json')), {
+                IsEncrypted: false,
+                Values: {
+                    UnrelatedSetting: 'keep-this-value',
+                    ['ConnectorNamespace__pollingEndpoint']:
+                        'https://example.logic.azure.com/api/connectorGateways/gateway-id',
+                    OnNewEmailTriggerConfigName: state.triggerConfigName,
+                },
+            });
+            assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(tempProject), projectMetadata);
+            assert.strictEqual((await AzExtFsExtra.readFile(path.join(tempProject, 'function.ts'))).toString(), source);
+            const repeatContext = await createContext(new ScriptedUi([], [], []));
+            await validateConnectorNamespacePreDebug(repeatContext, tempProject, dependencies);
+            assert.strictEqual(repeatContext.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+            assert.strictEqual(requests.length, 3);
+            assert.strictEqual(state.namespaceCreateCount, 1);
+            assert.strictEqual(state.connectionCreateCount, 1);
+            assert.strictEqual(await fs.promises.readFile(metadataPath, 'utf8'), metadataBefore);
+            assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
+            ui.assertConsumed();
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
+    test('skips scope selection and Azure setup for identity-only metadata with valid runtime settings', async () => {
         const tempProject = path.join(os.tmpdir(), `connector-f5-${Date.now()}`);
         await AzExtFsExtra.ensureDir(tempProject);
         await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
@@ -332,8 +902,8 @@ suite('Connector Trigger F5 setup', () => {
                 ensureConnectionAccessPolicies: fail,
                 createOrUpdateTriggerConfig: fail,
             },
-            handoffStore: {
-                read: async () => handoff,
+            projectStore: {
+                read: readConnectorTriggerProjectMetadata,
                 markComplete: async () => {
                     completed += 1;
                 },
@@ -343,18 +913,241 @@ suite('Connector Trigger F5 setup', () => {
                 resolveDynamicInput: fail,
                 serializeParameters: () => assert.fail('Parameters must not be serialized.'),
             },
+            openSetup: fail,
         };
 
         try {
+            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            const settingsPath = path.join(tempProject, '.vscode', 'settings.json');
+            const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
             assert.strictEqual(completed, 1);
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+            assert.strictEqual((await AzExtFsExtra.readFile(settingsPath)).toString(), before);
+            assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
+    });
+});
+
+suite('Connector Trigger pre-debug setup review', () => {
+    test('cancelled review does not provision, authenticate, configure or write local settings', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-review-'));
+        const settingsPath = path.join(tempProject, 'local.settings.json');
+        const source = `app.connectorTrigger('OnNewEmailV3', {
+    deliveryMode: 'Poll',
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%OnNewEmailTriggerConfigName%',
+    handler: async () => undefined,
+});
+`;
+        const state = createGatewayState();
+        const fail = async (): Promise<never> => assert.fail('Cancelled review cannot perform setup side effects.');
+        const gateway: ConnectorTriggerGateway = {
+            ...createGateway(state),
+            listConnections: async () => assert.fail('A new namespace has no existing connection to enumerate.'),
+            ensureNamespace: fail,
+            ensureConnection: fail,
+            getConnection: fail,
+            getConsentLink: fail,
+            ensureConnectionAccessPolicies: fail,
+            dynamicInvoke: fail,
+            createOrUpdateTriggerConfig: fail,
+        };
+        const previousEnvironment = process.env[binding.triggerConfigSettingName];
+        process.env[binding.triggerConfigSettingName] = 'fixture-environment-secret';
+        let reviewed = 0;
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [],
+        );
+        const dependencies = createDependencies(gateway, {
+            resolveOperation: fail,
+            resolveDynamicInput: fail,
+            serializeParameters: () => assert.fail('Review cannot serialize event values.'),
+        }, {
+            review: async (context, plan) => {
+                reviewed += 1;
+                assert.deepStrictEqual(plan.target, target);
+                assert.strictEqual(plan.namespace.kind, 'create');
+                assert.strictEqual(plan.connection.kind, 'create');
+                assert.deepStrictEqual(plan.localSettings, [
+                    { name: 'ConnectorNamespace__pollingEndpoint', purpose: 'pollingEndpoint', exists: false, environmentOverride: false },
+                    { name: 'OnNewEmailTriggerConfigName', purpose: 'triggerConfig', exists: true, environmentOverride: true },
+                ]);
+                assert.doesNotMatch(JSON.stringify(plan), /fixture-existing-secret|fixture-environment-secret|unrelated-secret/);
+                assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /subscription-id|tenant-id|connector-project/);
+                return false;
+            },
+            write: fail,
+            markComplete: fail,
+        });
+        dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
+        dependencies.projectStore.read = readConnectorTriggerProjectMetadata;
+        try {
+            await AzExtFsExtra.writeFile(path.join(tempProject, 'function.ts'), source);
+            await AzExtFsExtra.writeFile(path.join(tempProject, '.gitignore'), 'local.settings.json\n');
+            await AzExtFsExtra.writeJSON(settingsPath, {
+                IsEncrypted: false,
+                Values: { OnNewEmailTriggerConfigName: 'fixture-existing-secret', Unrelated: 'unrelated-secret' },
+            });
+            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            const before = await fs.promises.readFile(settingsPath, 'utf8');
+
+            await assert.rejects(
+                validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies),
+                error => error instanceof UserCancelledError,
+            );
+
+            assert.strictEqual(reviewed, 1);
+            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), before);
+            assert.strictEqual(await fs.promises.readFile(path.join(tempProject, 'function.ts'), 'utf8'), source);
+            assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(tempProject), projectMetadata);
+            assert.strictEqual(state.namespaceCreateCount, 0);
+            assert.strictEqual(state.connectionCreateCount, 0);
+            assert.strictEqual(state.triggerParameters, undefined);
+            ui.assertConsumed();
+        } finally {
+            if (previousEnvironment === undefined) {
+                delete process.env[binding.triggerConfigSettingName];
+            } else {
+                process.env[binding.triggerConfigSettingName] = previousEnvironment;
+            }
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
+    test('reviews deterministic reuse before ensuring existing namespace and connection resources', async () => {
+        const names = createConnectorTriggerResourceNames(projectPath, target, binding);
+        const state = createGatewayState();
+        state.namespace = { ...createNamespace(names.namespaceName), resourceGroupName: names.resourceGroupName };
+        state.connection = createConnection(names.connectionName, 'Connected');
+        const gateway = createGateway(state);
+        let approved = false;
+        const dependencies = createDependencies({
+            ...gateway,
+            ensureNamespace: async (...args) => {
+                assert.strictEqual(approved, true);
+                return await gateway.ensureNamespace(...args);
+            },
+            ensureConnection: async (...args) => {
+                assert.strictEqual(approved, true);
+                return await gateway.ensureConnection(...args);
+            },
+        }, {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
+            serializeParameters: () => [],
+        }, {
+            review: async (_context, plan) => {
+                assert.strictEqual(plan.namespace.kind, 'existing');
+                assert.strictEqual(plan.connection.kind, 'existing');
+                assert.strictEqual(plan.triggerConfigName, names.triggerConfigName);
+                assert.strictEqual(state.triggerParameters, undefined);
+                approved = true;
+                return true;
+            },
+            markComplete: async () => undefined,
+            write: async () => undefined,
+        });
+        const ui = new ScriptedUi([], [], []);
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
+        assert.strictEqual(approved, true);
+        assert.strictEqual(state.namespaceCreateCount, 0);
+        assert.strictEqual(state.connectionCreateCount, 0);
+        assert.deepStrictEqual(state.triggerParameters, []);
+        ui.assertConsumed();
+    });
+
+    test('closing during namespace creation stops new operations and retry reuses the created resource', async () => {
+        const state = createGatewayState();
+        const gateway = createGateway(state);
+        let close: (() => void) | undefined;
+        let closeFirstAttempt = true;
+        let written = 0;
+        const dependencies = createDependencies({
+            ...gateway,
+            ensureNamespace: async (...args) => {
+                const namespace = await gateway.ensureNamespace(...args);
+                if (closeFirstAttempt) {
+                    closeFirstAttempt = false;
+                    nonNullValue(close)();
+                }
+                return namespace;
+            },
+        }, {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
+            serializeParameters: () => [],
+        }, {
+            markComplete: async () => undefined,
+            write: async () => { written += 1; },
+        });
+        const open = dependencies.openSetup;
+        dependencies.openSetup = async (context, request) => {
+            const setup = await open(context, request);
+            close = () => setup.dispose();
+            return setup;
+        };
+        const cancelled = new ScriptedUi([/Create a new Connector Namespace/, /Create a new connector connection/], [], []);
+        await assert.rejects(runConnectorTriggerF5Setup(await createContext(cancelled), projectPath, target, binding, dependencies),
+            error => error instanceof UserCancelledError);
+        assert.strictEqual(state.namespaceCreateCount, 1);
+        assert.strictEqual(state.connectionCreateCount, 0);
+        assert.strictEqual(state.triggerParameters, undefined);
+        assert.strictEqual(written, 0);
+        cancelled.assertConsumed();
+
+        const retry = new ScriptedUi([/Create a new connector connection/], [], [/Open Sign-in Page/]);
+        await runConnectorTriggerF5Setup(await createContext(retry), projectPath, target, binding, dependencies);
+        assert.strictEqual(state.namespaceCreateCount, 1);
+        assert.strictEqual(state.connectionCreateCount, 1);
+        assert.strictEqual(written, 1);
+        retry.assertConsumed();
+    });
+
+    test('reviews and writes the actual binding setting keys rather than resource-derived names', async () => {
+        const customBinding: ConnectorTriggerLocalBinding = {
+            connectionSettingName: 'CustomConnection',
+            triggerConfigSettingName: 'CustomConfigReference',
+        };
+        const state = createGatewayState();
+        let written: Readonly<Record<string, string>> | undefined;
+        let approved = false;
+        const dependencies = createDependencies(createGateway(state), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
+            serializeParameters: () => [],
+        }, {
+            review: async (_context, plan) => {
+                assert.deepStrictEqual(plan.localSettings.map(setting => setting.name), [
+                    'CustomConnection__pollingEndpoint', 'CustomConfigReference',
+                ]);
+                approved = true;
+                return true;
+            },
+            markComplete: async () => undefined,
+            write: async (_context, _path, values) => {
+                assert.strictEqual(approved, true);
+                written = values;
+            },
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, customBinding, dependencies);
+        assert.deepStrictEqual(written, {
+            ['CustomConnection__pollingEndpoint']: 'https://example.logic.azure.com/api/connectorGateways/gateway-id',
+            CustomConfigReference: state.triggerConfigName,
+        });
+        ui.assertConsumed();
     });
 });
 
@@ -387,7 +1180,7 @@ function createGateway(
     return {
         listNamespaces: async () => state.namespace ? [state.namespace] : [],
         ensureNamespace: async (_context, requestHandoff, plan) => {
-            assert.strictEqual(requestHandoff.subscription.id, handoff.subscription.id);
+            assert.strictEqual(requestHandoff.subscription.id, target.subscription.id);
             if (plan.kind === 'existing') {
                 return plan.namespace;
             }
@@ -397,7 +1190,7 @@ function createGateway(
                     id: '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Web/connectorGateways/gateway',
                     name: plan.namespaceName,
                     resourceGroupName: plan.resourceGroupName,
-                    location: handoff.region,
+                    location: target.region,
                     identity: {
                         principalId: 'namespace-principal',
                         tenantId: 'tenant-id',
@@ -416,7 +1209,7 @@ function createGateway(
                 state.connection = {
                     id: '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Web/connectorGateways/gateway/connections/connection',
                     name: plan.connectionName,
-                    connectorId: handoff.connectorId,
+                    connectorId: target.connectorId,
                     status: 'Unauthenticated',
                     createdBy: {
                         objectId: 'developer-object',
@@ -466,6 +1259,7 @@ function createDependencies(
     gateway: ConnectorTriggerGateway,
     operationResolver: ConnectorTriggerOperationResolver,
     callbacks: {
+        review?: (context: IActionContext, plan: ConnectorTriggerSetupPlan) => Promise<boolean>;
         markComplete(): Promise<void>;
         write(
             context: IActionContext,
@@ -479,15 +1273,75 @@ function createDependencies(
             resolve: async () => binding,
         },
         gateway,
-        handoffStore: {
-            read: async () => handoff,
+        projectStore: {
+            read: async () => projectMetadata,
             markComplete: callbacks.markComplete,
         },
         localSettingsWriter: {
             write: callbacks.write,
         },
         operationResolver,
+        openSetup: async (context, request) =>
+            createScriptedSetupSession(context, request, gateway, operationResolver, callbacks.review),
         runtime: createRuntime(),
+    };
+}
+
+function createScriptedSetupSession(
+    context: IActionContext,
+    request: ConnectorTriggerSetupRequest,
+    gateway: ConnectorTriggerGateway,
+    resolver: ConnectorTriggerOperationResolver,
+    review: (context: IActionContext, plan: ConnectorTriggerSetupPlan) => Promise<boolean> = async () => true,
+): ConnectorTriggerSetupSession {
+    const form = new ConnectorTriggerSetupForm(context, request, gateway, {
+        listSubscriptions: async () => [{ id: target.subscription.id, label: 'Selected provisioning subscription' }],
+        getSubscription: async () => target.subscription,
+        listRegions: async () => [{ id: target.region, label: 'Selected provisioning region' }],
+        signIn: async () => assert.fail('This controlled test is already signed in.'),
+    }, () => undefined);
+    const cancellation = new vscode.CancellationTokenSource();
+    return {
+        cancellationToken: cancellation.token,
+        selectResources: async () => {
+            assert.ok(context.ui instanceof ScriptedUi);
+            let revision = 0;
+            await form.handleMessage({ command: 'initializeSetup' });
+            assert.strictEqual(form.state.canApprove, false);
+            assert.strictEqual(form.state.subscriptionId, '');
+            assert.strictEqual(form.state.regionId, '');
+            await form.handleMessage({ command: 'selectSubscription', revision: ++revision, id: form.state.subscriptionOptions[0].id });
+            assert.strictEqual(form.state.canApprove, false);
+            await form.handleMessage({ command: 'selectRegion', revision: ++revision, id: form.state.regionOptions[0].id });
+            assert.strictEqual(form.state.error, undefined);
+            if (form.state.namespaceId === 'new') {
+                const selected = await context.ui.showQuickPick(form.state.namespaceOptions.map(option => ({
+                    label: option.label, data: option.id,
+                })), {});
+                assert.ok(!Array.isArray(selected));
+                await form.handleMessage({ command: 'selectNamespace', revision: ++revision, id: selected.data });
+            }
+            if (form.state.connectionId === 'new') {
+                const selected = await context.ui.showQuickPick(form.state.connectionOptions.map(option => ({
+                    label: option.label, data: option.id,
+                })), {});
+                assert.ok(!Array.isArray(selected));
+                await form.handleMessage({ command: 'selectConnection', revision: ++revision, id: selected.data });
+            }
+            assert.strictEqual(form.state.canApprove, true, JSON.stringify(form.state.errors));
+            const plan = nonNullValue(await form.handleMessage({ command: 'approveSetup', revision: revision + 1 }));
+            if (!await review(context, plan)) {
+                throw new UserCancelledError('connectorF5Setup');
+            }
+            return plan;
+        },
+        collectParameters: async request => await collectScriptedParameters(context, request, resolver),
+        setStatus: status => form.setStatus(status),
+        dispose: () => {
+            cancellation.cancel();
+            cancellation.dispose();
+            form.dispose();
+        },
     };
 }
 
@@ -526,7 +1380,80 @@ function createOperationInputs(): ConnectorTriggerInputDefinition[] {
     ];
 }
 
-function createOutlookSwagger(): unknown {
+function createSwaggerResolver(
+    swagger: unknown,
+    onDynamicInvoke?: (request: ConnectorTriggerDynamicInvokeRequest) => unknown,
+): SwaggerConnectorTriggerOperationResolver {
+    return new SwaggerConnectorTriggerOperationResolver(
+        createGateway(createGatewayState(), { onDynamicInvoke }),
+        { getSwagger: async () => swagger },
+    );
+}
+
+function createDynamicValuesSwagger(descriptor: Record<string, unknown>): unknown {
+    return {
+        paths: {
+            '/event': {
+                get: {
+                    operationId: target.operationId,
+                    parameters: [{
+                        name: 'folderPath',
+                        in: 'query',
+                        required: true,
+                        type: 'string',
+                        'x-ms-summary': 'Folder',
+                        'x-ms-dynamic-list': descriptor,
+                    }],
+                },
+            },
+            '/folders': {
+                get: { operationId: 'ListFolders', parameters: [] },
+            },
+        },
+    };
+}
+
+function createDependentValuesSwagger(): unknown {
+    return {
+        parameters: {
+            Mailbox: { name: 'mailbox', in: 'query', type: 'string', required: false },
+        },
+        paths: {
+            '/event': {
+                get: {
+                    operationId: target.operationId,
+                    parameters: [
+                        {
+                            name: 'folderPath',
+                            in: 'query',
+                            required: true,
+                            type: 'string',
+                            'x-ms-dynamic-values': {
+                                operationId: 'ListFolders',
+                                parameters: { mailbox: { parameter: 'mailbox' } },
+                                'value-path': 'id',
+                                'value-title': 'name',
+                            },
+                        },
+                        { $ref: '#/parameters/Mailbox' },
+                        { name: 'includeAttachments', in: 'query', type: 'boolean', required: true, enum: [true, false] },
+                        { name: 'maxBatch', in: 'query', type: 'integer', required: true },
+                        { name: 'minimumScore', in: 'query', type: 'number', required: true, enum: [0.5, 1.5] },
+                        { name: 'note', in: 'query', type: 'string' },
+                    ],
+                },
+            },
+            '/{connectionId}/mailboxes/{mailbox}/folders': {
+                get: {
+                    operationId: 'ListFolders',
+                    parameters: [{ name: 'mailbox', in: 'path', type: 'string', required: true }],
+                },
+            },
+        },
+    };
+}
+
+function createOutlookSwagger(includeBrowse = false): unknown {
     return {
         paths: {
             '/{connectionId}/v3/Mail/OnNewEmail': {
@@ -557,12 +1484,26 @@ function createOutlookSwagger(): unknown {
                                     itemsPath: 'value',
                                     itemValuePath: 'Id',
                                     itemTitlePath: 'DisplayName',
+                                    ...(includeBrowse ? { itemIsParent: '(IsFolder eq true)' } : {}),
                                     parameters: {
                                         operation: {
                                             value: 'MailFolders',
                                         },
                                     },
                                 },
+                                ...(includeBrowse ? {
+                                    browse: {
+                                        operationId: 'OnFilePickerBrowse',
+                                        itemsPath: 'value',
+                                        itemValuePath: 'Id',
+                                        itemTitlePath: 'DisplayName',
+                                        itemIsParent: '(IsFolder eq true)',
+                                        parameters: {
+                                            operation: { value: 'MailFolders' },
+                                            id: { selectedItemValuePath: 'Id' },
+                                        },
+                                    },
+                                } : {}),
                             },
                         },
                     ],
@@ -574,6 +1515,17 @@ function createOutlookSwagger(): unknown {
                     parameters: [],
                 },
             },
+            ...(includeBrowse ? {
+                '/{connectionId}/OnFilePickerBrowse': {
+                    get: {
+                        operationId: 'OnFilePickerBrowse',
+                        parameters: [
+                            { name: 'operation', in: 'query', type: 'string', required: true },
+                            { name: 'id', in: 'query', type: 'string', required: true },
+                        ],
+                    },
+                },
+            } : {}),
         },
     };
 }
@@ -583,10 +1535,10 @@ function createNamespace(name: string): ConnectorTriggerNamespace {
         id: `/connectorGateways/${name}`,
         name,
         resourceGroupName: 'resource-group',
-        location: handoff.region,
+        location: target.region,
         identity: {
             principalId: 'namespace-principal',
-            tenantId: handoff.subscription.tenantId,
+            tenantId: target.subscription.tenantId,
         },
     };
 }
@@ -595,11 +1547,11 @@ function createConnection(name: string, status: string): ConnectorTriggerConnect
     return {
         id: `/connections/${name}`,
         name,
-        connectorId: handoff.connectorId,
+        connectorId: target.connectorId,
         status,
         createdBy: {
             objectId: 'developer-object',
-            tenantId: handoff.subscription.tenantId,
+            tenantId: target.subscription.tenantId,
         },
     };
 }
@@ -636,9 +1588,10 @@ class ScriptedUi {
     public readonly onDidFinishPrompt = this.promptEmitter.event;
     public readonly isPrompting = false;
     public readonly isTesting = true;
+    public readonly quickPickLabels: string[][] = [];
 
     public constructor(
-        private readonly quickPickResponses: PickResponse[],
+        private readonly quickPickResponses: (PickResponse | Error)[],
         private readonly inputBoxResponses: string[],
         private readonly warningResponses: (string | RegExp)[],
     ) { }
@@ -647,7 +1600,11 @@ class ScriptedUi {
         picks: IAzureQuickPickItem<T>[],
         options: { canPickMany?: boolean },
     ): Promise<IAzureQuickPickItem<T> | IAzureQuickPickItem<T>[]> {
+        this.quickPickLabels.push(picks.map(pick => pick.label));
         const response = nonNullValue(this.quickPickResponses.shift());
+        if (response instanceof Error) {
+            throw response;
+        }
         if (options.canPickMany) {
             assert.ok(Array.isArray(response), 'Expected a multi-select response.');
             const selected = response.map(expected => findPick(picks, expected));
@@ -660,8 +1617,9 @@ class ScriptedUi {
         return selected;
     }
 
-    public async showInputBox(): Promise<string> {
+    public async showInputBox(options: { validateInput?: (value: string) => string | undefined }): Promise<string> {
         const value = nonNullValue(this.inputBoxResponses.shift());
+        assert.strictEqual(options.validateInput?.(value), undefined);
         this.promptEmitter.fire({ value });
         return value;
     }
@@ -677,11 +1635,94 @@ class ScriptedUi {
         return selected;
     }
 
+    public async collectParameters(
+        context: IActionContext,
+        request: ConnectorTriggerParameterRequest,
+        resolver: ConnectorTriggerOperationResolver,
+    ): Promise<Record<string, ConnectorTriggerParameterValue>> {
+        const form = new ConnectorTriggerParameterForm(context, request, resolver, () => undefined);
+        let revision = 0;
+        try {
+            await form.handleMessage({ command: 'initialize' });
+            const optionalFields = form.state.fields.filter(field => field.advanced);
+            const optional = optionalFields.length ? await this.showQuickPick(optionalFields.map(field => ({
+                label: field.label,
+                data: field.name,
+            })), { canPickMany: true }) : [];
+            assert.ok(Array.isArray(optional));
+            const optionalNames = new Set(optional.map(pick => pick.data));
+            for (const initial of form.state.fields) {
+                if (initial.advanced && !optionalNames.has(initial.name)) {
+                    continue;
+                }
+                let field = nonNullValue(form.state.fields.find(field => field.name === initial.name));
+                if (field.error) {
+                    throw new Error(field.error);
+                }
+                if (field.kind === 'text') {
+                    const text = await this.showInputBox({});
+                    await form.handleMessage({ command: 'edit', revision: ++revision, name: field.name, text });
+                } else {
+                    while (true) {
+                        field = nonNullValue(form.state.fields.find(field => field.name === initial.name));
+                        if (field.error) {
+                            throw new Error(field.error);
+                        }
+                        type Selection = { command: 'browse' | 'select'; id: string } | { command: 'back' | 'skip' };
+                        const picks: IAzureQuickPickItem<Selection>[] = field.options.map(option => ({
+                            label: option.label,
+                            data: { command: option.hasChildren ? 'browse' : 'select', id: option.id },
+                        }));
+                        if (field.parent?.selectable) {
+                            picks.unshift({ label: 'Select this folder', data: { command: 'select', id: field.parent.id } });
+                        }
+                        if (field.canGoBack) {
+                            picks.push({ label: 'Back to previous folder', data: { command: 'back' } });
+                        }
+                        if (!field.required) {
+                            picks.push({ label: 'Skip for now', data: { command: 'skip' } });
+                        }
+                        const selection = await this.showQuickPick(picks, {});
+                        assert.ok(!Array.isArray(selection));
+                        if (selection.data.command === 'skip') {
+                            break;
+                        }
+                        const command = selection.data.command;
+                        await form.handleMessage({
+                            command,
+                            revision: ++revision,
+                            name: field.name,
+                            ...(command === 'select' && 'id' in selection.data ? { optionIds: [selection.data.id] } : {}),
+                            ...(command === 'browse' && 'id' in selection.data ? { optionId: selection.data.id } : {}),
+                        });
+                        if (command === 'select') {
+                            break;
+                        }
+                    }
+                }
+                const updated = nonNullValue(form.state.fields.find(field => field.name === initial.name));
+                assert.strictEqual(updated.error, undefined);
+            }
+            return nonNullValue(await form.handleMessage({ command: 'submit', revision: ++revision }));
+        } finally {
+            form.dispose();
+        }
+    }
+
     public assertConsumed(): void {
         assert.deepStrictEqual(this.quickPickResponses, []);
         assert.deepStrictEqual(this.inputBoxResponses, []);
         assert.deepStrictEqual(this.warningResponses, []);
     }
+}
+
+async function collectScriptedParameters(
+    context: IActionContext,
+    request: ConnectorTriggerParameterRequest,
+    resolver: ConnectorTriggerOperationResolver,
+): Promise<Record<string, ConnectorTriggerParameterValue>> {
+    assert.ok(context.ui instanceof ScriptedUi);
+    return await context.ui.collectParameters(context, request, resolver);
 }
 
 function findPick<T>(

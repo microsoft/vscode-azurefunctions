@@ -4,151 +4,141 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHash } from 'crypto';
+import * as path from 'path';
 import {
     AzureWizard,
     AzureWizardExecuteStep,
     AzureWizardPromptStep,
     UserCancelledError,
     type IActionContext,
-    type IAzureQuickPickItem,
 } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { localSettingsFileName } from '../../constants';
+import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter } from './ConnectorTriggerLocalSettingsWriter';
+import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerF5Runtime,
     type ConnectorTriggerInputDefinition,
-    type ConnectorTriggerInputOption,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerNamespace,
     type ConnectorTriggerNamespacePlan,
     type ConnectorTriggerOperationDefinition,
     type ConnectorTriggerParameterValue,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerSetupTarget,
+    type ConnectorTriggerProjectMetadata,
     type ConnectorTriggerConfig,
+    type ConnectorTriggerResourceNames,
+    type ConnectorTriggerSetupRequest,
+    type ConnectorTriggerSetupSession,
 } from './connectorTriggerF5Contracts';
 
 const connectionPollIntervalMs = 3000;
 const connectionPollTimeoutMs = 3 * 60 * 1000;
 
-interface ConnectorTriggerResourceNames {
-    resourceGroupName: string;
-    namespaceName: string;
-    connectionName: string;
-    triggerConfigName: string;
-}
-
 interface ConnectorTriggerF5WizardContext extends IActionContext {
     projectPath: string;
-    handoff: ConnectorTriggerProjectHandoff;
+    metadata: ConnectorTriggerProjectMetadata;
+    target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
-    names: ConnectorTriggerResourceNames;
+    names?: ConnectorTriggerResourceNames;
     namespacePlan?: ConnectorTriggerNamespacePlan;
     namespace?: ConnectorTriggerNamespace;
     connectionPlan?: ConnectorTriggerConnectionPlan;
     connection?: ConnectorTriggerConnection;
+    setupApproved?: boolean;
+    setupSession?: ConnectorTriggerSetupSession;
     operation?: ConnectorTriggerOperationDefinition;
     effectiveInputs: ConnectorTriggerInputDefinition[];
-    selectedOptionalInputs?: Set<string>;
+    parametersCollected?: boolean;
     parameterValues: Record<string, ConnectorTriggerParameterValue>;
     triggerConfig?: ConnectorTriggerConfig;
     localSettingsWritten?: boolean;
-    handoffCompleted?: boolean;
+    metadataCompleted?: boolean;
 }
 
 export class ConnectorTriggerF5SetupError extends Error {
     public readonly code = 'connectorTriggerF5SetupFailed';
 
-    public constructor(cause?: unknown) {
-        super(
-            localize(
-                'connectorTriggerF5SetupFailed',
-                'Connector Trigger setup could not be completed. Check your Azure access and network connection, then retry debugging.',
-            ),
-            { cause },
-        );
+    public constructor(
+        cause?: unknown,
+        message = localize(
+            'connectorTriggerF5SetupFailed',
+            'Connector Trigger setup could not be completed. Check your Azure access and network connection, then retry debugging.',
+        ),
+    ) {
+        super(message, { cause });
     }
 }
 
 export async function runConnectorTriggerF5Setup(
     context: IActionContext,
     projectPath: string,
-    handoff: ConnectorTriggerProjectHandoff,
+    metadata: ConnectorTriggerProjectMetadata,
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
 ): Promise<void> {
     const runtime = dependencies.runtime ?? createDefaultRuntime();
-    const names = createConnectorTriggerResourceNames(projectPath, handoff, binding);
     const wizardContext: ConnectorTriggerF5WizardContext = {
         ...context,
         projectPath,
-        handoff,
+        metadata,
         binding,
-        names,
         effectiveInputs: [],
         parameterValues: {},
     };
     maskSetupValues(wizardContext);
 
-    await runWizard(
-        wizardContext,
-        [new ConnectorNamespacePromptStep(dependencies)],
-        [new ConnectorNamespaceEnsureStep(dependencies)],
-    );
-    await runWizard(
-        wizardContext,
-        [new ConnectorConnectionPromptStep(dependencies)],
-        [
+    const setup = await dependencies.openSetup(wizardContext, await createSetupRequest(wizardContext));
+    wizardContext.setupSession = setup;
+    try {
+        await runWizard(wizardContext, [new ConnectorResourcesPromptStep()], [], false);
+        setup.setStatus('provisioning');
+        await runWizard(wizardContext, [], [new ConnectorNamespaceEnsureStep(dependencies)]);
+        await runWizard(wizardContext, [], [
             new ConnectorConnectionEnsureStep(dependencies),
             new ConnectorConnectionConsentStep(dependencies, runtime),
             new ConnectorConnectionAccessStep(dependencies),
-        ],
-    );
-    await resolveOperation(wizardContext, dependencies, runtime);
-    await runWizard(
-        wizardContext,
-        [
-            new ConnectorOptionalInputsStep(),
-            new ConnectorParameterPromptStep(dependencies),
-        ],
-        [],
-    );
-    await runWizard(
-        wizardContext,
-        [],
-        [
+        ]);
+        setup.setStatus('loadingParameters');
+        await resolveOperation(wizardContext, dependencies, runtime);
+        await runWizard(wizardContext, [new ConnectorParameterPromptStep()], [], false);
+        setup.setStatus('saving');
+        await runWizard(wizardContext, [], [
             new ConnectorTriggerConfigStep(dependencies),
             new ConnectorTriggerLocalSettingsStep(dependencies),
-            new ConnectorTriggerHandoffCompleteStep(dependencies),
-        ],
-    );
-
-    context.telemetry.properties.connectorF5SetupResult = 'completed';
+            new ConnectorTriggerMetadataCompleteStep(dependencies),
+        ]);
+        context.telemetry.properties.connectorF5SetupResult = 'completed';
+    } finally {
+        setup.dispose();
+    }
 }
 
 export function createConnectorTriggerResourceNames(
     projectPath: string,
-    handoff: ConnectorTriggerProjectHandoff,
+    target: ConnectorTriggerSetupTarget,
     binding: ConnectorTriggerLocalBinding,
 ): ConnectorTriggerResourceNames {
     const scopeHash = stableHash([
-        handoff.subscription.id,
-        handoff.region,
+        target.subscription.id,
+        target.region,
     ]);
     const projectHash = stableHash([
         projectPath,
-        handoff.subscription.id,
-        handoff.region,
-        handoff.connectorId,
-        handoff.operationId,
+        target.subscription.id,
+        target.region,
+        target.connectorId,
+        target.operationId,
         binding.connectionSettingName,
         binding.triggerConfigSettingName,
     ]);
-    const connectorName = normalizeResourceName(handoff.connectorId, 'connector', 36);
-    const operationName = normalizeResourceName(handoff.operationId, 'trigger', 36);
+    const connectorName = normalizeResourceName(target.connectorId, 'connector', 36);
+    const operationName = normalizeResourceName(target.operationId, 'trigger', 36);
 
     return {
         resourceGroupName: `func-connectors-${scopeHash}`,
@@ -158,59 +148,47 @@ export function createConnectorTriggerResourceNames(
     };
 }
 
-class ConnectorNamespacePromptStep extends AzureWizardPromptStep<ConnectorTriggerF5WizardContext> {
-    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
-        super();
-    }
-
+class ConnectorResourcesPromptStep extends AzureWizardPromptStep<ConnectorTriggerF5WizardContext> {
     public async prompt(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        const namespaces = (await this.dependencies.gateway.listNamespaces(context, context.handoff))
-            .filter(namespace => locationsEqual(namespace.location, context.handoff.region));
-        const reusable = namespaces.find(namespace =>
-            equalsIgnoreCase(namespace.name, context.names.namespaceName) &&
-            equalsIgnoreCase(namespace.resourceGroupName, context.names.resourceGroupName));
-        if (reusable) {
-            context.namespacePlan = { kind: 'existing', namespace: reusable };
-            context.telemetry.properties.connectorF5NamespaceMode = 'reused';
-            maskNamespace(context, reusable);
-            return;
-        }
-
-        const picks: IAzureQuickPickItem<ConnectorTriggerNamespacePlan>[] = namespaces.map(namespace => ({
-            label: namespace.name,
-            description: namespace.resourceGroupName,
-            data: { kind: 'existing', namespace },
-        }));
-        picks.push({
-            label: localize('createNewConnectorNamespace', '$(add) Create a new Connector Namespace'),
-            description: context.names.namespaceName,
-            data: {
-                kind: 'create',
-                resourceGroupName: context.names.resourceGroupName,
-                namespaceName: context.names.namespaceName,
-            },
-        });
-
-        context.namespacePlan = (await context.ui.showQuickPick(picks, {
-            placeHolder: localize(
-                'selectConnectorNamespaceForDebug',
-                'Select a Connector Namespace for this project.',
-            ),
-            stepName: 'connectorF5Namespace',
-            suppressPersistence: true,
-        })).data;
-        context.telemetry.properties.connectorF5NamespaceMode = context.namespacePlan.kind;
+        const plan = await nonNullValue(context.setupSession).selectResources();
+        context.target = plan.target;
+        context.names = {
+            resourceGroupName: plan.namespace.kind === 'existing' ? plan.namespace.namespace.resourceGroupName : plan.namespace.resourceGroupName,
+            namespaceName: plan.namespace.kind === 'existing' ? plan.namespace.namespace.name : plan.namespace.namespaceName,
+            connectionName: plan.connection.kind === 'existing' ? plan.connection.connection.name : plan.connection.connectionName,
+            triggerConfigName: plan.triggerConfigName,
+        };
+        maskSetupValues(context);
+        context.namespacePlan = plan.namespace;
+        context.connectionPlan = plan.connection;
+        context.telemetry.properties.connectorF5NamespaceMode = plan.namespace.kind;
+        context.telemetry.properties.connectorF5ConnectionMode = plan.connection.kind;
         if (context.namespacePlan.kind === 'existing') {
             maskNamespace(context, context.namespacePlan.namespace);
         }
+        if (context.connectionPlan.kind === 'existing') {
+            maskConnection(context, context.connectionPlan.connection);
+        } else {
+            maskValue(context, context.connectionPlan.connectionName);
+        }
+        if (context.namespacePlan.kind === 'create') {
+            maskValue(context, context.namespacePlan.namespaceName);
+            maskValue(context, context.namespacePlan.resourceGroupName);
+        }
+        context.setupApproved = true;
+        context.telemetry.properties.connectorF5SetupReviewed = 'true';
     }
 
     public shouldPrompt(context: ConnectorTriggerF5WizardContext): boolean {
-        return !context.namespacePlan;
+        return !context.setupApproved;
     }
 
     public undo(context: ConnectorTriggerF5WizardContext): void {
         context.namespacePlan = undefined;
+        context.connectionPlan = undefined;
+        context.target = undefined;
+        context.names = undefined;
+        context.setupApproved = false;
     }
 }
 
@@ -222,9 +200,10 @@ class ConnectorNamespaceEnsureStep extends AzureWizardExecuteStep<ConnectorTrigg
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
         context.namespace = await this.dependencies.gateway.ensureNamespace(
             context,
-            context.handoff,
+            nonNullValue(context.target),
             nonNullValue(context.namespacePlan),
         );
         maskNamespace(context, context.namespace);
@@ -232,62 +211,6 @@ class ConnectorNamespaceEnsureStep extends AzureWizardExecuteStep<ConnectorTrigg
 
     public shouldExecute(): boolean {
         return true;
-    }
-}
-
-class ConnectorConnectionPromptStep extends AzureWizardPromptStep<ConnectorTriggerF5WizardContext> {
-    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
-        super();
-    }
-
-    public async prompt(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        const namespace = nonNullValue(context.namespace);
-        const connections = (await this.dependencies.gateway.listConnections(context, context.handoff, namespace))
-            .filter(connection => equalsIgnoreCase(connection.connectorId, context.handoff.connectorId));
-        const reusable = connections.find(connection => equalsIgnoreCase(connection.name, context.names.connectionName));
-        if (reusable) {
-            context.connectionPlan = { kind: 'existing', connection: reusable };
-            context.telemetry.properties.connectorF5ConnectionMode = 'reused';
-            maskConnection(context, reusable);
-            return;
-        }
-
-        const picks: IAzureQuickPickItem<ConnectorTriggerConnectionPlan>[] = connections.map(connection => ({
-            label: connection.name,
-            description: connection.status ?
-                localize('connectorConnectionStatus', 'Status: {0}', connection.status) :
-                undefined,
-            data: { kind: 'existing', connection },
-        }));
-        picks.push({
-            label: localize('createNewConnectorConnection', '$(add) Create a new connector connection'),
-            description: context.names.connectionName,
-            data: {
-                kind: 'create',
-                connectionName: context.names.connectionName,
-            },
-        });
-
-        context.connectionPlan = (await context.ui.showQuickPick(picks, {
-            placeHolder: localize(
-                'selectConnectorConnectionForDebug',
-                'Select a connection to authenticate for this Connector Trigger.',
-            ),
-            stepName: 'connectorF5Connection',
-            suppressPersistence: true,
-        })).data;
-        context.telemetry.properties.connectorF5ConnectionMode = context.connectionPlan.kind;
-        if (context.connectionPlan.kind === 'existing') {
-            maskConnection(context, context.connectionPlan.connection);
-        }
-    }
-
-    public shouldPrompt(context: ConnectorTriggerF5WizardContext): boolean {
-        return !context.connectionPlan;
-    }
-
-    public undo(context: ConnectorTriggerF5WizardContext): void {
-        context.connectionPlan = undefined;
     }
 }
 
@@ -299,9 +222,10 @@ class ConnectorConnectionEnsureStep extends AzureWizardExecuteStep<ConnectorTrig
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
         context.connection = await this.dependencies.gateway.ensureConnection(
             context,
-            context.handoff,
+            nonNullValue(context.target),
             nonNullValue(context.namespace),
             nonNullValue(context.connectionPlan),
         );
@@ -324,14 +248,17 @@ class ConnectorConnectionConsentStep extends AzureWizardExecuteStep<ConnectorTri
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
+        nonNullValue(context.setupSession).setStatus('authenticating');
         const namespace = nonNullValue(context.namespace);
         let connection = nonNullValue(context.connection);
         connection = await this.dependencies.gateway.getConnection(
             context,
-            context.handoff,
+            nonNullValue(context.target),
             namespace,
             connection,
         );
+        assertSetupActive(context);
         if (isConnected(connection)) {
             context.telemetry.properties.connectorF5ConsentRequired = 'false';
             context.connection = connection;
@@ -341,10 +268,11 @@ class ConnectorConnectionConsentStep extends AzureWizardExecuteStep<ConnectorTri
         context.telemetry.properties.connectorF5ConsentRequired = 'true';
         const consentLink = await this.dependencies.gateway.getConsentLink(
             context,
-            context.handoff,
+            nonNullValue(context.target),
             namespace,
             connection,
         );
+        assertSetupActive(context);
         maskValue(context, consentLink);
         if (!isHttpsUrl(consentLink)) {
             throw new Error(localize(
@@ -367,6 +295,7 @@ class ConnectorConnectionConsentStep extends AzureWizardExecuteStep<ConnectorTri
         if (result !== openSignIn) {
             throw new UserCancelledError('connectorF5Consent');
         }
+        assertSetupActive(context);
         if (!await this.runtime.openExternal(consentLink)) {
             throw new Error(localize(
                 'connectorConsentBrowserFailed',
@@ -396,6 +325,7 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
         const namespace = nonNullValue(context.namespace);
         const connection = nonNullValue(context.connection);
         const namespaceObjectId = namespace.identity?.principalId;
@@ -411,7 +341,7 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
 
         await this.dependencies.gateway.ensureConnectionAccessPolicies(
             context,
-            context.handoff,
+            nonNullValue(context.target),
             namespace,
             connection,
             [
@@ -444,110 +374,31 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
     }
 }
 
-class ConnectorOptionalInputsStep extends AzureWizardPromptStep<ConnectorTriggerF5WizardContext> {
-    public async prompt(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        const optionalInputs = context.effectiveInputs.filter(input =>
-            isVisibleInput(input) &&
-            !shouldAlwaysPrompt(input) &&
-            context.parameterValues[input.name] === undefined);
-        if (optionalInputs.length === 0) {
-            context.selectedOptionalInputs = new Set();
-            return;
-        }
-
-        const picks: IAzureQuickPickItem<string>[] = optionalInputs.map(input => ({
-            label: input.label,
-            description: input.description,
-            data: input.name,
-        }));
-        const selected = await context.ui.showQuickPick(picks, {
-            canPickMany: true,
-            placeHolder: localize(
-                'selectOptionalConnectorParameters',
-                'Select any optional Connector Trigger parameters to configure.',
-            ),
-            stepName: 'connectorF5OptionalParameters',
-            suppressPersistence: true,
-        });
-        context.selectedOptionalInputs = new Set(selected.map(item => item.data));
-    }
-
-    public shouldPrompt(context: ConnectorTriggerF5WizardContext): boolean {
-        return context.selectedOptionalInputs === undefined;
-    }
-
-    public undo(context: ConnectorTriggerF5WizardContext): void {
-        context.selectedOptionalInputs = undefined;
-    }
-}
-
 class ConnectorParameterPromptStep extends AzureWizardPromptStep<ConnectorTriggerF5WizardContext> {
-    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
-        super();
-    }
-
     public async prompt(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        const queue = orderInputs(context.effectiveInputs);
-        const knownInputs = new Set(context.effectiveInputs.map(input => input.name));
-        const resolvedSchemas = new Set<string>();
-
-        while (queue.length > 0) {
-            const input = nonNullValue(queue.shift());
-            if (!isVisibleInput(input) || context.parameterValues[input.name] !== undefined) {
-                continue;
-            }
-
-            let options = input.options;
-            if (input.dynamic) {
-                const resolution = await this.dependencies.operationResolver.resolveDynamicInput(context, {
-                    handoff: context.handoff,
-                    namespace: nonNullValue(context.namespace),
-                    connection: nonNullValue(context.connection),
-                    operation: nonNullValue(context.operation),
-                    input,
-                    values: context.parameterValues,
-                });
-                options = resolution.options ?? options;
-
-                if (input.dynamic.kind === 'schema' &&
-                    !resolvedSchemas.has(input.name) &&
-                    resolution.inputs?.length) {
-                    resolvedSchemas.add(input.name);
-                    const newInputs = resolution.inputs.filter(newInput => {
-                        if (knownInputs.has(newInput.name)) {
-                            return false;
-                        }
-                        knownInputs.add(newInput.name);
-                        context.effectiveInputs.push(newInput);
-                        return true;
-                    });
-                    queue.unshift(...orderInputs(newInputs));
-                    continue;
-                }
-            }
-
-            if (!shouldPromptInput(context, input)) {
-                continue;
-            }
-
-            const value = await promptForInput(context, input, options);
-            if (value !== undefined) {
-                context.parameterValues[input.name] = value;
-                maskParameterValue(context, value);
-            }
+        assertSetupActive(context);
+        context.parameterValues = await nonNullValue(context.setupSession).collectParameters({
+            target: nonNullValue(context.target),
+            namespace: nonNullValue(context.namespace),
+            connection: nonNullValue(context.connection),
+            operation: {
+                ...nonNullValue(context.operation),
+                inputs: context.effectiveInputs,
+            },
+        });
+        for (const value of Object.values(context.parameterValues)) {
+            maskParameterValue(context, value);
         }
+        context.parametersCollected = true;
     }
 
     public shouldPrompt(context: ConnectorTriggerF5WizardContext): boolean {
-        return context.effectiveInputs.some(input =>
-            isVisibleInput(input) &&
-            context.parameterValues[input.name] === undefined &&
-            shouldPromptInput(context, input));
+        return context.effectiveInputs.length > 0 && !context.parametersCollected;
     }
 
     public undo(context: ConnectorTriggerF5WizardContext): void {
         context.parameterValues = {};
-        context.effectiveInputs = [...nonNullValue(context.operation).inputs];
+        context.parametersCollected = false;
     }
 }
 
@@ -559,6 +410,7 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
         const operation = nonNullValue(context.operation);
         const parameters = this.dependencies.operationResolver.serializeParameters(
             operation,
@@ -566,10 +418,10 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
             context.parameterValues,
         );
         context.triggerConfig = await this.dependencies.gateway.createOrUpdateTriggerConfig(context, {
-            handoff: context.handoff,
+            target: nonNullValue(context.target),
             namespace: nonNullValue(context.namespace),
             connection: nonNullValue(context.connection),
-            triggerConfigName: context.names.triggerConfigName,
+            triggerConfigName: nonNullValue(context.names).triggerConfigName,
             deliveryMode: 'Poll',
             state: 'Enabled',
             type: 'NotSpecified',
@@ -596,6 +448,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
         const triggerConfig = nonNullValue(context.triggerConfig);
         const pollingEndpoint = deriveConnectorPollingEndpoint(triggerConfig.pollingEndpoints.receiveUri);
         if (!equalsIgnoreCase(triggerConfig.state, 'Enabled')) {
@@ -618,7 +471,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
     }
 }
 
-class ConnectorTriggerHandoffCompleteStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {
+class ConnectorTriggerMetadataCompleteStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {
     public priority = 300;
 
     public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
@@ -626,12 +479,13 @@ class ConnectorTriggerHandoffCompleteStep extends AzureWizardExecuteStep<Connect
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        await this.dependencies.handoffStore.markComplete(context.projectPath);
-        context.handoffCompleted = true;
+        assertSetupActive(context);
+        await this.dependencies.projectStore.markComplete(context.projectPath);
+        context.metadataCompleted = true;
     }
 
     public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
-        return context.localSettingsWritten === true && !context.handoffCompleted;
+        return context.localSettingsWritten === true && !context.metadataCompleted;
     }
 }
 
@@ -639,12 +493,13 @@ async function runWizard(
     context: ConnectorTriggerF5WizardContext,
     promptSteps: AzureWizardPromptStep<ConnectorTriggerF5WizardContext>[],
     executeSteps: AzureWizardExecuteStep<ConnectorTriggerF5WizardContext>[],
+    showLoadingPrompt = true,
 ): Promise<void> {
     const wizard = new AzureWizard(context, {
         title: localize('configureConnectorTriggerForDebug', 'Configure Connector Trigger'),
         promptSteps,
         executeSteps,
-        showLoadingPrompt: true,
+        showLoadingPrompt,
     });
     if (promptSteps.length > 0) {
         await wizard.prompt();
@@ -663,17 +518,19 @@ async function resolveOperation(
         localize('loadingConnectorParameters', 'Loading Connector Trigger parameters...'),
         async token => {
             throwIfCancelled(token);
+            assertSetupActive(context);
             const resolvedOperation = await dependencies.operationResolver.resolveOperation(context, {
-                handoff: context.handoff,
+                target: nonNullValue(context.target),
                 namespace: nonNullValue(context.namespace),
                 connection: nonNullValue(context.connection),
             });
             throwIfCancelled(token);
+            assertSetupActive(context);
             return resolvedOperation;
         },
     );
     context.operation = operation;
-    context.effectiveInputs = operation.inputs.filter(isVisibleInput);
+    context.effectiveInputs = orderConnectorInputs(operation.inputs);
     context.telemetry.properties.connectorF5DynamicInputs = String(
         context.effectiveInputs.some(input => !!input.dynamic),
     );
@@ -693,10 +550,11 @@ async function waitForConnectedStatus(
             let lastError: unknown;
             while (runtime.now() < deadline) {
                 throwIfCancelled(token);
+                assertSetupActive(context);
                 try {
                     const refreshed = await dependencies.gateway.getConnection(
                         context,
-                        context.handoff,
+                        nonNullValue(context.target),
                         namespace,
                         connection,
                     );
@@ -722,183 +580,6 @@ async function waitForConnectedStatus(
     );
 }
 
-async function promptForInput(
-    context: ConnectorTriggerF5WizardContext,
-    input: ConnectorTriggerInputDefinition,
-    options: readonly ConnectorTriggerInputOption[] | undefined,
-): Promise<ConnectorTriggerParameterValue | undefined> {
-    if (options?.length) {
-        const picks: IAzureQuickPickItem<ConnectorTriggerParameterValue | undefined>[] = options.map(option => ({
-            label: option.label,
-            data: option.value,
-        }));
-        if (!input.required) {
-            picks.push({
-                label: localize('skipOptionalConnectorParameter', '$(clock) Skip for now'),
-                data: undefined,
-                suppressPersistence: true,
-            });
-        }
-
-        if (input.allowMultiple) {
-            const selected = await context.ui.showQuickPick(
-                picks.filter((pick): pick is IAzureQuickPickItem<ConnectorTriggerParameterValue> => pick.data !== undefined),
-                {
-                    canPickMany: true,
-                    placeHolder: input.description ?? input.label,
-                    stepName: 'connectorF5Parameter',
-                    suppressPersistence: true,
-                },
-            );
-            if (selected.length === 0) {
-                return undefined;
-            }
-            return selected.map(item => item.data);
-        }
-
-        return (await context.ui.showQuickPick(picks, {
-            placeHolder: input.description ?? input.label,
-            stepName: 'connectorF5Parameter',
-            suppressPersistence: true,
-        })).data;
-    }
-
-    if (input.type === 'boolean') {
-        const picks: IAzureQuickPickItem<boolean | undefined>[] = [
-            { label: localize('booleanTrue', 'True'), data: true },
-            { label: localize('booleanFalse', 'False'), data: false },
-        ];
-        if (!input.required) {
-            picks.push({
-                label: localize('skipOptionalConnectorParameter', '$(clock) Skip for now'),
-                data: undefined,
-                suppressPersistence: true,
-            });
-        }
-        return (await context.ui.showQuickPick(picks, {
-            placeHolder: input.description ?? input.label,
-            stepName: 'connectorF5Parameter',
-            suppressPersistence: true,
-        })).data;
-    }
-
-    const value = await context.ui.showInputBox({
-        password: input.sensitive,
-        prompt: input.description ?? localize(
-            'enterConnectorParameter',
-            'Enter a value for "{0}".',
-            input.label,
-        ),
-        stepName: 'connectorF5Parameter',
-        value: formatDefaultValue(input.defaultValue),
-        validateInput: candidate => validateInput(candidate, input),
-    });
-    if (!value && !input.required) {
-        return undefined;
-    }
-    return parseInputValue(value, input.type);
-}
-
-function validateInput(value: string, input: ConnectorTriggerInputDefinition): string | undefined {
-    if (input.required && !value.trim()) {
-        return localize('connectorParameterRequired', 'A value is required.');
-    }
-    if (!value.trim()) {
-        return undefined;
-    }
-    if (input.type === 'integer' && !Number.isInteger(Number(value))) {
-        return localize('connectorParameterInteger', 'Enter a whole number.');
-    }
-    if (input.type === 'number' && !Number.isFinite(Number(value))) {
-        return localize('connectorParameterNumber', 'Enter a number.');
-    }
-    if (input.type === 'array' || input.type === 'object') {
-        try {
-            const parsed = JSON.parse(value) as unknown;
-            const isExpectedShape = input.type === 'array' ?
-                Array.isArray(parsed) :
-                typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
-            if (!isExpectedShape) {
-                return localize('connectorParameterJsonShape', 'Enter a valid JSON {0}.', input.type);
-            }
-        } catch {
-            return localize('connectorParameterJson', 'Enter valid JSON.');
-        }
-    }
-    return undefined;
-}
-
-function parseInputValue(value: string, type: ConnectorTriggerInputDefinition['type']): ConnectorTriggerParameterValue {
-    switch (type) {
-        case 'array':
-        case 'object':
-            return JSON.parse(value) as ConnectorTriggerParameterValue;
-        case 'integer':
-            return Number.parseInt(value, 10);
-        case 'number':
-            return Number(value);
-        default:
-            return value;
-    }
-}
-
-function formatDefaultValue(value: ConnectorTriggerParameterValue | undefined): string | undefined {
-    if (value === undefined || value === null) {
-        return undefined;
-    }
-    return typeof value === 'object' ? JSON.stringify(value) : String(value);
-}
-
-function shouldPromptInput(
-    context: ConnectorTriggerF5WizardContext,
-    input: ConnectorTriggerInputDefinition,
-): boolean {
-    return shouldAlwaysPrompt(input) || context.selectedOptionalInputs?.has(input.name) === true;
-}
-
-function shouldAlwaysPrompt(input: ConnectorTriggerInputDefinition): boolean {
-    return input.required || input.visibility === 'important' || !!input.dynamic;
-}
-
-function isVisibleInput(input: ConnectorTriggerInputDefinition): boolean {
-    return input.visibility !== 'hidden';
-}
-
-function orderInputs(inputs: readonly ConnectorTriggerInputDefinition[]): ConnectorTriggerInputDefinition[] {
-    const pending = [...inputs]
-        .map((input, index) => ({ input, index }))
-        .sort((left, right) => inputPriority(left.input) - inputPriority(right.input) || left.index - right.index);
-    const pendingNames = new Set(pending.map(item => item.input.name));
-    const emitted = new Set<string>();
-    const result: ConnectorTriggerInputDefinition[] = [];
-
-    while (pending.length > 0) {
-        const readyIndex = pending.findIndex(({ input }) =>
-            (input.dynamic?.dependsOn ?? []).every(dependency =>
-                emitted.has(dependency) || !pendingNames.has(dependency)));
-        const index = readyIndex >= 0 ? readyIndex : 0;
-        const [{ input }] = pending.splice(index, 1);
-        pendingNames.delete(input.name);
-        emitted.add(input.name);
-        result.push(input);
-    }
-
-    return result;
-}
-
-function inputPriority(input: ConnectorTriggerInputDefinition): number {
-    if (input.required) {
-        return 0;
-    }
-    if (input.visibility === 'important') {
-        return 1;
-    }
-    if (input.dynamic) {
-        return 2;
-    }
-    return 3;
-}
-
 function createDefaultRuntime(): ConnectorTriggerF5Runtime {
     return {
         now: () => Date.now(),
@@ -921,22 +602,55 @@ function throwIfCancelled(token: vscode.CancellationToken): void {
     }
 }
 
+function assertSetupActive(context: ConnectorTriggerF5WizardContext): void {
+    if (!context.setupApproved) {
+        throw new Error(localize('connectorSetupNotApproved', 'Approve Connector Trigger resource setup before continuing.'));
+    }
+    throwIfCancelled(nonNullValue(context.setupSession).cancellationToken);
+}
+
+async function createSetupRequest(context: ConnectorTriggerF5WizardContext): Promise<ConnectorTriggerSetupRequest> {
+    const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
+    const keys = [
+        { name: `${context.binding.connectionSettingName}__pollingEndpoint`, purpose: 'pollingEndpoint' },
+        { name: context.binding.triggerConfigSettingName, purpose: 'triggerConfig' },
+    ] as const;
+    return {
+        metadata: context.metadata,
+        projectPath: context.projectPath,
+        binding: context.binding,
+        localSettings: keys.map(({ name, purpose }) => {
+            const previousValue = settings.Values?.[name];
+            if (typeof previousValue === 'string') {
+                maskValue(context, previousValue);
+            }
+            maskValue(context, process.env[name] ?? '');
+            return {
+                name,
+                purpose,
+                exists: Object.hasOwn(settings.Values ?? {}, name),
+                environmentOverride: process.env[name] !== undefined,
+            };
+        }),
+    };
+}
+
 function maskSetupValues(context: ConnectorTriggerF5WizardContext): void {
     for (const value of [
         context.projectPath,
-        context.handoff.subscription.id,
-        context.handoff.subscription.tenantId,
-        context.handoff.subscription.environment.name,
-        context.handoff.subscription.environment.resourceManagerEndpointUrl,
-        context.handoff.region,
-        context.handoff.connectorId,
-        context.handoff.operationId,
+        context.target?.subscription.id ?? '',
+        context.target?.subscription.tenantId ?? '',
+        context.target?.subscription.environment.name ?? '',
+        context.target?.subscription.environment.resourceManagerEndpointUrl ?? '',
+        context.target?.region ?? '',
+        context.metadata.connectorId,
+        context.metadata.operationId,
         context.binding.connectionSettingName,
         context.binding.triggerConfigSettingName,
-        context.names.resourceGroupName,
-        context.names.namespaceName,
-        context.names.connectionName,
-        context.names.triggerConfigName,
+        context.names?.resourceGroupName ?? '',
+        context.names?.namespaceName ?? '',
+        context.names?.connectionName ?? '',
+        context.names?.triggerConfigName ?? '',
     ]) {
         maskValue(context, value);
     }
@@ -977,14 +691,6 @@ function maskValue(context: IActionContext, value: string): void {
 
 function isConnected(connection: ConnectorTriggerConnection): boolean {
     return equalsIgnoreCase(connection.status, 'Connected');
-}
-
-function locationsEqual(left: string, right: string): boolean {
-    return normalizeLocation(left) === normalizeLocation(right);
-}
-
-function normalizeLocation(value: string): string {
-    return value.replace(/\s+/g, '').toLowerCase();
 }
 
 function isHttpsUrl(value: string): boolean {

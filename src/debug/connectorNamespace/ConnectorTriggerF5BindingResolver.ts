@@ -11,18 +11,18 @@ import {
 import {
     type ConnectorTriggerBindingResolver,
     type ConnectorTriggerLocalBinding,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerProjectMetadata,
 } from './connectorTriggerF5Contracts';
 
 export class ProjectConnectorTriggerBindingResolver implements ConnectorTriggerBindingResolver {
     public async resolve(
         context: IActionContext,
         projectPath: string,
-        handoff: ConnectorTriggerProjectHandoff,
+        metadata: ConnectorTriggerProjectMetadata,
     ): Promise<ConnectorTriggerLocalBinding> {
         const binding = selectPollingConnectorBinding(
             await findPollingConnectorBindings(projectPath),
-            handoff.operationId,
+            metadata.operationId,
         );
         maskValue(context, binding.connectionSettingName);
         maskValue(context, binding.triggerConfigSettingName);

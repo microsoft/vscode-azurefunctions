@@ -33,11 +33,12 @@ import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
     type ConnectorTriggerNamespace,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerNamespacePlan,
+    type ConnectorTriggerSetupTarget,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { createConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
 
-const handoff: ConnectorTriggerProjectHandoff = {
+const target: ConnectorTriggerSetupTarget = {
     version: 1,
     subscription: {
         id: 'subscription-id',
@@ -135,7 +136,7 @@ suite('Connector Trigger F5 production adapters', () => {
         const resolver = new LiveConnectorSubscriptionResolver(async () => [live]);
         const context = await createTestActionContext();
 
-        const resolved = await resolver.resolve(context, handoff);
+        const resolved = await resolver.resolve(context, target);
         assert.strictEqual(resolved.subscriptionId, live.subscriptionId);
         assert.strictEqual(
             resolved.environment.resourceManagerEndpointUrl,
@@ -144,11 +145,11 @@ suite('Connector Trigger F5 production adapters', () => {
 
         await assert.rejects(
             resolver.resolve(context, {
-                ...handoff,
+                ...target,
                 subscription: {
-                    ...handoff.subscription,
+                    ...target.subscription,
                     environment: {
-                        ...handoff.subscription.environment,
+                        ...target.subscription.environment,
                         resourceManagerEndpointUrl: 'https://attacker.invalid/',
                     },
                 },
@@ -187,7 +188,7 @@ suite('Connector Trigger F5 production adapters', () => {
                 request: { properties: { connectorName: string } },
             ) => {
                 connectionCreates += 1;
-                assert.strictEqual(request.properties.connectorName, handoff.connectorId);
+                assert.strictEqual(request.properties.connectorName, target.connectorId);
                 connectionResource = createConnectionResource(connectionName);
                 return connectionResource;
             },
@@ -214,18 +215,60 @@ suite('Connector Trigger F5 production adapters', () => {
             namespaceName: 'connector-namespace',
         };
 
-        const namespace = await adapter.ensureNamespace(context, handoff, plan);
-        await adapter.ensureNamespace(context, handoff, plan);
+        const namespace = await adapter.ensureNamespace(context, target, plan);
+        await adapter.ensureNamespace(context, target, plan);
         const connectionPlan = {
             kind: 'create' as const,
             connectionName: 'connector-connection',
         };
-        await adapter.ensureConnection(context, handoff, namespace, connectionPlan);
-        await adapter.ensureConnection(context, handoff, namespace, connectionPlan);
+        await adapter.ensureConnection(context, target, namespace, connectionPlan);
+        await adapter.ensureConnection(context, target, namespace, connectionPlan);
 
         assert.strictEqual(namespaceCreates, 1);
         assert.strictEqual(connectionCreates, 1);
         assert.strictEqual(resourceGroupCreates, 1);
+    });
+
+    test('rechecks the selected region before reusing a selected or newly named namespace', async () => {
+        const fail = async () => assert.fail('A region mismatch must not start another Azure operation.');
+        const client: ConnectorGatewayClient = {
+            listNamespaces: fail,
+            getNamespace: async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'westus' }),
+            isNamespaceNameAvailable: fail,
+            createNamespace: fail,
+            listConnections: fail,
+            getConnection: fail,
+            createOrUpdateConnection: fail,
+            getConnectionStatus: fail,
+            listConsentLinks: fail,
+            confirmConsentCode: fail,
+            dynamicInvoke: fail,
+            listConnectionAccessPolicies: fail,
+            getConnectionAccessPolicy: fail,
+            createOrUpdateConnectionAccessPolicy: fail,
+            listTriggerConfigs: fail,
+            getTriggerConfig: fail,
+            isTriggerConfigNameAvailable: fail,
+            createOrUpdateTriggerConfig: fail,
+            deleteTriggerConfig: fail,
+        };
+        const adapter = new AzureConnectorTriggerGatewayAdapter(
+            client,
+            new LiveConnectorSubscriptionResolver(async () => [createLiveSubscription()]),
+            fail,
+            fail,
+            fail,
+        );
+        const plans: ConnectorTriggerNamespacePlan[] = [
+            { kind: 'create', namespaceName: 'connector-namespace', resourceGroupName: 'connector-rg' },
+            { kind: 'existing', namespace: createNamespace() },
+        ];
+        const context = await createTestActionContext();
+        for (const plan of plans) {
+            await assert.rejects(adapter.ensureNamespace(context, target, plan), /not in the selected region/);
+        }
+        client.getNamespace = async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'East US' });
+        assert.strictEqual((await adapter.ensureNamespace(context, target, plans[0])).location, 'East US');
     });
 
     test('binds consent, policies, Poll Trigger Config fallback, and custom-cloud Swagger', async () => {
@@ -339,14 +382,14 @@ suite('Connector Trigger F5 production adapters', () => {
         const context = await createTestActionContext();
 
         assert.strictEqual(
-            await adapter.getConsentLink(context, handoff, namespace, connection),
+            await adapter.getConsentLink(context, target, namespace, connection),
             'https://login.example.test/consent',
         );
         assert.strictEqual(
             consentRequest?.parameters?.[0]?.redirectUrl,
             'https://portal.azure.us',
         );
-        await adapter.dynamicInvoke(context, handoff, namespace, connection, {
+        await adapter.dynamicInvoke(context, target, namespace, connection, {
             request: {
                 method: 'GET',
                 path: '/folders/secret-parent-id',
@@ -369,7 +412,7 @@ suite('Connector Trigger F5 production adapters', () => {
         ];
         await adapter.ensureConnectionAccessPolicies(
             context,
-            handoff,
+            target,
             namespace,
             connection,
             policies,
@@ -377,7 +420,7 @@ suite('Connector Trigger F5 production adapters', () => {
         assert.deepStrictEqual(policyRequests.map(item => item.name), ['local-developer']);
 
         const triggerConfig = await adapter.createOrUpdateTriggerConfig(context, {
-            handoff,
+            target,
             namespace,
             connection,
             triggerConfigName: 'on-new-email',
@@ -403,7 +446,7 @@ suite('Connector Trigger F5 production adapters', () => {
 
         assert.deepStrictEqual(
             await adapter.getSwagger(context, {
-                handoff,
+                target,
                 namespace,
                 connection,
             }),
@@ -417,13 +460,13 @@ suite('Connector Trigger F5 production adapters', () => {
         assert.match(swaggerUrls[1], /locations\/eastus\/managedApis\/office365/i);
     });
 
-    test('creates the production dependency composition without clearing handoff state', async () => {
+    test('creates the production dependency composition without clearing target state', async () => {
         const dependencies = await createConnectorTriggerF5Dependencies(
             await createTestActionContext(),
             'C:\\project',
         );
         assert.ok(dependencies);
-        await dependencies.handoffStore.markComplete('C:\\project');
+        await dependencies.projectStore.markComplete('C:\\project');
     });
 });
 
@@ -475,7 +518,7 @@ function createConnectionResource(name: string) {
         id: `${createNamespace().id}/connections/${name}`,
         name,
         properties: {
-            connectorName: handoff.connectorId,
+            connectorName: target.connectorId,
             overallStatus: 'Unauthenticated' as const,
             createdBy: {
                 objectId: 'developer-object',

@@ -14,9 +14,9 @@ import {
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
 import {
-    connectorTriggerProjectHandoffVersion,
-    type ConnectorTriggerProjectHandoff,
-} from '../../../connectorTrigger/connectorTriggerProjectHandoff';
+    connectorTriggerProjectMetadataVersion,
+    type ConnectorTriggerProjectMetadata,
+} from '../../../connectorTrigger/connectorTriggerProjectMetadata';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -735,10 +735,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         await this.postMessage({ command: 'projectCreationStarted' });
         try {
-            const handoff = createProjectHandoff(
-                selection,
-                subscriptionContext,
-            );
+            const metadata = createProjectMetadata(selection);
             if (!this.launchOptions.isProjectWizard) {
                 const outputMetadata =
                     await getConnectorOperationOutputMetadata(
@@ -750,7 +747,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     actionContext,
                     this.launchOptions.language,
                     projectPath,
-                    handoff,
+                    metadata,
                     outputMetadata,
                 );
                 return;
@@ -811,7 +808,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 projectPath,
                 'details',
                 {
-                    connectorTriggerHandoff: handoff,
+                    connectorTriggerMetadata: metadata,
                     ...(outputMetadata ?
                         { connectorTriggerOutputMetadata: outputMetadata } :
                         {}),
@@ -926,22 +923,11 @@ async function getConnectorOperationOutputMetadata(
     }
 }
 
-function createProjectHandoff(
+function createProjectMetadata(
     selection: ConnectorTriggerProjectSelection,
-    subscriptionContext: ISubscriptionContext,
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerProjectMetadata {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: subscriptionContext.subscriptionId,
-            tenantId: subscriptionContext.tenantId,
-            environment: {
-                name: subscriptionContext.environment.name,
-                resourceManagerEndpointUrl:
-                    subscriptionContext.environment.resourceManagerEndpointUrl,
-            },
-        },
-        region: selection.azureContext.region,
+        version: connectorTriggerProjectMetadataVersion,
         connectorId: selection.connector.id,
         operationId: selection.operation.id,
     };

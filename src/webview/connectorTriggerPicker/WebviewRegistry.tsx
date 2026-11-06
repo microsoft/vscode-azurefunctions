@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ConnectorTriggerPickerView } from './ConnectorTriggerPickerView';
+import { ConnectorTriggerSetupView } from '../connectorTriggerParameters/ConnectorTriggerSetupView';
 
 export const WebviewRegistry = {
     connectorTriggerPicker: ConnectorTriggerPickerView,
+    connectorTriggerSetup: ConnectorTriggerSetupView,
 } as const;

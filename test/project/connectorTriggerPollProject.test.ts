@@ -15,9 +15,9 @@ import {
     selectPollingConnectorBinding,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
 import {
-    connectorTriggerProjectHandoffVersion,
-    type ConnectorTriggerProjectHandoff,
-} from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+    connectorTriggerProjectMetadataVersion,
+    type ConnectorTriggerProjectMetadata,
+} from '../../src/connectorTrigger/connectorTriggerProjectMetadata';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
@@ -62,7 +62,7 @@ suite('Connector trigger Poll project scaffolding', () => {
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createMetadata('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -125,7 +125,7 @@ suite('Connector trigger Poll project scaffolding', () => {
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createMetadata('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -169,7 +169,7 @@ public void Run(
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createMetadata('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -198,7 +198,7 @@ public void Run(
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.TypeScript,
-            createHandoff('rss', 'OnNewFeed'),
+            createMetadata('rss', 'OnNewFeed'),
             await readOutputMetadata('rssOnNewFeedSwagger.json', 'OnNewFeed'),
         );
 
@@ -249,7 +249,7 @@ def keep_me() -> None:
 azurefunctions-extensions-connectors
 `);
 
-        const handoff = createHandoff('act', 'TrigNewContact');
+        const metadata = createMetadata('act', 'TrigNewContact');
         const outputMetadata = await readOutputMetadata(
             'actTrigNewContactSwagger.json',
             'TrigNewContact',
@@ -257,13 +257,13 @@ azurefunctions-extensions-connectors
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.Python,
-            handoff,
+            metadata,
             outputMetadata,
         );
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.Python,
-            handoff,
+            metadata,
             outputMetadata,
         );
 
@@ -313,7 +313,7 @@ azurefunctions-extensions-connectors
                 'actTrigNewContactSwagger.json',
                 'TrigNewContact',
             );
-            const handoff = createHandoff('act', 'TrigNewContact');
+            const metadata = createMetadata('act', 'TrigNewContact');
 
             const csharpPath = path.join(projectPath, 'csharp');
             await AzExtFsExtra.ensureDir(csharpPath);
@@ -350,7 +350,7 @@ host.Run();
             await ensureConnectorTriggerPollProject(
                 csharpPath,
                 ProjectLanguage.CSharp,
-                handoff,
+                metadata,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -408,7 +408,7 @@ export const app: {
             await ensureConnectorTriggerPollProject(
                 typescriptPath,
                 ProjectLanguage.TypeScript,
-                handoff,
+                metadata,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -447,7 +447,7 @@ app = func.FunctionApp()
             await ensureConnectorTriggerPollProject(
                 pythonPath,
                 ProjectLanguage.Python,
-                handoff,
+                metadata,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -460,21 +460,12 @@ app = func.FunctionApp()
     );
 });
 
-function createHandoff(
+function createMetadata(
     connectorId: string,
     operationId: string,
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerProjectMetadata {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: 'sub-one',
-            tenantId: 'tenant-one',
-            environment: {
-                name: 'AzureCloud',
-                resourceManagerEndpointUrl: 'https://management.azure.com/',
-            },
-        },
-        region: 'westcentralus',
+        version: connectorTriggerProjectMetadataVersion,
         connectorId,
         operationId,
     };

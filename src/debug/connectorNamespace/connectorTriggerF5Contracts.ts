@@ -5,6 +5,9 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type CancellationToken } from 'vscode';
+import { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+
+export { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 
 export type ConnectorTriggerParameterValue =
     string |
@@ -14,8 +17,7 @@ export type ConnectorTriggerParameterValue =
     ConnectorTriggerParameterValue[] |
     { [key: string]: ConnectorTriggerParameterValue };
 
-export interface ConnectorTriggerProjectHandoff {
-    version: 1;
+export interface ConnectorTriggerSetupTarget extends ConnectorTriggerProjectMetadata {
     subscription: {
         id: string;
         tenantId: string;
@@ -25,12 +27,10 @@ export interface ConnectorTriggerProjectHandoff {
         };
     };
     region: string;
-    connectorId: string;
-    operationId: string;
 }
 
-export interface ConnectorTriggerProjectHandoffStore {
-    read(projectPath: string): Promise<ConnectorTriggerProjectHandoff | undefined>;
+export interface ConnectorTriggerProjectMetadataStore {
+    read(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined>;
     /**
      * Records completion without removing the only recovery metadata. A no-op is valid when the
      * required local settings are the durable completion marker.
@@ -46,7 +46,7 @@ export interface ConnectorTriggerBindingResolver {
     resolve(
         context: IActionContext,
         projectPath: string,
-        handoff: ConnectorTriggerProjectHandoff,
+        metadata: ConnectorTriggerProjectMetadata,
     ): Promise<ConnectorTriggerLocalBinding>;
 }
 
@@ -112,29 +112,29 @@ export type ConnectorTriggerConnectionPlan =
 
 export interface ConnectorTriggerGateway {
     /**
-     * The persisted environment fields are identity metadata only. Implementations must resolve
+     * The selected environment fields are transient identity metadata. Implementations must resolve
      * the subscription through the current authenticated Azure account and use that live context.
      */
-    listNamespaces(context: IActionContext, handoff: ConnectorTriggerProjectHandoff): Promise<ConnectorTriggerNamespace[]>;
+    listNamespaces(context: IActionContext, target: ConnectorTriggerSetupTarget): Promise<ConnectorTriggerNamespace[]>;
     ensureNamespace(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         plan: ConnectorTriggerNamespacePlan,
     ): Promise<ConnectorTriggerNamespace>;
     listConnections(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
     ): Promise<ConnectorTriggerConnection[]>;
     ensureConnection(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         plan: ConnectorTriggerConnectionPlan,
     ): Promise<ConnectorTriggerConnection>;
     getConnection(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
     ): Promise<ConnectorTriggerConnection>;
@@ -144,20 +144,20 @@ export interface ConnectorTriggerGateway {
      */
     getConsentLink(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
     ): Promise<string>;
     dynamicInvoke(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
     ): Promise<unknown>;
     ensureConnectionAccessPolicies(
         context: IActionContext,
-        handoff: ConnectorTriggerProjectHandoff,
+        target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
@@ -194,7 +194,7 @@ export interface ConnectorTriggerDynamicInvokeRequest {
 }
 
 export interface ConnectorTriggerConfigRequest {
-    handoff: ConnectorTriggerProjectHandoff;
+    target: ConnectorTriggerSetupTarget;
     namespace: ConnectorTriggerNamespace;
     connection: ConnectorTriggerConnection;
     triggerConfigName: string;
@@ -215,6 +215,9 @@ export type ConnectorTriggerInputVisibility = 'advanced' | 'default' | 'hidden' 
 export interface ConnectorTriggerInputOption {
     label: string;
     value: ConnectorTriggerParameterValue;
+    hasChildren?: boolean;
+    selectable?: boolean;
+    metadata?: unknown;
 }
 
 export interface ConnectorTriggerDynamicInput {
@@ -240,6 +243,8 @@ export interface ConnectorTriggerInputDefinition {
 
 export interface ConnectorTriggerOperationDefinition {
     inputs: ConnectorTriggerInputDefinition[];
+    label?: string;
+    connectorLabel?: string;
     metadata?: unknown;
 }
 
@@ -272,7 +277,7 @@ export interface ConnectorTriggerSwaggerProvider {
 }
 
 export interface ConnectorTriggerOperationResolutionRequest {
-    handoff: ConnectorTriggerProjectHandoff;
+    target: ConnectorTriggerSetupTarget;
     namespace: ConnectorTriggerNamespace;
     connection: ConnectorTriggerConnection;
 }
@@ -281,6 +286,55 @@ export interface ConnectorTriggerDynamicResolutionRequest extends ConnectorTrigg
     operation: ConnectorTriggerOperationDefinition;
     input: ConnectorTriggerInputDefinition;
     values: Readonly<Record<string, ConnectorTriggerParameterValue>>;
+    parent?: ConnectorTriggerInputOption;
+}
+
+export interface ConnectorTriggerParameterRequest extends ConnectorTriggerOperationResolutionRequest {
+    operation: ConnectorTriggerOperationDefinition;
+}
+
+export interface ConnectorTriggerSetupPlan {
+    target: ConnectorTriggerSetupTarget;
+    namespace: ConnectorTriggerNamespacePlan;
+    connection: ConnectorTriggerConnectionPlan;
+    triggerConfigName: string;
+    localSettings: {
+        name: string;
+        exists: boolean;
+        environmentOverride: boolean;
+        purpose: 'pollingEndpoint' | 'triggerConfig';
+    }[];
+}
+
+export interface ConnectorTriggerResourceNames {
+    resourceGroupName: string;
+    namespaceName: string;
+    connectionName: string;
+    triggerConfigName: string;
+}
+
+export interface ConnectorTriggerSetupRequest {
+    metadata: ConnectorTriggerProjectMetadata;
+    projectPath: string;
+    binding: ConnectorTriggerLocalBinding;
+    localSettings: ConnectorTriggerSetupPlan['localSettings'];
+}
+
+export interface ConnectorTriggerSetupScopes {
+    listSubscriptions(context: IActionContext): Promise<{ id: string; label: string }[]>;
+    getSubscription(context: IActionContext, id: string): Promise<ConnectorTriggerSetupTarget['subscription']>;
+    listRegions(context: IActionContext, subscriptionId: string): Promise<{ id: string; label: string }[]>;
+    signIn(context: IActionContext): Promise<void>;
+}
+
+export type ConnectorTriggerSetupStatus = 'provisioning' | 'authenticating' | 'loadingParameters' | 'parameters' | 'saving';
+
+export interface ConnectorTriggerSetupSession {
+    readonly cancellationToken: CancellationToken;
+    selectResources(): Promise<ConnectorTriggerSetupPlan>;
+    collectParameters(request: ConnectorTriggerParameterRequest): Promise<Record<string, ConnectorTriggerParameterValue>>;
+    setStatus(status: ConnectorTriggerSetupStatus): void;
+    dispose(): void;
 }
 
 export interface ConnectorTriggerLocalSettingsWriter {
@@ -304,8 +358,9 @@ export interface ConnectorTriggerF5Runtime {
 export interface ConnectorTriggerF5Dependencies {
     bindingResolver: ConnectorTriggerBindingResolver;
     gateway: ConnectorTriggerGateway;
-    handoffStore: ConnectorTriggerProjectHandoffStore;
+    projectStore: ConnectorTriggerProjectMetadataStore;
     operationResolver: ConnectorTriggerOperationResolver;
+    openSetup(context: IActionContext, request: ConnectorTriggerSetupRequest): Promise<ConnectorTriggerSetupSession>;
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
     runtime?: ConnectorTriggerF5Runtime;
 }

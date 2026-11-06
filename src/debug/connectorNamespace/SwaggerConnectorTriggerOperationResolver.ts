@@ -6,6 +6,7 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { parseConnectorSwaggerInputs } from '../../commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
 import { localize } from '../../localize';
+import { ConnectorTriggerF5SetupError } from './connectorTriggerF5Setup';
 import {
     type ConnectorTriggerDynamicInvokeRequest,
     type ConnectorTriggerDynamicResolution,
@@ -27,9 +28,11 @@ interface DynamicInvocationSpec {
     path: string;
     parameterLiterals?: Record<string, string>;
     parameterMap?: Record<string, string>;
+    selectedItemMap?: Record<string, string>;
     collectionPath: string;
     valuePath: string;
     labelPath: string;
+    isParentExpression?: string;
 }
 
 type DynamicInputMetadata =
@@ -37,6 +40,8 @@ type DynamicInputMetadata =
         kind: 'tree';
         open: DynamicInvocationSpec;
         browse?: DynamicInvocationSpec;
+        canSelectParentNodes: boolean;
+        canSelectLeafNodes: boolean;
     }
     | {
         kind: 'values';
@@ -60,18 +65,25 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
         const response = asRecord(await this.swaggerProvider.getSwagger(context, request));
         const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
         if (!swagger) {
-            throw new Error(localize(
-                'invalidConnectorSwagger',
-                'Azure did not return a valid connector definition.',
-            ));
+            throw invalidEventDefinition();
         }
 
-        const parsedInputs = parseConnectorSwaggerInputs(swagger, request.handoff.operationId);
-        const rawParameters = getOperationParameters(swagger, request.handoff.operationId);
-        const inputs = (parsedInputs ?? []).map(input => {
-            const rawParameter = rawParameters.find(parameter =>
-                equalsIgnoreCase(readString(parameter.name), input.name));
+        const parsedInputs = parseConnectorSwaggerInputs(swagger, request.target.operationId);
+        const rawParameters = getOperationParameters(swagger, request.target.operationId);
+        if (!parsedInputs) {
+            throw invalidEventDefinition();
+        }
+        const inputNames = new Set<string>();
+        const inputs = parsedInputs.map((input): ConnectorTriggerInputDefinition => {
+            if (inputNames.has(input.name)) {
+                throw invalidEventDefinition();
+            }
+            inputNames.add(input.name);
+            const rawParameter = getInputMetadata(rawParameters, input.name, swagger);
             const dynamicMetadata = rawParameter ? getDynamicInputMetadata(rawParameter, swagger) : undefined;
+            if (input.dynamic && !dynamicMetadata) {
+                throw unsupportedDynamicMetadata();
+            }
             return {
                 name: input.name,
                 label: input.label,
@@ -81,18 +93,54 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
                 visibility: normalizeVisibility(input.visibility),
                 sensitive: input.sensitive,
                 defaultValue: input.defaultValue,
-                options: input.options,
+                options: input.options?.map(option => ({
+                    label: option.label,
+                    value: parseOptionValue(option.value, input.type),
+                })),
                 dynamic: dynamicMetadata ? {
                     kind: dynamicMetadata.kind,
-                    dependsOn: getDynamicDependencies(dynamicMetadata),
                     metadata: dynamicMetadata,
                 } : undefined,
                 metadata: rawParameter,
             } satisfies ConnectorTriggerInputDefinition;
         });
+        for (const input of inputs) {
+            const dynamic = input.dynamic;
+            if (!dynamic) {
+                continue;
+            }
+            const metadata = asDynamicInputMetadata(dynamic.metadata);
+            if (!metadata) {
+                throw unsupportedDynamicMetadata();
+            }
+            const invocations = metadata.kind === 'tree' ?
+                [metadata.open, ...(metadata.browse ? [metadata.browse] : [])] :
+                [metadata.invocation];
+            for (const invocation of invocations) {
+                const parameterMap = invocation.parameterMap;
+                for (const [name, reference] of Object.entries(parameterMap ?? {})) {
+                    const matches = inputs.filter(candidate =>
+                        candidate.name === reference ||
+                        candidate.name === reference.replace(/\//g, '.') ||
+                        rawParameters.some(parameter =>
+                            parameter.in === 'body' &&
+                            reference.startsWith(`${readString(parameter.name)}/`) &&
+                            candidate.name === reference.substring(String(parameter.name).length + 1).replace(/\//g, '.')));
+                    if (matches.length !== 1) {
+                        throw unsupportedDynamicMetadata();
+                    }
+                    if (parameterMap) {
+                        parameterMap[name] = matches[0].name;
+                    }
+                }
+            }
+            dynamic.dependsOn = getDynamicDependencies(metadata);
+        }
 
         return {
             inputs,
+            label: readString(findOperation(swagger, request.target.operationId)?.operation.summary),
+            connectorLabel: readString(asRecord(swagger.info)?.title),
             metadata: { swagger } satisfies OperationMetadata,
         };
     }
@@ -102,20 +150,22 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
         request: Parameters<ConnectorTriggerOperationResolver['resolveDynamicInput']>[1],
     ): Promise<ConnectorTriggerDynamicResolution> {
         const metadata = asDynamicInputMetadata(request.input.dynamic?.metadata);
-        const invocation = metadata?.kind === 'tree' ? metadata.open : metadata?.invocation;
+        const invocation = metadata?.kind === 'tree' ?
+            request.parent ? metadata.browse : metadata.open :
+            metadata?.invocation;
         if (!invocation) {
-            return {};
+            throw unsupportedDynamicMetadata();
         }
 
         const response = await this.gateway.dynamicInvoke(
             context,
-            request.handoff,
+            request.target,
             request.namespace,
             request.connection,
-            buildConnectorDynamicInvokeRequest(invocation, request.values),
+            buildConnectorDynamicInvokeRequest(invocation, request.values, request.parent?.metadata),
         );
         return {
-            options: projectDynamicOptions(response, invocation),
+            options: projectDynamicOptions(response, invocation, metadata?.kind === 'tree' ? metadata : undefined),
         };
     }
 
@@ -133,19 +183,32 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
 export function buildConnectorDynamicInvokeRequest(
     spec: DynamicInvocationSpec,
     values: Readonly<Record<string, ConnectorTriggerParameterValue>>,
+    selectedItem?: unknown,
 ): ConnectorTriggerDynamicInvokeRequest {
     const parameters: Record<string, string> = { ...spec.parameterLiterals };
     for (const [targetName, sourceName] of Object.entries(spec.parameterMap ?? {})) {
         const value = getByPath(values, sourceName);
-        if (isPrimitive(value)) {
-            parameters[targetName] = String(value);
+        if (!isPrimitive(value)) {
+            throw missingDynamicDependency();
         }
+        parameters[targetName] = String(value);
+    }
+    for (const [targetName, sourcePath] of Object.entries(spec.selectedItemMap ?? {})) {
+        const value = getByPath(selectedItem, sourcePath);
+        if (!isPrimitive(value)) {
+            throw invalidDynamicResponse();
+        }
+        parameters[targetName] = String(value);
     }
 
     const consumed = new Set<string>();
     const path = spec.path.replace(/\{([^}]+)\}/g, (_match, parameterName: string) => {
         consumed.add(parameterName);
-        return encodeURIComponent(parameters[parameterName] ?? '');
+        const value = parameters[parameterName];
+        if (value === undefined) {
+            throw missingDynamicDependency();
+        }
+        return encodeURIComponent(value);
     });
     const queries = Object.fromEntries(
         Object.entries(parameters).filter(([name]) => !consumed.has(name)),
@@ -162,14 +225,60 @@ export function buildConnectorDynamicInvokeRequest(
 
 function getOperationParameters(swagger: JsonRecord, operationId: string): JsonRecord[] {
     const operation = findOperation(swagger, operationId)?.operation;
+    if (!operation ||
+        operation.parameters !== undefined && !Array.isArray(operation.parameters)) {
+        throw invalidEventDefinition();
+    }
     const topLevelParameters = asRecord(swagger.parameters) ?? {};
-    return Array.isArray(operation?.parameters) ?
-        operation.parameters.flatMap(parameter => {
+    return Array.isArray(operation.parameters) ?
+        operation.parameters.map(parameter => {
             const record = asRecord(parameter);
             const reference = readString(record?.$ref)?.match(/^#\/parameters\/(.+)$/)?.[1];
-            return [reference ? asRecord(topLevelParameters[reference]) ?? record : record].filter(isDefined);
+            const resolved = reference ? asRecord(topLevelParameters[reference]) : record;
+            if (!resolved || !readString(resolved.name) || record?.$ref && !reference) {
+                throw invalidEventDefinition();
+            }
+            return resolved;
         }) :
         [];
+}
+
+function getInputMetadata(
+    parameters: readonly JsonRecord[],
+    inputName: string,
+    swagger: JsonRecord,
+): JsonRecord | undefined {
+    const parameter = parameters.find(candidate =>
+        equalsIgnoreCase(readString(candidate.name), inputName));
+    if (parameter) {
+        return { ...resolveSchema(asRecord(parameter.schema), swagger), ...parameter };
+    }
+    for (const body of parameters.filter(candidate => candidate.in === 'body')) {
+        let schema = resolveSchema(asRecord(body.schema), swagger);
+        for (const segment of inputName.split('.')) {
+            schema = resolveSchema(asRecord(asRecord(schema?.properties)?.[segment]), swagger);
+        }
+        if (schema) {
+            return schema;
+        }
+    }
+    return undefined;
+}
+
+function resolveSchema(schema: JsonRecord | undefined, swagger: JsonRecord): JsonRecord | undefined {
+    const seen = new Set<string>();
+    while (typeof schema?.$ref === 'string') {
+        const reference = schema.$ref;
+        if (!reference.startsWith('#/') || seen.has(reference)) {
+            throw invalidEventDefinition();
+        }
+        seen.add(reference);
+        schema = asRecord(getByPath(swagger, reference.substring(2)));
+        if (!schema) {
+            throw invalidEventDefinition();
+        }
+    }
+    return schema;
 }
 
 function getDynamicInputMetadata(parameter: JsonRecord, swagger: JsonRecord): DynamicInputMetadata | undefined {
@@ -178,10 +287,13 @@ function getDynamicInputMetadata(parameter: JsonRecord, swagger: JsonRecord): Dy
         const open = createInvocationSpec(asRecord(tree.open), tree, swagger);
         const browse = createInvocationSpec(asRecord(tree.browse), tree, swagger);
         if (open) {
+            const settings = asRecord(tree.settings);
             return {
                 kind: 'tree',
                 open,
                 ...(browse ? { browse } : {}),
+                canSelectParentNodes: settings?.canSelectParentNodes !== false,
+                canSelectLeafNodes: settings?.canSelectLeafNodes !== false,
             };
         }
     }
@@ -207,56 +319,63 @@ function createInvocationSpec(
         readString(dynamicState?.operationId) ??
         readString(dynamicExtension?.operationId);
     if (!operationId) {
-        return undefined;
+        throw unsupportedDynamicMetadata();
     }
 
     const target = findOperation(swagger, operationId);
     if (!target) {
-        return undefined;
+        throw unsupportedDynamicMetadata();
     }
 
     const parameterMappings = asRecord(descriptor.parameters) ??
         asRecord(dynamicState?.parameters) ??
         asRecord(dynamicExtension?.parameters);
-    const { literals, parameterMap } = parseParameterMappings(parameterMappings);
+    const { literals, parameterMap, selectedItemMap } = parseParameterMappings(parameterMappings);
+    const valuePath = readString(descriptor.itemValuePath) ??
+        readString(descriptor.valuePath) ??
+        readString(descriptor['value-path']) ??
+        readString(defaults?.itemValuePath) ??
+        readString(defaults?.['value-property']) ??
+        '';
 
     return {
         method: target.method,
         path: stripConnectionIdPrefix(target.path),
         parameterLiterals: Object.keys(literals).length ? literals : undefined,
         parameterMap: Object.keys(parameterMap).length ? parameterMap : undefined,
+        selectedItemMap: Object.keys(selectedItemMap).length ? selectedItemMap : undefined,
         collectionPath: readString(descriptor.itemsPath) ??
             readString(descriptor.valueCollection) ??
             readString(descriptor['value-collection']) ??
             readString(defaults?.itemsPath) ??
             readString(defaults?.['value-collection']) ??
-            'value',
-        valuePath: readString(descriptor.itemValuePath) ??
-            readString(descriptor.valuePath) ??
-            readString(descriptor['value-path']) ??
-            readString(defaults?.itemValuePath) ??
-            readString(defaults?.['value-property']) ??
-            'id',
+            '',
+        valuePath,
         labelPath: readString(descriptor.itemTitlePath) ??
             readString(descriptor.valueTitle) ??
             readString(descriptor['value-title']) ??
             readString(defaults?.itemTitlePath) ??
             readString(defaults?.['value-title']) ??
-            readString(descriptor.itemValuePath) ??
-            'id',
+            valuePath,
+        isParentExpression: readString(descriptor.itemIsParent) ?? readString(defaults?.itemIsParent),
     };
 }
 
 function parseParameterMappings(parameters: JsonRecord | undefined): {
     literals: Record<string, string>;
     parameterMap: Record<string, string>;
+    selectedItemMap: Record<string, string>;
 } {
     const literals: Record<string, string> = {};
     const parameterMap: Record<string, string> = {};
+    const selectedItemMap: Record<string, string> = {};
     for (const [targetName, mapping] of Object.entries(parameters ?? {})) {
         const record = asRecord(mapping);
         const sourceName = readString(record?.parameter) ?? readString(record?.parameterReference);
-        if (sourceName) {
+        const selectedItemPath = readString(record?.selectedItemValuePath) ?? readString(record?.['value-property']);
+        if (selectedItemPath) {
+            selectedItemMap[targetName] = selectedItemPath;
+        } else if (sourceName) {
             parameterMap[targetName] = sourceName;
         } else if (record && 'value' in record && isPrimitive(record.value)) {
             literals[targetName] = String(record.value);
@@ -267,9 +386,11 @@ function parseParameterMappings(parameters: JsonRecord | undefined): {
             } else {
                 literals[targetName] = String(mapping);
             }
+        } else {
+            throw unsupportedDynamicMetadata();
         }
     }
-    return { literals, parameterMap };
+    return { literals, parameterMap, selectedItemMap };
 }
 
 function findOperation(
@@ -300,32 +421,52 @@ function findOperation(
 function projectDynamicOptions(
     response: unknown,
     spec: DynamicInvocationSpec,
+    tree?: Extract<DynamicInputMetadata, { kind: 'tree' }>,
 ): ConnectorTriggerInputOption[] {
     const root = unwrapDynamicInvokeResponse(response);
     const collection = getByPath(root, spec.collectionPath);
     if (!Array.isArray(collection)) {
-        return [];
+        throw invalidDynamicResponse();
     }
 
-    return collection.flatMap(item => {
+    return collection.map(item => {
         const value = getByPath(item, spec.valuePath);
-        if (!isPrimitive(value)) {
-            return [];
-        }
         const label = getByPath(item, spec.labelPath);
-        return [{
-            label: isPrimitive(label) ? String(label) : String(value),
+        if (!isPrimitive(value) || !isPrimitive(label)) {
+            throw invalidDynamicResponse();
+        }
+        const hasChildren = tree?.browse ? isParentItem(item, spec.isParentExpression) : undefined;
+        return {
+            label: String(label),
             value,
-        }];
+            ...(hasChildren !== undefined ? {
+                hasChildren,
+                selectable: hasChildren ? tree?.canSelectParentNodes : tree?.canSelectLeafNodes,
+                metadata: item,
+            } : {}),
+        };
     });
+}
+
+function isParentItem(item: unknown, expression: string | undefined): boolean {
+    if (!expression) {
+        throw unsupportedDynamicMetadata();
+    }
+    const comparison = expression.match(/^\(?\s*([\w/.]+)\s+eq\s+(true|false)\s*\)?$/i);
+    const value = getByPath(item, comparison?.[1] ?? expression);
+    if (typeof value !== 'boolean') {
+        throw invalidDynamicResponse();
+    }
+    return comparison ? value === (comparison[2].toLowerCase() === 'true') : value;
 }
 
 function unwrapDynamicInvokeResponse(response: unknown): unknown {
     const outer = asRecord(response);
     const nestedResponse = asRecord(outer?.response);
     const statusCode = nestedResponse?.statusCode ?? outer?.statusCode;
-    if (typeof statusCode === 'number' && statusCode >= 400) {
-        throw new Error(localize(
+    if (statusCode !== undefined &&
+        (!/^\d{3}$/.test(String(statusCode)) || Number(statusCode) < 200 || Number(statusCode) >= 300)) {
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
             'connectorDynamicInvokeFailed',
             'The connector could not resolve this parameter.',
         ));
@@ -336,15 +477,17 @@ function unwrapDynamicInvokeResponse(response: unknown): unknown {
         try {
             return JSON.parse(body) as unknown;
         } catch {
-            return body;
+            throw invalidDynamicResponse();
         }
     }
     return body;
 }
 
 function getDynamicDependencies(metadata: DynamicInputMetadata): string[] | undefined {
-    const invocation = metadata.kind === 'tree' ? metadata.open : metadata.invocation;
-    const dependencies = Object.values(invocation.parameterMap ?? {});
+    const invocations = metadata.kind === 'tree' ?
+        [metadata.open, ...(metadata.browse ? [metadata.browse] : [])] :
+        [metadata.invocation];
+    const dependencies = [...new Set(invocations.flatMap(invocation => Object.values(invocation.parameterMap ?? {})))];
     return dependencies.length ? dependencies : undefined;
 }
 
@@ -383,10 +526,15 @@ function stripConnectionIdPrefix(path: string): string {
 }
 
 function getByPath(value: unknown, path: string): unknown {
+    const root = asRecord(value);
+    if (root && Object.prototype.hasOwnProperty.call(root, path)) {
+        return root[path];
+    }
     let current = value;
-    for (const segment of path.split(/[./]/).filter(Boolean)) {
+    for (const part of path.split(path.includes('/') ? '/' : '.').filter(Boolean)) {
+        const segment = part.replace(/~1/g, '/').replace(/~0/g, '~');
         const record = asRecord(current);
-        if (!record) {
+        if (!record || !Object.prototype.hasOwnProperty.call(record, segment)) {
             return undefined;
         }
         current = record[segment];
@@ -412,6 +560,40 @@ function asRecord(value: unknown): JsonRecord | undefined {
         undefined;
 }
 
-function isDefined<T>(value: T | undefined): value is T {
-    return value !== undefined;
+function parseOptionValue(value: string, type: ConnectorTriggerInputDefinition['type']): ConnectorTriggerParameterValue {
+    if (type === 'boolean' && (value === 'true' || value === 'false')) {
+        return value === 'true';
+    }
+    if ((type === 'integer' || type === 'number') && Number.isFinite(Number(value))) {
+        return Number(value);
+    }
+    return value;
+}
+
+function invalidEventDefinition(): Error {
+    return new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorEventDefinitionUnavailable',
+        'The selected connector event definition or its parameters are unavailable. Reload the event metadata and retry debugging.',
+    ));
+}
+
+function unsupportedDynamicMetadata(): Error {
+    return new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorDynamicMetadataUnsupported',
+        'The connector parameter uses missing or unsupported dynamic metadata. Check the selected event definition before retrying debugging.',
+    ));
+}
+
+function missingDynamicDependency(): Error {
+    return new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorDynamicDependencyMissing',
+        'A connector parameter dependency has no supported value. Configure its required inputs before loading dynamic values.',
+    ));
+}
+
+function invalidDynamicResponse(): Error {
+    return new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorDynamicResponseInvalid',
+        'The connector returned an invalid parameter values response. Check the connection and retry debugging.',
+    ));
 }

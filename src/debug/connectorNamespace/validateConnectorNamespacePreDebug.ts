@@ -14,7 +14,7 @@ import { parseJson } from '../../utils/parseJson';
 import {
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerLocalBinding,
-    type ConnectorTriggerProjectHandoff,
+    type ConnectorTriggerProjectMetadata,
 } from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
@@ -34,27 +34,27 @@ export async function validateConnectorNamespacePreDebug(
 ): Promise<void> {
     const dependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
     if (dependencies) {
-        let handoff: ConnectorTriggerProjectHandoff | undefined;
+        let target: ConnectorTriggerProjectMetadata | undefined;
         try {
-            handoff = await dependencies.handoffStore.read(projectPath);
+            target = await dependencies.projectStore.read(projectPath);
         } catch (error) {
             throw new ConnectorTriggerF5SetupError(error);
         }
 
-        context.telemetry.properties.connectorF5HandoffDetected = String(!!handoff);
-        if (handoff) {
+        context.telemetry.properties.connectorF5HandoffDetected = String(!!target);
+        if (target) {
             context.telemetry.properties.connectorPollTriggerDetected = 'true';
             try {
-                const binding = await dependencies.bindingResolver.resolve(context, projectPath, handoff);
+                const binding = await dependencies.bindingResolver.resolve(context, projectPath, target);
                 const settingsValid = await areConnectorTriggerSettingsValid(context, projectPath, binding);
                 context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
                 if (settingsValid) {
-                    await dependencies.handoffStore.markComplete(projectPath);
+                    await dependencies.projectStore.markComplete(projectPath);
                     context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
                     return;
                 }
 
-                await runConnectorTriggerF5Setup(context, projectPath, handoff, binding, dependencies);
+                await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
                 return;
             } catch (error) {
                 if (parseError(error).isUserCancelledError) {

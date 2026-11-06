@@ -47,6 +47,20 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
     ![debug3](resources/readme/debug3.png)
 
+### Configure a polling Connector Trigger
+
+Connector Trigger projects use their source bindings to find polling triggers and the runtime setting keys to configure. The canonical connector/event cannot be reliably recovered from every language's bindings, `host.json`, or `local.settings.json`. Creating or adding a Connector Trigger saves only the metadata version, connector ID and canonical operation ID in the folder's `azureFunctions.connectorTriggerProjects` VS Code setting, keyed by project-relative path (`"."` for the folder root). Subscription and region used to retrieve authoring metadata are not saved: choose the provisioning subscription and supported region in the F5 setup screen. Other settings and projects are preserved; User settings and shared `.code-workspace` settings do not supply these project identities. A project created before it is opened keeps its setting in its own `.vscode/settings.json`, which also works when later opened under a parent workspace folder.
+
+No separate project-metadata file or metadata-specific ignore rule is created. Invalid metadata stops setup rather than guessing an identity. Creating or adding the function does not authenticate a connector or load account-specific parameter choices.
+
+On the first F5, one editable setup screen shows the connector/event, Azure scope, resource choices, and computed local-settings changes. Select an existing or new Connector Namespace and connection; for new resources, edit the resource group, namespace, and connection names. **Planned changes** lists the resources and access policies. Computed setting keys and value sources are read-only, existing values are hidden, and environment overrides are flagged.
+
+Choose **Set up and authenticate** to approve provisioning and lock the resource choices. Complete browser consent if needed. The same screen then unlocks the selected event's inputs from the connector API. Dynamic choices are loaded through that authenticated connection, not a local list. For folder pickers such as Outlook, use the arrow to browse children, select a folder, or go back to the previous folder. Changing a dependency clears and reloads its dependent choices.
+
+Choose **Apply and continue** to send the selected IDs or paths, not their display labels, to the event's Trigger Config. Events with no inputs finish configuration after setup. Before approval, **Cancel setup** or closing the screen makes no connector changes. After approval, cancellation stops new work after any in-flight operation settles, keeps any resources already created, and does not apply unsubmitted parameter values. Cancel and restart debugging to change locked resource choices.
+
+Setup writes only the service-provided polling endpoint and Trigger Config reference to `local.settings.json`, preserving unrelated settings. Parameter values and credentials are not written to function source or the VS Code metadata setting. Later F5 runs reuse valid runtime settings; cancelling parameter selection leaves existing Azure resources available for retry. Missing or unsupported event metadata and unavailable required choices stop setup rather than substituting guessed values. Fix the connection access or event definition and retry F5.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer
