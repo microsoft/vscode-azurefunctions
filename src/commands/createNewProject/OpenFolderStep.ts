@@ -9,7 +9,7 @@ import { localize } from '../../localize';
 import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class OpenFolderStep extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
-    stepName: string;
+    public stepName: string = 'OpenFolderStep';
     public priority: number = 250;
 
     public async execute(context: IProjectWizardContext): Promise<void> {

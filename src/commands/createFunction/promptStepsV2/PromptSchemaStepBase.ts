@@ -9,6 +9,7 @@ import { type ParsedInput } from "../../../templates/script/parseScriptTemplates
 import { type FunctionV2WizardContext } from "../IFunctionWizardContext";
 
 export abstract class PromptSchemaStepBase<T extends FunctionV2WizardContext> extends AzureWizardPromptStep<T> {
+    public telemetryId: string = 'PromptSchemaStepBase';
 
     public constructor(readonly input: ParsedInput) {
         super();

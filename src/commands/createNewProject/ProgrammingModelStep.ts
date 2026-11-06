@@ -12,6 +12,7 @@ import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
+    public telemetryId: string = 'ProgrammingModelStep';
     public hideStepCount: boolean = true;
     private _options: ProgrammingModelStepOptions;
 
@@ -83,4 +84,3 @@ interface ProgrammingModelStepOptions {
     learnMoreLink?: string,
     isProjectWizard?: boolean;
 }
-
