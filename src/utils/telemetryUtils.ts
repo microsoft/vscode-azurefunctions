@@ -4,8 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { ProjectLanguage } from '../constants';
 
 export namespace telemetryUtils {
+    export function getProjectLanguage(language: string | undefined): ProjectLanguage | 'unknown' {
+        return Object.values(ProjectLanguage).find(value => value === language) ?? 'unknown';
+    }
+
     export async function runWithDurationTelemetry<T>(context: IActionContext, prefix: string, callback: () => Promise<T>): Promise<T> {
         const start = Date.now();
         try {

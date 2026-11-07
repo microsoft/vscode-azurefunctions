@@ -17,6 +17,7 @@ import {
 import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
@@ -130,6 +131,14 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommand('azureFunctions.useClassicTemplateFeed', async (context: IActionContext) => {
+        const { FunctionsTemplateGalleryController } = await import('./createNewProject/FunctionsTemplateGalleryController.js');
+        const controller = FunctionsTemplateGalleryController.currentController;
+        if (!controller) {
+            throw new Error(localize('templateGalleryNotOpen', 'Open the template gallery before switching to the classic template feed.'));
+        }
+        await controller.useClassicTemplateFeed(context);
+    });
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.createNewProjectWithDockerfile',
         async (context: IActionContext) =>

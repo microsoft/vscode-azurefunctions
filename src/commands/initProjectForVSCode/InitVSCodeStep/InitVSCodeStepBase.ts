@@ -12,6 +12,7 @@ import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
+import { telemetryUtils } from '../../../utils/telemetryUtils';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { type IExtensionsJson } from '../../../vsCodeConfig/extensions';
 import { getDebugConfigs, getLaunchVersion, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion, type ILaunchJson } from '../../../vsCodeConfig/launch';
@@ -44,7 +45,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         context.telemetry.properties.projectRuntime = version;
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
-        context.telemetry.properties.projectLanguage = language;
+        context.telemetry.properties.projectLanguage = telemetryUtils.getProjectLanguage(language);
 
         context.telemetry.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
 
@@ -80,7 +81,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
     }
 
     protected addSubDir(context: IProjectWizardContext, fsPath: string): string {
-        const subDir: string = path.relative(context.workspacePath, context.projectPath);
+        const subDir: string = path.relative(context.workspacePath, context.projectPath).split(path.sep).join(path.posix.sep);
         // always use posix for debug config
         return path.posix.join(subDir, fsPath);
     }
@@ -240,10 +241,11 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
 
         // Add "projectSubpath" setting if project is far enough down that we won't auto-detect it
-        if (path.posix.relative(context.projectPath, context.workspacePath).startsWith('../..')) {
+        const projectSubpath = path.relative(context.workspacePath, context.projectPath).split(path.sep).join(path.posix.sep);
+        if (projectSubpath.split(path.posix.sep).length > 1) {
             settings.push({
                 key: projectSubpathSetting,
-                value: path.posix.relative(context.workspacePath, context.projectPath)
+                value: projectSubpath
             });
         }
 
