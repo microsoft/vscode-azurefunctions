@@ -96,7 +96,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             this.closeReason = 'classic';
             this.disposePanelIfOpen();
             actionContext.telemetry.properties.classicSwitchStage = 'classicWizard';
-            await createClassicProject(actionContext, { folderPath: this.initialLocation });
+            await createClassicProject(actionContext, {});
             actionContext.telemetry.properties.classicSwitchStage = 'complete';
         } finally {
             this.isCreatingProject = false;
@@ -386,6 +386,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             } catch (error) {
                 if (actionContext.telemetry.properties.projectCreated !== 'true') {
                     actionContext.telemetry.properties.creationOutcome = error instanceof UserCancelledError ? 'canceled' : 'failed';
+                    if (error instanceof UserCancelledError) {
+                        this.postMessageToWebview({ type: 'projectCreationFailed', error: '' });
+                    }
                 }
                 throw error;
             } finally {
@@ -397,7 +400,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private async initializeProjectForVSCode(actionContext: IActionContext, projectPath: string, language: string): Promise<void> {
         this.sendProgress(localize('initializingGalleryProject', 'Initializing project for VS Code...'));
         const projectLanguage = Object.values(ProjectLanguage).find(value => value === language);
-        await initProjectForVSCode(actionContext, projectPath, projectLanguage, { useProjectFolderAsWorkspace: true });
+        await initProjectForVSCode(actionContext, projectPath, projectLanguage, {
+            useProjectFolderAsWorkspace: true,
+            useProjectLanguageModel: true,
+            requireProject: true,
+        });
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {
@@ -548,10 +555,6 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
      * user with a modal warning before continuing. Hidden / metadata entries
      * (`.vscode`, `.git`, `.DS_Store`, `Thumbs.db`, etc.) are ignored — they
      * don't conflict with the cloned template files.
-     *
-     * If the user cancels, posts a silent `projectCreationFailed` message to
-     * the webview so it returns to the gallery without showing an error, then
-     * re-throws `UserCancelledError` so telemetry records the cancellation.
      */
     private async confirmTargetNotEmpty(actionContext: IActionContext, projectPath: string): Promise<void> {
         if (!projectPath || !await AzExtFsExtra.pathExists(projectPath)) {
@@ -570,19 +573,12 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
         actionContext.telemetry.properties.nonEmptyTarget = 'true';
         const proceed: vscode.MessageItem = { title: localize('proceedAnyway', 'Create here anyway') };
-        try {
-            // Modal dialogs add an automatic "Cancel" button — only pass the affirmative action.
-            await actionContext.ui.showWarningMessage(
-                localize('targetNotEmpty', 'The selected folder "{0}" is not empty. Existing files may be overwritten. Do you want to create this template here?', projectPath),
-                { modal: true, stepName: 'targetNotEmpty' },
-                proceed,
-            );
-        } catch (err) {
-            if (err instanceof UserCancelledError) {
-                this.postMessageToWebview({ type: 'projectCreationFailed', error: '' });
-            }
-            throw err;
-        }
+        // Modal dialogs add an automatic "Cancel" button — only pass the affirmative action.
+        await actionContext.ui.showWarningMessage(
+            localize('targetNotEmpty', 'The selected folder "{0}" is not empty. Existing files may be overwritten. Do you want to create this template here?', projectPath),
+            { modal: true, stepName: 'targetNotEmpty' },
+            proceed,
+        );
     }
 
     private async tryOpenReadme(projectPath: string): Promise<void> {

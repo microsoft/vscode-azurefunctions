@@ -15,6 +15,7 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 import { installNodeDependencies } from '../../src/commands/createNewProject/installNodeDependencies';
 import { JavaScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
+import { initProjectForVSCode } from '../../src/commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
@@ -138,7 +139,9 @@ suite('Project npm dependencies', () => {
 
                 await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
                     await runWithFuncSetting('createPythonVenv', false, async () => {
-                        await controller['createProject'](template, language, projectPath);
+                        await runWithFuncSetting('projectLanguageModel', language === ProjectLanguage.Python ? 1 : 3, async () => {
+                            await controller['createProject'](template, language, projectPath);
+                        });
                     });
                 });
 
@@ -177,6 +180,60 @@ suite('Project npm dependencies', () => {
         assert.strictEqual(failed?.properties.creationOutcome, 'failed');
         assert.strictEqual(failed?.properties.creationStage, 'initializeVSCode');
         assert.strictEqual(failed?.properties.projectCreated, undefined);
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('ordinary initialization preserves its global model default and missing-project no-op', async () => {
+        await initProjectForVSCode(await createTestActionContext(), projectPath, ProjectLanguage.TypeScript);
+        assert.ok(!await AzExtFsExtra.pathExists(path.join(projectPath, '.vscode')));
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {
+            dependencies: { '@azure/functions': '^4.0.0' },
+        });
+        cpUtils.executeCommand = async () => '';
+
+        await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
+            await runWithFuncSetting('projectLanguageModel', 3, async () => {
+                await initProjectForVSCode(await createTestActionContext(), projectPath, ProjectLanguage.TypeScript);
+            });
+        });
+
+        const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(projectPath, '.vscode', 'settings.json'));
+        assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 3);
+    });
+
+    test('gallery initialization cancellation resets the shared creating view exactly once', async () => {
+        const controller = createController(false, []);
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+            await AzExtFsExtra.writeJSON(path.join(destination, 'host.json'), {});
+        };
+        controller['initializeProjectForVSCode'] = async () => { throw new UserCancelledError('initProject'); };
+        let resets = 0;
+        controller['postMessageToWebview'] = message => {
+            assert.deepStrictEqual(message, { type: 'projectCreationFailed', error: '' });
+            resets++;
+        };
+
+        await controller['createProject'](template, ProjectLanguage.Python, projectPath);
+
+        assert.strictEqual(resets, 1);
+        assert.strictEqual(controller['isCreatingProject'], false);
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('gallery initialization rejects a copied template without host.json', async () => {
+        const events: string[] = [];
+        const controller = createController(false, events);
+        controller['initializeProjectForVSCode'] = FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'];
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+            await fs.promises.writeFile(path.join(destination, 'README.md'), 'Template without a Functions project');
+        };
+
+        await assert.rejects(controller['createProject'](template, ProjectLanguage.TypeScript, projectPath), /host\.json/);
+
+        assert.ok(!events.includes('open'));
         assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
     });
 

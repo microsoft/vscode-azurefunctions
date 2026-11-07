@@ -20,11 +20,11 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 1. Select a new, _empty_ folder to contain your project and create the project.
 1. If the selected folder is not already open, select "Open in current window" to open it.
 
-**Create New Function Project...** opens the template gallery, even when a Functions project is already open. Gallery-created projects are initialized for VS Code before opening, including their language, tasks, and debugging configuration.
+**Create New Function Project...** opens the template gallery, even when a Functions project is already open. Gallery-created projects are initialized for VS Code before opening, including their language, tasks, and debugging configuration. Their programming model is detected from the copied project rather than overridden by a global default.
 
 **Create Function...** adds a function to an existing Functions project using the classic template feed, including projects created from the gallery. If no Functions project exists in the selected folder, it opens project creation.
 
-To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. Disable the setting to return to the gallery.
+To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. The classic wizard asks for a destination again rather than reusing the gallery's launch-time folder. Disable the setting to return to the gallery.
 
 ## Run the serverless app locally
 

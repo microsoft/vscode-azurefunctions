@@ -18,7 +18,7 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, options?: { useProjectFolderAsWorkspace?: boolean }): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, options?: { useProjectFolderAsWorkspace?: boolean; useProjectLanguageModel?: boolean; requireProject?: boolean }): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
     if (fsPath === undefined) {
@@ -43,11 +43,16 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
 
     const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
+        if (options?.requireProject) {
+            throw new Error(localize('missingFunctionsProject', 'No Azure Functions project was found. The project must contain a host.json file.'));
+        }
         return;
     }
 
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
-    const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
+    const languageModel: number | undefined = options?.useProjectLanguageModel
+        ? await detectProjectLanguageModel(language, projectPath)
+        : getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 

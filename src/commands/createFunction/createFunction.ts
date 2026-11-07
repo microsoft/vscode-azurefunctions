@@ -54,7 +54,7 @@ export async function createFunctionFromCommand(
         functionSettings,
         language: <api.ProjectLanguage>language,
         version: <api.ProjectVersion>version
-    }, async (actionContext, options) => {
+    }, async (actionContext, options, defaultFolderPath) => {
         await routeCreateNewProject(actionContext, {
             templateId: options.templateId,
             startFromScratch: options.language !== undefined || options.version !== undefined ||
@@ -62,7 +62,7 @@ export async function createFunctionFromCommand(
         }, {
             createClassicProject: async () => await createNewProjectInternal(actionContext, options),
             showTemplateGallery: () => {
-                FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: options.folderPath });
+                FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: options.folderPath ?? defaultFolderPath });
             },
         });
     });
@@ -71,7 +71,7 @@ export async function createFunctionFromCommand(
 export async function createFunctionInternal(
     context: IActionContext,
     options: api.ICreateFunctionOptions,
-    createProject: typeof createNewProjectInternal = createNewProjectInternal,
+    createProject: (context: IActionContext, options: api.ICreateFunctionOptions, defaultFolderPath?: string) => Promise<void> = createNewProjectInternal,
 ): Promise<void> {
     context.telemetry.maskEntireErrorMessage = true;
     let workspaceFolder: WorkspaceFolder | undefined;
@@ -86,11 +86,11 @@ export async function createFunctionInternal(
 
     addLocalFuncTelemetry(context, workspacePath);
 
-    const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
+    const projectPath: string | undefined = await verifyProjectPath(context, options.folderPath ?? workspaceFolder ?? workspacePath);
     if (!projectPath) {
         // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
         context.telemetry.properties.noWorkspaceResult = 'createNewProject';
-        await createProject(context, { ...options, folderPath: workspacePath });
+        await createProject(context, options, workspacePath);
         return;
     }
 

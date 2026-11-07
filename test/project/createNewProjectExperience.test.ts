@@ -178,6 +178,82 @@ suite('Unified Create Function', () => {
         });
     });
 
+    test('keeps an inferred workspace as a gallery default without changing API destination options', async () => {
+        const workspacePath = getTestWorkspaceFolder();
+        const workspaceFolder = vscode.workspace.workspaceFolders?.find(folder => folder.uri.fsPath === workspacePath);
+        assert.ok(workspaceFolder);
+        const originalPicker = vscode.window.showWorkspaceFolderPick;
+        vscode.window.showWorkspaceFolderPick = async () => workspaceFolder;
+        try {
+            const options = {};
+            let called = false;
+            await createFunctionInternal(await createTestActionContext(), options, async (_context, actualOptions, defaultLocation) => {
+                assert.strictEqual(actualOptions, options);
+                assert.strictEqual(actualOptions.folderPath, undefined);
+                assert.strictEqual(defaultLocation, workspacePath);
+                called = true;
+            });
+            assert.ok(called);
+        } finally {
+            vscode.window.showWorkspaceFolderPick = originalPicker;
+        }
+    });
+
+    test('preserves an explicit nested project instead of discovering the containing root project', async () => {
+        const workspacePath = getTestWorkspaceFolder();
+        const selectedProjectPath = path.join(workspacePath, 'child');
+        const context = await createTestActionContext();
+        const provider = new CentralTemplateProvider();
+        const selectionReached = new Error('Reached selected project templates');
+        let requestedProjectPath: string | undefined;
+        provider.getFunctionTemplates = async (_context, projectPath) => {
+            requestedProjectPath = projectPath;
+            return [{
+                id: 'HttpTrigger', name: 'HTTP trigger', language: ProjectLanguage.TypeScript,
+                isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false,
+                templateSchemaVersion: TemplateSchemaVersion.v2,
+            }];
+        };
+        ext.templateProvider.registerActionVariable(provider, context);
+        context.ui.showQuickPick = async () => { throw selectionReached; };
+        try {
+            await AzExtFsExtra.ensureDir(selectedProjectPath);
+            await AzExtFsExtra.writeJSON(path.join(workspacePath, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(selectedProjectPath, 'host.json'), { version: '2.0' });
+
+            await assert.rejects(createFunctionInternal(context, {
+                folderPath: selectedProjectPath,
+                language: ProjectLanguage.TypeScript,
+                languageModel: 4,
+                version: FuncVersion.v4,
+            }), error => error === selectionReached);
+            assert.strictEqual(requestedProjectPath, selectedProjectPath);
+        } finally {
+            provider.dispose();
+            await AzExtFsExtra.emptyDir(workspacePath);
+        }
+    });
+
+    test('does not pass a stale launch folder to classic creation after a changed gallery destination', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            const originalBrowse = TemplateGalleryController.prototype['browseFolder'];
+            const selectedLocation = path.join(folderPath, 'selected');
+            TemplateGalleryController.prototype['browseFolder'] = async () => selectedLocation;
+            try {
+                const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+                assert.strictEqual(await controller['browseFolder'](), selectedLocation);
+                let called = false;
+                await controller.useClassicTemplateFeed(await createTestActionContext(), async (_context, options) => {
+                    assert.strictEqual(options.folderPath, undefined);
+                    called = true;
+                });
+                assert.ok(called);
+            } finally {
+                TemplateGalleryController.prototype['browseFolder'] = originalBrowse;
+            }
+        });
+    });
+
     test('opens the project gallery even when the target already contains a Functions project', async () => {
         await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
             await fs.promises.writeFile(path.join(folderPath, 'host.json'), '{}');
@@ -202,11 +278,15 @@ suite('Unified Create Function', () => {
         const context = await createTestActionContext();
         const provider = new CentralTemplateProvider();
         const selectionReached = new Error('Reached function template selection');
-        provider.getFunctionTemplates = async () => [{
-            id: 'HttpTrigger', name: 'HTTP trigger', language: ProjectLanguage.TypeScript,
-            isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false,
-            templateSchemaVersion: TemplateSchemaVersion.v2,
-        }];
+        let requestedLanguageModel: number | undefined;
+        provider.getFunctionTemplates = async (_context, _projectPath, _language, languageModel) => {
+            requestedLanguageModel = languageModel;
+            return [{
+                id: 'HttpTrigger', name: 'HTTP trigger', language: ProjectLanguage.TypeScript,
+                isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false,
+                templateSchemaVersion: TemplateSchemaVersion.v2,
+            }];
+        };
         ext.templateProvider.registerActionVariable(provider, context);
         let placeHolder: string | undefined;
         context.ui.showQuickPick = async (_picks, options) => {
@@ -221,12 +301,15 @@ suite('Unified Create Function', () => {
             const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
             controller['sendProgress'] = () => undefined;
             await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
-                await controller['initializeProjectForVSCode'](await createTestActionContext(), workspacePath, ProjectLanguage.TypeScript);
+                await runWithFuncSetting('projectLanguageModel', 3, async () => {
+                    await controller['initializeProjectForVSCode'](await createTestActionContext(), workspacePath, ProjectLanguage.TypeScript);
+                });
             });
             await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
                 await assert.rejects(createFunctionFromCommand(context, workspacePath), error => error === selectionReached);
             });
             assert.ok(placeHolder?.startsWith('Select a template for your function'));
+            assert.strictEqual(requestedLanguageModel, 4);
             assert.strictEqual(FunctionsTemplateGalleryController.currentController, undefined);
             assert.strictEqual(context.telemetry.properties.functionCreationExperience, 'classic');
             assert.strictEqual(context.telemetry.properties.functionCreationRouteReason, 'existingProject');
@@ -359,7 +442,7 @@ suite('Unified Create Function', () => {
                 target = options.folderPath;
             });
 
-            assert.strictEqual(target, folderPath);
+            assert.strictEqual(target, undefined);
             assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), true);
             assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'galleryBanner');
             assert.strictEqual(context.telemetry.properties.classicPreferenceSaved, 'true');
