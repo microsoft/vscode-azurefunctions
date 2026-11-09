@@ -37,6 +37,10 @@ export class ConnectorNamespaceNameStep<T extends IConnectorNamespaceWizardConte
 
     private async validateNameAvailable(context: T, namespaceName: string = ''): Promise<string | undefined> {
         namespaceName = namespaceName.trim();
+        const validationError = validateConnectorNamespaceName(namespaceName);
+        if (validationError) {
+            return validationError;
+        }
         maskValue(context, namespaceName);
 
         if (!await this._client.isNameAvailable(context, getResourceGroupName(context), namespaceName)) {

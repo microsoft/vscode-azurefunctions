@@ -16,7 +16,7 @@ import {
     getConnectorTriggerEventIdentity,
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
-import { type ConnectorTriggerProjectHandoff } from './connectorTriggerProjectHandoff';
+import { type ConnectorTriggerSelection } from './connectorTriggerSelection';
 import {
     getConnectorTriggerOutputModelName,
     getCSharpOutputModelDefinition,
@@ -38,13 +38,13 @@ interface AvailableConnectorIdentity {
 export async function ensureConnectorTriggerPollProject(
     projectPath: string,
     language: string,
-    handoff: ConnectorTriggerProjectHandoff,
+    selection: ConnectorTriggerSelection,
     outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const available = await getAvailableConnectorIdentity(
         projectPath,
         language,
-        handoff,
+        selection,
     );
     switch (language) {
         case ProjectLanguage.CSharp:
@@ -68,13 +68,13 @@ export async function ensureConnectorTriggerPollProject(
 async function getAvailableConnectorIdentity(
     projectPath: string,
     language: string,
-    handoff: ConnectorTriggerProjectHandoff,
+    selection: ConnectorTriggerSelection,
 ): Promise<AvailableConnectorIdentity> {
     const registrations = await findConnectorTriggerRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
     const baseIdentity = getConnectorTriggerEventIdentity(
-        handoff.connectorId,
-        handoff.operationId,
+        selection.connectorId,
+        selection.operationId,
     );
     const matchingBindings = bindings.filter(binding =>
         equalsIgnoreCase(binding.functionName, baseIdentity.functionName));
@@ -103,8 +103,8 @@ async function getAvailableConnectorIdentity(
     let fileInstance = 1;
     for (; fileInstance <= 100; fileInstance++) {
         const candidate = getConnectorTriggerEventIdentity(
-            handoff.connectorId,
-            handoff.operationId,
+            selection.connectorId,
+            selection.operationId,
             fileInstance,
         );
         if (await isGeneratedIdentityAvailable(
@@ -668,7 +668,7 @@ function equalsIgnoreCase(
 function createUnsupportedTemplateError(): Error {
     return new Error(localize(
         'connectorTriggerPollTemplateUnsupported',
-        'The selected project template cannot be configured for Connector Trigger Poll debugging.',
+        'The selected project template cannot be materialized for the Connector Trigger Poll event.',
     ));
 }
 
