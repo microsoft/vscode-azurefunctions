@@ -482,9 +482,10 @@ suite('Project npm dependencies', () => {
         const controller = createController(false, []);
         controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
             await AzExtFsExtra.ensureDir(destination);
+            await fs.promises.writeFile(path.join(destination, 'README.md'), 'test');
         };
         try {
-            await controller['createProject'](template, ProjectLanguage.Python, projectPath);
+            await controller['createProject'](template, ProjectLanguage.TypeScript, projectPath);
         } finally {
             telemetry.dispose();
         }

@@ -122,16 +122,11 @@ suite('Create New Project experience', () => {
 
 suite('Unified Create Function', () => {
     let folderPath: string;
-    let originalContext: vscode.ExtensionContext;
     let telemetryHook: vscode.Disposable;
     let events: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
     const originalFetchTemplates = FunctionsTemplateGalleryController.prototype['fetchTemplates'];
 
     setup(async () => {
-        originalContext = ext.context;
-        const extension = vscode.extensions.getExtension('ms-azuretools.vscode-azurefunctions');
-        assert.ok(extension);
-        ext.context = { ...originalContext, extensionPath: extension.extensionPath };
         folderPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc unified creation '));
         FunctionsTemplateGalleryController.prototype['fetchTemplates'] = async () => ({ templates: [], defaultLocation: folderPath });
         events = [];
@@ -144,7 +139,6 @@ suite('Unified Create Function', () => {
         FunctionsTemplateGalleryController.currentController?.panel.dispose();
         telemetryHook.dispose();
         FunctionsTemplateGalleryController.prototype['fetchTemplates'] = originalFetchTemplates;
-        ext.context = originalContext;
         await AzExtFsExtra.deleteResource(folderPath, { recursive: true, useTrash: false });
     });
 
