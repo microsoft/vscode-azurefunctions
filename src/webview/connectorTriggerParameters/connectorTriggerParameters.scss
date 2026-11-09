@@ -13,6 +13,18 @@
             margin-top: 24px;
         }
 
+        .setup-progress {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            padding: 18px;
+            margin-bottom: 24px;
+            border: 1px solid var(--vscode-focusBorder);
+            border-radius: var(--connector-picker-radius);
+            background: var(--vscode-editor-background);
+        }
+
         .setup-review-table {
             margin: 16px 0 28px;
             overflow-x: auto;

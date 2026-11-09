@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { parseConnectorSwaggerInputs } from '../../commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
+import { isConnectorBuiltInTextSuggestion, parseConnectorSwaggerInputs } from '../../commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
 import { localize } from '../../localize';
 import { ConnectorTriggerF5SetupError } from './connectorTriggerF5Setup';
 import {
@@ -81,7 +81,7 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
             inputNames.add(input.name);
             const rawParameter = getInputMetadata(rawParameters, input.name, swagger);
             const dynamicMetadata = rawParameter ? getDynamicInputMetadata(rawParameter, swagger) : undefined;
-            if (input.dynamic && !dynamicMetadata) {
+            if (input.dynamic && !dynamicMetadata && !isConnectorBuiltInTextSuggestion(rawParameter)) {
                 throw unsupportedDynamicMetadata();
             }
             return {
@@ -282,6 +282,9 @@ function resolveSchema(schema: JsonRecord | undefined, swagger: JsonRecord): Jso
 }
 
 function getDynamicInputMetadata(parameter: JsonRecord, swagger: JsonRecord): DynamicInputMetadata | undefined {
+    if (isConnectorBuiltInTextSuggestion(parameter)) {
+        return undefined;
+    }
     const tree = asRecord(parameter['x-ms-dynamic-tree']);
     if (tree) {
         const open = createInvocationSpec(asRecord(tree.open), tree, swagger);
@@ -464,7 +467,7 @@ function unwrapDynamicInvokeResponse(response: unknown): unknown {
     const outer = asRecord(response);
     const nestedResponse = asRecord(outer?.response);
     const statusCode = nestedResponse?.statusCode ?? outer?.statusCode;
-    if (statusCode !== undefined &&
+    if (statusCode !== undefined && statusCode !== 'OK' &&
         (!/^\d{3}$/.test(String(statusCode)) || Number(statusCode) < 200 || Number(statusCode) >= 300)) {
         throw new ConnectorTriggerF5SetupError(undefined, localize(
             'connectorDynamicInvokeFailed',

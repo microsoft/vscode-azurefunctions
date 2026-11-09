@@ -33,7 +33,7 @@ export function createConnectorTriggerF5Dependencies(
             const { ConnectorTriggerDataClient } = await import('../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient.js');
             const data = new ConnectorTriggerDataClient();
             const scopes: ConnectorTriggerSetupScopes = {
-                listSubscriptions: async () => await data.listSubscriptions(true),
+                listSubscriptions: async (_context, showAll) => await data.listSubscriptions(showAll),
                 getSubscription: async (_context, id) => {
                     const subscription = await data.getSubscriptionContext(id);
                     return {
@@ -46,7 +46,9 @@ export function createConnectorTriggerF5Dependencies(
                     };
                 },
                 listRegions: async (actionContext, id) =>
-                    (await data.listLocations(actionContext, id)).map(location => ({ id: location.name, label: location.label })),
+                    (await data.listLocations(actionContext, id)).map(location => ({
+                        id: location.name, label: location.label, regionCategory: location.regionCategory,
+                    })),
                 signIn: async () => {
                     await commands.executeCommand('azureResourceGroups.logIn');
                     data.invalidateSubscriptions();

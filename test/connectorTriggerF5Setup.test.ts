@@ -74,6 +74,64 @@ const projectMetadata: ConnectorTriggerProjectMetadata = {
 };
 
 suite('Connector Trigger F5 setup', () => {
+    for (const choice of ['Configure', 'Debug Anyway', 'Cancel']) {
+        test(`configuration choice ${choice} is handled before opening connector setup`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-choice-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            const ui = new ScriptedUi([], [], [
+                choice === 'Cancel' ? new UserCancelledError('missingConnectorTriggerSettings') : choice,
+            ]);
+            const context = await createContext(ui);
+            const state = createGatewayState();
+            let setupOpened = false;
+            const fail = async (): Promise<never> => assert.fail('The configuration choice cannot perform setup side effects.');
+            const dependencies = createDependencies(createGateway(state), {
+                resolveOperation: fail,
+                resolveDynamicInput: fail,
+                serializeParameters: () => assert.fail('The configuration choice cannot serialize parameters.'),
+            }, {
+                markComplete: fail,
+                write: fail,
+            });
+            dependencies.openSetup = async () => {
+                assert.strictEqual(ui.warnings.length, 1, 'Confirmation must precede the configuration page.');
+                setupOpened = true;
+                throw new UserCancelledError('connectorF5Setup');
+            };
+
+            try {
+                await AzExtFsExtra.writeJSON(settingsPath, {
+                    IsEncrypted: false,
+                    Values: { UnrelatedSetting: 'keep-this-value' },
+                });
+                const before = await fs.promises.readFile(settingsPath, 'utf8');
+                const validate = () => validateConnectorNamespacePreDebug(context, tempProject, dependencies);
+                if (choice === 'Debug Anyway') {
+                    await validate();
+                    assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
+                } else {
+                    await assert.rejects(validate, error => error instanceof UserCancelledError);
+                }
+
+                assert.strictEqual(setupOpened, choice === 'Configure');
+                assert.strictEqual(ui.warnings.length, 1);
+                assert.deepStrictEqual(ui.warnings[0].options, {
+                    modal: true,
+                    stepName: 'missingConnectorTriggerSettings',
+                });
+                assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
+                assert.match(ui.warnings[0].message, /connector trigger.*configur/i);
+                assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), before);
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+                assert.strictEqual(state.triggerParameters, undefined);
+                ui.assertConsumed();
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+            }
+        });
+    }
+
     test('creates, authenticates, resolves dynamic values, and writes only Poll settings', async () => {
         const ui = new ScriptedUi(
             [
@@ -334,6 +392,98 @@ suite('Connector Trigger F5 setup', () => {
         ]);
     });
 
+    test('accepts the live OK status for dynamic folder results', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        const body = { value: [{ Id: 'inbox-id', DisplayName: 'Inbox' }] };
+        for (const response of [
+            { statusCode: 'OK', body },
+            { response: { statusCode: 'OK', body: JSON.stringify(body) } },
+        ]) {
+            const resolver = createSwaggerResolver(createOutlookSwagger(), () => response);
+            const operation = await resolver.resolveOperation(context, request);
+            const resolution = await resolver.resolveDynamicInput(context, {
+                ...request,
+                operation,
+                input: nonNullValue(operation.inputs.find(input => input.name === 'folderPath')),
+                values: {},
+            });
+            assert.deepStrictEqual(resolution.options, [{ label: 'Inbox', value: 'inbox-id' }]);
+        }
+    });
+
+    test('preserves Outlook built-in address suggestions as typed filters alongside the folder tree', async () => {
+        const resolver = createSwaggerResolver(createOutlookSwagger(true, true));
+        const context = await createContext(new ScriptedUi([], [], []));
+        const operation = await resolver.resolveOperation(context, {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        });
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        assert.strictEqual(folder.dynamic?.kind, 'tree');
+        const addressNames = ['to', 'cc', 'toOrCc', 'from'];
+        const addressInputs = operation.inputs.filter(input => addressNames.includes(input.name));
+        assert.deepStrictEqual(addressInputs.map(input => ({
+            name: input.name,
+            type: input.type,
+            required: input.required,
+            dynamic: input.dynamic,
+        })), addressNames.map(name => ({
+            name,
+            type: 'string',
+            required: false,
+            dynamic: undefined,
+        })));
+        assert.deepStrictEqual(resolver.serializeParameters(operation, addressInputs, {
+            from: 'sender@example.invalid;other@example.invalid',
+        }), [{ name: 'from', value: 'sender@example.invalid;other@example.invalid' }]);
+    });
+
+    test('rejects unsupported or malformed built-in address suggestion metadata', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        const descriptor = {
+            builtInOperation: 'AadGraph.GetUsers',
+            parameters: {},
+            'value-path': 'mail',
+        };
+        for (const metadata of [
+            { ...descriptor, builtInOperation: 'Unknown.Lookup' },
+            { ...descriptor, 'value-path': 'unknown' },
+            { ...descriptor, parameters: { unsupported: true } },
+            { ...descriptor, operationId: 'MissingOperation' },
+            { ...descriptor, dynamicState: {} },
+        ]) {
+            const resolver = createSwaggerResolver(createDynamicValuesSwagger(metadata));
+            await assert.rejects(resolver.resolveOperation(context, request), /unsupported dynamic metadata/i);
+        }
+        const resolver = createSwaggerResolver({
+            paths: {
+                '/event': {
+                    get: {
+                        operationId: target.operationId,
+                        parameters: [{
+                            name: 'from',
+                            in: 'query',
+                            type: 'integer',
+                            'x-ms-dynamic-values': descriptor,
+                        }],
+                    },
+                },
+            },
+        });
+        await assert.rejects(resolver.resolveOperation(context, request), /unsupported dynamic metadata/i);
+    });
+
     test('rejects unavailable event definitions but accepts a known parameterless event', async () => {
         const context = await createContext(new ScriptedUi([], [], []));
         const request = {
@@ -438,6 +588,9 @@ suite('Connector Trigger F5 setup', () => {
         };
         for (const response of [
             { response: { statusCode: '403', body: { error: 'private-response' } } },
+            { response: { statusCode: 'NotFound', body: { value: [{ id: 'inbox-id', name: 'Inbox' }] } } },
+            { response: { statusCode: 'ok', body: { value: [{ id: 'inbox-id', name: 'Inbox' }] } } },
+            { response: { statusCode: 'OK', body: 'private-response' } },
             { response: { statusCode: 200, body: 'private-response' } },
             { response: { statusCode: 200, body: { unexpected: [] } } },
             { response: { statusCode: 200, body: { value: [{ unexpected: 'private-response' }] } } },
@@ -669,7 +822,7 @@ suite('Connector Trigger F5 setup', () => {
         const ui = new ScriptedUi(
             [/Create a new Connector Namespace/, /Create a new connector connection/],
             [],
-            [/Open Sign-in Page/],
+            ['Configure', /Open Sign-in Page/],
         );
         await assert.rejects(
             validateConnectorNamespacePreDebug(await createContext(ui), projectPath, dependencies),
@@ -818,7 +971,7 @@ suite('Connector Trigger F5 setup', () => {
                 /Select this folder/,
             ],
             [],
-            [/Open Sign-in Page/],
+            ['Configure', /Open Sign-in Page/],
         );
         try {
             await AzExtFsExtra.writeFile(path.join(tempProject, 'function.ts'), source);
@@ -964,7 +1117,7 @@ suite('Connector Trigger pre-debug setup review', () => {
         const ui = new ScriptedUi(
             [/Create a new Connector Namespace/, /Create a new connector connection/],
             [],
-            [],
+            ['Configure'],
         );
         const dependencies = createDependencies(gateway, {
             resolveOperation: fail,
@@ -1453,7 +1606,7 @@ function createDependentValuesSwagger(): unknown {
     };
 }
 
-function createOutlookSwagger(includeBrowse = false): unknown {
+function createOutlookSwagger(includeBrowse = false, includeBuiltInSuggestions = false): unknown {
     return {
         paths: {
             '/{connectionId}/v3/Mail/OnNewEmail': {
@@ -1506,6 +1659,17 @@ function createOutlookSwagger(includeBrowse = false): unknown {
                                 } : {}),
                             },
                         },
+                        ...(includeBuiltInSuggestions ? ['to', 'cc', 'toOrCc', 'from'].map(name => ({
+                            name,
+                            in: 'query',
+                            required: false,
+                            type: 'string',
+                            'x-ms-dynamic-values': {
+                                builtInOperation: 'AadGraph.GetUsers',
+                                parameters: {},
+                                'value-path': 'mail',
+                            },
+                        })) : []),
                     ],
                 },
             },
@@ -1589,11 +1753,12 @@ class ScriptedUi {
     public readonly isPrompting = false;
     public readonly isTesting = true;
     public readonly quickPickLabels: string[][] = [];
+    public readonly warnings: { message: string; options: unknown; items: string[] }[] = [];
 
     public constructor(
         private readonly quickPickResponses: (PickResponse | Error)[],
         private readonly inputBoxResponses: string[],
-        private readonly warningResponses: (string | RegExp)[],
+        private readonly warningResponses: (string | RegExp | Error)[],
     ) { }
 
     public async showQuickPick<T>(
@@ -1625,11 +1790,15 @@ class ScriptedUi {
     }
 
     public async showWarningMessage<T extends vscode.MessageItem>(
-        _message: string,
-        _options: unknown,
+        message: string,
+        options: unknown,
         ...items: T[]
     ): Promise<T> {
+        this.warnings.push({ message, options, items: items.map(item => item.title) });
         const response = nonNullValue(this.warningResponses.shift());
+        if (response instanceof Error) {
+            throw response;
+        }
         const selected = findPick(items.map(item => ({ label: item.title, data: item })), response).data;
         this.promptEmitter.fire({ value: selected });
         return selected;

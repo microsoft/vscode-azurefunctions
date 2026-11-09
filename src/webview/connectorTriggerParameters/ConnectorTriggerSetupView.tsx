@@ -5,8 +5,10 @@
 
 /// <reference lib="dom" />
 
+import { Button, Spinner } from '@fluentui/react-components';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useContext, useEffect, useRef, useState, type JSX } from 'react';
+import { AzureContextFields } from '../AzureContextFields';
 import { ConnectorTriggerParameterSection } from './ConnectorTriggerParametersView';
 import {
     isConnectorParameterConfiguration,
@@ -16,6 +18,7 @@ import {
     type ConnectorTriggerParametersViewModel,
 } from './ConnectorTriggerParametersViewModel';
 import {
+    applyConnectorSetupAction,
     isConnectorSetupResponse,
     type ConnectorSetupAction,
     type ConnectorSetupNameField,
@@ -50,16 +53,7 @@ export function ConnectorTriggerSetupView(): JSX.Element {
     }, [vscodeApi]);
     const sendResource = (action: ConnectorSetupAction) => {
         const revision = ++resourceRevision.current;
-        setResources(current => current ? {
-            ...current,
-            canApprove: false,
-            names: action.command === 'editResource' ? { ...current.names, [action.field]: action.text } : current.names,
-            namespaceId: action.command === 'selectNamespace' ? action.id : current.namespaceId,
-            connectionId: action.command === 'selectConnection' ? action.id : current.connectionId,
-            subscriptionId: action.command === 'selectSubscription' ? action.id : current.subscriptionId,
-            regionId: action.command === 'selectSubscription' ? '' : action.command === 'selectRegion' ? action.id : current.regionId,
-            scopeReady: action.command === 'selectSubscription' || action.command === 'selectRegion' ? false : current.scopeReady,
-        } : current);
+        setResources(current => current ? applyConnectorSetupAction(current, action, viewModel.labels.provisioning) : current);
         vscodeApi.postMessage({ ...action, revision });
     };
     const sendParameter = (action: ConnectorParameterAction) => {
@@ -104,6 +98,9 @@ export function ConnectorTriggerSetupPage({
 }): JSX.Element {
     const { labels } = viewModel;
     const locked = !!resources && resources.phase !== 'resources';
+    const working = locked && resources.phase !== 'parameters';
+    const loading = !resources || resources.loading;
+    const status = loading ? labels.loading : resources.status;
     const renderName = (field: ConnectorSetupNameField, label: string, isNew: boolean) => (
         <div className="setup-name-field">
             <label htmlFor={`setup-${field}`}>{label}</label>
@@ -128,32 +125,36 @@ export function ConnectorTriggerSetupPage({
                 <div className="gallery-tabs"><span className="parameter-tab">{labels.connectorTriggers}</span></div>
             </header>
             <section className="step-page">
+                {(working || loading) && <div className="setup-progress" role="status" aria-live="polite">
+                    <Spinner size="small" label={status} labelPosition="after" />
+                </div>}
                 <dl className="parameter-context">
                     {context.filter(([, value]) => value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
                 </dl>
                 <h2>{labels.resources}</h2>
                 <p className="parameter-notice">{labels.scopeNotice}</p>
-                <div className="setup-resource-grid">
-                    <div>
-                        <label htmlFor="setup-subscription">{labels.subscription}</label>
-                        <select id="setup-subscription" required value={resources?.subscriptionId ?? ''} disabled={!resources || locked}
-                            onChange={event => sendResource({ command: 'selectSubscription', id: event.target.value })}>
-                            <option value="" disabled>{labels.selectSubscription}</option>
-                            {resources?.subscriptionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="setup-region">{labels.region}</label>
-                        <select id="setup-region" required value={resources?.regionId ?? ''} disabled={!resources?.regionOptions.length || locked || resources.loading}
-                            onChange={event => sendResource({ command: 'selectRegion', id: event.target.value })}>
-                            <option value="" disabled>{labels.selectRegion}</option>
-                            {resources?.regionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-                        </select>
-                    </div>
-                </div>
-                {!locked && <button type="button" disabled={!resources || resources.loading}
-                    onClick={() => sendResource({ command: 'signInSetup' })}>{labels.signIn}</button>}
-                <div className="setup-resource-grid">
+                <AzureContextFields
+                    labels={labels}
+                    subscriptions={resources?.subscriptionOptions ?? []}
+                    selectedSubscriptionId={resources?.subscriptionId ?? ''}
+                    subscriptionsLoading={loading}
+                    showingAllSubscriptions={resources?.showingAllSubscriptions ?? false}
+                    signInRequired={!resources?.subscriptionOptions.length}
+                    signInLabel={labels.signIn}
+                    showSubscriptionIds={false}
+                    subscriptionInputId="setup-subscription"
+                    locations={resources?.regionOptions.map(option => ({ ...option, name: option.id })) ?? []}
+                    selectedRegion={resources?.regionId ?? ''}
+                    locationsLoading={loading}
+                    regionSelectId="setup-region"
+                    disabled={locked}
+                    onRequestSignIn={() => sendResource({ command: 'signInSetup' })}
+                    onShowAllSubscriptions={() => sendResource({ command: 'loadAllSubscriptions' })}
+                    onUseFilteredSubscriptions={() => sendResource({ command: 'loadFilteredSubscriptions' })}
+                    onSelectSubscription={id => sendResource({ command: 'selectSubscription', id })}
+                    onSelectRegion={id => sendResource({ command: 'selectRegion', id })}
+                />
+                <div className="setup-resource-grid" aria-busy={working || loading}>
                     <div>
                         <label htmlFor="setup-namespace">{labels.namespace}</label>
                         <select id="setup-namespace" value={resources?.namespaceId ?? 'new'} disabled={!resources?.scopeReady || locked || resources.loading}
@@ -172,25 +173,11 @@ export function ConnectorTriggerSetupPage({
                         {renderName('connectionName', labels.connectionName, resources?.connectionIsNew === true)}
                     </div>
                 </div>
-                <p role="status" aria-live="polite">{!resources || resources.loading ? labels.loading : resources.status}</p>
+                {!working && !loading && <p role="status" aria-live="polite">{status}</p>}
                 {locked && <p className="parameter-notice">{labels.resourceChoicesLocked}</p>}
                 {resources?.error && <p className="parameter-error" role="alert">{resources.error}</p>}
                 {!locked && resources?.error && <button type="button" disabled={resources.loading}
                     onClick={() => sendResource({ command: 'reloadSetup' })}>{labels.retry}</button>}
-                <details className="setup-review-table">
-                    <summary>{labels.details}</summary>
-                    <table>
-                        <caption className="setup-review-caption">{labels.resources}</caption>
-                        <thead><tr><th scope="col">{labels.resource}</th><th scope="col">{labels.action}</th><th scope="col">{labels.details}</th></tr></thead>
-                        <tbody>{resources?.resources.map(resource => (
-                            <tr key={resource.type}>
-                                <th scope="row"><strong>{resource.name}</strong><code>{resource.type}</code></th>
-                                <td>{resource.action}</td>
-                                <td>{resource.detail}</td>
-                            </tr>
-                        ))}</tbody>
-                    </table>
-                </details>
                 <h2>{labels.localSettings}</h2>
                 <div className="setup-review-table">
                     <table>
@@ -206,9 +193,10 @@ export function ConnectorTriggerSetupPage({
                     </table>
                 </div>
                 <p className="parameter-notice">{labels.notice}</p>
-                {!locked && <div className="parameter-actions">
-                    <button className="parameter-primary" type="button" disabled={!resources?.canApprove}
-                        onClick={() => sendResource({ command: 'approveSetup' })}>{labels.approve}</button>
+                {(!locked || working) && <div className="parameter-actions">
+                    <Button className="parameter-primary" appearance="primary" type="button" disabled={working || !resources?.canApprove}
+                        icon={working ? <Spinner size="tiny" aria-hidden="true" /> : undefined}
+                        onClick={() => sendResource({ command: 'approveSetup' })}>{working ? labels.working : labels.approve}</Button>
                 </div>}
                 {parameterModel ? <ConnectorTriggerParameterSection
                     viewModel={parameterModel} state={parameters} send={sendParameter}
@@ -218,7 +206,7 @@ export function ConnectorTriggerSetupPage({
                         <p className="parameter-notice">{labels.parametersLocked}</p>
                     </section>}
                 <div className="parameter-actions">
-                    <button type="button" onClick={cancel}>{labels.cancel}</button>
+                    <Button type="button" onClick={cancel}>{labels.cancel}</Button>
                 </div>
             </section>
         </main>

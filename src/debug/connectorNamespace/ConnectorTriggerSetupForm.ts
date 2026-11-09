@@ -27,11 +27,12 @@ import { createConnectorTriggerResourceNames } from './connectorTriggerF5Setup';
 
 export class ConnectorTriggerSetupForm {
     private readonly subscriptionOptions = new Map<string, { id: string; label: string }>();
-    private readonly regionOptions = new Map<string, { id: string; label: string }>();
+    private readonly regionOptions = new Map<string, { id: string; label: string; regionCategory?: string }>();
     private subscriptionId = '';
     private regionId = '';
     private subscription?: ConnectorTriggerSetupTarget['subscription'];
     private subscriptionsLoaded = false;
+    private showingAllSubscriptions = false;
     private defaults?: ConnectorTriggerResourceNames;
     private namespaces: ConnectorTriggerNamespace[] = [];
     private connections: ConnectorTriggerConnection[] = [];
@@ -70,9 +71,10 @@ export class ConnectorTriggerSetupForm {
             phase: this.phase,
             status: setupStatus(this.phase),
             loading: this.loading,
+            showingAllSubscriptions: this.showingAllSubscriptions,
             subscriptionOptions: [...this.subscriptionOptions].map(([id, option]) => ({ id, label: option.label })),
             subscriptionId: this.subscriptionId,
-            regionOptions: [...this.regionOptions].map(([id, option]) => ({ id, label: option.label })),
+            regionOptions: [...this.regionOptions].map(([id, option]) => ({ id, label: option.label, regionCategory: option.regionCategory })),
             regionId: this.regionId,
             scopeReady: !!this.target,
             tenant: this.subscription?.tenantId,
@@ -95,7 +97,6 @@ export class ConnectorTriggerSetupForm {
                 connectionName: connection?.name ?? this.names.connectionName,
             },
             errors,
-            resources: plan ? resourceSummary(plan) : [],
             canApprove: !!plan && this.phase === 'resources' && this.initialized && !this.loading &&
                 !this.error && !this.loadError && Object.keys(errors).length === 0,
             error: this.error ?? this.loadError,
@@ -148,6 +149,10 @@ export class ConnectorTriggerSetupForm {
         }
         this.error = undefined;
         switch (message.command) {
+            case 'loadAllSubscriptions':
+            case 'loadFilteredSubscriptions':
+                await this.loadSubscriptions(message.command === 'loadAllSubscriptions');
+                return undefined;
             case 'reloadSetup':
                 if (this.target) {
                     await this.loadNamespaces();
@@ -289,7 +294,7 @@ export class ConnectorTriggerSetupForm {
         this.connectionOptions.clear();
     }
 
-    private async loadSubscriptions(): Promise<void> {
+    private async loadSubscriptions(showAll = this.showingAllSubscriptions): Promise<void> {
         const previous = this.subscriptionOptions.get(this.subscriptionId);
         const previousRegion = this.regionOptions.get(this.regionId)?.id;
         const generation = ++this.generation;
@@ -302,11 +307,12 @@ export class ConnectorTriggerSetupForm {
         this.loadError = undefined;
         this.notify();
         try {
-            const subscriptions = await this.scopes.listSubscriptions(this.context);
+            const subscriptions = await this.scopes.listSubscriptions(this.context, showAll);
             if (this.disposed || generation !== this.generation) {
                 return;
             }
             this.subscriptionOptions.clear();
+            this.showingAllSubscriptions = showAll;
             for (const option of subscriptions) {
                 maskValue(this.context, option.id);
                 maskValue(this.context, option.label);
@@ -380,6 +386,7 @@ export class ConnectorTriggerSetupForm {
         const generation = ++this.generation;
         this.loading = true;
         this.error = undefined;
+        this.loadError = undefined;
         this.notify();
         try {
             await this.scopes.signIn(this.context);
@@ -508,53 +515,13 @@ function invalidResourceSelection(): string {
 
 function setupStatus(phase: ConnectorSetupResourceState['phase']): string {
     switch (phase) {
-        case 'resources': return localize('connectorSetupChooseResources', 'Choose a subscription, region and resources, then review the planned changes.');
+        case 'resources': return localize('connectorSetupChooseResources', 'Choose a subscription, region and resources, then set up and authenticate.');
         case 'provisioning': return localize('connectorSetupProvisioning', 'Setting up the namespace and connector connection...');
         case 'authenticating': return localize('connectorSetupAuthenticating', 'Authenticating and authorizing the connector connection...');
         case 'loadingParameters': return localize('connectorSetupLoadingParameters', 'Loading event parameters from the connector...');
         case 'parameters': return localize('connectorSetupAuthenticated', 'Authenticated. Configure the event parameters below.');
         case 'saving': return localize('connectorSetupSaving', 'Saving Trigger Config and local settings...');
     }
-}
-
-function resourceSummary(plan: ConnectorTriggerSetupPlan): ConnectorSetupResourceState['resources'] {
-    const reuse = localize('connectorSetupReuse', 'Reuse');
-    const create = localize('connectorSetupCreate', 'Create');
-    const update = localize('connectorSetupUpdate', 'Create or update');
-    return [
-        {
-            name: plan.namespace.kind === 'existing' ? plan.namespace.namespace.resourceGroupName : plan.namespace.resourceGroupName,
-            type: 'Microsoft.Resources/resourceGroups',
-            action: plan.namespace.kind === 'existing' ? reuse : localize('connectorSetupEnsure', 'Create if missing'),
-            detail: localize('connectorSetupResourceGroupDetail', 'Contains the selected Connector Namespace.'),
-        },
-        {
-            name: plan.namespace.kind === 'existing' ? plan.namespace.namespace.name : plan.namespace.namespaceName,
-            type: 'Microsoft.Web/connectorGateways',
-            action: plan.namespace.kind === 'existing' ? reuse : create,
-            detail: plan.namespace.kind === 'existing' ?
-                localize('connectorSetupReuseNamespace', 'Use the existing namespace and its managed identity.') :
-                localize('connectorSetupCreateNamespace', 'Ensure Microsoft.Web is registered, then create in the selected region with a system-assigned managed identity.'),
-        },
-        {
-            name: plan.connection.kind === 'existing' ? plan.connection.connection.name : plan.connection.connectionName,
-            type: 'Microsoft.Web/connectorGateways/connections',
-            action: plan.connection.kind === 'existing' ? reuse : create,
-            detail: localize('connectorSetupConnectionDetail', 'Browser sign-in is requested only if authentication is needed.'),
-        },
-        {
-            name: 'namespace-trigger-runtime, local-developer',
-            type: 'Microsoft.Web/connectorGateways/connections/accessPolicies',
-            action: update,
-            detail: localize('connectorSetupAccessDetail', 'Authorize the namespace runtime identity and the connection developer identity.'),
-        },
-        {
-            name: plan.triggerConfigName,
-            type: 'Microsoft.Web/connectorGateways/triggerConfigs',
-            action: update,
-            detail: localize('connectorSetupTriggerDetail', 'Configure the selected polling event only after you apply its parameters.'),
-        },
-    ];
 }
 
 export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSetupRequest): ConnectorTriggerSetupViewModel {
@@ -580,14 +547,12 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             cloud: localize('connectorSetupCloud', 'Azure cloud'),
             region: localize('connectorSetupRegion', 'Region'),
             resources: localize('connectorSetupResources', 'Azure resources'),
-            resource: localize('connectorSetupResource', 'Resource'),
             action: localize('connectorSetupAction', 'Action'),
-            details: localize('connectorSetupDetails', 'Planned changes'),
             localSettings: localize('connectorSetupLocalSettings', 'Computed local settings'),
             setting: localize('connectorSetupSetting', 'Setting key'),
             valueSource: localize('connectorSetupValueSource', 'Value source'),
             environmentOverride: localize('connectorSetupEnvironmentOverride', 'An environment variable overrides this key. Setup does not change environment variables.'),
-            notice: localize('connectorSetupNotice', 'Set up and authenticate approves the listed resource and access-policy changes. Your browser may open for sign-in. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Existing setting values are hidden, unrelated settings and source are preserved. Cancelling later keeps any Azure resources already created.'),
+            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and authorizes the namespace runtime and connection developer identities. Your browser may open for sign-in. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Existing setting values are hidden, unrelated settings and source are preserved. Cancelling later keeps any Azure resources already created.'),
             approve: localize('connectorSetupApprove', 'Set up and authenticate'),
             cancel: localize('connectorSetupCancel', 'Cancel setup'),
             namespace: localize('connectorSetupNamespace', 'Connector Namespace'),
@@ -599,8 +564,16 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             parametersLocked: localize('connectorSetupParametersLocked', 'Set up and authenticate the connection above to load this event\'s inputs and account-specific choices here.'),
             resourceChoicesLocked: localize('connectorSetupResourceChoicesLocked', 'Resource choices are locked because setup has started. Cancel and restart debugging to change them.'),
             loading: localize('connectorSetupLoading', 'Loading Azure resources...'),
+            working: localize('connectorSetupWorking', 'Working...'),
+            provisioning: setupStatus('provisioning'),
+            loadingSubscriptions: localize('connectorSetupLoadingSubscriptions', 'Loading subscriptions...'),
+            loadingRegions: localize('connectorSetupLoadingRegions', 'Loading regions...'),
+            recommendedRegions: localize('connectorSetupRecommendedRegions', 'Recommended'),
+            otherRegions: localize('connectorSetupOtherRegions', 'Other'),
             retry: localize('connectorSetupReload', 'Reload Azure resources'),
             selectSubscription: localize('connectorSetupSelectSubscription', 'Select a subscription'),
+            showAllSubscriptions: localize('connectorTriggerShowAllSubscriptions', 'Show all subscriptions'),
+            useFilteredSubscriptions: localize('connectorTriggerUseFilteredSubscriptions', 'Use filtered subscriptions'),
             selectRegion: localize('connectorSetupSelectRegion', 'Select a region'),
             signIn: localize('connectorSetupSignIn', 'Sign in to Azure'),
             scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. This subscription and region are used only for this setup and are not saved to the project setting.'),

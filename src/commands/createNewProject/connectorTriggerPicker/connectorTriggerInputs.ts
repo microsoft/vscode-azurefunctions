@@ -326,9 +326,26 @@ function combineVisibility(
     return visibility || inheritedVisibility;
 }
 
+export function isConnectorBuiltInTextSuggestion(value: unknown): boolean {
+    const parameter = asRecord(value);
+    const descriptor = asRecord(parameter?.['x-ms-dynamic-values']);
+    const parameters = asRecord(descriptor?.parameters);
+    // Designer address suggestions do not define a connector operation; their input remains a string.
+    return (parameter?.type === 'string' || asRecord(parameter?.schema)?.type === 'string') &&
+        descriptor?.builtInOperation === 'AadGraph.GetUsers' &&
+        descriptor.operationId === undefined &&
+        descriptor.dynamicState === undefined &&
+        descriptor['value-path'] === 'mail' &&
+        parameters !== undefined && Object.keys(parameters).length === 0 &&
+        !parameter?.['x-ms-dynamic-list'] &&
+        !parameter?.['x-ms-dynamic-tree'] &&
+        !parameter?.['x-ms-dynamic-schema'] &&
+        !parameter?.['x-ms-dynamic-properties'];
+}
+
 function hasDynamicMetadata(value: JsonRecord | undefined): boolean {
     return !!value && (
-        !!value['x-ms-dynamic-values'] ||
+        !!value['x-ms-dynamic-values'] && !isConnectorBuiltInTextSuggestion(value) ||
         !!value['x-ms-dynamic-list'] ||
         !!value['x-ms-dynamic-tree'] ||
         !!value['x-ms-dynamic-schema'] ||

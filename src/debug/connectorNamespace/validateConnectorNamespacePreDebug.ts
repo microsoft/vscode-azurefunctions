@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, UserCancelledError, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createConnectorNamespace } from '../../commands/createFunction/connectorSteps/createConnectorNamespace';
@@ -52,6 +52,25 @@ export async function validateConnectorNamespacePreDebug(
                     await dependencies.projectStore.markComplete(projectPath);
                     context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
                     return;
+                }
+
+                const configure: vscode.MessageItem = { title: localize('configureConnectorTrigger', 'Configure') };
+                const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
+                const result = await context.ui.showWarningMessage(
+                    localize(
+                        'connectorTriggerConfigurationRequiredForDebug',
+                        "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
+                    ),
+                    { modal: true, stepName: 'missingConnectorTriggerSettings' },
+                    configure,
+                    debugAnyway,
+                );
+                if (result === debugAnyway) {
+                    context.telemetry.properties.connectorF5SetupResult = 'debugAnyway';
+                    return;
+                }
+                if (result !== configure) {
+                    throw new UserCancelledError('missingConnectorTriggerSettings');
                 }
 
                 await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);

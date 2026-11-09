@@ -49,6 +49,42 @@ import { type IProjectTemplate, type TemplateCategory } from '../../src/template
 import { type ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
 
 suite('Connector trigger picker', () => {
+    test('keeps known built-in address suggestions as typed inputs without suppressing real dynamic metadata', () => {
+        const descriptor = {
+            builtInOperation: 'AadGraph.GetUsers',
+            parameters: {},
+            'value-path': 'mail',
+        };
+        const inputs = parseConnectorInputsDefinition({
+            parameters: [{
+                name: 'from',
+                in: 'query',
+                type: 'string',
+                required: true,
+                'x-ms-dynamic-values': descriptor,
+            }, {
+                name: 'folder',
+                in: 'query',
+                type: 'string',
+                'x-ms-dynamic-values': { operationId: 'ListFolders' },
+            }, {
+                name: 'unsupported',
+                in: 'query',
+                type: 'string',
+                'x-ms-dynamic-values': { ...descriptor, builtInOperation: 'Unknown.Lookup' },
+            }],
+        });
+        assert.deepStrictEqual(inputs?.map(input => ({
+            name: input.name,
+            required: input.required,
+            dynamic: input.dynamic,
+        })), [
+            { name: 'from', required: true, dynamic: false },
+            { name: 'folder', required: false, dynamic: true },
+            { name: 'unsupported', required: false, dynamic: true },
+        ]);
+    });
+
     test('lists Connector Namespaces across subscriptions with paging and partial failure', async () => {
         const requests: string[] = [];
         const client = new ConnectorTriggerDataClient(

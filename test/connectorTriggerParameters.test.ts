@@ -22,6 +22,7 @@ import {
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { ConnectorTriggerSetupPage } from '../src/webview/connectorTriggerParameters/ConnectorTriggerSetupView';
 import {
+    applyConnectorSetupAction,
     isConnectorSetupMessage,
     type ConnectorSetupAction,
     type ConnectorSetupResourceState,
@@ -254,9 +255,6 @@ suite('Connector Trigger parameter webview', () => {
         const fixture = await createSetupForm();
         await fixture.initialize();
         const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
-        assert.deepStrictEqual(fixture.form.state.resources.map(resource => resource.action), [
-            'Create if missing', 'Create', 'Create', 'Create or update', 'Create or update',
-        ]);
         assert.deepStrictEqual(viewModel.localSettings.map(setting => setting.action), ['Add key', 'Set existing key']);
         const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
             viewModel, resources: fixture.form.state,
@@ -268,7 +266,10 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /setup-region/);
         assert.match(html, /fixture-tenant/);
         assert.match(html, /OnNewEmailV3/);
-        assert.match(html, /Microsoft.Web\/connectorGateways\/connections/);
+        assert.doesNotMatch(html, /Planned changes|planned changes|<details/);
+        assert.doesNotMatch(html, /subscription-\d+/);
+        assert.strictEqual((html.match(/class="setup-review-table"/g) ?? []).length, 1);
+        assert.match(html, /authorizes the namespace runtime and connection developer identities/);
         assert.match(html, /CustomConnection__pollingEndpoint/);
         assert.match(html, /CustomTriggerConfig/);
         assert.match(html, /environment variable overrides this key/i);
@@ -286,9 +287,210 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /https:\/\/management|receiveUri|consent\?/);
         assert.doesNotMatch(html, /<input[^>]*(?:CustomTriggerConfig|pollingEndpoint)/);
     });
+
+    test('reuses searchable Azure context fields without a permanent sign-in button while signed out or authenticated', async () => {
+        for (const subscriptions of [[], [{ id: 'opaque-subscription', label: 'Authenticated subscription' }]]) {
+            const fixture = await createSetupForm(undefined, createSetupScopes({ listSubscriptions: async () => subscriptions }));
+            await fixture.initialize(false);
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.match(html, /class="azure-context-fields"/);
+            assert.match(html, /role="combobox"/);
+            assert.doesNotMatch(html, /<select[^>]*id="setup-subscription"/);
+            assert.doesNotMatch(html, /<button[^>]*>Sign in to Azure/);
+            assert.match(html, /id="setup-region"[^>]*disabled/);
+            assert.doesNotMatch(html, /Planned changes/);
+        }
+    });
+
+    test('immediately shows busy approval feedback before receiving a host reply and preserves the resource choices', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize();
+        const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
+        const before = fixture.form.state;
+        const resources = applyConnectorSetupAction(before, { command: 'approveSetup' }, viewModel.labels.provisioning);
+        assert.strictEqual(resources.phase, 'provisioning');
+        assert.strictEqual(resources.canApprove, false);
+        assert.strictEqual(resources.status, viewModel.labels.provisioning);
+        assert.deepStrictEqual(resources.names, before.names);
+        assert.strictEqual(before.phase, 'resources');
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel, resources,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.match(html, /class="setup-progress" role="status" aria-live="polite"/);
+        assert.match(html, /role="progressbar"/);
+        assert.match(html, /Setting up the namespace and connector connection/);
+        assert.match(html, /aria-busy="true"/);
+        assert.match(html, /Working\.\.\./);
+        const button = html.match(/<button\b[^>]*class="[^"]*parameter-primary[^"]*"[^>]*>[\s\S]*?<\/button>/)?.[0];
+        assert.ok(button);
+        assert.match(button, /disabled=""/);
+        assert.match(html, /Cancel setup/);
+        assert.doesNotMatch(html, /Set up and authenticate<\/button>/);
+    });
+
+    test('announces every setup phase, leaves cancellation available and stops spinning when parameters are ready', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize();
+        await fixture.send({ command: 'approveSetup' });
+        for (const phase of ['provisioning', 'authenticating', 'loadingParameters', 'saving', 'parameters'] as const) {
+            fixture.form.setStatus(phase);
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.ok(html.includes(fixture.form.state.status));
+            assert.match(html, /Cancel setup/);
+            assert.match(html, /id="setup-namespace" disabled=""/);
+            if (phase === 'parameters') {
+                assert.doesNotMatch(html, /setup-progress|role="progressbar"|Working\.\.\./);
+            } else {
+                assert.match(html, /class="setup-progress" role="status"/);
+                assert.match(html, /role="progressbar"/);
+                assert.match(html, /Working\.\.\./);
+            }
+        }
+    });
+
+    test('shows loading immediately for sign-in and reload without changing the editable phase', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize(false);
+        const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
+        for (const command of ['signInSetup', 'reloadSetup'] as const) {
+            const resources = applyConnectorSetupAction({ ...fixture.form.state, error: 'Previous load failure' }, { command }, viewModel.labels.provisioning);
+            assert.strictEqual(resources.loading, true);
+            assert.strictEqual(resources.phase, 'resources');
+            assert.strictEqual(resources.canApprove, false);
+            assert.strictEqual(resources.error, undefined);
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel, resources,
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.match(html, /class="setup-progress" role="status"/);
+            assert.match(html, /Loading Azure resources/);
+        }
+    });
+
+    test('carries shared Recommended region metadata without exposing real region IDs', async () => {
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listRegions: async () => [
+                { id: 'eastus', label: 'East US', regionCategory: 'Recommended' },
+                { id: 'westus', label: 'West US', regionCategory: 'Other' },
+            ],
+        }));
+        await fixture.initialize();
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.match(html, /<optgroup label="Recommended">.*East US.*<\/optgroup><optgroup label="Other">.*West US/s);
+        assert.doesNotMatch(html, /value="eastus"|value="westus"/);
+    });
 });
 
 suite('Connector Trigger editable setup webview', () => {
+    test('uses the Azure subscription filter by default, switches lists and preserves a still-visible scope', async () => {
+        const modes: boolean[] = [];
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async (_context, showAll) => {
+                modes.push(showAll);
+                return [
+                    { id: 'fixture-subscription', label: 'Fixture subscription' },
+                    ...(showAll ? [{ id: 'hidden-subscription', label: 'Hidden subscription' }] : []),
+                ];
+            },
+        }));
+        await fixture.initialize();
+        assert.deepStrictEqual(modes, [false]);
+        assert.strictEqual(fixture.form.state.showingAllSubscriptions, false);
+        assert.strictEqual(fixture.form.state.scopeReady, true);
+        await fixture.send({ command: 'loadAllSubscriptions' });
+        assert.deepStrictEqual(modes, [false, true]);
+        assert.strictEqual(fixture.form.state.showingAllSubscriptions, true);
+        assert.strictEqual(fixture.form.state.scopeReady, true);
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        assert.strictEqual(fixture.form.state.subscriptionOptions.length, 2);
+        await fixture.send({ command: 'loadFilteredSubscriptions' });
+        assert.deepStrictEqual(modes, [false, true, false]);
+        assert.strictEqual(fixture.form.state.showingAllSubscriptions, false);
+        assert.strictEqual(fixture.form.state.scopeReady, true);
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        assert.strictEqual(fixture.form.state.subscriptionOptions.length, 1);
+    });
+
+    test('clears a selected scope excluded by the Azure subscription filter and prevents approval', async () => {
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async (_context, showAll) => showAll ?
+                [{ id: 'fixture-subscription', label: 'Excluded subscription' }] : [],
+        }));
+        await fixture.initialize(false);
+        assert.strictEqual(fixture.form.state.subscriptionOptions.length, 0);
+        assert.strictEqual(fixture.form.state.showingAllSubscriptions, false);
+        await fixture.send({ command: 'loadAllSubscriptions' });
+        await fixture.send({ command: 'selectSubscription', id: fixture.form.state.subscriptionOptions[0].id });
+        await fixture.send({ command: 'selectRegion', id: fixture.form.state.regionOptions[0].id });
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        await fixture.send({ command: 'loadFilteredSubscriptions' });
+        assert.strictEqual(fixture.form.state.subscriptionId, '');
+        assert.strictEqual(fixture.form.state.regionId, '');
+        assert.strictEqual(fixture.form.state.tenant, undefined);
+        assert.strictEqual(fixture.form.state.scopeReady, false);
+        assert.strictEqual(fixture.form.state.canApprove, false);
+        assert.strictEqual(fixture.form.state.error, undefined);
+    });
+
+    test('ignores stale subscription-mode responses and retains the last successful mode on failure', async () => {
+        let finishAll: ((subscriptions: { id: string; label: string }[]) => void) | undefined;
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async (_context, showAll) => showAll ?
+                await new Promise(resolve => { finishAll = resolve; }) :
+                [{ id: 'fixture-subscription', label: 'Filtered subscription' }],
+        }));
+        await fixture.initialize(false);
+        const pending = fixture.send({ command: 'loadAllSubscriptions' });
+        assert.ok(finishAll);
+        await fixture.send({ command: 'loadFilteredSubscriptions' });
+        finishAll([{ id: 'stale-subscription', label: 'Stale all subscription' }]);
+        await pending;
+        assert.strictEqual(fixture.form.state.showingAllSubscriptions, false);
+        assert.deepStrictEqual(fixture.form.state.subscriptionOptions.map(option => option.label), ['Filtered subscription']);
+
+        const failed = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async (_context, showAll) => {
+                if (showAll) {
+                    throw new Error('private-subscription-error');
+                }
+                return [];
+            },
+        }));
+        await failed.initialize(false);
+        await failed.send({ command: 'loadAllSubscriptions' });
+        assert.strictEqual(failed.form.state.showingAllSubscriptions, false);
+        assert.strictEqual(failed.form.state.canApprove, false);
+        assert.match(failed.form.state.error ?? '', /could not be loaded/i);
+        assert.doesNotMatch(JSON.stringify(failed.form.state), /private-subscription-error/);
+    });
+
+    test('accepts both subscription-mode actions and immediately disables the dropdown during reload', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize(false);
+        const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
+        for (const command of ['loadAllSubscriptions', 'loadFilteredSubscriptions'] as const) {
+            assert.strictEqual(isConnectorSetupMessage({ command, revision: 1 }), true);
+            const state = applyConnectorSetupAction(fixture.form.state, { command }, viewModel.labels.provisioning);
+            assert.strictEqual(state.loading, true);
+            assert.strictEqual(state.canApprove, false);
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel, resources: state,
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.match(html, /id="setup-subscription"[^>]*disabled/);
+        }
+    });
+
     test('requires explicit subscription and supported-region choices before any resource lookup or approval', async () => {
         const targets: { subscription: string; region: string }[] = [];
         const fixture = await createSetupForm({
@@ -402,8 +604,11 @@ suite('Connector Trigger editable setup webview', () => {
         assert.doesNotMatch(JSON.stringify(fixture.form.state), /private-subscription-response/);
         assert.strictEqual(fixture.form.state.canApprove, false);
         fails = false;
+        const beforeSignIn = fixture.changes.length;
         await fixture.send({ command: 'signInSetup' });
         assert.strictEqual(signIns, 1);
+        assert.strictEqual(fixture.changes[beforeSignIn].loading, true);
+        assert.strictEqual(fixture.changes[beforeSignIn].error, undefined);
         assert.strictEqual(fixture.form.state.error, undefined);
         assert.strictEqual(fixture.form.state.subscriptionId, '');
         assert.strictEqual(fixture.form.state.regionId, '');

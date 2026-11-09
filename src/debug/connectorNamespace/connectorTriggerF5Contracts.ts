@@ -321,9 +321,9 @@ export interface ConnectorTriggerSetupRequest {
 }
 
 export interface ConnectorTriggerSetupScopes {
-    listSubscriptions(context: IActionContext): Promise<{ id: string; label: string }[]>;
+    listSubscriptions(context: IActionContext, showAll: boolean): Promise<{ id: string; label: string }[]>;
     getSubscription(context: IActionContext, id: string): Promise<ConnectorTriggerSetupTarget['subscription']>;
-    listRegions(context: IActionContext, subscriptionId: string): Promise<{ id: string; label: string }[]>;
+    listRegions(context: IActionContext, subscriptionId: string): Promise<{ id: string; label: string; regionCategory?: string }[]>;
     signIn(context: IActionContext): Promise<void>;
 }
 

@@ -31,9 +31,9 @@ import {
     AzureContextFields,
     filterSubscriptionOptions,
     getSubscriptionModeActionLabel,
-    shouldPreserveSubscriptionSelection,
     shouldRequestAzureSignIn,
-} from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
+} from '../../src/webview/AzureContextFields';
+import { shouldPreserveSubscriptionSelection } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     reconcileConnectorTriggerSelection,
 } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';

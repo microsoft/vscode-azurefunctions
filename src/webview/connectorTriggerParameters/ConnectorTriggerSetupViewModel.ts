@@ -25,9 +25,7 @@ export interface ConnectorTriggerSetupViewModel {
         cloud: string;
         region: string;
         resources: string;
-        resource: string;
         action: string;
-        details: string;
         localSettings: string;
         setting: string;
         valueSource: string;
@@ -44,8 +42,16 @@ export interface ConnectorTriggerSetupViewModel {
         parametersLocked: string;
         resourceChoicesLocked: string;
         loading: string;
+        working: string;
+        provisioning: string;
+        loadingSubscriptions: string;
+        loadingRegions: string;
+        recommendedRegions: string;
+        otherRegions: string;
         retry: string;
         selectSubscription: string;
+        showAllSubscriptions: string;
+        useFilteredSubscriptions: string;
         selectRegion: string;
         signIn: string;
         scopeNotice: string;
@@ -55,6 +61,7 @@ export interface ConnectorTriggerSetupViewModel {
 export interface ConnectorSetupResourceOption {
     id: string;
     label: string;
+    regionCategory?: string;
 }
 
 export type ConnectorSetupNameField = 'resourceGroupName' | 'namespaceName' | 'connectionName';
@@ -63,6 +70,7 @@ export interface ConnectorSetupResourceState {
     revision: number;
     phase: 'resources' | ConnectorTriggerSetupStatus;
     loading: boolean;
+    showingAllSubscriptions: boolean;
     status: string;
     subscriptionOptions: ConnectorSetupResourceOption[];
     subscriptionId: string;
@@ -79,7 +87,6 @@ export interface ConnectorSetupResourceState {
     connectionIsNew: boolean;
     names: Record<ConnectorSetupNameField, string>;
     errors: Partial<Record<ConnectorSetupNameField, string>>;
-    resources: { name: string; type: string; action: string; detail: string }[];
     canApprove: boolean;
     error?: string;
 }
@@ -87,11 +94,34 @@ export interface ConnectorSetupResourceState {
 export type ConnectorSetupAction =
     | { command: 'selectSubscription' | 'selectRegion' | 'selectNamespace' | 'selectConnection'; id: string }
     | { command: 'editResource'; field: ConnectorSetupNameField; text: string }
-    | { command: 'approveSetup' | 'reloadSetup' | 'signInSetup' };
+    | { command: 'approveSetup' | 'reloadSetup' | 'signInSetup' | 'loadAllSubscriptions' | 'loadFilteredSubscriptions' };
 
 export type ConnectorSetupMessage =
     | { command: 'initializeSetup' }
     | (ConnectorSetupAction & { revision: number });
+
+export function applyConnectorSetupAction(
+    current: ConnectorSetupResourceState,
+    action: ConnectorSetupAction,
+    provisioningStatus: string,
+): ConnectorSetupResourceState {
+    const loadingSubscriptions = action.command === 'signInSetup' || action.command === 'reloadSetup' ||
+        action.command === 'loadAllSubscriptions' || action.command === 'loadFilteredSubscriptions';
+    return {
+        ...current,
+        canApprove: false,
+        phase: action.command === 'approveSetup' ? 'provisioning' : current.phase,
+        status: action.command === 'approveSetup' ? provisioningStatus : current.status,
+        loading: loadingSubscriptions || current.loading,
+        error: loadingSubscriptions ? undefined : current.error,
+        names: action.command === 'editResource' ? { ...current.names, [action.field]: action.text } : current.names,
+        namespaceId: action.command === 'selectNamespace' ? action.id : current.namespaceId,
+        connectionId: action.command === 'selectConnection' ? action.id : current.connectionId,
+        subscriptionId: action.command === 'selectSubscription' ? action.id : current.subscriptionId,
+        regionId: action.command === 'selectSubscription' ? '' : action.command === 'selectRegion' ? action.id : current.regionId,
+        scopeReady: action.command === 'selectSubscription' || action.command === 'selectRegion' ? false : current.scopeReady,
+    };
+}
 
 export function isConnectorSetupMessage(value: unknown): value is ConnectorSetupMessage {
     if (!value || typeof value !== 'object' || !('command' in value)) {
@@ -107,6 +137,8 @@ export function isConnectorSetupMessage(value: unknown): value is ConnectorSetup
         case 'approveSetup':
         case 'reloadSetup':
         case 'signInSetup':
+        case 'loadAllSubscriptions':
+        case 'loadFilteredSubscriptions':
             return true;
         case 'selectSubscription':
         case 'selectRegion':
