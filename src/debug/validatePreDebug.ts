@@ -18,7 +18,6 @@ import { durableUtils } from '../utils/durableUtils';
 import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
-import { validateConnectorNamespacePreDebug } from './connectorNamespace/validateConnectorNamespacePreDebug';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
 import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
@@ -49,7 +48,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            context.projectPath = await tryGetFunctionProjectRoot(context, workspace, 'modalPrompt');
+            context.projectPath = await tryGetFunctionProjectRoot(context, workspace);
 
             if (context.projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
@@ -65,9 +64,6 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
-
-                context.telemetry.properties.lastValidateStep = 'connectorNamespace';
-                await validateConnectorNamespacePreDebug(context, context.projectPath);
 
                 if (validateEmulators) {
                     switch (durableStorageType) {
