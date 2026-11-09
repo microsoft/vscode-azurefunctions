@@ -3,16 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export interface ConnectorNamespaceOption {
-    id: string;
-    name: string;
-    label: string;
-    location: string;
-    resourceGroup: string;
-    subscriptionId: string;
-    subscriptionName: string;
-}
-
 export interface ConnectorTriggerOption {
     id: string;
     label: string;
@@ -40,33 +30,6 @@ export interface ConnectorTriggerLocationOption {
     regionCategory?: string;
 }
 
-export type ConnectorTriggerInputType =
-    'array' |
-    'boolean' |
-    'integer' |
-    'number' |
-    'object' |
-    'string';
-
-export interface ConnectorTriggerInputOption {
-    label: string;
-    value: string;
-}
-
-export interface ConnectorTriggerInputDefinition {
-    name: string;
-    label: string;
-    description?: string;
-    type: ConnectorTriggerInputType;
-    format?: string;
-    required: boolean;
-    defaultValue?: string | number | boolean;
-    options?: ConnectorTriggerInputOption[];
-    dynamic: boolean;
-    sensitive: boolean;
-    visibility?: string;
-}
-
 export interface ConnectorTriggerOperationOption {
     id: string;
     connectorId: string;
@@ -74,7 +37,6 @@ export interface ConnectorTriggerOperationOption {
     description?: string;
     isWebhook: boolean;
     isNotification: boolean;
-    inputDefinitions?: ConnectorTriggerInputDefinition[];
     availability?: ConnectorTriggerAvailability;
 }
 

@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import { findConnectorProjectTemplates } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorProjectTemplates';
-import { parseConnectorInputsDefinition } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
 import {
     createConnectorTriggerPickerViewModel,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
@@ -122,16 +121,6 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(shouldExpandOtherConnectors('', false), false);
         assert.strictEqual(shouldExpandOtherConnectors('', true), true);
         assert.strictEqual(shouldExpandOtherConnectors('github', false), true);
-    });
-
-    test('distinguishes unavailable input schemas from confirmed empty schemas', () => {
-        assert.strictEqual(parseConnectorInputsDefinition(undefined), undefined);
-        assert.strictEqual(parseConnectorInputsDefinition(null), undefined);
-        assert.strictEqual(parseConnectorInputsDefinition({ type: 'string' }), undefined);
-        assert.deepStrictEqual(
-            parseConnectorInputsDefinition({ type: 'object', properties: {} }),
-            [],
-        );
     });
 
     test('resolves Outlook and SharePoint templates for every supported language', () => {
