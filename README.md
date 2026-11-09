@@ -109,6 +109,20 @@ There are a couple of ways you can contribute to this repo:
   * To build, press <kbd>F1</kbd> and type in `Tasks: Run Build Task`.
   * Debug: press <kbd>F5</kbd> to start debugging the extension.
 
+### Creation and deployment workflow telemetry
+
+This integration uses the published `@microsoft/vscode-azext-utils` 5.1.0 and `@microsoft/vscode-azext-azureappservice` 6.1.0 workflow telemetry APIs from [microsoft/vscode-azuretools#2418](https://github.com/microsoft/vscode-azuretools/pull/2418) and [microsoft/vscode-azuretools#2426](https://github.com/microsoft/vscode-azuretools/pull/2426).
+
+The root events are `azureFunctions.createNewProject`, `azureFunctions.createNewProjectWithDockerfile`, `azureFunctions.templateGallery.createProject`, `azureFunctions.deploy`, `azureFunctions.deployProject`, `azureFunctions.deploySlot`, `azureFunctions.redeploy`, and `azureFunctions.deployByFunctionAppId`. The additive shared schema (`workflowSchemaVersion=1`) identifies the bounded `workflow` and `command`, generated `workflowRunId` and `attemptId`, `isWorkflowRoot`, and observed `stage`/`outcome`. Nested actions have a `parentAttemptId`; deployment stages and real retries are not additional user workflows. Registered literal step identities are independent of wizard runtime UUIDs. Unregistered template-supplied step names remain `unknown`.
+
+Use normalized `outcome`, not the legacy `result`, to distinguish `handedOff` to the gallery, `blocked` on an unavailable prerequisite, genuine `canceled` dismissal, and `failed` pre-deploy tasks. Legacy cancellation control flow is preserved. Gallery launch is not completed project creation, and cannot execute classic creation steps. A failed task followed by "Deploy Anyway" remains a failed task stage, not a failed deployment by itself. Deployment mechanism/status and bounded failure categories distinguish task, CLI, transport, and deployment failures without recording raw messages, output, paths, URLs, resource names, or resource identifiers in the new fields.
+
+For creation-outcome denominators, select `workflow=createProject` and `isWorkflowRoot=true`, exclude `outcome=handedOff`, and exclude started/child/stage records. The explicit gallery Create button starts its own root; its internal operations join that root. Measure launcher engagement separately from actual creation outcomes. This schema does not link the earlier gallery launcher to that later click, so it cannot establish cross-handoff conversion attribution. Missing terminal events and unknown outcomes must not be interpreted as success.
+
+Shared stage events record observed active and extension-owned user-wait duration separately, in seconds. Functions-owned native-dependency and trigger-discovery retries contribute to retry/recovery metadata only when actually invoked. Trigger discovery is awaited and can fail the overall workflow even after `deploymentStatus=succeeded`; bounded `networkCategory` remains separate from that completion failure code. CLI exit or execution failure determines the command outcome, but remote `deploymentStatus` remains `unknown` without an authoritative Azure completion signal. CLI success does not prove Azure trigger/start health. The detached `postDeploy` notification response is correlated as a child; its wait and later work are excluded from the already-emitted root summary. Unobservable signals are unavailable, not fabricated zeros or completion. Payload tests prove instrumentation behavior, not a production failure-rate or diagnostic-coverage improvement.
+
+When opening a newly created project restarts the extension host, cached `postFunctionCreate` diagnostics retain only validated, generated `workflowRunId` and `parentAttemptId` links and `isWorkflowRoot=false`. These replay records do not resume the normalized workflow schema, outcome, or timing, and are not creation attempts or evidence that the original root completed. Legacy cache entries without correlation remain readable and unlinked.
+
 ### Pull requests and reviews
 
 Keep PR descriptions brief:

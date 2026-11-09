@@ -242,7 +242,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (language === ProjectLanguage.Custom && isFlexConsumption) {
         // don't run predeploy tasks and verify settings for a deployment with the CLI
-        await validateFuncCoreToolsInstalled(context, localize('validateFuncCoreToolsCustom', 'The Functions Core Tools are required to deploy to a custom runtime function app.'));
+        if (!await validateFuncCoreToolsInstalled(context, localize('validateFuncCoreToolsCustom', 'The Functions Core Tools are required to deploy to a custom runtime function app.'))) {
+            throw new UserCancelledError('validateFuncCoreToolsInstalled');
+        }
     } else {
         await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 

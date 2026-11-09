@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, nonNullValue, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Uri, window, workspace, type Progress } from 'vscode';
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
@@ -23,9 +23,25 @@ interface ICachedFunction {
     newFilePath: string;
     isHttpTrigger: boolean;
     isMcpTrigger: boolean;
+    workflowCorrelation?: ICachedWorkflowCorrelation;
+}
+
+interface ICachedWorkflowCorrelation {
+    workflowRunId: string;
+    parentAttemptId: string;
 }
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
+
+function isWorkflowCorrelation(value: unknown): value is ICachedWorkflowCorrelation {
+    if (!value || typeof value !== 'object' || !('workflowRunId' in value) || !('parentAttemptId' in value)) {
+        return false;
+    }
+
+    const generatedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+    return [value.workflowRunId, value.parentAttemptId].every(id =>
+        typeof id === 'string' && id.length === 36 && generatedId.test(id));
+}
 
 export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
@@ -70,7 +86,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
-        const newFilePath: string = await this.executeCore(context);
+        const newFilePath = await withTelemetryStage(context, { stage: 'functionCreation' }, async () => this.executeCore(context));
         if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
             context.mcpProjectType = McpProjectType.McpExtensionServer;
@@ -127,7 +143,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             }
         }
 
-        await openCreatedFunction(cachedFunc, !!context.openBehavior);
+        await openCreatedFunction(cachedFunc, !!context.openBehavior, context);
     }
 
     public shouldExecute(context: T): boolean {
@@ -135,7 +151,17 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 }
 
-export async function openCreatedFunction(func: ICachedFunction, cache: boolean): Promise<void> {
+export async function openCreatedFunction(func: ICachedFunction, cache: boolean, parentContext?: IActionContext): Promise<void> {
+    if (parentContext?.telemetry.properties.workflowRunId) {
+        const workflowCorrelation = {
+            workflowRunId: parentContext.telemetry.properties.workflowRunId,
+            parentAttemptId: parentContext.telemetry.properties.attemptId,
+        };
+        if (isWorkflowCorrelation(workflowCorrelation)) {
+            func.workflowCorrelation = workflowCorrelation;
+        }
+    }
+
     if (cache) {
         // OpenFolderStep can restart the extension host, so activation opens the cached file.
         const globalState = ext.context.globalState;
@@ -143,11 +169,20 @@ export async function openCreatedFunction(func: ICachedFunction, cache: boolean)
         setTimeout(() => { void globalState.update(cacheKey, undefined); }, 5 * 1000);
     }
 
-    await runPostFunctionCreateSteps(func);
+    await runPostFunctionCreateSteps(func, parentContext);
 }
 
-async function runPostFunctionCreateSteps(func: ICachedFunction): Promise<void> {
+async function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActionContext): Promise<void> {
     await callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+        if (parentContext?.telemetry.properties.workflowRunId) {
+            initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'unknown' }, parentContext);
+            context.valuesToMask.push(...parentContext.valuesToMask);
+        } else if (isWorkflowCorrelation(func.workflowCorrelation)) {
+            // Restart replay links diagnostics only; the original workflow's outcome and timing cannot be resumed.
+            context.telemetry.properties.workflowRunId = func.workflowCorrelation.workflowRunId;
+            context.telemetry.properties.parentAttemptId = func.workflowCorrelation.parentAttemptId;
+            context.telemetry.properties.isWorkflowRoot = 'false';
+        }
         context.telemetry.suppressIfSuccessful = true;
 
         // If function creation created a new file, open it in an editor...

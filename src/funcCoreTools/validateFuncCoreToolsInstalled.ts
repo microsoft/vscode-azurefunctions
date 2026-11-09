@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, DialogResponses, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, initializeWorkflowTelemetry, setWorkflowOutcome, withTelemetryStage, type IActionContext, type WorkflowTelemetryDetails } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as os from "os";
 import { env, type MessageItem } from 'vscode';
@@ -33,44 +33,60 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     }
 
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (innerContext: IActionContext) => {
+        if (context.telemetry.properties.workflowRunId) {
+            initializeWorkflowTelemetry(innerContext, { workflow: 'unknown', command: 'unknown' }, context);
+        }
         innerContext.errorHandling.suppressDisplay = true;
 
-        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath)) {
-            innerContext.telemetry.properties.validateFuncCoreTools = 'false';
-            installed = true;
-        } else if (await funcToolsInstalled(innerContext, workspacePath)) {
-            installed = true;
-        } else {
-            const items: MessageItem[] = [];
-            const packageManagers: PackageManager[] = await getFuncPackageManagers(false /* isFuncInstalled */);
-            if (packageManagers.length > 0) {
-                items.push(install);
-            } else {
-                items.push(DialogResponses.learnMore);
-            }
-
-            if (os.platform() === 'linux') {
-                const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(!!packageManagers.length /* hasPackageManager */);
-                if (linuxErrorMessages.noPackageManager) {
-                    message += ' ' + linuxErrorMessages.noPackageManager;
-                }
-                if (linuxErrorMessages.failedInstall) {
-                    failedInstall += ' ' + linuxErrorMessages.failedInstall;
-                }
-            }
-
-            // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
-            input = await innerContext.ui.showWarningMessage(message, { modal: true }, ...items);
-            innerContext.telemetry.properties.dialogResult = input.title;
-
-            if (input === install) {
-                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, workspacePath));
-                await installFuncCoreTools(innerContext, packageManagers, version);
+        await withTelemetryStage(innerContext, { stage: 'prerequisites' }, async stage => {
+            if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath)) {
+                innerContext.telemetry.properties.validateFuncCoreTools = 'false';
                 installed = true;
-            } else if (input === DialogResponses.learnMore) {
-                await openUrl(getInstallUrl());
+            } else if (await funcToolsInstalled(innerContext, workspacePath)) {
+                installed = true;
+            } else {
+                try {
+                    const items: MessageItem[] = [];
+                    const packageManagers: PackageManager[] = await getFuncPackageManagers(false /* isFuncInstalled */);
+                    if (packageManagers.length > 0) {
+                        items.push(install);
+                    } else {
+                        items.push(DialogResponses.learnMore);
+                    }
+
+                    if (os.platform() === 'linux') {
+                        const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(!!packageManagers.length /* hasPackageManager */);
+                        if (linuxErrorMessages.noPackageManager) {
+                            message += ' ' + linuxErrorMessages.noPackageManager;
+                        }
+                        if (linuxErrorMessages.failedInstall) {
+                            failedInstall += ' ' + linuxErrorMessages.failedInstall;
+                        }
+                    }
+
+                    // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
+                    input = await innerContext.ui.showWarningMessage(message, { modal: true }, ...items);
+                    innerContext.telemetry.properties.dialogResult = input.title;
+
+                    if (input === install) {
+                        const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, workspacePath));
+                        await installFuncCoreTools(innerContext, packageManagers, version);
+                        installed = true;
+                    } else if (input === DialogResponses.learnMore) {
+                        await openUrl(getInstallUrl());
+                    }
+                } finally {
+                    if (!installed) {
+                        const details: WorkflowTelemetryDetails = {
+                            cancelReason: 'prerequisite', failureCategory: 'prerequisite', failureCode: 'coreToolsUnavailable',
+                        };
+                        stage.setOutcome('blocked', details);
+                        setWorkflowOutcome(innerContext, 'blocked', details);
+                        setWorkflowOutcome(context, 'blocked', details);
+                    }
+                }
             }
-        }
+        });
     });
 
     // validate that Func Tools was installed only if user confirmed
