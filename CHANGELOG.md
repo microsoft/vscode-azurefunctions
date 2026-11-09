@@ -1,5 +1,14 @@
 # Change Log
 
+## Unreleased
+
+### Added
+* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Add live Connector Trigger project authoring with selected-event Poll scaffolds
+
+### Fixed
+* [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
+* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Load connector identities without a full-catalog operation scan, inspect Poll and webhook events only for the selected connector, block unsupported webhook creation before side effects, and generate event-specific schema-derived Poll scaffolds
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed
