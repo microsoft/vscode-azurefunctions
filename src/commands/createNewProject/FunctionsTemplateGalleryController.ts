@@ -225,8 +225,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                                 await installNodeDependencies(actionContext, functionProjectPath);
                             }
                         }
-                        await this.initializeNodeProjectForVSCode(actionContext, projectPath, language);
                     }
+                    await this.initializeProjectForVSCode(actionContext, projectPath, Object.values(ProjectLanguage).find(projectLanguage => projectLanguage === language));
 
                     this.sendProgress('Initializing git repository...');
                     // Remove the cloned template's git history so the user gets a fresh repo
@@ -270,10 +270,9 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         });
     }
 
-    private async initializeNodeProjectForVSCode(context: IActionContext, projectPath: string, language: ProjectLanguage): Promise<void> {
+    private async initializeProjectForVSCode(context: IActionContext, projectPath: string, language?: ProjectLanguage): Promise<void> {
         const functionProjectPath = await tryGetFunctionProjectRoot(context, projectPath, 'prompt');
-        if (functionProjectPath && !isPathEqual(functionProjectPath, projectPath)
-            && await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
+        if (functionProjectPath) {
             await initProjectForVSCode(context, functionProjectPath, language, projectPath);
         }
     }

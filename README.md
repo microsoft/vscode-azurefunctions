@@ -84,9 +84,9 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Troubleshooting
 
-### Nested JavaScript and TypeScript gallery projects
+### Gallery project initialization
 
-When a gallery template places the Function App in a subfolder such as `src`, project creation initializes its VS Code configuration so npm and Functions host tasks run in that subfolder. Confirm the task-overwrite prompt to replace the template's matching tasks; unrelated custom tasks are preserved. For an existing project, run **Azure Functions: Initialize Project for Use with VS Code...** from the workspace root.
+Every gallery project is initialized for use with VS Code, regardless of language or whether the Function App is at the workspace root or in a subfolder such as `src`. Initialization configures the language-specific tasks, debugger, and settings for the Function App's location. Confirm any task-overwrite prompt to replace the template's matching tasks; unrelated custom tasks and parent-workspace configuration are preserved. For an existing project, run **Azure Functions: Initialize Project for Use with VS Code...** from the workspace root.
 
 ### Node.js MCP template SDK requirements
 

@@ -74,8 +74,31 @@ suite('Project npm dependencies', () => {
         controller['tryOpenReadme'] = async () => { events.push('readme'); };
         controller['disposePanelIfOpen'] = () => { events.push('dispose'); };
         controller['promptAndOpenProject'] = async () => { events.push('open'); };
-        controller['initializeNodeProjectForVSCode'] = async () => { events.push('initialized'); };
+        controller['initializeProjectForVSCode'] = async () => { events.push('initialized'); };
         return controller;
+    }
+
+    for (const language of Object.values(ProjectLanguage)) {
+        test(`initializes ${language} gallery projects before reporting success and opening`, async () => {
+            const events: string[] = [];
+            const controller = createController(false, events);
+            controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+                await AzExtFsExtra.ensureDir(destination);
+                await AzExtFsExtra.writeJSON(path.join(destination, 'host.json'), { version: '2.0' });
+                events.push('downloaded');
+            };
+            controller['initializeProjectForVSCode'] = async (_context, location, projectLanguage) => {
+                assert.strictEqual(location, projectPath);
+                assert.strictEqual(projectLanguage, language);
+                events.push('initialized');
+            };
+
+            await controller['createProject'](template, language, projectPath);
+
+            assert.ok(events.indexOf('downloaded') < events.indexOf('initialized'));
+            assert.ok(events.indexOf('initialized') < events.indexOf('readme'));
+            assert.ok(events.indexOf('initialized') < events.indexOf('open'));
+        });
     }
 
     for (const gitInstalled of [true, false]) {
@@ -296,11 +319,11 @@ suite('Project npm dependencies', () => {
                 await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'tasks.json'), { version: '2.0.0', tasks: copiedTasks });
             };
             cpUtils.executeCommand = async () => '';
-            controller['initializeNodeProjectForVSCode'] = async (context, location, projectLanguage) => {
+            controller['initializeProjectForVSCode'] = async (context, location, projectLanguage) => {
                 const { ui } = await createTestActionContext();
                 context.ui = ui;
                 await ui.runWithInputs(['Overwrite'], async () =>
-                    await FunctionsTemplateGalleryController.prototype['initializeNodeProjectForVSCode'].call(controller, context, location, projectLanguage));
+                    await FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'].call(controller, context, location, projectLanguage));
                 events.push('initialized');
             };
 
@@ -322,20 +345,56 @@ suite('Project npm dependencies', () => {
         });
     }
 
-    test('leaves root-level gallery tasks unchanged', async () => {
-        const context = await createTestActionContext();
-        await AzExtFsExtra.writeJSON(path.join(projectPath, 'host.json'), { version: '2.0' });
-        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {});
-        await AzExtFsExtra.ensureDir(path.join(projectPath, '.vscode'));
-        const tasks = { version: '2.0.0', tasks: [{ type: 'shell', label: 'npm install (functions)', command: 'npm install' }] };
-        const tasksPath = path.join(projectPath, '.vscode', 'tasks.json');
-        await AzExtFsExtra.writeJSON(tasksPath, tasks);
-        const controller = createController(false, []);
+    for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.Python, ProjectLanguage.CSharp, ProjectLanguage.PowerShell]) {
+        for (const subpath of ['.', 'src']) {
+            test(`writes ${language} gallery configuration for a ${subpath === '.' ? 'root-level' : 'nested'} Function App without package.json`, async () => {
+                const events: string[] = [];
+                const controller = createController(false, events);
+                const customTask = { type: 'shell', label: 'custom task', command: 'echo custom' };
+                controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+                    const appPath = path.join(destination, subpath);
+                    await AzExtFsExtra.ensureDir(appPath);
+                    await AzExtFsExtra.writeJSON(path.join(appPath, 'host.json'), { version: '2.0' });
+                    if (language === ProjectLanguage.CSharp) {
+                        await fs.promises.writeFile(path.join(appPath, 'test.csproj'), '<Project><PropertyGroup><TargetFramework>net8.0</TargetFramework><AzureFunctionsVersion>v4</AzureFunctionsVersion></PropertyGroup></Project>');
+                    } else if (language === ProjectLanguage.Python) {
+                        await fs.promises.writeFile(path.join(appPath, 'function_app.py'), '');
+                    }
+                    await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+                    await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'tasks.json'), { version: '2.0.0', tasks: [customTask] });
+                };
+                controller['initializeProjectForVSCode'] = async (context, location, projectLanguage) => {
+                    const { ui } = await createTestActionContext();
+                    context.ui = ui;
+                    await ui.runWithInputs([], async () =>
+                        await FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'].call(controller, context, location, projectLanguage));
+                    events.push('initialized');
+                };
+                cpUtils.executeCommand = async () => { throw new Error('npm must not run without a Node package.json'); };
 
-        await FunctionsTemplateGalleryController.prototype['initializeNodeProjectForVSCode'].call(controller, context, projectPath, ProjectLanguage.JavaScript);
+                await runWithFuncSetting('createPythonVenv', false, async () =>
+                    await runWithFuncSetting(funcVersionSetting, FuncVersion.v4, async () =>
+                        await controller['createProject'](template, language, projectPath)));
 
-        assert.deepStrictEqual(await AzExtFsExtra.readJSON(tasksPath), tasks);
-    });
+                const vscodePath = path.join(projectPath, '.vscode');
+                const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(vscodePath, 'settings.json'));
+                assert.strictEqual(settings['azureFunctions.projectLanguage'], language);
+                assert.ok(await AzExtFsExtra.pathExists(path.join(vscodePath, 'launch.json')));
+                const tasks = (await AzExtFsExtra.readJSON<ITasksJson>(path.join(vscodePath, 'tasks.json'))).tasks ?? [];
+                assert.deepStrictEqual(tasks.find(task => task.label === customTask.label), customTask);
+                const functionTasks = tasks.filter(task => task.label !== customTask.label);
+                assert.ok(functionTasks.length > 0);
+                for (const task of functionTasks) {
+                    if (subpath === 'src') {
+                        assert.ok(task.options?.cwd?.startsWith('${workspaceFolder}/src'), task.label);
+                    } else {
+                        assert.ok(!task.options?.cwd?.includes('/src'), task.label);
+                    }
+                }
+                assert.ok(events.indexOf('initialized') < events.indexOf('open'));
+            });
+        }
+    }
 
     test('Gallery installer records success and uses the project directory with spaces', async () => {
         const context = await createTestActionContext();

@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Fixed
-* [[5128](https://github.com/microsoft/vscode-azurefunctions/issues/5128), [5286](https://github.com/microsoft/vscode-azurefunctions/pull/5286)] Fix F5 debugging for JavaScript and TypeScript gallery projects with the Function App in a subfolder.
+* [[5128](https://github.com/microsoft/vscode-azurefunctions/issues/5128), [5286](https://github.com/microsoft/vscode-azurefunctions/pull/5286)] Initialize all gallery projects for VS Code, including language-specific debugging and tasks for Function Apps in subfolders.
 * [[4354](https://github.com/microsoft/vscode-azurefunctions/issues/4354), [4145](https://github.com/microsoft/vscode-azurefunctions/issues/4145), [5265](https://github.com/microsoft/vscode-azurefunctions/pull/5265)] Select a deployment slot instead of falling back to production when using Deploy to Slot.
 * Remove Python 3.10 from supported interpreters for local project creation.
 * Hide end-of-support .NET runtimes from the project creation picker using the tooling feed's UTC support deadlines.
