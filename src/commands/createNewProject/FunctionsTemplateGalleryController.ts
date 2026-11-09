@@ -106,14 +106,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
         const message = vscode.l10n.t('Prefer the classic experience?');
         const link = vscode.l10n.t('Switch to classic');
-        const preference = vscode.l10n.t('Your preference will be saved for future projects.');
         const banner = `<div role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
             <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 16 16" style="flex: none; color: var(--vscode-editorInfo-foreground);">
                 <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/>
                 <path d="M8 7v4" stroke="currentColor" stroke-width="1.5"/>
                 <circle cx="8" cy="4.5" r=".75" fill="currentColor"/>
             </svg>
-            <div style="flex: 1; min-width: 180px;"><strong style="font-size: 14px;">${escapeHtml(message)}</strong><div>${escapeHtml(preference)}</div></div>
+            <div style="flex: 1; min-width: 180px;"><strong style="font-size: 14px;">${escapeHtml(message)}</strong></div>
             <a href="command:azureFunctions.useClassicTemplateFeed" style="display: inline-block; padding: 6px 12px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-button-border, transparent)); font-weight: 600; text-decoration: none; white-space: nowrap;">${escapeHtml(link)}</a>
         </div>`;
         return super.getDocumentTemplate(webview).replace('<body>', `<body>${banner}`);

@@ -420,7 +420,7 @@ suite('Unified Create Function', () => {
         assert.ok(bannerPosition >= 0 && bannerPosition < html.indexOf('<div id="root">'));
         assert.ok(html.includes('href="command:azureFunctions.useClassicTemplateFeed"'));
         assert.ok(html.includes('Switch to classic'));
-        assert.ok(html.includes('Your preference will be saved for future projects.'));
+        assert.ok(!html.includes('Your preference will be saved for future projects.'));
         assert.ok(html.includes('role="note"'));
         assert.ok(html.includes('aria-hidden="true" focusable="false"'));
         assert.ok(html.includes('--vscode-inputValidation-infoBackground'));
