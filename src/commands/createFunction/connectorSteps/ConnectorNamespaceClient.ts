@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type GenericResource, type ResourceManagementClient } from '@azure/arm-resources';
+import { isRestError } from '@azure/core-rest-pipeline';
 import { type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 import { ConnectorNamespaceApiVersion, ConnectorNamespaceResourceType, webProvider } from '../../../constants';
 import { createResourceClient } from '../../../utils/azureClients';
@@ -37,7 +38,7 @@ export class AzureConnectorNamespaceClient implements ConnectorNamespaceClient {
             );
             return false;
         } catch (error) {
-            if (getStatusCode(error) === 404) {
+            if (isRestError(error) && error.statusCode === 404) {
                 return true;
             }
 
@@ -71,13 +72,4 @@ export class AzureConnectorNamespaceClient implements ConnectorNamespaceClient {
             },
         );
     }
-}
-
-function getStatusCode(error: unknown): number | undefined {
-    if (typeof error === 'object' && error !== null && 'statusCode' in error) {
-        const statusCode = error.statusCode;
-        return typeof statusCode === 'number' ? statusCode : undefined;
-    }
-
-    return undefined;
 }
