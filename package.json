@@ -229,6 +229,12 @@
                 "enablement": "!virtualWorkspace"
             },
             {
+                "command": "azureFunctions.dismissClassicTemplateFeedBanner",
+                "title": "%azureFunctions.dismissClassicTemplateFeedBanner%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.createSlot",
                 "title": "%azureFunctions.createSlot%",
                 "category": "Azure Functions"
@@ -977,6 +983,10 @@
                     "when": "never"
                 },
                 {
+                    "command": "azureFunctions.dismissClassicTemplateFeedBanner",
+                    "when": "never"
+                },
+                {
                     "command": "azureFunctions.deployByFunctionAppId",
                     "when": "never"
                 },
@@ -1534,6 +1544,12 @@
                         "default": false,
                         "scope": "application",
                         "description": "%azureFunctions.classicTemplateFeed%"
+                    },
+                    "azureFunctions.showClassicTemplateFeedBanner": {
+                        "type": "boolean",
+                        "default": true,
+                        "scope": "application",
+                        "description": "%azureFunctions.showClassicTemplateFeedBanner%"
                     },
                     "azureFunctions.enableTemplateGallery": {
                         "type": "boolean",

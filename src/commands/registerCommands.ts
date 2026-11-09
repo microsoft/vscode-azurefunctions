@@ -139,6 +139,14 @@ export function registerCommands(
         }
         await controller.useClassicTemplateFeed(context);
     });
+    registerCommand('azureFunctions.dismissClassicTemplateFeedBanner', async (context: IActionContext) => {
+        const { FunctionsTemplateGalleryController } = await import('./createNewProject/FunctionsTemplateGalleryController.js');
+        const controller = FunctionsTemplateGalleryController.currentController;
+        if (!controller) {
+            throw new Error(localize('templateGalleryBannerNotOpen', 'Open the template gallery before dismissing its banner.'));
+        }
+        await controller.dismissClassicTemplateFeedBanner(context);
+    });
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.createNewProjectWithDockerfile',
         async (context: IActionContext) =>

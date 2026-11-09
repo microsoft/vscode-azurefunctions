@@ -26,6 +26,8 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. The classic wizard asks for a destination again rather than reusing the gallery's launch-time folder. Disable the setting to return to the gallery.
 
+Select the banner's **Dismiss** (X) button to hide it permanently without switching to classic. To show it again, enable `"azureFunctions.showClassicTemplateFeedBanner"` in Settings.
+
 ## Run the serverless app locally
 
 This extension integrates with the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local) to let you run your project locally before publishing to Azure.
@@ -134,7 +136,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 ## Telemetry
 
-Project and function creation telemetry distinguishes the gallery and classic experiences, template selection, creation outcomes and cancellations, dependency installation, VS Code initialization, and opening behavior. Gallery telemetry uses template IDs from the loaded official catalog and known language/experience values; it does not collect template display names, folder paths, search text, or Copilot prompts. Closing a gallery during creation is recorded separately from cancellation, since closing the panel does not stop file creation.
+Project and function creation telemetry distinguishes the gallery and classic experiences, banner dismissal, template selection, creation outcomes and cancellations, dependency installation, VS Code initialization, and opening behavior. Gallery telemetry uses template IDs from the loaded official catalog and known language/experience values; it does not collect template display names, folder paths, search text, or Copilot prompts. Closing a gallery during creation is recorded separately from cancellation, since closing the panel does not stop file creation.
 
 Language telemetry is restricted to supported language categories; other setting or argument values are reported as `unknown`. Creation error and exception telemetry is fully redacted in both classic and gallery flows, including the classic-banner handoff. Detailed local errors remain available for troubleshooting.
 

@@ -20,7 +20,7 @@ import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
 import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
-import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
+import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting, showClassicTemplateFeedBannerSetting } from '../../constants';
 import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
 import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
@@ -62,7 +62,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         this.initialFilters = options.initialFilters;
         this.panel.webview.options = {
             ...this.panel.webview.options,
-            enableCommandUris: ['azureFunctions.useClassicTemplateFeed'],
+            enableCommandUris: ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner'],
         };
 
         this.registerDisposable(
@@ -103,10 +103,22 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
+    public async dismissClassicTemplateFeedBanner(actionContext: IActionContext): Promise<void> {
+        actionContext.telemetry.maskEntireErrorMessage = true;
+        await updateGlobalSetting(showClassicTemplateFeedBannerSetting, false);
+        actionContext.telemetry.properties.classicBannerDismissed = 'true';
+        await this.panel.webview.postMessage({ type: 'dismissClassicTemplateFeedBanner' });
+    }
+
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
+        const html = super.getDocumentTemplate(webview);
+        if (getWorkspaceSetting<boolean>(showClassicTemplateFeedBannerSetting) === false) {
+            return html;
+        }
         const message = vscode.l10n.t('Prefer the classic experience?');
         const link = vscode.l10n.t('Switch to classic');
-        const banner = `<div role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
+        const dismiss = vscode.l10n.t('Dismiss classic experience banner');
+        const banner = `<div id="classic-template-feed-banner" role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
             <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 16 16" style="flex: none; color: var(--vscode-editorInfo-foreground);">
                 <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/>
                 <path d="M8 7v4" stroke="currentColor" stroke-width="1.5"/>
@@ -114,8 +126,26 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             </svg>
             <div style="flex: 1; min-width: 180px;"><strong style="font-size: 14px;">${escapeHtml(message)}</strong></div>
             <a href="command:azureFunctions.useClassicTemplateFeed" style="display: inline-block; padding: 6px 12px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-button-border, transparent)); font-weight: 600; text-decoration: none; white-space: nowrap;">${escapeHtml(link)}</a>
+            <a id="dismiss-classic-template-feed-banner" href="command:azureFunctions.dismissClassicTemplateFeedBanner" role="button" aria-label="${escapeHtml(dismiss)}" title="${escapeHtml(dismiss)}" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: var(--vscode-foreground); border-radius: 3px;">
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </a>
         </div>`;
-        return super.getDocumentTemplate(webview).replace('<body>', `<body>${banner}`);
+        const bannerScript = `
+            window.addEventListener('message', event => {
+                if (event.data?.type === 'dismissClassicTemplateFeedBanner') {
+                    document.getElementById('classic-template-feed-banner')?.remove();
+                }
+            });
+            const dismissBanner = document.getElementById('dismiss-classic-template-feed-banner');
+            dismissBanner.addEventListener('keydown', event => {
+                if (event.key === ' ') {
+                    event.preventDefault();
+                    dismissBanner.click();
+                }
+            });
+        `;
+        // Reuse the shared nonced script; removing only the banner preserves gallery state.
+        return html.replace('<body>', `<body>${banner}`).replace('</script>', `${bannerScript}</script>`);
     }
 
     public static createOrShow(context: vscode.ExtensionContext, options: TemplateGalleryLaunchOptions = {}): FunctionsTemplateGalleryController {

@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { createFunctionFromCommand, createFunctionInternal } from '../../src/commands/createFunction/createFunction';
 import { createNewProjectFromCommand, routeCreateNewProject } from '../../src/commands/createNewProject/createNewProject';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
-import { classicTemplateFeedSetting, ProjectLanguage } from '../../src/constants';
+import { classicTemplateFeedSetting, ProjectLanguage, showClassicTemplateFeedBannerSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { CentralTemplateProvider } from '../../src/templates/CentralTemplateProvider';
@@ -412,7 +412,7 @@ suite('Unified Create Function', () => {
         }
     });
 
-    test('shows a top banner with only the classic-switch command enabled', () => {
+    test('shows an accessible top banner with only its switch and dismiss commands enabled', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const html = controller.panel.webview.html;
 
@@ -427,7 +427,74 @@ suite('Unified Create Function', () => {
         assert.ok(html.includes('border-left: 4px solid var(--vscode-editorInfo-foreground)'));
         assert.ok(html.includes('<strong style="font-size: 14px;">Prefer the classic experience?</strong>'));
         assert.ok(html.includes('--vscode-button-secondaryBackground'));
-        assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed']);
+        assert.ok(html.includes('href="command:azureFunctions.dismissClassicTemplateFeedBanner"'));
+        assert.ok(html.includes('role="button" aria-label="Dismiss classic experience banner"'));
+        assert.ok(html.includes("if (event.key === ' ')"));
+        assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner']);
+    });
+
+    test('dismissing the banner persists independently without reloading gallery state or canceling creation', async () => {
+        await runWithFuncSetting(classicTemplateFeedSetting, false, async () => {
+            await runWithFuncSetting(showClassicTemplateFeedBannerSetting, true, async () => {
+                const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+                const originalHtml = controller.panel.webview.html;
+                const messages: unknown[] = [];
+                controller.panel.webview.postMessage = async message => {
+                    messages.push(message);
+                    return true;
+                };
+                controller['isCreatingProject'] = true;
+                const context = await createTestActionContext();
+
+                await controller.dismissClassicTemplateFeedBanner(context);
+
+                assert.strictEqual(getWorkspaceSetting(showClassicTemplateFeedBannerSetting), false);
+                assert.strictEqual(getWorkspaceSetting(classicTemplateFeedSetting), false);
+                assert.strictEqual(context.telemetry.properties.classicBannerDismissed, 'true');
+                assert.deepStrictEqual(messages, [{ type: 'dismissClassicTemplateFeedBanner' }]);
+                assert.strictEqual(controller.panel.webview.html, originalHtml);
+                assert.strictEqual(FunctionsTemplateGalleryController.currentController, controller);
+                assert.strictEqual(controller['isCreatingProject'], true);
+                controller['isCreatingProject'] = false;
+                controller.panel.dispose();
+
+                const reopened = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
+                assert.ok(!reopened.panel.webview.html.includes('classic-template-feed-banner'));
+                assert.ok(!reopened.panel.webview.html.includes('Prefer the classic experience?'));
+                assert.ok(reopened.panel.webview.html.includes('<div id="root">'));
+                reopened.panel.dispose();
+            });
+        });
+    });
+
+    test('the banner can be restored in Settings without changing the creation experience', async () => {
+        await runWithFuncSetting(showClassicTemplateFeedBannerSetting, false, async () => {
+            const hidden = FunctionsTemplateGalleryController.createOrShow(ext.context);
+            assert.ok(!hidden.panel.webview.html.includes('classic-template-feed-banner'));
+            hidden.panel.dispose();
+            await runWithFuncSetting(showClassicTemplateFeedBannerSetting, true, async () => {
+                const visible = FunctionsTemplateGalleryController.createOrShow(ext.context);
+                assert.ok(visible.panel.webview.html.includes('classic-template-feed-banner'));
+                visible.panel.dispose();
+            });
+        });
+    });
+
+    test('contributes an application-scoped banner setting and hides the dismiss command from the palette', async () => {
+        const manifest = await AzExtFsExtra.readJSON<{
+            contributes: {
+                commands: { command: string; title: string }[];
+                menus: Record<string, { command: string; when?: string }[]>;
+                configuration: { properties: Record<string, { type?: string; scope?: string; default?: boolean }> }[];
+            };
+        }>(path.join(ext.context.extensionPath, 'package.json'));
+        const command = 'azureFunctions.dismissClassicTemplateFeedBanner';
+        assert.ok(manifest.contributes.commands.some(entry => entry.command === command));
+        assert.ok(manifest.contributes.menus.commandPalette.some(entry => entry.command === command && entry.when === 'never'));
+        const setting = manifest.contributes.configuration.map(entry => entry.properties[`azureFunctions.${showClassicTemplateFeedBannerSetting}`]).find(entry => entry !== undefined);
+        assert.strictEqual(setting?.type, 'boolean');
+        assert.strictEqual(setting?.scope, 'application');
+        assert.strictEqual(setting?.default, true);
     });
 
     test('switching saves the preference, closes the gallery, and keeps the target folder', async () => {
