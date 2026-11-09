@@ -127,22 +127,12 @@ suite('Connector trigger picker Azure context UX', () => {
         );
     });
 
-    test('renders connector and event selection without trigger parameters', () => {
+    test('renders connector and event selection', () => {
         const labels = createConnectorTriggerPickerViewModel('python').labels;
         const html = renderToStaticMarkup(createElement(ConnectorEventStep, {
             connector,
             labels,
-            operations: [{
-                ...operation,
-                inputDefinitions: [{
-                    name: 'folderPath',
-                    label: 'Folder parameter must not render',
-                    type: 'string',
-                    required: true,
-                    dynamic: true,
-                    sensitive: false,
-                }],
-            }],
+            operations: [operation],
             operationsError: '',
             operationsLoading: false,
             projectCreating: false,
@@ -159,7 +149,6 @@ suite('Connector trigger picker Azure context UX', () => {
         assert.ok(html.includes(connector.label));
         assert.ok(html.includes(operation.label));
         assert.ok(html.includes(labels.useTemplate));
-        assert.ok(!html.includes('Folder parameter must not render'));
     });
 
     test('renders webhook events as selectable with unsupported creation status', () => {

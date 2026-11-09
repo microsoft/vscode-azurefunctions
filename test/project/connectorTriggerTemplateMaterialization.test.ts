@@ -16,16 +16,12 @@ import {
     ProjectTemplateCreator,
     type ProjectTemplateCreationOptions,
 } from '../../src/commands/createNewProject/ProjectTemplateCreator';
-import {
-    connectorTriggerProjectHandoffVersion,
-    readConnectorTriggerProjectHandoff,
-    type ConnectorTriggerProjectHandoff,
-} from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
@@ -205,7 +201,7 @@ suite('Connector Trigger template materialization', () => {
             ProjectLanguage.TypeScript,
             projectPath,
             'details',
-            { connectorTriggerHandoff: createHandoff() },
+            { connectorTriggerSelection: createSelection() },
         );
 
         const sourceFiles = await vscodeSourceFiles(projectPath);
@@ -238,7 +234,7 @@ suite('Connector Trigger template materialization', () => {
                 ProjectLanguage.TypeScript,
                 projectPath,
                 'details',
-                { connectorTriggerHandoff: createHandoff() },
+                { connectorTriggerSelection: createSelection() },
             ),
             /missing operation ownership metadata/,
         );
@@ -454,7 +450,7 @@ suite('Connector Trigger template materialization', () => {
                             destination,
                             'details',
                             {
-                                connectorTriggerHandoff: createHandoff(
+                                connectorTriggerSelection: createSelection(
                                     testCase.connectorId,
                                     testCase.operationId,
                                 ),
@@ -504,7 +500,7 @@ suite('Connector Trigger template materialization', () => {
                         `${template.id}-${index}`,
                     );
                     const creator = createIntegrationCreator(index === 0);
-                    const handoff = createHandoff(
+                    const projectSelection = createSelection(
                         selection.connectorId,
                         selection.operationId,
                     );
@@ -524,7 +520,7 @@ suite('Connector Trigger template materialization', () => {
                             destination,
                             'details',
                             {
-                                connectorTriggerHandoff: handoff,
+                                connectorTriggerSelection: projectSelection,
                                 connectorTriggerOutputMetadata: outputMetadata,
                             },
                         );
@@ -537,7 +533,7 @@ suite('Connector Trigger template materialization', () => {
                     await assertGenericMaterialized(
                         destination,
                         language,
-                        handoff,
+                        projectSelection,
                         outputMetadata,
                     );
                     if (index < 2 && buildGenericTemplateTestsEnabled) {
@@ -671,12 +667,12 @@ async function assertMaterializedOperation(
 async function assertGenericMaterialized(
     root: string,
     language: ProjectLanguage,
-    handoff: ConnectorTriggerProjectHandoff,
+    selection: ConnectorTriggerSelection,
     outputMetadata: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const identity = getConnectorTriggerEventIdentity(
-        handoff.connectorId,
-        handoff.operationId,
+        selection.connectorId,
+        selection.operationId,
     );
     assert.deepStrictEqual(
         await findConnectorTriggerRegistrations(root),
@@ -690,9 +686,11 @@ async function assertGenericMaterialized(
             triggerConfigSettingName: identity.triggerConfigSettingName,
         }],
     );
-    assert.deepStrictEqual(
-        await readConnectorTriggerProjectHandoff(root),
-        handoff,
+    assert.strictEqual(
+        await AzExtFsExtra.pathExists(
+            path.join(root, '.azure-functions', 'connector-trigger.json'),
+        ),
+        false,
     );
     assert.strictEqual(
         await AzExtFsExtra.pathExists(path.join(root, 'host.json')),
@@ -703,6 +701,7 @@ async function assertGenericMaterialized(
     )).toString();
     assert.ok(readme.includes(identity.operationId));
     assert.ok(!readme.includes('OnGenericCustomConnectorEvent'));
+    assert.ok(readme.includes('not created by this authoring flow'));
 
     if (language === ProjectLanguage.TypeScript) {
         const functionsPath = path.join(root, 'src', 'functions');
@@ -977,21 +976,11 @@ function createTemplate(): IProjectTemplate {
     };
 }
 
-function createHandoff(
+function createSelection(
     connectorId = 'office365',
     operationId = 'OnNewEmailV3',
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerSelection {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: 'subscription-id',
-            tenantId: 'tenant-id',
-            environment: {
-                name: 'AzureCloud',
-                resourceManagerEndpointUrl: 'https://management.azure.com/',
-            },
-        },
-        region: 'westcentralus',
         connectorId,
         operationId,
     };

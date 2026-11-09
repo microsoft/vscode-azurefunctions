@@ -13,11 +13,8 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
-import {
-    connectorTriggerProjectHandoffVersion,
-    type ConnectorTriggerProjectHandoff,
-} from '../../../connectorTrigger/connectorTriggerProjectHandoff';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelection } from '../../../connectorTrigger/connectorTriggerSelection';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
 import { type IProjectTemplate } from '../../../templates/projectTemplates/IProjectTemplate';
@@ -480,7 +477,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 command: 'connectorOperationsLoaded',
                 connectorId,
                 eventSupport: result.eventSupport,
-                operations: result.operations.map(removeOperationInputs),
+                operations: result.operations,
             });
         } catch (error) {
             if (!this.isCurrentCatalogContext(azureContext)) {
@@ -690,7 +687,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         await this.postMessage({
             command: 'catalogLoaded',
             connectors: result.catalog.connectors,
-            operations: result.catalog.operations.map(removeOperationInputs),
+            operations: result.catalog.operations,
             ...(result.warning ? { warning: result.warning } : {}),
         });
     }
@@ -735,10 +732,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
         await this.postMessage({ command: 'projectCreationStarted' });
         try {
-            const handoff = createProjectHandoff(
-                selection,
-                subscriptionContext,
-            );
+            const projectSelection = createProjectSelection(selection);
             if (!this.launchOptions.isProjectWizard) {
                 const outputMetadata =
                     await getConnectorOperationOutputMetadata(
@@ -750,7 +744,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     actionContext,
                     this.launchOptions.language,
                     projectPath,
-                    handoff,
+                    projectSelection,
                     outputMetadata,
                 );
                 return;
@@ -811,7 +805,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 projectPath,
                 'details',
                 {
-                    connectorTriggerHandoff: handoff,
+                    connectorTriggerSelection: projectSelection,
                     ...(outputMetadata ?
                         { connectorTriggerOutputMetadata: outputMetadata } :
                         {}),
@@ -895,14 +889,6 @@ function getAzureContextDisplay(
     };
 }
 
-function removeOperationInputs(
-    operation: ConnectorTriggerOperationOption,
-): ConnectorTriggerOperationOption {
-    const pickerOperation = { ...operation };
-    delete pickerOperation.inputDefinitions;
-    return pickerOperation;
-}
-
 async function getConnectorOperationOutputMetadata(
     dataClient: ConnectorTriggerDataClient,
     actionContext: IActionContext,
@@ -926,22 +912,10 @@ async function getConnectorOperationOutputMetadata(
     }
 }
 
-function createProjectHandoff(
+function createProjectSelection(
     selection: ConnectorTriggerProjectSelection,
-    subscriptionContext: ISubscriptionContext,
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerSelection {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: subscriptionContext.subscriptionId,
-            tenantId: subscriptionContext.tenantId,
-            environment: {
-                name: subscriptionContext.environment.name,
-                resourceManagerEndpointUrl:
-                    subscriptionContext.environment.resourceManagerEndpointUrl,
-            },
-        },
-        region: selection.azureContext.region,
         connectorId: selection.connector.id,
         operationId: selection.operation.id,
     };

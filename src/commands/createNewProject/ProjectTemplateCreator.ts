@@ -9,11 +9,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    writeConnectorTriggerProjectHandoff,
-    type ConnectorTriggerProjectHandoff,
-} from '../../connectorTrigger/connectorTriggerProjectHandoff';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelection } from '../../connectorTrigger/connectorTriggerSelection';
 import { ensureConnectorTriggerPollProject } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
@@ -40,7 +37,7 @@ export interface ProjectTemplateCreatorCallbacks {
 }
 
 export interface ProjectTemplateCreationOptions {
-    connectorTriggerHandoff?: ConnectorTriggerProjectHandoff;
+    connectorTriggerSelection?: ConnectorTriggerSelection;
     connectorTriggerOutputMetadata?: ConnectorTriggerOutputMetadata;
 }
 
@@ -53,17 +50,16 @@ export class ProjectTemplateCreator {
         actionContext: IActionContext,
         language: string,
         projectPath: string,
-        handoff: ConnectorTriggerProjectHandoff,
+        selection: ConnectorTriggerSelection,
         outputMetadata?: ConnectorTriggerOutputMetadata,
     ): Promise<void> {
         this.reportProgress('Adding Connector Trigger...');
         await ensureConnectorTriggerPollProject(
             projectPath,
             language,
-            handoff,
+            selection,
             outputMetadata,
         );
-        await writeConnectorTriggerProjectHandoff(projectPath, handoff);
         actionContext.telemetry.properties.result = 'Succeeded';
         this.callbacks.onProjectCreated?.();
         void vscode.window.showInformationMessage(
@@ -88,13 +84,13 @@ export class ProjectTemplateCreator {
         actionContext.telemetry.properties.language = language;
         actionContext.telemetry.properties.entryPoint = entryPoint ?? 'unknown';
 
-        const isGenericConnectorTrigger = !!options.connectorTriggerHandoff &&
+        const isGenericConnectorTrigger = !!options.connectorTriggerSelection &&
             isGenericConnectorTriggerTemplate(template, language);
         const connectorTriggerTemplate =
-            options.connectorTriggerHandoff && !isGenericConnectorTrigger ?
+            options.connectorTriggerSelection && !isGenericConnectorTrigger ?
             getConnectorTriggerTemplate(template) :
             undefined;
-        if (options.connectorTriggerHandoff) {
+        if (options.connectorTriggerSelection) {
             actionContext.telemetry.properties.connectorTriggerTemplate =
                 isGenericConnectorTrigger ? 'generic' : 'specialized';
         }
@@ -182,25 +178,21 @@ export class ProjectTemplateCreator {
                 // git init is optional.
             }
 
-            if (options.connectorTriggerHandoff) {
+            if (options.connectorTriggerSelection) {
                 if (isGenericConnectorTrigger) {
                     await materializeGenericConnectorTriggerProject(
                         projectPath,
                         language,
-                        options.connectorTriggerHandoff,
+                        options.connectorTriggerSelection,
                         options.connectorTriggerOutputMetadata,
                     );
                 } else if (connectorTriggerTemplate) {
                     await materializeConnectorTriggerTemplate(
                         projectPath,
                         connectorTriggerTemplate,
-                        options.connectorTriggerHandoff.operationId,
+                        options.connectorTriggerSelection.operationId,
                     );
                 }
-                await writeConnectorTriggerProjectHandoff(
-                    projectPath,
-                    options.connectorTriggerHandoff,
-                );
             }
 
             actionContext.telemetry.properties.result = 'Succeeded';

@@ -6,7 +6,6 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
@@ -143,33 +142,6 @@ export function getPollingConnectorBindings(
     ];
 }
 
-export function selectPollingConnectorBinding(
-    candidates: readonly ConnectorTriggerBindingCandidate[],
-    operationId: string,
-): ConnectorTriggerBindingCandidate {
-    const unique = deduplicateBindings(candidates);
-    const matching = unique.filter(candidate =>
-        candidate.functionName &&
-        normalizeOperationName(candidate.functionName) === normalizeOperationName(operationId));
-    const selected = matching.length === 1 ?
-        matching[0] :
-        matching.length === 0 && unique.length === 1 ?
-            unique[0] :
-            undefined;
-    if (!selected) {
-        throw new Error(unique.length === 0 ?
-            localize(
-                'connectorTriggerBindingMissing',
-                'The selected project does not contain explicit Poll binding settings for this Connector Trigger.',
-            ) :
-            localize(
-                'connectorTriggerBindingAmbiguous',
-                'The selected Connector Trigger matches multiple Poll bindings. Make the binding metadata unambiguous, then retry debugging.',
-            ));
-    }
-    return selected;
-}
-
 function getConnectorTriggerRegistrationCountFromFunctionJson(data: unknown): number {
     if (!isRecord(data) || !Array.isArray(data.bindings)) {
         return 0;
@@ -278,13 +250,6 @@ function deduplicateBindings(
         seen.add(key);
         return true;
     });
-}
-
-function normalizeOperationName(value: string): string {
-    return value
-        .replace(/v\d+$/i, '')
-        .replace(/[^a-z\d]/gi, '')
-        .toLowerCase();
 }
 
 function readString(value: unknown): string | undefined {

@@ -10,7 +10,6 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
 import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
-import { getWorkerPidFileArgs, getWorkerPidFilePath } from '../funcCoreTools/jsonOutputFile';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
@@ -95,7 +94,7 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-
+             
             const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
@@ -120,9 +119,6 @@ export class FuncTaskProvider implements TaskProvider {
         if (/^\s*(host )?start/i.test(command)) {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
-
-            const workerPidFile: string = await getWorkerPidFilePath(`${folder.uri.fsPath}|${command}|${JSON.stringify(definitionArgs)}`);
-            allArgs.push(...getWorkerPidFileArgs(allArgs, workerPidFile));
         }
 
         options = options || {};
@@ -145,7 +141,7 @@ export class FuncTaskProvider implements TaskProvider {
         if (language === ProjectLanguage.Python) {
             // Python requires chaining venv activation with the func command via shell operators (&&, ;),
             // so we must use the string-based ShellExecution form
-            let commandLine = `${funcCliPath} ${allArgs.join(' ')}`;
+            let commandLine = `${funcCliPath} ${[...commandParts, ...definitionArgs].join(' ')}`;
             commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
             execution = new ShellExecution(commandLine, options);
         } else {

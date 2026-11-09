@@ -10,19 +10,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
-import {
-    getPollingConnectorBindings,
-    selectPollingConnectorBinding,
-} from '../../src/connectorTrigger/connectorTriggerBindings';
-import {
-    connectorTriggerProjectHandoffVersion,
-    type ConnectorTriggerProjectHandoff,
-} from '../../src/connectorTrigger/connectorTriggerProjectHandoff';
+import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
-import { getPollingConnectorConnectionPrefixes } from '../../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { envUtils } from '../../src/utils/envUtils';
 
@@ -62,7 +55,7 @@ suite('Connector trigger Poll project scaffolding', () => {
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createSelection('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -89,19 +82,12 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.match(functionContents, /ValueKind == JsonValueKind\.Array/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
-            getPollingConnectorConnectionPrefixes(functionContents),
-            ['ConnectorNamespace'],
-        );
-        assert.deepStrictEqual(
-            selectPollingConnectorBinding(
-                getPollingConnectorBindings(functionContents),
-                'TrigNewContact',
-            ),
-            {
+            getPollingConnectorBindings(functionContents),
+            [{
                 connectionSettingName: 'ConnectorNamespace',
                 functionName: 'TrigNewContact',
                 triggerConfigSettingName: 'TrigNewContactTriggerConfigName',
-            },
+            }],
         );
     });
 
@@ -125,7 +111,7 @@ suite('Connector trigger Poll project scaffolding', () => {
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createSelection('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -169,7 +155,7 @@ public void Run(
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.CSharp,
-            createHandoff('act', 'TrigNewContact'),
+            createSelection('act', 'TrigNewContact'),
             await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
@@ -198,7 +184,7 @@ public void Run(
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.TypeScript,
-            createHandoff('rss', 'OnNewFeed'),
+            createSelection('rss', 'OnNewFeed'),
             await readOutputMetadata('rssOnNewFeedSwagger.json', 'OnNewFeed'),
         );
 
@@ -216,19 +202,12 @@ public void Run(
         assert.match(functionContents, /record\?\.value/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
-            getPollingConnectorConnectionPrefixes(functionContents),
-            ['ConnectorNamespace'],
-        );
-        assert.deepStrictEqual(
-            selectPollingConnectorBinding(
-                getPollingConnectorBindings(functionContents),
-                'OnNewFeed',
-            ),
-            {
+            getPollingConnectorBindings(functionContents),
+            [{
                 connectionSettingName: 'ConnectorNamespace',
                 functionName: 'OnNewFeed',
                 triggerConfigSettingName: 'OnNewFeedTriggerConfigName',
-            },
+            }],
         );
     });
 
@@ -249,7 +228,7 @@ def keep_me() -> None:
 azurefunctions-extensions-connectors
 `);
 
-        const handoff = createHandoff('act', 'TrigNewContact');
+        const selection = createSelection('act', 'TrigNewContact');
         const outputMetadata = await readOutputMetadata(
             'actTrigNewContactSwagger.json',
             'TrigNewContact',
@@ -257,13 +236,13 @@ azurefunctions-extensions-connectors
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.Python,
-            handoff,
+            selection,
             outputMetadata,
         );
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.Python,
-            handoff,
+            selection,
             outputMetadata,
         );
 
@@ -289,19 +268,12 @@ azurefunctions-extensions-connectors
         assert.match(functionContents, /if isinstance\(body, list\):/);
         assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
         assert.deepStrictEqual(
-            getPollingConnectorConnectionPrefixes(functionContents),
-            ['ConnectorNamespace'],
-        );
-        assert.deepStrictEqual(
-            selectPollingConnectorBinding(
-                getPollingConnectorBindings(functionContents),
-                'TrigNewContact',
-            ),
-            {
+            getPollingConnectorBindings(functionContents),
+            [{
                 connectionSettingName: 'ConnectorNamespace',
                 functionName: 'TrigNewContact',
                 triggerConfigSettingName: 'TrigNewContactTriggerConfigName',
-            },
+            }],
         );
     });
 
@@ -313,7 +285,7 @@ azurefunctions-extensions-connectors
                 'actTrigNewContactSwagger.json',
                 'TrigNewContact',
             );
-            const handoff = createHandoff('act', 'TrigNewContact');
+            const selection = createSelection('act', 'TrigNewContact');
 
             const csharpPath = path.join(projectPath, 'csharp');
             await AzExtFsExtra.ensureDir(csharpPath);
@@ -350,7 +322,7 @@ host.Run();
             await ensureConnectorTriggerPollProject(
                 csharpPath,
                 ProjectLanguage.CSharp,
-                handoff,
+                selection,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -408,7 +380,7 @@ export const app: {
             await ensureConnectorTriggerPollProject(
                 typescriptPath,
                 ProjectLanguage.TypeScript,
-                handoff,
+                selection,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -447,7 +419,7 @@ app = func.FunctionApp()
             await ensureConnectorTriggerPollProject(
                 pythonPath,
                 ProjectLanguage.Python,
-                handoff,
+                selection,
                 outputMetadata,
             );
             await cpUtils.executeCommand(
@@ -460,21 +432,11 @@ app = func.FunctionApp()
     );
 });
 
-function createHandoff(
+function createSelection(
     connectorId: string,
     operationId: string,
-): ConnectorTriggerProjectHandoff {
+): ConnectorTriggerSelection {
     return {
-        version: connectorTriggerProjectHandoffVersion,
-        subscription: {
-            id: 'sub-one',
-            tenantId: 'tenant-one',
-            environment: {
-                name: 'AzureCloud',
-                resourceManagerEndpointUrl: 'https://management.azure.com/',
-            },
-        },
-        region: 'westcentralus',
         connectorId,
         operationId,
     };
