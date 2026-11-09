@@ -118,7 +118,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         const message = vscode.l10n.t('Prefer the classic experience?');
         const link = vscode.l10n.t('Switch to classic');
         const dismiss = vscode.l10n.t('Dismiss classic experience banner');
-        const banner = `<div id="classic-template-feed-banner" role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
+        const banner = `<div id="classic-template-feed-banner" role="note" style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 6px 24px; background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-widget-border)); border-left: 4px solid var(--vscode-editorInfo-foreground); color: var(--vscode-foreground); line-height: 20px;">
             <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 16 16" style="flex: none; color: var(--vscode-editorInfo-foreground);">
                 <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor"/>
                 <path d="M8 7v4" stroke="currentColor" stroke-width="1.5"/>
