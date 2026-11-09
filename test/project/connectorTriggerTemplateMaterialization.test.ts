@@ -6,6 +6,7 @@
 import {
     AzExtFsExtra,
     createTestActionContext,
+    TestOutputChannel,
     type IActionContext,
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
@@ -24,7 +25,11 @@ import {
 import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
-import { ProjectLanguage } from '../../src/constants';
+import {
+    ProjectLanguage,
+    projectTemplatesCacheExpirationHoursSetting,
+} from '../../src/constants';
+import { ext } from '../../src/extensionVariables';
 import {
     findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
@@ -48,6 +53,10 @@ const buildGenericTemplateTestsEnabled = envUtils.isEnvironmentVariableSet(
 
 suite('Connector Trigger template materialization', () => {
     let projectPath: string;
+
+    suiteSetup(() => {
+        ext.outputChannel = new TestOutputChannel();
+    });
 
     setup(async () => {
         projectPath = await fs.promises.mkdtemp(
@@ -284,24 +293,82 @@ suite('Connector Trigger template materialization', () => {
         );
     });
 
-    test('ProjectTemplateProvider does not use an offline manifest when the remote fetch fails', async () => {
+    test('ProjectTemplateProvider uses a fresh cached manifest before remote or bundled sources', async () => {
+        const cachedManifest = createOrdinaryProjectManifest();
         const provider = new ProjectTemplateProvider() as unknown as {
             getManifest(context: IActionContext): Promise<ITemplateManifest>;
+            getCachedManifest(): Promise<ITemplateManifest | undefined>;
             fetchManifestFromRemote(context: IActionContext): Promise<ITemplateManifest>;
+            getBundledManifest(): Promise<ITemplateManifest>;
         };
+        provider.getCachedManifest = async () => cachedManifest;
         provider.fetchManifestFromRemote = async () => {
-            throw new Error('Remote manifest unavailable.');
+            return assert.fail('A fresh cache must prevent a remote request.');
+        };
+        provider.getBundledManifest = async () => {
+            return assert.fail('A fresh cache must prevent a bundled fallback.');
         };
         const context = await createTestActionContext();
 
-        await assert.rejects(
-            provider.getManifest(context),
-            /Remote manifest unavailable/,
+        assert.strictEqual(
+            await provider.getManifest(context),
+            cachedManifest,
         );
         assert.strictEqual(
             context.telemetry.properties.manifestSource,
-            'remote',
+            'cache',
         );
+    });
+
+    test('ProjectTemplateProvider uses the ordinary bundled manifest when the remote fetch fails', async () => {
+        const bundledManifest = createOrdinaryProjectManifest();
+        const provider = new ProjectTemplateProvider() as unknown as {
+            getManifest(context: IActionContext): Promise<ITemplateManifest>;
+            getCachedManifest(): Promise<ITemplateManifest | undefined>;
+            fetchManifestFromRemote(context: IActionContext): Promise<ITemplateManifest>;
+            getBundledManifest(): Promise<ITemplateManifest>;
+        };
+        provider.getCachedManifest = async () => undefined;
+        provider.fetchManifestFromRemote = async () => {
+            throw new Error('Remote manifest unavailable.');
+        };
+        provider.getBundledManifest = async () => bundledManifest;
+        const context = await createTestActionContext();
+
+        assert.strictEqual(
+            await provider.getManifest(context),
+            bundledManifest,
+        );
+        assert.strictEqual(
+            context.telemetry.properties.manifestSource,
+            'bundled',
+        );
+    });
+
+    test('contributes the project template cache expiration setting', async () => {
+        const packageJson = JSON.parse(await fs.promises.readFile(
+            path.join(__dirname, '..', '..', 'package.json'),
+            'utf8',
+        )) as {
+            contributes: {
+                configuration: {
+                    properties: Record<string, unknown>;
+                }[];
+            };
+        };
+        const setting = packageJson.contributes.configuration
+            .map(configuration =>
+                configuration.properties[
+                    `azureFunctions.${projectTemplatesCacheExpirationHoursSetting}`
+                ],
+            )
+            .find(value => value !== undefined);
+
+        assert.deepStrictEqual(setting, {
+            type: 'number',
+            default: 24,
+            description: '%azureFunctions.projectTemplates.cacheExpirationHours%',
+        });
     });
 
     test('derives valid event identities from canonical operation IDs', () => {
@@ -915,6 +982,19 @@ function createTemplate(): IProjectTemplate {
                 ],
             }],
         },
+    };
+}
+
+function createOrdinaryProjectManifest(): ITemplateManifest {
+    const template = createTemplate();
+    template.id = 'http-trigger-typescript';
+    template.displayName = 'HTTP Trigger';
+    template.repositoryUrl = 'https://example.invalid/http-template';
+    delete template.connectorTrigger;
+    return {
+        version: '1.0.0',
+        generatedAt: '2026-01-01T00:00:00Z',
+        templates: [template],
     };
 }
 

@@ -203,6 +203,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     protected override async fetchCachedTemplates(): Promise<{ templates: ISharedProjectTemplate[]; defaultLocation: string } | undefined> {
+        await this.templateProvider.clearCache();
         return await this.fetchTemplates();
     }
 
