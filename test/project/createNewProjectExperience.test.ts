@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, callWithTelemetryAndErrorHandling, createTestActionContext, registerTelemetryHandler, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, createTestActionContext, initializeWorkflowTelemetry, registerTelemetryHandler, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController } from '@microsoft/vscode-azext-webview';
 import * as assert from 'assert';
 import * as fs from 'fs';
@@ -22,6 +22,7 @@ import { LocalProjectTreeItem } from '../../src/tree/localProject/LocalProjectTr
 import { telemetryUtils } from '../../src/utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
 import { runWithFuncSetting } from '../runWithSetting';
+import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
 import { getTestWorkspaceFolder } from '../global.test';
 
 suite('Create New Project experience', () => {
@@ -35,9 +36,10 @@ suite('Create New Project experience', () => {
 
     test('opens the template gallery by default without an experience prompt', async () => {
         const context = await createTestActionContext();
+        initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'createNewProject' });
         const { calls, handlers } = createHandlers();
 
-        await routeCreateNewProject(context, { classicTemplateFeed: false }, handlers);
+        await runWithTelemetryContext(context, async () => routeCreateNewProject(context, { classicTemplateFeed: false }, handlers));
 
         assert.strictEqual(calls.classic, 0);
         assert.strictEqual(calls.templateGallery, 1);
@@ -45,6 +47,8 @@ suite('Create New Project experience', () => {
         assert.strictEqual(context.telemetry.properties.classicTemplateFeed, 'false');
         assert.strictEqual(context.telemetry.properties.flow, 'templateGallery');
         assert.strictEqual(context.telemetry.properties.projectCreationRouteReason, 'default');
+        assert.strictEqual(context.telemetry.properties.outcome, 'handedOff');
+        assert.strictEqual(context.telemetry.properties.cancelReason, 'templateGallery');
     });
 
     test('uses the classic template feed when the user setting is enabled', async () => {

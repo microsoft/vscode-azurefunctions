@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, setWorkflowOutcome, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { classicTemplateFeedSetting, funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -92,6 +92,7 @@ export async function routeCreateNewProject(
     context.telemetry.properties.projectCreationRouteReason = 'default';
     context.telemetry.properties.flow = 'templateGallery';
     handlers.showTemplateGallery();
+    setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
 }
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {

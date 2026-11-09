@@ -14,6 +14,7 @@ import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { type IProjectWizardContext } from "../IProjectWizardContext";
 
 export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
+    public telemetryId: string = 'DotnetRuntimeStep';
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
         if (context.targetFramework) {
             context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;

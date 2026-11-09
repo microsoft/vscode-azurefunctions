@@ -3,25 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, registerOnActionStartHandler, registerTelemetryHandler, TestOutputChannel, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, initializeWorkflowTelemetry, registerOnActionStartHandler, registerTelemetryHandler, TestOutputChannel, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { Uri, type Disposable } from 'vscode';
+import { FunctionCreateStepBase } from '../../src/commands/createFunction/FunctionCreateStepBase';
+import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { installNodeDependencies } from '../../src/commands/createNewProject/installNodeDependencies';
 import { JavaScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
+import { ProjectCreateStepBase } from '../../src/commands/createNewProject/ProjectCreateStep/ProjectCreateStepBase';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
 import { initProjectForVSCode } from '../../src/commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase';
+import { createActivityContext } from '../../src/utils/activityUtils';
 import { cpUtils } from '../../src/utils/cpUtils';
+import { gitUtils } from '../../src/utils/gitUtils';
 import { runWithFuncSetting } from '../runWithSetting';
+import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
 
 suite('Project npm dependencies', () => {
     const originalExecuteCommand = cpUtils.executeCommand;
@@ -463,6 +470,102 @@ suite('Project npm dependencies', () => {
 
         assert.strictEqual(context.telemetry.properties.npmInstallSucceeded, 'true');
         assert.deepStrictEqual(logs, []);
+    });
+
+    test('gallery creation emits its own root with an observed creation stage', async () => {
+        const contexts: IActionContext[] = [];
+        const telemetry = registerTelemetryHandler(context => {
+            if (context.callbackId === 'azureFunctions.templateGallery.createProject') {
+                contexts.push(context);
+            }
+        });
+        const controller = createController(false, []);
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+        };
+        try {
+            await controller['createProject'](template, ProjectLanguage.Python, projectPath);
+        } finally {
+            telemetry.dispose();
+        }
+        assert.strictEqual(contexts.length, 1);
+        const { properties, measurements } = contexts[0].telemetry;
+        assert.strictEqual(properties.workflow, 'createProject');
+        assert.strictEqual(properties.command, 'templateGallery.createProject');
+        assert.strictEqual(properties.isWorkflowRoot, 'true');
+        assert.strictEqual(properties.outcome, 'succeeded');
+        assert.ok(typeof measurements.workflowDuration === 'number' && measurements.workflowDuration >= 0);
+        assert.ok(!JSON.stringify({ properties, measurements }).includes(projectPath));
+    });
+
+    test('classic started event copies legacy fields without aliasing or counting another root', async () => {
+        const context: IProjectWizardContext = Object.assign(await createTestActionContext(), {
+            projectPath, workspacePath: projectPath, workspaceFolder: undefined,
+            version: FuncVersion.v4, language: ProjectLanguage.JavaScript, projectTemplateKey: undefined,
+        });
+        initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'createNewProject' });
+        context.telemetry.properties.legacyProjectSignal = 'present';
+        const children: IActionContext[] = [];
+        const handler = registerTelemetryHandler(child => {
+            if (child.callbackId === 'azureFunctions.createNewProjectStarted') {
+                children.push(child);
+            }
+        });
+        const originalGitInstalled = gitUtils.isGitInstalled;
+        gitUtils.isGitInstalled = async () => false;
+        class ProjectStep extends ProjectCreateStepBase {
+            public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+                wizardContext.telemetry.properties.fixtureCreated = 'true';
+            }
+        }
+        try {
+            await runWithTelemetryContext(context, async () => new ProjectStep().execute(context, { report: () => undefined }));
+        } finally {
+            gitUtils.isGitInstalled = originalGitInstalled;
+            handler.dispose();
+        }
+        assert.strictEqual(children.length, 1);
+        const child = children[0];
+        assert.notStrictEqual(child.telemetry, context.telemetry);
+        assert.notStrictEqual(child.telemetry.properties, context.telemetry.properties);
+        assert.strictEqual(child.telemetry.properties.legacyProjectSignal, 'present');
+        assert.strictEqual(child.telemetry.properties.fixtureCreated, 'true');
+        assert.strictEqual(child.telemetry.properties.workflowRunId, context.telemetry.properties.workflowRunId);
+        assert.strictEqual(child.telemetry.properties.parentAttemptId, context.telemetry.properties.attemptId);
+        assert.strictEqual(child.telemetry.properties.isWorkflowRoot, 'false');
+        assert.notStrictEqual(child.telemetry.properties.attemptId, context.telemetry.properties.attemptId);
+    });
+
+    test('nested function creation retains the project root and correlates its post-create child', async () => {
+        const context: IFunctionWizardContext = Object.assign(await createTestActionContext(), await createActivityContext(), {
+            projectPath, workspacePath: projectPath, workspaceFolder: undefined,
+            version: FuncVersion.v4, language: ProjectLanguage.JavaScript, projectTemplateKey: undefined,
+            functionTemplate: {
+                id: 'testHttpTrigger', name: 'HttpTrigger', language: ProjectLanguage.JavaScript,
+                isHttpTrigger: true, isTimerTrigger: false, isMcpTrigger: false, templateSchemaVersion: TemplateSchemaVersion.v1,
+            },
+        });
+        initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'createNewProject' });
+        const children: IActionContext[] = [];
+        const handler = registerTelemetryHandler(child => {
+            if (child.callbackId === 'postFunctionCreate') {
+                children.push(child);
+            }
+        });
+        class FunctionStep extends FunctionCreateStepBase<IFunctionWizardContext> {
+            public async executeCore(): Promise<string> { return ''; }
+        }
+        try {
+            await runWithTelemetryContext(context, async () => new FunctionStep().execute(context, { report: () => undefined }));
+        } finally {
+            handler.dispose();
+        }
+        assert.strictEqual(context.telemetry.properties.stage, 'workflow');
+        assert.strictEqual(context.telemetry.properties.isWorkflowRoot, 'true');
+        assert.strictEqual(children.length, 1);
+        assert.strictEqual(children[0].telemetry.properties.workflowRunId, context.telemetry.properties.workflowRunId);
+        assert.strictEqual(children[0].telemetry.properties.parentAttemptId, context.telemetry.properties.attemptId);
+        assert.strictEqual(children[0].telemetry.properties.isWorkflowRoot, 'false');
     });
 
     test('Gallery installer records optional failure and explains manual recovery', async () => {

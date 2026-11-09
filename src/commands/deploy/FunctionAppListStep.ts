@@ -15,6 +15,7 @@ import { createCreateFunctionAppComponents } from "../createFunctionApp/createCr
 import { type IFuncDeployContext } from "./deploy";
 
 export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContext> {
+    public telemetryId: string = 'FunctionAppListStep';
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.site = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder: vscode.l10n.t("Select a function app") })).data;
         context.telemetry.properties.resourceId = context.site?.id ? new vscode.TelemetryTrustedValue(context.site?.id) : undefined;

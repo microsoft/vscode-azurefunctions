@@ -8,6 +8,7 @@ import { localize } from '../../localize';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 
 export class OpenBehaviorStep extends AzureWizardPromptStep<IProjectWizardContext> {
+    public telemetryId: string = 'OpenBehaviorStep';
     public async prompt(context: IProjectWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<OpenBehavior>[] = [
             { label: localize('OpenInCurrentWindow', 'Open in current window'), data: 'OpenInCurrentWindow' },

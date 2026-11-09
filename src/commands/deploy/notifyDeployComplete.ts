@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, setWorkflowTelemetryDetails, withTelemetryStage, type AzExtTreeItem, type IActionContext } from '@microsoft/vscode-azext-utils';
 import retry from 'p-retry';
 import * as path from 'path';
 import { Uri, window, type MessageItem, type WorkspaceFolder } from 'vscode';
@@ -47,10 +47,13 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
     // Don't wait
     void window.showInformationMessage(deployComplete, ...messageItems).then(async result => {
         await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
+            if (context.telemetry.properties.workflowRunId) {
+                initializeWorkflowTelemetry(postDeployContext, { workflow: 'deploy', command: 'unknown' }, context);
+            }
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             postDeployContext.valuesToMask.push(...context.valuesToMask);
-            context.telemetry.eventVersion = 2;
-            await node.initSite(context);
+            postDeployContext.telemetry.eventVersion = 2;
+            await node.initSite(postDeployContext);
 
             if (result === viewOutput) {
                 ext.outputChannel.show();
@@ -88,13 +91,21 @@ export async function notifyDeployComplete(context: IFuncDeployContext, node: Sl
                     localize('queryingTriggers', 'Querying triggers...') :
                     localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
                 ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
-                await listHttpTriggerUrls(context, node);
+                await withTelemetryStage(context, { stage: 'completion', attempt: currentAttempt }, async stage => {
+                    try {
+                        await listHttpTriggerUrls(context, node);
+                    } catch (error) {
+                        stage.setOutcome('failed', { failureCategory: 'deployment', failureCode: 'triggerDiscoveryFailed' });
+                        throw error;
+                    }
+                });
             },
             { retries, minTimeout: 2 * 1000 }
         );
     } catch (error) {
         // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
         context.errorHandling.suppressDisplay = true;
+        setWorkflowTelemetryDetails(context, { failureCategory: 'deployment', failureCode: 'triggerDiscoveryFailed' });
         ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
         throw error;
     }
