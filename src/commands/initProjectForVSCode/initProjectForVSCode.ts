@@ -17,7 +17,7 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, projectWorkspacePath?: string): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
     if (fsPath === undefined) {
@@ -33,11 +33,11 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
             }
         }
     } else {
-        workspaceFolder = getContainingWorkspace(fsPath);
-        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
+        workspaceFolder = projectWorkspacePath ? undefined : getContainingWorkspace(fsPath);
+        workspacePath = projectWorkspacePath ?? (workspaceFolder ? workspaceFolder.uri.fsPath : fsPath);
     }
 
-    const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
+    const projectPath: string | undefined = projectWorkspacePath ? fsPath : await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         return;
     }

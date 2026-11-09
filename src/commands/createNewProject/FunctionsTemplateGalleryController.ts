@@ -22,11 +22,13 @@ import { telemetryUtils } from '../../utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
+import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+import { tryGetFunctionProjectRoot } from './verifyIsProject';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -223,6 +225,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                                 await installNodeDependencies(actionContext, functionProjectPath);
                             }
                         }
+                        await this.initializeNodeProjectForVSCode(actionContext, projectPath, language);
                     }
 
                     this.sendProgress('Initializing git repository...');
@@ -265,6 +268,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 }
             });
         });
+    }
+
+    private async initializeNodeProjectForVSCode(context: IActionContext, projectPath: string, language: ProjectLanguage): Promise<void> {
+        const functionProjectPath = await tryGetFunctionProjectRoot(context, projectPath, 'prompt');
+        if (functionProjectPath && !isPathEqual(functionProjectPath, projectPath)
+            && await AzExtFsExtra.pathExists(path.join(functionProjectPath, packageJsonFileName))) {
+            await initProjectForVSCode(context, functionProjectPath, language, projectPath);
+        }
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {
