@@ -3,56 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
-import { ProjectLanguage, projectTemplatesCacheExpirationHoursSetting } from '../../constants';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { requestUtils } from '../../utils/requestUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from './IProjectTemplate';
 
 /**
- * Provides project templates from a remote manifest with caching and offline fallback
+ * Provides project templates from the live remote manifest.
  */
 export class ProjectTemplateProvider {
-    private static readonly CACHE_KEY = 'projectTemplatesManifestV2';
-    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestampV2';
     private static readonly MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
-    private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
     /**
      * Get all project templates, applying language and model filtering
      */
     public async getTemplates(context: IActionContext, language?: ProjectLanguage, languageModel?: number): Promise<IProjectTemplate[]> {
         const manifest = await this.getManifest(context);
-        const bundledManifest =
-            context.telemetry.properties.manifestSource === 'bundled' ?
-                manifest :
-                await this.getBundledManifest();
-        const connectorOwnership = new Map(
-            bundledManifest.templates
-                .filter(template => !!template.connectorTrigger)
-                .map(template => [template.id, template]),
-        );
-        let ownershipOverlayCount = 0;
         // Normalize manifest field names so the rest of the code works against a
         // consistent shape regardless of which manifest version was fetched.
         let templates = manifest.templates.map(t => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const rawTemplate = t as any;
-            const ownershipTemplate = !rawTemplate.connectorTrigger ?
-                connectorOwnership.get(rawTemplate.id) :
-                undefined;
-            const raw = ownershipTemplate ? {
-                ...rawTemplate,
-                connectorTrigger: ownershipTemplate.connectorTrigger,
-                folderPath: ownershipTemplate.folderPath,
-                gitRef: ownershipTemplate.gitRef,
-                repositoryUrl: ownershipTemplate.repositoryUrl,
-                subdirectory: ownershipTemplate.subdirectory,
-            } : rawTemplate;
-            ownershipOverlayCount += ownershipTemplate ? 1 : 0;
+            const raw = t as any;
 
             // categories: accept singular 'category' string from older manifests
             const categories: TemplateCategory[] =
@@ -86,7 +59,7 @@ export class ProjectTemplateProvider {
             const subdirectory: string | undefined = raw.subdirectory;
 
             return {
-                ...raw,
+                ...t,
                 categories,
                 displayName,
                 shortDescription,
@@ -96,8 +69,6 @@ export class ProjectTemplateProvider {
                 ...(subdirectory !== undefined ? { subdirectory } : {}),
             } as IProjectTemplate;
         });
-        context.telemetry.properties.connectorOwnershipOverlay =
-            String(ownershipOverlayCount > 0);
 
         // Filter by language if specified
         if (language) {
@@ -119,73 +90,13 @@ export class ProjectTemplateProvider {
     }
 
     /**
-     * Get the template manifest, using cache or fetching from remote
+     * Get the live template manifest.
      */
     public async getManifest(context: IActionContext): Promise<ITemplateManifest> {
-        // Try to get cached manifest if not expired
-        const cachedManifest = await this.getCachedManifest();
-        if (cachedManifest) {
-            context.telemetry.properties.manifestSource = 'cache';
-            ext.outputChannel.appendLog(localize('usingCachedManifest', 'Using cached template manifest ({0} templates)', cachedManifest.templates.length.toString()));
-            return cachedManifest;
-        }
-
-        // Try to fetch from remote
-        try {
-            const manifest = await this.fetchManifestFromRemote(context);
-            await this.cacheManifest(manifest);
-            context.telemetry.properties.manifestSource = 'remote';
-            ext.outputChannel.appendLog(localize('manifestFetched', 'Successfully fetched template manifest ({0} templates)', manifest.templates.length.toString()));
-            return manifest;
-        } catch (error) {
-            // If remote fetch fails, try bundled fallback
-            context.telemetry.properties.manifestSource = 'bundled';
-            context.telemetry.properties.manifestFetchError = parseError(error).message;
-
-            ext.outputChannel.appendLog(localize('manifestFetchFailed', 'Could not fetch template manifest from remote: {0}. Using bundled templates.', parseError(error).message));
-
-            return await this.getBundledManifest();
-        }
-    }
-
-    /**
-     * Clear the cached manifest, forcing a fresh fetch on next request
-     */
-    public async clearCache(): Promise<void> {
-        ext.outputChannel.appendLog(localize('clearingCache', 'Clearing template manifest cache...'));
-        await ext.context.globalState.update(ProjectTemplateProvider.CACHE_KEY, undefined);
-        await ext.context.globalState.update(ProjectTemplateProvider.CACHE_TIMESTAMP_KEY, undefined);
-    }
-
-    /**
-     * Get cached manifest if it exists and hasn't expired
-     */
-    private async getCachedManifest(): Promise<ITemplateManifest | undefined> {
-        const cached = ext.context.globalState.get<ITemplateManifest>(ProjectTemplateProvider.CACHE_KEY);
-        const cachedTimestamp = ext.context.globalState.get<number>(ProjectTemplateProvider.CACHE_TIMESTAMP_KEY);
-
-        if (!cached || !cachedTimestamp) {
-            return undefined;
-        }
-
-        // Check if cache has expired
-        const expirationHours = getWorkspaceSetting<number>(projectTemplatesCacheExpirationHoursSetting) || ProjectTemplateProvider.DEFAULT_CACHE_EXPIRATION_HOURS;
-        const expirationMs = expirationHours * 60 * 60 * 1000;
-        const now = Date.now();
-
-        if (now - cachedTimestamp > expirationMs) {
-            return undefined;
-        }
-
-        return cached;
-    }
-
-    /**
-     * Cache the manifest with current timestamp
-     */
-    private async cacheManifest(manifest: ITemplateManifest): Promise<void> {
-        await ext.context.globalState.update(ProjectTemplateProvider.CACHE_KEY, manifest);
-        await ext.context.globalState.update(ProjectTemplateProvider.CACHE_TIMESTAMP_KEY, Date.now());
+        context.telemetry.properties.manifestSource = 'remote';
+        const manifest = await this.fetchManifestFromRemote(context);
+        ext.outputChannel.appendLog(localize('manifestFetched', 'Successfully fetched template manifest ({0} templates)', manifest.templates.length.toString()));
+        return manifest;
     }
 
     /**
@@ -215,20 +126,6 @@ export class ProjectTemplateProvider {
         }
 
         return manifest;
-    }
-
-    /**
-     * Get bundled fallback manifest
-     */
-    private async getBundledManifest(): Promise<ITemplateManifest> {
-        const bundledPath = path.join(ext.context.extensionPath, 'resources', 'backupProjectTemplates', 'manifest.json');
-
-        if (!await AzExtFsExtra.pathExists(bundledPath)) {
-            throw new Error(localize('noBundledManifest', 'No bundled template manifest found and remote fetch failed'));
-        }
-
-        const manifestContent = await AzExtFsExtra.readFile(bundledPath);
-        return JSON.parse(manifestContent) as ITemplateManifest;
     }
 }
 

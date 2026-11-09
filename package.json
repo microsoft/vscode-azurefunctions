@@ -1514,11 +1514,6 @@
                             "%azureFunctions.mcpProjectType.SelfHostedMcpServer%"
                         ]
                     },
-                    "azureFunctions.projectTemplates.cacheExpirationHours": {
-                        "type": "number",
-                        "default": 24,
-                        "description": "%azureFunctions.projectTemplates.cacheExpirationHours%"
-                    },
                     "azureFunctions.enableTemplateGallery": {
                         "type": "boolean",
                         "default": false,

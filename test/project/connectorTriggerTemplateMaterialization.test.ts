@@ -248,40 +248,22 @@ suite('Connector Trigger template materialization', () => {
         );
     });
 
-    test('ProjectTemplateProvider overlays older manifests and preserves remote ownership', async () => {
+    test('ProjectTemplateProvider preserves remote connector ownership', async () => {
         const remoteTemplate = createTemplate();
-        delete remoteTemplate.connectorTrigger;
-        remoteTemplate.gitRef = 'refs/tags/old';
-        remoteTemplate.folderPath = 'old-template-root';
-        const bundledTemplate = createTemplate();
-        bundledTemplate.gitRef = '0123456789abcdef0123456789abcdef01234567';
-        bundledTemplate.folderPath = 'office365App/template';
-        bundledTemplate.repositoryUrl = 'https://example.invalid/pinned-template';
+        remoteTemplate.gitRef = 'refs/tags/remote-contract';
+        remoteTemplate.folderPath = 'remote-template-root';
+        remoteTemplate.repositoryUrl = 'https://example.invalid/remote-template';
         const provider = new ProjectTemplateProvider() as unknown as {
             getTemplates(
                 context: IActionContext,
                 language?: ProjectLanguage,
             ): Promise<IProjectTemplate[]>;
-            getManifest(): Promise<{
-                version: string;
-                generatedAt: string;
-                templates: IProjectTemplate[];
-            }>;
-            getBundledManifest(): Promise<{
-                version: string;
-                generatedAt: string;
-                templates: IProjectTemplate[];
-            }>;
+            getManifest(): Promise<ITemplateManifest>;
         };
         provider.getManifest = async () => ({
             version: '1.0.0',
             generatedAt: '2026-01-01T00:00:00Z',
             templates: [remoteTemplate],
-        });
-        provider.getBundledManifest = async () => ({
-            version: '1.0.0',
-            generatedAt: '2026-01-01T00:00:00Z',
-            templates: [bundledTemplate],
         });
         const context = await createTestActionContext();
 
@@ -290,69 +272,36 @@ suite('Connector Trigger template materialization', () => {
             ProjectLanguage.TypeScript,
         );
 
-        assert.strictEqual(
-            template.gitRef,
-            '0123456789abcdef0123456789abcdef01234567',
-        );
-        assert.deepStrictEqual(
-            template.connectorTrigger,
-            bundledTemplate.connectorTrigger,
-        );
-        assert.strictEqual(template.folderPath, 'office365App/template');
+        assert.strictEqual(template.gitRef, 'refs/tags/remote-contract');
+        assert.strictEqual(template.folderPath, 'remote-template-root');
         assert.strictEqual(
             template.repositoryUrl,
-            'https://example.invalid/pinned-template',
-        );
-        assert.strictEqual(
-            context.telemetry.properties.connectorOwnershipOverlay,
-            'true',
-        );
-
-        remoteTemplate.connectorTrigger = {
-            operations: [{
-                operationId: 'RemoteOperation',
-                functionName: 'RemoteFunction',
-                ownedPaths: ['src/functions/remote.ts'],
-            }],
-        };
-        remoteTemplate.gitRef = 'refs/tags/remote-contract';
-        remoteTemplate.folderPath = 'remote-template-root';
-        remoteTemplate.repositoryUrl = 'https://example.invalid/remote-template';
-        const remoteContext = await createTestActionContext();
-        const [remoteOwnedTemplate] = await provider.getTemplates(
-            remoteContext,
-            ProjectLanguage.TypeScript,
-        );
-
-        assert.strictEqual(remoteOwnedTemplate.gitRef, 'refs/tags/remote-contract');
-        assert.strictEqual(remoteOwnedTemplate.folderPath, 'remote-template-root');
-        assert.strictEqual(
-            remoteOwnedTemplate.repositoryUrl,
             'https://example.invalid/remote-template',
         );
         assert.deepStrictEqual(
-            remoteOwnedTemplate.connectorTrigger,
+            template.connectorTrigger,
             remoteTemplate.connectorTrigger,
-        );
-        assert.strictEqual(
-            remoteContext.telemetry.properties.connectorOwnershipOverlay,
-            'false',
         );
     });
 
-    test('bundled manifest carries every exact connector ownership contract', async () => {
-        const manifest = await readBundledManifest();
-        const expected = getExpectedConnectorTemplates();
-        const actual = Object.fromEntries(manifest.templates
-            .filter(template => Object.hasOwn(expected, template.id))
-            .map(template => [template.id, {
-                connectorTrigger: template.connectorTrigger,
-                folderPath: template.folderPath,
-                gitRef: template.gitRef,
-                repositoryUrl: template.repositoryUrl,
-            }]));
+    test('ProjectTemplateProvider does not use an offline manifest when the remote fetch fails', async () => {
+        const provider = new ProjectTemplateProvider() as unknown as {
+            getManifest(context: IActionContext): Promise<ITemplateManifest>;
+            fetchManifestFromRemote(context: IActionContext): Promise<ITemplateManifest>;
+        };
+        provider.fetchManifestFromRemote = async () => {
+            throw new Error('Remote manifest unavailable.');
+        };
+        const context = await createTestActionContext();
 
-        assert.deepStrictEqual(actual, expected);
+        await assert.rejects(
+            provider.getManifest(context),
+            /Remote manifest unavailable/,
+        );
+        assert.strictEqual(
+            context.telemetry.properties.manifestSource,
+            'remote',
+        );
     });
 
     test('derives valid event identities from canonical operation IDs', () => {
@@ -573,42 +522,35 @@ function createIntegrationCreator(useGit: boolean): TestableProjectTemplateCreat
 }
 
 async function createIntegrationProvider(): Promise<ProjectTemplateProvider> {
-    const bundledManifest = await readBundledManifest();
-    const remoteManifest = JSON.parse(
-        JSON.stringify(bundledManifest),
-    ) as ITemplateManifest;
-    for (const template of remoteManifest.templates) {
-        if (template.connectorTrigger) {
-            delete template.connectorTrigger;
-            template.gitRef = 'refs/tags/pre-ownership-contract';
-            template.folderPath = template.folderPath?.replace(/\/template$/, '');
-        }
-    }
+    const remoteManifest: ITemplateManifest = {
+        version: 'test',
+        generatedAt: '2026-11-09T00:00:00Z',
+        templates: Object.entries(getExpectedConnectorTemplates()).map(
+            ([id, contract]): IProjectTemplate => ({
+                id,
+                displayName: id,
+                shortDescription: 'Connector Trigger project',
+                categories: [TemplateCategory.Other],
+                languages: [
+                    id.endsWith('-csharp') ?
+                        ProjectLanguage.CSharp :
+                        id.endsWith('-python') ?
+                            ProjectLanguage.Python :
+                            ProjectLanguage.TypeScript,
+                ],
+                ...contract,
+            }),
+        ),
+    };
 
     const provider = new ProjectTemplateProvider() as unknown as {
-        getBundledManifest(): Promise<ITemplateManifest>;
         getManifest(context: IActionContext): Promise<ITemplateManifest>;
     };
     provider.getManifest = async context => {
-        context.telemetry.properties.manifestSource = 'cache';
+        context.telemetry.properties.manifestSource = 'remote';
         return remoteManifest;
     };
-    provider.getBundledManifest = async () => bundledManifest;
     return provider as unknown as ProjectTemplateProvider;
-}
-
-async function readBundledManifest(): Promise<ITemplateManifest> {
-    return JSON.parse(await fs.promises.readFile(
-        path.join(
-            __dirname,
-            '..',
-            '..',
-            'resources',
-            'backupProjectTemplates',
-            'manifest.json',
-        ),
-        'utf8',
-    )) as ITemplateManifest;
 }
 
 async function readConnectorFixture(name: string): Promise<unknown> {
