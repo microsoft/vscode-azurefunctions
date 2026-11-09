@@ -10,6 +10,8 @@ import { parseJson } from '../utils/parseJson';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
 const connectorSourceGlob = '**/*.{cs,py,js,ts}';
+const connectorCallPattern = /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*/gi;
+const structuralTokenPattern = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|[{}()[\],]/g;
 
 export interface ConnectorTriggerBindingCandidate {
     connectionSettingName: string;
@@ -75,14 +77,7 @@ export async function findPollingConnectorBindings(
 
 export function getConnectorTriggerRegistrations(content: string): string[] {
     return [
-        ...getRegistrationNames(
-            content,
-            /\[Function\(\s*["']([^"']+)["']\s*\)\][\s\S]*?\[\s*ConnectorTrigger\s*\(/gi,
-        ),
-        ...getRegistrationNames(
-            content,
-            /@(?:\w+\.)?function_name\s*\(\s*name\s*=\s*["']([^"']+)["']\s*\)[\s\S]*?@(?:\w+\.)?connector_trigger\s*\(/gi,
-        ),
+        ...getAttributedConnectorBlocks(content).map(block => block.functionName),
         ...getRegistrationNames(
             content,
             /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']/gi,
@@ -117,28 +112,17 @@ export function getPollingConnectorBindings(
     content: string,
 ): ConnectorTriggerBindingCandidate[] {
     return [
-        ...getBindingsFromBlocks(
-            content,
-            /\[Function\(\s*["']([^"']+)["']\s*\)\][\s\S]*?\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/gi,
-            /DeliveryMode\s*=\s*(?:\w+\.)*Poll\b/i,
-            /Connection\s*=\s*["']([^"']+)["']/i,
-            /TriggerConfigName\s*=\s*["']([^"']+)["']/i,
-        ),
-        ...getBindingsFromBlocks(
-            content,
-            /@(?:\w+\.)?function_name\s*\(\s*name\s*=\s*["']([^"']+)["']\s*\)[\s\S]*?@(?:\w+\.)?connector_trigger\s*\(([\s\S]*?)\)\s*(?:\r?\n)/gi,
-            /delivery_mode\s*=\s*(?:\w+\.)*POLL\b/i,
-            /connection\s*=\s*["']([^"']+)["']/i,
-            /trigger_config_name\s*=\s*["']([^"']+)["']/i,
-        ),
-        ...getBindingsFromBlocks(
-            content,
-            /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*\{([\s\S]*?)\bhandler\s*:/gi,
-            /deliveryMode\s*:\s*["']Poll["']/i,
-            /connection\s*:\s*["']([^"']+)["']/i,
-            /triggerConfigName\s*:\s*["']([^"']+)["']/i,
-        ),
-        ...getBindingsFromNamedTypeScriptOptions(content),
+        ...getAttributedConnectorBlocks(content).flatMap(({ functionName, options }) => {
+            if (!/delivery_?mode\s*=\s*(?:\w+\.)*Poll\b/i.test(options)) {
+                return [];
+            }
+            return createBindingCandidate(
+                /connection\s*=\s*["']([^"']+)["']/i.exec(options)?.[1],
+                /trigger_?config_?name\s*=\s*["']([^"']+)["']/i.exec(options)?.[1],
+                functionName,
+            );
+        }),
+        ...getTypeScriptBindings(content),
     ];
 }
 
@@ -157,60 +141,98 @@ function getRegistrationNames(content: string, pattern: RegExp): string[] {
     return [...content.matchAll(pattern)].map(match => match[1]);
 }
 
-function getBindingsFromBlocks(
+function getAttributedConnectorBlocks(content: string): { functionName: string; options: string }[] {
+    const blocks: { functionName: string; options: string }[] = [];
+    // Stop at the method body (including expression bodies), never at a later function's trigger.
+    for (const match of content.matchAll(/\[Function\(\s*["']([^"']+)["']\s*\)\]((?:(?!=>|\[Function\s*\()[^{])*?)(?=\{|=>)/gi)) {
+        const options = /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/i.exec(match[2])?.[1];
+        if (options) {
+            blocks.push({ functionName: match[1], options });
+        }
+    }
+    for (const match of content.matchAll(/^[ \t]*@[\s\S]*?(?=^[ \t]*(?:async\s+)?def\b)/gm)) {
+        const functionName = /@(?:\w+\.)?function_name\s*\(\s*name\s*=\s*["']([^"']+)["']\s*\)/i.exec(match[0])?.[1];
+        const options = /@(?:\w+\.)?connector_trigger\s*\(([\s\S]*?)\)\s*(?:\r?\n)/i.exec(match[0])?.[1];
+        if (functionName && options) {
+            blocks.push({ functionName, options });
+        }
+    }
+    return blocks;
+}
+
+function getTypeScriptBindings(
     content: string,
-    blockPattern: RegExp,
-    pollPattern: RegExp,
-    connectionPattern: RegExp,
-    triggerConfigPattern: RegExp,
 ): ConnectorTriggerBindingCandidate[] {
+    const namedOptions = new Map<string, string>();
+    for (const match of content.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
+        const options = readOptionsObject(content.slice(match.index + match[0].length));
+        if (options !== undefined) {
+            namedOptions.set(match[1], options);
+        }
+    }
+
     const bindings: ConnectorTriggerBindingCandidate[] = [];
-    for (const match of content.matchAll(blockPattern)) {
-        const block = match[2];
-        if (!pollPattern.test(block)) {
+    for (const match of content.matchAll(connectorCallPattern)) {
+        const argument = content.slice(match.index + match[0].length);
+        const name = /^([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(argument)?.[1];
+        const options = name ? namedOptions.get(name) : readOptionsObject(argument);
+        if (options === undefined) {
+            continue;
+        }
+        const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
+            const withoutComments = property.replace(structuralTokenPattern,
+                token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
+            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(["'])(.*?)\3\s*$/.exec(withoutComments);
+            return value ? [[value[1] ?? value[2], value[4]] as const] : [];
+        }));
+        if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
             continue;
         }
         bindings.push(...createBindingCandidate(
-            connectionPattern.exec(block)?.[1],
-            triggerConfigPattern.exec(block)?.[1],
+            properties.get('connection'),
+            properties.get('triggerConfigName'),
             match[1],
         ));
     }
     return bindings;
 }
 
-function getBindingsFromNamedTypeScriptOptions(
-    content: string,
-): ConnectorTriggerBindingCandidate[] {
-    const options = new Map<string, ConnectorTriggerBindingCandidate>();
-    const optionsPattern =
-        /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{([\s\S]*?)\bhandler\s*:/gi;
-    for (const match of content.matchAll(optionsPattern)) {
-        if (!/deliveryMode\s*:\s*["']Poll["']/i.test(match[2])) {
-            continue;
-        }
-        const [candidate] = createBindingCandidate(
-            /connection\s*:\s*["']([^"']+)["']/i.exec(match[2])?.[1],
-            /triggerConfigName\s*:\s*["']([^"']+)["']/i.exec(match[2])?.[1],
-        );
-        if (candidate) {
-            options.set(match[1], candidate);
-        }
-    }
+// Skip literals/comments and balance nested expressions so handlers cannot supply binding settings.
+function getStructuralTokens(content: string): IterableIterator<RegExpExecArray> {
+    return content.matchAll(structuralTokenPattern);
+}
 
-    const bindings: ConnectorTriggerBindingCandidate[] = [];
-    const callPattern =
-        /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*([A-Za-z_$][\w$]*)\s*,?\s*\)/gi;
-    for (const match of content.matchAll(callPattern)) {
-        const candidate = options.get(match[2]);
-        if (candidate) {
-            bindings.push({
-                ...candidate,
-                functionName: match[1],
-            });
+function readOptionsObject(content: string): string | undefined {
+    if (!content.startsWith('{')) {
+        return undefined;
+    }
+    let depth = 0;
+    for (const token of getStructuralTokens(content)) {
+        if (token[0] === '{') {
+            depth++;
+        } else if (token[0] === '}' && --depth === 0) {
+            return content.slice(1, token.index);
         }
     }
-    return bindings;
+    return undefined;
+}
+
+function splitTopLevelProperties(content: string): string[] {
+    const properties: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (const token of getStructuralTokens(content)) {
+        if (/^[{([]$/.test(token[0])) {
+            depth++;
+        } else if (/^[})\]]$/.test(token[0])) {
+            depth--;
+        } else if (token[0] === ',' && depth === 0) {
+            properties.push(content.slice(start, token.index));
+            start = token.index + 1;
+        }
+    }
+    properties.push(content.slice(start));
+    return properties;
 }
 
 function createBindingCandidate(

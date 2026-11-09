@@ -231,6 +231,10 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
     if (message.command === 'subscriptionsLoaded') {
         return 'subscriptions' in message &&
             Array.isArray(message.subscriptions) &&
+            message.subscriptions.every((value: unknown) =>
+                !!value && typeof value === 'object' &&
+                'id' in value && typeof value.id === 'string' &&
+                'label' in value && typeof value.label === 'string') &&
             'showingAll' in message &&
             typeof message.showingAll === 'boolean';
     }

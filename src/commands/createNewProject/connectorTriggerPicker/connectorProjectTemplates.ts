@@ -39,13 +39,13 @@ export function findConnectorProjectTemplates(
                 return true;
             }
 
-            const corpus = [
+            const searchText = [
                 template.id,
                 template.displayName,
                 template.shortDescription,
             ].join(' ').toLowerCase();
-            return corpus.includes(connectorId) ||
-                connectorTokens.every(token => corpus.includes(token));
+            return searchText.includes(connectorId) ||
+                connectorTokens.every(token => searchText.includes(token));
         })
         .sort((left, right) => left.displayName.localeCompare(right.displayName));
 }

@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from '../localize';
+
 type JsonRecord = Record<string, unknown>;
 
 const pythonReservedNames = new Set([
@@ -72,8 +74,14 @@ export function getCSharpOutputModelDefinition(
     schema: ConnectorTriggerOutputSchema,
     modelName: string,
 ): string {
+    const usedNames = new Set([modelName]);
     const properties = schema.properties.map(property => {
-        const propertyName = toPascalIdentifier(property.name);
+        const baseName = toPascalIdentifier(property.name);
+        let propertyName = baseName;
+        for (let suffix = 2; usedNames.has(propertyName); suffix++) {
+            propertyName = `${baseName}${suffix}`;
+        }
+        usedNames.add(propertyName);
         const type = getCSharpPropertyType(property.type);
         const declaration = property.required ?
             getRequiredCSharpProperty(type, propertyName) :
@@ -99,6 +107,12 @@ export function getPythonOutputModelDefinition(
     schema: ConnectorTriggerOutputSchema,
     modelName: string,
 ): string {
+    if (hasPythonFieldCollisions(schema.properties)) {
+        throw new Error(localize(
+            'connectorOutputFieldCollision',
+            'The Connector Trigger output schema contains properties that map to the same Python field. Use the raw connector output instead.',
+        ));
+    }
     const properties = [...schema.properties].sort((left, right) =>
         Number(right.required) - Number(left.required));
     const fields = properties.map(property => {
@@ -183,6 +197,10 @@ export function parseConnectorTriggerOutputMetadata(
         required: required.has(name),
         type: parsePropertyType(swagger, asRecord(value)),
     }));
+    // Schema-based local models require an unambiguous Python wire-name lookup.
+    if (hasPythonFieldCollisions(properties)) {
+        return { limitation: 'unsupported-output-schema' };
+    }
     const schemaName = item.name ?? `${operationId}Item`;
     return {
         schema: {
@@ -192,6 +210,11 @@ export function parseConnectorTriggerOutputMetadata(
             schemaName,
         },
     };
+}
+
+function hasPythonFieldCollisions(properties: readonly ConnectorTriggerOutputProperty[]): boolean {
+    const names = properties.map(property => getPythonOutputFieldName(property.name));
+    return new Set(names).size !== names.length;
 }
 
 function findOperation(
