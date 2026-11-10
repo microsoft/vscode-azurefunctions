@@ -303,7 +303,7 @@ suite('Project npm dependencies', () => {
             const controller = createController(false, events);
             const customTask = { type: 'shell', label: 'custom task', command: 'echo custom' };
             const copiedTasks = [
-                { type: 'shell', label: 'npm install (functions)', command: 'npm install' },
+                { type: 'shell', label: 'npm install (functions)', command: 'npm install', options: { cwd: '${workspaceFolder}' } },
                 { type: 'func', label: 'func: host start', command: 'host start', dependsOn: 'npm install (functions)' },
                 customTask,
             ];
