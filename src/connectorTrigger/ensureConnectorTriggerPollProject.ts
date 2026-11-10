@@ -9,7 +9,7 @@ import { FileType } from 'vscode';
 import { ProjectLanguage, requirementsFileName } from '../constants';
 import { localize } from '../localize';
 import {
-    findConnectorTriggerRegistrations,
+    findNonPollingFunctionRegistrations,
     findPollingConnectorBindings,
 } from './connectorTriggerBindings';
 import {
@@ -70,7 +70,7 @@ async function getAvailableConnectorIdentity(
     language: string,
     selection: ConnectorTriggerSelection,
 ): Promise<AvailableConnectorIdentity> {
-    const registrations = await findConnectorTriggerRegistrations(projectPath);
+    const nonPollingRegistrations = await findNonPollingFunctionRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
     const baseIdentity = getConnectorTriggerEventIdentity(
         selection.connectorId,
@@ -84,19 +84,20 @@ async function getAvailableConnectorIdentity(
             'The selected event already matches multiple Poll bindings.',
         ));
     }
+    // An existing Poll binding must not hide another registration with the same name.
+    if (nonPollingRegistrations.some(registration =>
+        equalsIgnoreCase(registration, baseIdentity.functionName))) {
+        throw new Error(localize(
+            'connectorTriggerFunctionNameCollision',
+            'A function with the selected event name is already registered. Rename the existing function or select another event before adding a Connector Trigger.',
+        ));
+    }
     if (matchingBindings.length === 1) {
         return {
             alreadyExists: true,
             identity: baseIdentity,
             instance: 1,
         };
-    }
-    if (registrations.some(registration =>
-        equalsIgnoreCase(registration, baseIdentity.functionName))) {
-        throw new Error(localize(
-            'connectorTriggerBindingIncomplete',
-            'The selected event function already exists without complete Poll binding settings.',
-        ));
     }
 
     let fileIdentity: ConnectorTriggerEventIdentity | undefined;
