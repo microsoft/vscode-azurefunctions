@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-* [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event.
+* [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ## 1.22.2 - 2026-09-25
 
