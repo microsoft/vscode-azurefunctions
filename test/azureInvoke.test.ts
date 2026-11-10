@@ -16,7 +16,9 @@ import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvoke
 import { parseInvocationCollection, serializeInvocationCollection } from '../src/tree/azureInvoke/invocationCollection';
 import { HttpRequestController } from '../src/webviews/azureInvoke/extension/HttpRequestController';
 import { HttpRequestEditors } from '../src/webviews/azureInvoke/extension/HttpRequestEditors';
+import { BlobInvocationEditors } from '../src/webviews/azureInvoke/extension/BlobInvocationEditors';
 import { TimerInvocationEditors } from '../src/webviews/azureInvoke/extension/TimerInvocationEditors';
+import { type BlobInvocation } from '../src/webviews/azureInvoke/shared/blobInvocation';
 import { sendHttpRequest } from '../src/webviews/azureInvoke/extension/sendHttpRequest';
 import { type HttpInvocation, type HttpRequest } from '../src/webviews/azureInvoke/shared/httpRequest';
 import { type TimerInvocation } from '../src/webviews/azureInvoke/shared/timerInvocation';
@@ -1079,6 +1081,278 @@ suite('Azure Invoke', () => {
     }
 
 
+    suite('manual Blob invocations', () => {
+        let storage: Server;
+        let storageUrl: string;
+        let sequence = 0;
+        const containers = new Set<string>();
+        const blobs = new Map<string, { bytes: Buffer; contentType: string; etag: string }>();
+        const uploads: { path: string; bytes: Buffer; contentType: string; ifMatch?: string; ifNoneMatch?: string }[] = [];
+        let changeBeforeWrite = false;
+        let onPendingUpload: (() => void) | undefined;
+        let onContainerWrite: (() => void) | undefined;
+
+        suiteSetup(async () => {
+            storage = createServer(async (request, response) => {
+                const url = new URL(request.url ?? '/', 'http://localhost');
+                const key = decodeURIComponent(url.pathname);
+                response.setHeader('x-ms-request-id', 'blob-fixture');
+                response.setHeader('x-ms-version', '2020-06-12');
+                if (request.method === 'HEAD') {
+                    const blob = blobs.get(key);
+                    if (!blob) {
+                        response.writeHead(404, { 'x-ms-error-code': 'BlobNotFound' }).end();
+                    } else {
+                        response.writeHead(200, { etag: blob.etag, 'last-modified': 'Wed, 01 Jan 2025 00:00:00 GMT', 'content-length': blob.bytes.length }).end();
+                    }
+                    return;
+                }
+                if (request.method === 'PUT' && url.searchParams.get('restype') === 'container') {
+                    if (containers.has(key)) {
+                        response.writeHead(409, { 'x-ms-error-code': 'ContainerAlreadyExists' }).end();
+                    } else {
+                        containers.add(key);
+                        response.writeHead(201).end();
+                    }
+                    onContainerWrite?.();
+                    return;
+                }
+                if (request.method === 'PUT') {
+                    const parts: Buffer[] = [];
+                    for await (const part of request) {
+                        parts.push(Buffer.from(part));
+                    }
+                    const bytes = Buffer.concat(parts);
+                    const contentType = String(request.headers['x-ms-blob-content-type']);
+                    const ifMatch = request.headers['if-match']?.toString();
+                    const ifNoneMatch = request.headers['if-none-match']?.toString();
+                    uploads.push({ path: key, bytes, contentType, ifMatch, ifNoneMatch });
+                    if (key.endsWith('/server-error.bin')) {
+                        response.writeHead(503, { 'x-ms-error-code': 'ServerBusy' }).end('private storage diagnostics');
+                        return;
+                    }
+                    if (key.endsWith('/pending.bin')) {
+                        onPendingUpload?.();
+                        return;
+                    }
+                    if (changeBeforeWrite) {
+                        changeBeforeWrite = false;
+                        blobs.set(key, { bytes: Buffer.from('concurrent writer'), contentType: 'text/plain', etag: '"concurrent"' });
+                    }
+                    const previous = blobs.get(key);
+                    if ((ifNoneMatch === '*' && previous) || (ifMatch && previous?.etag !== ifMatch)) {
+                        response.writeHead(412, { 'x-ms-error-code': 'ConditionNotMet' }).end();
+                        return;
+                    }
+                    const etag = `"fixture-${++sequence}"`;
+                    blobs.set(key, { bytes, contentType, etag });
+                    response.writeHead(201, { etag, 'last-modified': 'Wed, 01 Jan 2025 00:00:00 GMT' }).end();
+                    return;
+                }
+                response.writeHead(400).end();
+            });
+            await new Promise<void>(resolve => storage.listen(0, '127.0.0.1', resolve));
+            storageUrl = `http://127.0.0.1:${(storage.address() as AddressInfo).port}/devstoreaccount1`;
+        });
+
+        setup(() => {
+            containers.clear();
+            blobs.clear();
+            uploads.length = 0;
+            changeBeforeWrite = false;
+            onPendingUpload = undefined;
+            onContainerWrite = undefined;
+        });
+
+        suiteTeardown(async () => {
+            storage.closeAllConnections();
+            await new Promise<void>((resolve, reject) => storage.close(error => error ? reject(error) : resolve()));
+        });
+
+        function fixture(): BlobInvocation {
+            return {
+                id: 'manual-blob', name: "Blob's </script><img src=x>", group: 'Manual fixtures', trigger: 'blob',
+                request: {
+                    target: { kind: 'azurite', url: storageUrl },
+                    container: 'test-fixtures', blobName: 'nested/sample.json', encoding: 'utf8',
+                    content: '{"id":"literal-{{guid}}","private":"fixture-secret"}', contentType: 'application/json',
+                },
+            };
+        }
+
+
+
+
+        test('picks a file without content controls, preserves it on cancellation, and saves captured bytes for reopening', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new BlobInvocationEditors(context, provider);
+            const draft = provider.createBlobInvocation();
+            const blob = {
+                ...draft, name: fixture().name,
+                request: { ...draft.request, target: { kind: 'azurite' as const, url: storageUrl }, container: 'test-fixtures' },
+            };
+            const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc-blob-'));
+            const file = vscode.Uri.file(path.join(directory, 'fixture.bin'));
+            const bytes = Buffer.from([0, 255, 128, 10, 65]);
+            await fs.writeFile(file.fsPath, bytes);
+            let selections = 0;
+            const handler = registerOnActionStartHandler(action => {
+                if (action.callbackId === 'azureFunctions.azureInvoke.blobEditor') {
+                    action.ui.showOpenDialog = async () => {
+                        if (++selections === 2) {
+                            throw new UserCancelledError();
+                        }
+                        return [file];
+                    };
+                    action.ui.showWarningMessage = async () => { throw new Error('Uploading must not prompt for overwrite confirmation.'); };
+                }
+            });
+            try {
+                const editor = editors.open(blob, false);
+                await runEditorScript(editor, `
+                    if (document.querySelector('.subtitle').textContent !== 'Blob Trigger') throw new Error('Blob editor subtitle is not the trigger type.');
+                    if (document.querySelector('h1 img')) throw new Error('Blob name was interpreted as HTML.');
+                    if (!document.querySelector('#upload').disabled || !document.querySelector('#save').disabled) throw new Error('A new fixture must require file selection.');
+                    if (document.querySelector('#encoding') || document.querySelector('#content')) throw new Error('Manual content controls remain visible.');
+                    if (document.querySelector('[data-label="targetHint"], [data-label="fileHint"], [data-label="uploadHint"], [data-label="debugHint"]')) throw new Error('Removed helper paragraphs remain visible.');
+                    document.querySelector('#load-file').click();
+                    await waitFor(() => document.querySelector('#selected-file').textContent === 'fixture.bin');
+                    if (document.querySelector('#blob-name').value !== 'fixture.bin') throw new Error('File selection did not default the blob name.');
+                    document.querySelector('#load-file').click();
+                    await waitFor(() => !document.querySelector('#load-file').disabled);
+                    if (document.querySelector('#selected-file').textContent !== 'fixture.bin' || !document.querySelector('#error').hidden) throw new Error('Cancelling replaced the selected file or displayed an error.');
+                    document.querySelector('#save').click();
+                    await waitFor(() => document.querySelector('#save-status').textContent === 'Saved for this session');
+                    document.querySelector('#blob-name').value = 'nested/unsaved.bin';
+                    document.querySelector('#blob-name').dispatchEvent(new Event('input', { bubbles: true }));
+                    document.querySelector('#upload').click();
+                    await waitFor(() => !document.querySelector('#receipt').hidden);
+                    if (!document.querySelector('#upload-status').textContent.includes('Function execution not observed')) throw new Error('Receipt claimed function success.');
+                `);
+                assert.strictEqual(uploads.length, 1);
+                assert.strictEqual(uploads[0].path, '/devstoreaccount1/test-fixtures/nested/unsaved.bin');
+                assert.deepStrictEqual(uploads[0].bytes, bytes);
+                assert.strictEqual(uploads[0].contentType, 'application/octet-stream');
+                assert.strictEqual(uploads[0].ifNoneMatch, undefined);
+                assert.strictEqual(uploads[0].ifMatch, undefined);
+                const saved = provider.getBlobInvocation(blob.id);
+                assert.ok(saved);
+                assert.strictEqual(saved.request.blobName, 'fixture.bin');
+                assert.strictEqual(saved.request.encoding, 'base64');
+                assert.strictEqual(saved.request.content, bytes.toString('base64'));
+                assert.strictEqual(saved.request.fileName, 'fixture.bin');
+                await fs.remove(file.fsPath);
+                editor.dispose();
+                const reopened = editors.open(saved, true);
+                await runEditorScript(reopened, `
+                    if (document.querySelector('#blob-name').value !== 'fixture.bin') throw new Error('Unsaved blob name persisted.');
+                    if (document.querySelector('#selected-file').textContent !== 'fixture.bin') throw new Error('Saved file selection was not restored.');
+                    if (!document.querySelector('#save').disabled) throw new Error('Reopened fixture was marked dirty.');
+                `);
+                await editors.uploadSaved(await createTestActionContext(), blob.id);
+                assert.strictEqual(uploads.length, 2);
+                assert.deepStrictEqual(uploads[1].bytes, bytes, 'Saving must capture bytes rather than depend on a live file path.');
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection([saved])), [saved]);
+            } finally {
+                handler.dispose();
+                editors.dispose();
+                provider.dispose();
+                await fs.remove(directory);
+            }
+        });
+
+        test('overwrites existing and concurrently changed blobs without prompting and never retries failed writes', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new BlobInvocationEditors(context, provider);
+            const blob = fixture();
+            const action = await createTestActionContext();
+            action.ui.showWarningMessage = async () => { throw new Error('Overwrites must not require another confirmation.'); };
+            provider.saveRequest(blob);
+            try {
+                const original = await editors.uploadSaved(action, blob.id);
+                assert.strictEqual(original.functionExecution, 'notObserved');
+                assert.strictEqual(uploads[0].bytes.toString(), blob.request.content);
+                await editors.uploadSaved(action, blob.id);
+                assert.strictEqual(uploads[1].ifMatch, undefined);
+                assert.strictEqual(uploads[1].ifNoneMatch, undefined);
+                assert.strictEqual(uploads[1].bytes.toString(), blob.request.content);
+
+                changeBeforeWrite = true;
+                await editors.uploadSaved(action, blob.id);
+                assert.strictEqual(uploads.length, 3);
+                assert.strictEqual(blobs.get(uploads[2].path)?.bytes.toString(), blob.request.content);
+                assert.ok(!provider.getRequestStatus(blob.id).includes('function succeeded'));
+
+                provider.saveRequest({ ...blob, request: { ...blob.request, blobName: 'concurrent-new.json' } });
+                changeBeforeWrite = true;
+                await editors.uploadSaved(action, blob.id);
+                assert.strictEqual(uploads.length, 4);
+                assert.strictEqual(uploads[3].ifNoneMatch, undefined);
+                assert.strictEqual(blobs.get(uploads[3].path)?.bytes.toString(), blob.request.content);
+
+                provider.saveRequest({ ...blob, request: { ...blob.request, blobName: 'server-error.bin' } });
+                await assert.rejects(() => editors.uploadSaved(action, blob.id), (error: unknown) => {
+                    assert.ok(error instanceof Error);
+                    assert.match(error.message, /could not be confirmed/);
+                    assert.ok(!error.message.includes('private storage diagnostics'));
+                    assert.ok(!error.message.includes(storageUrl));
+                    return true;
+                });
+                assert.strictEqual(uploads.length, 5, 'SDK transport failures must not retry a mutation.');
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+
+        test('cancellation aborts an in-flight SDK upload and rejects overlapping uploads', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new BlobInvocationEditors(context, provider);
+            const blob = fixture();
+            const pending = { ...blob, request: { ...blob.request, blobName: 'pending.bin' } };
+            provider.saveRequest(pending);
+            const action = await createTestActionContext();
+            const abort = new AbortController();
+            const observed = new Promise<void>(resolve => { onPendingUpload = resolve; });
+            try {
+                const running = editors.uploadSaved(action, blob.id, abort.signal);
+                await observed;
+                assert.strictEqual(provider.getRequestRunStatus(blob.id).status, 'running');
+                await assert.rejects(() => editors.uploadSaved(action, blob.id), /already in progress/);
+                abort.abort();
+                await assert.rejects(running, isUserCancelledError);
+                assert.strictEqual(provider.getRequestRunStatus(blob.id).status, 'cancelled');
+                assert.strictEqual(uploads.length, 1);
+            } finally {
+                abort.abort();
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('rejects non-emulator targets, oversized content, and malformed binary fixtures without network writes', () => {
+            const provider = new AzureInvokeTreeDataProvider();
+            const blob = fixture();
+            try {
+                for (const url of ['https://example.com/devstoreaccount1', `${storageUrl}?secret=private`, `${storageUrl}/other`, 'http://user:password@localhost:10000/devstoreaccount1']) {
+                    assert.throws(() => provider.saveRequest({ ...blob, request: { ...blob.request, target: { kind: 'azurite', url } } }), /loopback Azurite URL/);
+                }
+                assert.throws(() => provider.saveRequest({ ...blob, request: { ...blob.request, content: 'x'.repeat(5 * 1024 * 1024 + 1) } }), /at most 5 MB/);
+                assert.throws(() => provider.saveRequest({ ...blob, request: { ...blob.request, encoding: 'base64', content: 'invalid!' } }), /valid text or Base64/);
+                assert.strictEqual(provider.getInvocations().length, 0);
+                assert.strictEqual(uploads.length, 0);
+            } finally {
+                provider.dispose();
+            }
+        });
+    });
 
     suite('manual Timer invocations', () => {
         function timerInvocation(functionName = 'CleanupTimer'): TimerInvocation {
@@ -1198,6 +1472,15 @@ suite('Azure Invoke', () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
             });
             await vscode.window.tabGroups.close(await waitForInvocationTab());
+            await ui.runWithInputs(['Azure Blob Storage trigger'], async () => {
+                await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
+            });
+            const findBlobTab = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab =>
+                tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('azureInvokeBlob'));
+            await waitForTabChange(() => !!findBlobTab());
+            const tab = findBlobTab();
+            assert.ok(tab);
+            await vscode.window.tabGroups.close(tab);
             await ui.runWithInputs(['Timer trigger'], async () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
             });

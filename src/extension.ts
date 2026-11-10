@@ -10,6 +10,7 @@ import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } f
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
+import { BlobInvocationEditors } from './webviews/azureInvoke/extension/BlobInvocationEditors';
 import { TimerInvocationEditors } from './webviews/azureInvoke/extension/TimerInvocationEditors';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
@@ -100,10 +101,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+        const azureInvokeBlobs = new BlobInvocationEditors(context, azureInvokeProvider);
         const azureInvokeTimers = new TimerInvocationEditors(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
+            azureInvokeBlobs,
             azureInvokeTimers,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
@@ -116,7 +119,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     schedulerClient
                 }
             },
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, timers: azureInvokeTimers }
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, blobs: azureInvokeBlobs, timers: azureInvokeTimers }
         });
 
         registerFuncHostTaskEvents();

@@ -27,6 +27,7 @@ import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorCli
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { telemetryUtils } from '../utils/telemetryUtils';
 import { type HttpRequestEditors } from '../webviews/azureInvoke/extension/HttpRequestEditors';
+import { type BlobInvocationEditors } from '../webviews/azureInvoke/extension/BlobInvocationEditors';
 import { type TimerInvocationEditors } from '../webviews/azureInvoke/extension/TimerInvocationEditors';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
@@ -102,10 +103,11 @@ export function registerCommands({ services, azureInvoke }: {
     azureInvoke: {
         provider: AzureInvokeTreeDataProvider,
         editors: HttpRequestEditors,
+        blobs: BlobInvocationEditors,
         timers: TimerInvocationEditors
     }
 }): void {
-    registerAzureInvokeCommands(azureInvoke.provider, azureInvoke.editors, azureInvoke.timers);
+    registerAzureInvokeCommands(azureInvoke.provider, azureInvoke.editors, azureInvoke.blobs, azureInvoke.timers);
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
