@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Fixed
+* [[5288](https://github.com/microsoft/vscode-azurefunctions/pull/5288)] Generate Connector Trigger imports and bindings from verified event-specific SDK support, and use Python's default batching options.
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed

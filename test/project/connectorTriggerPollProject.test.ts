@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { runInNewContext } from 'vm';
 import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { getConnectorTriggerSdkBinding } from '../../src/connectorTrigger/connectorTriggerSdkBindings';
 import { ProjectLanguage } from '../../src/constants';
 import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import {
@@ -75,11 +76,10 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.match(functionContents, /Connection = "ConnectorNamespace"/);
         assert.match(functionContents, /TriggerConfigName = "%TrigNewContactTriggerConfigName%"/);
         assert.match(functionContents, /\[Function\("TrigNewContact"\)\]/);
-        assert.match(functionContents, /\]\s*string payload\)/);
-        assert.match(functionContents, /using var document = JsonDocument\.Parse\(payload\);/);
-        assert.match(functionContents, /var data = document\.RootElement;/);
-        assert.strictEqual(functionContents.match(/JsonDocument\.Parse/g)?.length, 1);
-        assert.doesNotMatch(functionContents, /Deserialize|JsonPropertyName|Envelope|List<|catch/);
+        assert.match(functionContents, /\]\s*ConnectorEvent<string> connectorEvent\)/);
+        assert.match(functionContents, /connectorEvent\.Data\.Length/);
+        assert.doesNotMatch(functionContents, /JsonDocument|Deserialize|JsonPropertyName|Envelope|List<|catch|Azure\.Connectors\.Sdk/);
+        assert.doesNotMatch(projectContents, /Include="Azure\.Connectors\.Sdk"/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -128,7 +128,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             /TriggerConfigName = "%TrigNewContactTriggerConfigName%"/,
         );
         assert.match(generated, /public sealed class TrigNewContact2Function/);
-        assert.match(generated, /JsonDocument\.Parse\(payload\)/);
+        assert.match(generated, /ConnectorEvent<string> connectorEvent/);
     });
 
     test('keeps the canonical operation registration when the setting name collides', async () => {
@@ -175,7 +175,7 @@ public void Run(
         assert.ok(!Object.hasOwn(settings.Values, 'TrigNewContactTriggerConfigName'));
     });
 
-    test('adds a raw TypeScript Poll binding without inferring models from the RSS schema', async () => {
+    test('adds a generic TypeScript Poll binding with the declared RSS SDK item', async () => {
         const existingFunction = path.join(
             projectPath,
             'src',
@@ -209,13 +209,11 @@ const example = "app.http('OnNewFeed', {})";
         assert.match(functionContents, /deliveryMode: 'Poll'/);
         assert.match(functionContents, /connection: 'ConnectorNamespace'/);
         assert.match(functionContents, /triggerConfigName: '%OnNewFeedTriggerConfigName%'/);
-        assert.match(functionContents, /app\.connectorTrigger\('OnNewFeed'/);
-        assert.match(functionContents, /payload: unknown, context: InvocationContext/);
-        assert.match(functionContents, /let data: unknown = payload;/);
-        assert.match(functionContents, /if \(typeof payload === 'string'\)/);
-        assert.match(functionContents, /data = JSON\.parse\(payload\);/);
-        assert.strictEqual(functionContents.match(/JSON\.parse/g)?.length, 1);
-        assert.doesNotMatch(functionContents, /interface |normalize|decodeJson|outputs/);
+        assert.match(functionContents, /connectorTrigger<FeedItem>\('OnNewFeed'/);
+        assert.match(functionContents, /import type \{ FeedItem \} from '@azure\/connectors\/generated\/RssExtensions'/);
+        assert.match(functionContents, /handler: async \(event, invocationContext\)/);
+        assert.match(functionContents, /event\.items\.length/);
+        assert.doesNotMatch(functionContents, /app\.connectorTrigger|JSON\.parse|interface |normalize|decodeJson|outputs/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -275,15 +273,12 @@ azurefunctions-extensions-connectors
         );
         assert.match(functionContents, /delivery_mode=func\.DeliveryMode\.POLL/);
         assert.match(functionContents, /trigger_config_name="%TrigNewContactTriggerConfigName%"/);
-        assert.match(functionContents, /^import json$/m);
-        assert.match(functionContents, /^from typing import List$/m);
-        assert.match(functionContents, /cardinality=func\.Cardinality\.MANY/);
-        assert.match(functionContents, /max_batch_size=4/);
-        assert.match(functionContents, /payloads: List\[str\]/);
-        assert.match(functionContents, /for payload in payloads:\r?\n {8}data = json\.loads\(payload\)/);
-        assert.strictEqual(functionContents.match(/json\.loads/g)?.length, 1);
-        assert.doesNotMatch(functionContents, /dataclass|WIRE_PROPERTIES|_normalize|_decode|except/);
-        assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
+        assert.match(functionContents, /arg_name="payload"/);
+        assert.match(functionContents, /payload: str/);
+        assert.match(functionContents, /len\(payload\)/);
+        assert.doesNotMatch(functionContents, /import json|from typing|cardinality|max_batch_size|json\.loads|azurefunctions\.extensions|dataclass|WIRE_PROPERTIES|_normalize|_decode|except/);
+        assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'\r?$/m);
+        assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'\r?$/m);
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
             [{
@@ -300,6 +295,228 @@ azurefunctions-extensions-connectors
   </ItemGroup>
 </Project>
 `;
+    const sdkCases = [
+        {
+            connector: 'office365', operation: 'OnNewEmailV3',
+            csharp: 'Office365OnNewEmailTriggerPayload',
+            node: "connectors.office365.onNewEmail('OnNewEmailV3'",
+            python: 'list[office365.GraphClientReceiveMessage]',
+        },
+        {
+            connector: 'office365', operation: 'CalendarGetOnChangedItemsV3',
+            csharp: 'Office365OnCalendarChangedItemsTriggerPayload',
+            node: "connectors.office365.onCalendarChangedItems('CalendarGetOnChangedItemsV3'",
+            python: 'list[office365.GraphCalendarEventClientWithActionType]',
+        },
+        {
+            connector: 'github', operation: 'IssueOpened',
+            csharp: 'GitHubOnIssueOpenedTriggerPayload',
+            node: "connectorTrigger<IssueDetailsModel>('IssueOpened'",
+            python: 'str',
+        },
+        {
+            connector: 'office365', operation: 'UnsupportedEvent',
+            csharp: 'ConnectorEvent<string>',
+            node: "connectorTrigger('UnsupportedEvent'",
+            python: 'str',
+        },
+        {
+            connector: 'sharepointonline', operation: 'OnNewFile',
+            csharp: 'ConnectorEvent<string>',
+            node: "connectors.sharepoint.onNewFile('OnNewFile'",
+            python: 'str',
+        },
+        {
+            connector: 'sharepointonline', operation: 'GetOnDeletedItems',
+            csharp: 'SharePointOnlineOnDeletedItemsTriggerPayload',
+            node: "connectors.sharepoint.onDeletedItems('GetOnDeletedItems'",
+            python: 'list[sharepointonline.DeletedItem]',
+        },
+        {
+            connector: 'teams', operation: 'OnGroupMembershipAdd',
+            csharp: 'TeamsOnTeamMemberAddedTriggerPayload',
+            node: "connectors.teams.onTeamMemberAdded('OnGroupMembershipAdd'",
+            python: 'list[teams.OnGroupMemberChangeResponse]',
+        },
+        {
+            connector: 'teams', operation: 'OnNewChannelMessage',
+            csharp: 'TeamsOnNewChannelMessageTriggerPayload',
+            node: "connectors.teams.onNewChannelMessage('OnNewChannelMessage'",
+            python: 'list[teams.ChatMessage]',
+        },
+        {
+            connector: 'commondataservice', operation: 'GetOnDeletedItems_V2',
+            csharp: 'CommondataserviceOnDeletedItemsTriggerPayload',
+            node: "connectorTrigger('GetOnDeletedItems_V2'",
+            python: 'list[commondataservice.Item]',
+        },
+        {
+            connector: 'onedrive', operation: 'OnNewFilesV2',
+            csharp: 'OneDriveOnNewFilesTriggerPayload',
+            node: "connectorTrigger('OnNewFilesV2'",
+            python: 'str',
+        },
+        {
+            connector: 'customconnector', operation: 'OnNewEmailV3',
+            csharp: 'ConnectorEvent<string>',
+            node: "connectorTrigger('OnNewEmailV3'",
+            python: 'str',
+        },
+    ];
+    for (const sdkCase of sdkCases) {
+        for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
+            test(`uses the exact ${language} SDK capability for ${sdkCase.connector}/${sdkCase.operation}`, async () => {
+                if (language === ProjectLanguage.CSharp) {
+                    await writeProjectFiles(projectPath, { 'sample.csproj': csharpProject });
+                } else if (language === ProjectLanguage.Python) {
+                    await writeProjectFiles(projectPath, {
+                        'function_app.py': 'import azure.functions as func\napp = func.FunctionApp()\n',
+                        'requirements.txt': 'azure-functions>=2.2.0b4\n',
+                    });
+                }
+                const selection = createSelection(sdkCase.connector, sdkCase.operation);
+                await ensureConnectorTriggerPollProject(projectPath, language, selection);
+                const binding = getConnectorTriggerSdkBinding(sdkCase.connector, sdkCase.operation);
+                const files = await readProjectFiles(projectPath);
+                const source = Object.entries(files).find(([name]) =>
+                    language === ProjectLanguage.CSharp ? name.endsWith('Function.cs') :
+                        language === ProjectLanguage.TypeScript ? name.endsWith('Function.ts') :
+                            name === 'function_app.py')?.[1];
+                assert.ok(source);
+                if (language === ProjectLanguage.CSharp) {
+                    assert.ok(source.includes(sdkCase.csharp));
+                    if (binding.csharp) {
+                        assert.ok(source.includes(`using ${binding.csharp.namespace};`));
+                        assert.match(files['sample.csproj'] ?? '', /Include="Azure\.Connectors\.Sdk" Version="0\.15\.0-preview\.1"/);
+                    } else {
+                        assert.doesNotMatch(source, /using Azure\.Connectors\.Sdk/);
+                        assert.doesNotMatch(files['sample.csproj'] ?? '', /Include="Azure\.Connectors\.Sdk"/);
+                    }
+                } else if (language === ProjectLanguage.TypeScript) {
+                    assert.ok(source.includes(sdkCase.node));
+                    assert.doesNotMatch(source, /app\.connectorTrigger|JSON\.parse/);
+                    if (binding.typescript.helper) {
+                        assert.match(source, /import \{ connectors \}/);
+                        assert.doesNotMatch(source, /import type/);
+                    } else if (binding.typescript.importPath) {
+                        assert.ok(source.includes(`import type { ${binding.typescript.itemType} } from '${binding.typescript.importPath}'`));
+                    } else {
+                        assert.doesNotMatch(source, /import type/);
+                    }
+                } else {
+                    assert.ok(source.includes(`payload: ${sdkCase.python})`));
+                    assert.doesNotMatch(source, /cardinality|max_batch_size|json\.loads/);
+                    if (binding.python) {
+                        assert.ok(source.includes(`import ${binding.python.importPath} as ${binding.python.moduleName}`));
+                        assert.match(files['requirements.txt'] ?? '', /^azurefunctions-extensions-connectors>=1\.0\.0b4$/m);
+                        assert.match(files['requirements.txt'] ?? '', /^azure-connectors>=0\.6\.0b1$/m);
+                    } else {
+                        assert.doesNotMatch(source, /azurefunctions\.extensions|azure\.connectors/);
+                    }
+                }
+                await ensureConnectorTriggerPollProject(projectPath, language, selection);
+                assert.deepStrictEqual(await readProjectFiles(projectPath), files);
+            });
+        }
+    }
+
+    test('preserves Node package scripts and newer compatible SDK and engine requirements', async () => {
+        const packageJson = {
+            type: 'module',
+            scripts: { build: 'tsc', start: 'func start' },
+            dependencies: {
+                '@azure/functions': '^4.18.0',
+                '@azure/functions-extensions-connectors': '^0.3.0',
+                '@azure/connectors': '^0.5.0',
+                other: '1.2.3',
+            },
+            engines: { node: '>=26.0.0', npm: '>=11' },
+        };
+        await writeProjectFiles(projectPath, { 'package.json': JSON.stringify(packageJson) });
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, createSelection('github', 'IssueOpened'));
+        assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(projectPath, 'package.json')), packageJson);
+    });
+
+    test('upgrades Node template dependencies to the verified SDK APIs and Node 24', async () => {
+        await writeProjectFiles(projectPath, {
+            'package.json': JSON.stringify({
+                scripts: { build: 'tsc' },
+                dependencies: { '@azure/functions': '^4.16.0', '@azure/functions-extensions-connectors': '0.0.2-preview' },
+                engines: { node: '>=20' },
+            }),
+        });
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, createSelection('github', 'IssueOpened'));
+        assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(projectPath, 'package.json')), {
+            scripts: { build: 'tsc' },
+            dependencies: {
+                '@azure/functions': '^4.17.0',
+                '@azure/functions-extensions-connectors': '^0.2.0-preview',
+                '@azure/connectors': '^0.4.0-preview',
+            },
+            engines: { node: '>=24.0.0' },
+        });
+    });
+
+    test('does not interpret inherited object properties as SDK capabilities', () => {
+        for (const name of ['constructor', 'toString', '__proto__']) {
+            assert.deepStrictEqual(getConnectorTriggerSdkBinding(name, name), {
+                csharp: undefined, python: undefined,
+                typescript: { helper: undefined, importPath: undefined, itemType: undefined },
+            });
+        }
+    });
+
+    for (const range of ['*', '>=22 || >=26', '<25', 'invalid']) {
+        test(`upgrades the unsupported Node engine range ${range}`, async () => {
+            await writeProjectFiles(projectPath, {
+                'package.json': JSON.stringify({ engines: { node: range } }),
+            });
+            await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, createSelection('github', 'IssueOpened'));
+            const packageJson = await AzExtFsExtra.readJSON<{ engines: { node: string } }>(path.join(projectPath, 'package.json'));
+            assert.strictEqual(packageJson.engines.node, '>=24.0.0');
+        });
+    }
+
+    test('preserves Node OR ranges only when every alternative meets the required minimum', async () => {
+        await writeProjectFiles(projectPath, {
+            'package.json': JSON.stringify({
+                dependencies: { '@azure/functions': '^4.18.0 || ^4.16.0' },
+                engines: { node: '^24 || >=26' },
+            }),
+        });
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, createSelection('github', 'IssueOpened'));
+        const packageJson = await AzExtFsExtra.readJSON<{
+            dependencies: Record<string, string>;
+            engines: { node: string };
+        }>(path.join(projectPath, 'package.json'));
+        assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.0');
+        assert.strictEqual(packageJson.engines.node, '^24 || >=26');
+    });
+
+    test('updates Python version markers once without leaving a conflicting requirement', async () => {
+        await writeProjectFiles(projectPath, {
+            'function_app.py': 'import azure.functions as func\napp = func.FunctionApp()\n',
+            'requirements.txt': [
+                '# Keep existing dependencies.',
+                "azure-functions>=2.2.0b4 ; python_version >= '3.13'",
+                "azure-functions>=1.26.0b1 ; python_version < '3.13'",
+                'other-package==1.2.3',
+                '',
+            ].join('\r\n'),
+        });
+        const selection = createSelection('office365', 'OnNewEmailV3');
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.Python, selection);
+        const requirementsPath = path.join(projectPath, 'requirements.txt');
+        const requirements = (await AzExtFsExtra.readFile(requirementsPath)).toString();
+        assert.strictEqual(requirements.match(/^azure-functions[><=]/gm)?.length, 2);
+        assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'\r?$/m);
+        assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'\r?$/m);
+        assert.match(requirements, /^other-package==1\.2\.3\r?$/m);
+        assert.match(requirements, /^# Keep existing dependencies\.\r?$/m);
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.Python, selection);
+        assert.strictEqual((await AzExtFsExtra.readFile(requirementsPath)).toString(), requirements);
+    });
+
     const nonPollRegistrations: {
         name: string;
         language: ProjectLanguage;
@@ -463,11 +680,8 @@ async def OnNewFeed(req):
             const sourceFile = language === ProjectLanguage.CSharp ? 'OnNewFeedFunction.cs' :
                 language === ProjectLanguage.TypeScript ? path.join('src', 'functions', 'onNewFeedFunction.ts') :
                     'function_app.py';
-            const parser = language === ProjectLanguage.CSharp ? /JsonDocument\.Parse/g :
-                language === ProjectLanguage.TypeScript ? /JSON\.parse/g : /json\.loads/g;
             const source = await fs.promises.readFile(path.join(projectPath, sourceFile), 'utf8');
-            assert.strictEqual(source.match(parser)?.length, 1);
-            assert.doesNotMatch(source, /Output schema|normalize|Deserialize|dataclass/);
+            assert.doesNotMatch(source, /JsonDocument\.Parse|JSON\.parse|json\.loads|Output schema|normalize|Deserialize|dataclass/);
             for (const file of ['.gitignore', '.funcignore']) {
                 assert.strictEqual(
                     await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
@@ -722,77 +936,39 @@ def http_handler(req):
         assert.deepStrictEqual(await readProjectFiles(projectPath), before);
     });
 
-    test('executes the raw TypeScript handler with parse-once shapes and rejects malformed JSON without reflecting payloads', async () => {
+    test('uses the extension context without reparsing or logging the payload', async () => {
         await ensureConnectorTriggerPollProject(
             projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'),
         );
         const source = await fs.promises.readFile(
             path.join(projectPath, 'src', 'functions', 'onNewFeedFunction.ts'), 'utf8',
         );
-        type Handler = (payload: unknown, context: { log(...values: unknown[]): void }) => Promise<void>;
+        type Handler = (event: { items: unknown[] }, context: { log(...values: unknown[]): void }) => Promise<void>;
         const handlers: Handler[] = [];
-        const parsedValues: unknown[] = [];
-        let parseCalls = 0;
         const logs: unknown[][] = [];
         const context = { log: (...values: unknown[]) => { logs.push(values); } };
         const compiled = await transform(source, { loader: 'ts', format: 'cjs' });
         runInNewContext(compiled.code, {
-            SyntaxError,
             require: (id: string) => {
-                assert.strictEqual(id, '@azure/functions');
+                assert.strictEqual(id, '@azure/functions-extensions-connectors');
                 return {
-                    app: {
-                        connectorTrigger: (_name: string, options: { handler: Handler }) => {
-                            handlers.push(options.handler);
-                        },
+                    connectorTrigger: (_name: string, options: { handler: Handler }) => {
+                        handlers.push(options.handler);
                     },
                 };
-            },
-            JSON: {
-                parse: (payload: string): unknown => {
-                    parseCalls++;
-                    const value: unknown = JSON.parse(payload);
-                    parsedValues.push(value);
-                    return value;
-                },
             },
         });
         assert.strictEqual(handlers.length, 1);
         const handler = handlers[0];
-        const payloads = [
-            { outputs: { body: '[{"private":"private-payload-marker"}]' } },
-            [1, { value: 'private-payload-marker' }],
-            42,
-            true,
-            null,
-            '{"nested":"private-payload-marker"}',
-        ];
-        for (const [index, value] of payloads.entries()) {
-            await handler(JSON.stringify(value), context);
-            assert.strictEqual(parsedValues.length, index + 1);
-            assert.deepStrictEqual(parsedValues[index], value);
-        }
-        for (const value of payloads.filter(payload => typeof payload !== 'string')) {
-            await handler(value, context);
-        }
-        assert.strictEqual(parsedValues.length, payloads.length);
-        assert.strictEqual(parseCalls, payloads.length);
-        const successfulLogs = logs.length;
-        const invalidPayload = 'payload-secret';
-        await assert.rejects(handler(invalidPayload, context), (error: unknown) => {
-            assert.ok(error instanceof SyntaxError);
-            assert.strictEqual(error.message, 'Invalid Connector Trigger JSON payload.');
-            assert.ok(!String(error).includes(invalidPayload));
-            assert.ok(!error.stack?.includes(invalidPayload));
-            assert.ok(!('cause' in error));
-            return true;
-        });
-        assert.strictEqual(parseCalls, payloads.length + 1);
-        assert.strictEqual(logs.length, successfulLogs);
+        await handler({ items: [{ private: 'private-payload-marker' }] }, context);
+        await handler({ items: [] }, context);
+        assert.deepStrictEqual(logs, [
+            ['Received 1 item(s) in the polling event.'],
+            ['Received 0 item(s) in the polling event.'],
+        ]);
         assert.ok(!JSON.stringify(logs).includes('private-payload-marker'));
-        assert.ok(!JSON.stringify(logs).includes(invalidPayload));
         const loggingError = new Error('Test logging failure.');
-        await assert.rejects(handler('{}', {
+        await assert.rejects(handler({ items: [] }, {
             log: () => { throw loggingError; },
         }), (error: unknown) => error === loggingError);
     });
@@ -801,6 +977,12 @@ def http_handler(req):
         'builds event-specific add-to-project scaffolds',
         async function (this: Mocha.Context): Promise<void> {
             this.timeout(5 * 60 * 1000);
+            const typedSelections = [
+                createSelection('office365', 'OnNewEmailV3'),
+                createSelection('github', 'IssueOpened'),
+                createSelection('onedrive', 'OnNewFilesV2'),
+                createSelection('teams', 'OnNewChannelMessage'),
+            ];
             const outputMetadata = await readOutputMetadata(
                 'actTrigNewContactSwagger.json',
                 'TrigNewContact',
@@ -845,6 +1027,9 @@ host.Run();
                 selection,
                 outputMetadata,
             );
+            for (const typedSelection of typedSelections) {
+                await ensureConnectorTriggerPollProject(csharpPath, ProjectLanguage.CSharp, typedSelection);
+            }
             await cpUtils.executeCommand(
                 undefined,
                 csharpPath,
@@ -853,36 +1038,11 @@ host.Run();
             );
 
             const typescriptPath = path.join(projectPath, 'typescript');
-            const typesPath = path.join(
-                typescriptPath,
-                'node_modules',
-                '@azure',
-                'functions',
-            );
-            await AzExtFsExtra.ensureDir(typesPath);
-            await AzExtFsExtra.writeFile(
-                path.join(typesPath, 'package.json'),
-                '{"types":"index.d.ts"}\n',
-            );
-            await AzExtFsExtra.writeFile(
-                path.join(typesPath, 'index.d.ts'),
-                `export interface InvocationContext {
-    log(...values: unknown[]): void;
-}
-
-export const app: {
-    connectorTrigger(
-        name: string,
-        options: {
-            deliveryMode: 'Poll';
-            connection: string;
-            triggerConfigName: string;
-            handler(payload: unknown, context: InvocationContext): Promise<void>;
-        },
-    ): void;
-};
-`,
-            );
+            await AzExtFsExtra.ensureDir(typescriptPath);
+            await AzExtFsExtra.writeJSON(path.join(typescriptPath, 'package.json'), {
+                private: true,
+                devDependencies: { '@types/node': '^24.0.0' },
+            });
             await AzExtFsExtra.writeFile(
                 path.join(typescriptPath, 'tsconfig.json'),
                 `{
@@ -891,7 +1051,8 @@ export const app: {
     "moduleResolution": "Node16",
     "noEmit": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
@@ -903,20 +1064,18 @@ export const app: {
                 selection,
                 outputMetadata,
             );
+            for (const typedSelection of typedSelections) {
+                await ensureConnectorTriggerPollProject(typescriptPath, ProjectLanguage.TypeScript, typedSelection);
+            }
+            await cpUtils.executeCommand(
+                undefined, typescriptPath, 'npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'],
+            );
             await cpUtils.executeCommand(
                 undefined,
                 typescriptPath,
                 'node',
                 [
-                    path.join(
-                        __dirname,
-                        '..',
-                        '..',
-                        'node_modules',
-                        'typescript',
-                        'bin',
-                        'tsc',
-                    ),
+                    require.resolve('typescript/bin/tsc'),
                     '--project',
                     'tsconfig.json',
                 ],
@@ -942,12 +1101,27 @@ app = func.FunctionApp()
                 selection,
                 outputMetadata,
             );
+            for (const typedSelection of typedSelections) {
+                await ensureConnectorTriggerPollProject(pythonPath, ProjectLanguage.Python, typedSelection);
+            }
             await cpUtils.executeCommand(
                 undefined,
                 pythonPath,
                 process.env.AZFUNC_TEST_PYTHON || 'python',
                 ['-m', 'compileall', '-q', 'function_app.py'],
             );
+            if (process.env.AZFUNC_TEST_PYTHON) {
+                await AzExtFsExtra.writeFile(
+                    path.join(pythonPath, 'verify_handler.py'),
+                    'import function_app\nassert len(function_app.app.get_functions()) == 5\n',
+                );
+                await cpUtils.executeCommand(
+                    undefined,
+                    pythonPath,
+                    process.env.AZFUNC_TEST_PYTHON,
+                    ['verify_handler.py'],
+                );
+            }
         },
     );
 });

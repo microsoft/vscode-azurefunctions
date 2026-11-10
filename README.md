@@ -84,6 +84,12 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ## Troubleshooting
 
+### Connector Trigger scaffolding
+
+Connector Trigger handlers use the exact selected connector and operation, not a model inferred from an action response or a similar name. Node.js prefers that event's named extension helper, then `connectorTrigger` with a verified SDK item type, then `connectorTrigger` with unknown items. C# uses a declared SDK callback payload, or `ConnectorEvent<string>` when no mapping is verified. Python imports a typed Functions adapter only when both the event's SDK model and that specific annotation adapter are supported; otherwise it binds to `str`. Python leaves cardinality and batch size at their defaults.
+
+The capability table in `src/connectorTrigger/connectorTriggerSdkBindings.ts` records the verified package versions. Node.js projects require Node.js 24 or later. Python's published adapter and SDK versions are currently `1.0.0b4` and `0.6.0b1`, respectively; final `1.0.0` packages are not yet published. Existing handlers and local setting values are preserved.
+
 ### "unable to get local issuer certificate" on a corporate network
 
 If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), Azure operations may fail with errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain`. This happens because the extension's Azure calls run in the Node.js extension host, which does not use the operating system certificate store by default.
