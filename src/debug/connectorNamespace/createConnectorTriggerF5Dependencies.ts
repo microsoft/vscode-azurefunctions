@@ -9,13 +9,13 @@ import { readConnectorTriggerProjectMetadata } from '../../connectorTrigger/conn
 import { ext } from '../../extensionVariables';
 import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Adapters';
 import { ProjectConnectorTriggerBindingResolver } from './ConnectorTriggerF5BindingResolver';
-import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerSetupScopes } from './connectorTriggerF5Contracts';
+import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerSetupScopes, type ConnectorTriggerSetupScope } from './connectorTriggerF5Contracts';
 import { SwaggerConnectorTriggerOperationResolver } from './SwaggerConnectorTriggerOperationResolver';
 
 export function createConnectorTriggerF5Dependencies(
     _context: IActionContext,
     _projectPath: string,
-): Promise<ConnectorTriggerF5Dependencies | undefined> {
+): Promise<ConnectorTriggerF5Dependencies> {
     const gateway = new AzureConnectorTriggerGatewayAdapter();
     const operationResolver = new SwaggerConnectorTriggerOperationResolver(gateway, gateway);
     return Promise.resolve({
@@ -49,6 +49,11 @@ export function createConnectorTriggerF5Dependencies(
                     (await data.listLocations(actionContext, id)).map(location => ({
                         id: location.name, label: location.label, regionCategory: location.regionCategory,
                     })),
+                listConnectors: async (actionContext, scope) =>
+                    (await data.getCatalog(actionContext, toCatalogContext(scope))).catalog.connectors,
+                listEvents: async (actionContext, scope, connectorId) =>
+                    (await data.listConnectorOperations(actionContext, toCatalogContext(scope), connectorId))
+                        .map(operation => ({ id: operation.id, label: operation.label })),
                 signIn: async () => {
                     await commands.executeCommand('azureResourceGroups.logIn');
                     data.invalidateSubscriptions();
@@ -57,4 +62,15 @@ export function createConnectorTriggerF5Dependencies(
             return ConnectorTriggerSetupController.open(ext.context, context, request, gateway, operationResolver, scopes);
         },
     });
+}
+
+function toCatalogContext(scope: ConnectorTriggerSetupScope): {
+    subscriptionId: string; subscriptionName: string; region: string; regionDisplayName: string;
+} {
+    return {
+        subscriptionId: scope.subscription.id,
+        subscriptionName: scope.subscription.id,
+        region: scope.region,
+        regionDisplayName: scope.region,
+    };
 }

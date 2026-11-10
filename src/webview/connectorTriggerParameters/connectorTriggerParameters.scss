@@ -1,3 +1,72 @@
+:root {
+    --connector-picker-radius: 4px;
+    --connector-picker-border: var(--vscode-panel-border, #3c3c3c);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.page {
+    padding: 0 24px 32px;
+}
+
+.gallery-header {
+    padding-top: 18px;
+    border-bottom: 1px solid var(--connector-picker-border);
+
+    h1 {
+        margin: 0;
+        font-size: 1.7em;
+        font-weight: 600;
+    }
+
+    > p {
+        margin: 4px 0 24px;
+        color: var(--vscode-descriptionForeground);
+    }
+}
+
+.subscription-option {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+
+    strong,
+    small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.subscription-combobox-listbox {
+    max-height: min(320px, calc(100vh - 32px)) !important;
+}
+
+.azure-context-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+
+    > label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+
 .connector-parameters {
     .parameter-tab {
         display: flex;
@@ -83,6 +152,10 @@
 
         .setup-parameters-locked {
             margin-top: 28px;
+        }
+
+        .setup-identity-notice {
+            grid-column: 1 / -1;
         }
 
         .parameter-fields {

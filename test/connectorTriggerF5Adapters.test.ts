@@ -27,8 +27,8 @@ import {
     getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
     getPollingConnectorBindingsFromFunctionJson,
-    selectPollingConnectorBinding,
 } from '../src/connectorTrigger/connectorTriggerBindings';
+import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
@@ -54,7 +54,7 @@ const target: ConnectorTriggerSetupTarget = {
 };
 
 suite('Connector Trigger F5 production adapters', () => {
-    test('resolves explicit Poll binding keys and rejects missing or ambiguous metadata', () => {
+    test('resolves explicit single Poll binding keys without guessing identities from registration names', async () => {
         const csharp = getPollingConnectorBindings(`
             [Function("OnNewEmail")]
             public void Run(
@@ -94,15 +94,12 @@ suite('Connector Trigger F5 production adapters', () => {
             }],
         }, 'OnNewEmail');
 
-        assert.deepStrictEqual(selectPollingConnectorBinding(
-            [...csharp, ...python, ...typescript],
-            'OnNewEmailV3',
-        ), {
-            connectionSettingName: 'Office365Connection',
-            functionName: 'OnNewEmail',
-            triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
-        });
-        assert.deepStrictEqual(selectPollingConnectorBinding(functionJson, 'OnNewEmailV3'), {
+        const resolver = new ProjectConnectorTriggerBindingResolver();
+        const context = await createTestActionContext();
+        resolver.find = async () => [...csharp, ...python, ...typescript];
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
+        resolver.find = async () => functionJson;
+        assert.deepStrictEqual(await resolver.resolve(context, 'fixture', target), {
             connectionSettingName: 'Office365Connection',
             functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
@@ -115,20 +112,10 @@ suite('Connector Trigger F5 production adapters', () => {
                 handler: async () => {}
             });
         `), ['ConnectorTriggerFunction']);
-        assert.throws(
-            () => selectPollingConnectorBinding(
-                [...csharp, ...csharp.map(item => ({ ...item, triggerConfigSettingName: 'Other' }))],
-                'OnNewEmailV3',
-            ),
-            /multiple Poll bindings/i,
-        );
-        assert.throws(
-            () => selectPollingConnectorBinding(
-                getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`),
-                'OnNewEmailV3',
-            ),
-            /does not contain explicit Poll binding settings/i,
-        );
+        resolver.find = async () => [...csharp, ...csharp.map(item => ({ ...item, triggerConfigSettingName: 'Other' }))];
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
+        resolver.find = async () => getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`);
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
     });
 
     test('rehydrates only a compatible live subscription context', async () => {

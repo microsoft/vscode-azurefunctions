@@ -154,6 +154,27 @@ export function ConnectorTriggerSetupPage({
                     onSelectSubscription={id => sendResource({ command: 'selectSubscription', id })}
                     onSelectRegion={id => sendResource({ command: 'selectRegion', id })}
                 />
+                {viewModel.identityRequired && <section className="setup-resource-grid">
+                    <p className="parameter-notice setup-identity-notice">{labels.identityNotice}</p>
+                    <div>
+                        <label htmlFor="setup-connector">{labels.connector}</label>
+                        <select id="setup-connector" value={resources?.connectorId ?? ''}
+                            disabled={!resources?.regionReady || loading || locked}
+                            onChange={event => sendResource({ command: 'selectConnector', id: event.target.value })}>
+                            <option value="">{labels.selectConnector}</option>
+                            {resources?.connectorOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="setup-event">{labels.event}</label>
+                        <select id="setup-event" value={resources?.eventId ?? ''}
+                            disabled={!resources?.connectorId || loading || locked}
+                            onChange={event => sendResource({ command: 'selectEvent', id: event.target.value })}>
+                            <option value="">{labels.selectEvent}</option>
+                            {resources?.eventOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                        </select>
+                    </div>
+                </section>}
                 <div className="setup-resource-grid" aria-busy={working || loading}>
                     <div>
                         <label htmlFor="setup-namespace">{labels.namespace}</label>

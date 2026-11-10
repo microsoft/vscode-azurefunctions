@@ -7,20 +7,34 @@
 
 import { Combobox, Option } from '@fluentui/react-components';
 import { useEffect, useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react';
-import {
-    type ConnectorTriggerLocationOption,
-    type ConnectorTriggerPickerViewModel,
-    type ConnectorTriggerSubscriptionOption,
-} from './connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
 const showAllSubscriptionsValue = '__showAllSubscriptions__';
 const useFilteredSubscriptionsValue = '__useFilteredSubscriptions__';
 const signInValue = '__signIn__';
 
-type AzureContextLabels = Pick<ConnectorTriggerPickerViewModel['labels'],
-    'subscription' | 'region' | 'loadingSubscriptions' | 'selectSubscription' |
-    'loadingRegions' | 'selectRegion' | 'recommendedRegions' | 'otherRegions'> &
-    Partial<Pick<ConnectorTriggerPickerViewModel['labels'], 'showAllSubscriptions' | 'useFilteredSubscriptions'>>;
+interface AzureContextLabels {
+    subscription: string;
+    region: string;
+    loadingSubscriptions: string;
+    selectSubscription: string;
+    loadingRegions: string;
+    selectRegion: string;
+    recommendedRegions: string;
+    otherRegions: string;
+    showAllSubscriptions?: string;
+    useFilteredSubscriptions?: string;
+}
+
+interface AzureSubscriptionOption {
+    id: string;
+    label: string;
+}
+
+interface AzureLocationOption {
+    name: string;
+    label: string;
+    regionCategory?: string;
+}
 
 export function AzureContextFields({
     labels,
@@ -44,7 +58,7 @@ export function AzureContextFields({
     onSelectSubscription,
 }: {
     labels: AzureContextLabels;
-    locations: readonly ConnectorTriggerLocationOption[];
+    locations: readonly AzureLocationOption[];
     locationsLoading: boolean;
     selectedRegion: string;
     selectedSubscriptionId: string;
@@ -52,7 +66,7 @@ export function AzureContextFields({
     signInLabel?: string;
     showingAllSubscriptions?: boolean;
     showSubscriptionIds?: boolean;
-    subscriptions: readonly ConnectorTriggerSubscriptionOption[];
+    subscriptions: readonly AzureSubscriptionOption[];
     subscriptionsLoading: boolean;
     disabled?: boolean;
     subscriptionInputId?: string;
@@ -172,8 +186,8 @@ export function AzureContextFields({
 }
 
 export function partitionConnectorLocations(
-    locations: readonly ConnectorTriggerLocationOption[],
-): { recommended: ConnectorTriggerLocationOption[]; other: ConnectorTriggerLocationOption[] } {
+    locations: readonly AzureLocationOption[],
+): { recommended: AzureLocationOption[]; other: AzureLocationOption[] } {
     return {
         recommended: locations.filter(location => location.regionCategory?.toLowerCase() === 'recommended'),
         other: locations.filter(location => location.regionCategory?.toLowerCase() !== 'recommended'),
@@ -185,10 +199,10 @@ export function shouldRequestAzureSignIn(signInRequired: boolean, subscriptionsL
 }
 
 export function filterSubscriptionOptions(
-    subscriptions: readonly ConnectorTriggerSubscriptionOption[],
+    subscriptions: readonly AzureSubscriptionOption[],
     query: string,
     selectedSubscriptionId: string,
-): ConnectorTriggerSubscriptionOption[] {
+): AzureSubscriptionOption[] {
     const normalized = query.trim().toLocaleLowerCase();
     const selected = subscriptions.find(subscription => subscription.id === selectedSubscriptionId);
     if (!normalized || normalized === selected?.label.toLocaleLowerCase()) {
@@ -200,7 +214,7 @@ export function filterSubscriptionOptions(
 
 export function getSubscriptionModeActionLabel(
     showingAllSubscriptions: boolean,
-    labels: Pick<ConnectorTriggerPickerViewModel['labels'], 'showAllSubscriptions' | 'useFilteredSubscriptions'>,
+    labels: { showAllSubscriptions: string; useFilteredSubscriptions: string },
 ): string {
     return showingAllSubscriptions ? labels.useFilteredSubscriptions : labels.showAllSubscriptions;
 }

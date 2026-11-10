@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type GenericResource } from '@azure/arm-resources';
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { RestError } from '@azure/core-rest-pipeline';
+import { type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
+import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { type Progress } from 'vscode';
 import { ConnectorNamespaceApiVersion, ConnectorNamespaceResourceType, webProvider } from '../../src/constants';
@@ -13,7 +15,6 @@ import {
     type ConnectorNamespaceClient,
     type ConnectorNamespaceResourcesClient,
 } from '../../src/commands/createFunction/connectorSteps/ConnectorNamespaceClient';
-import { type ConnectorGatewayClientContext } from '../../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import { ConnectorNamespaceCreateStep } from '../../src/commands/createFunction/connectorSteps/ConnectorNamespaceCreateStep';
 import {
     ConnectorNamespaceNameStep,
@@ -80,7 +81,7 @@ suite('Connector Namespace wizard steps', () => {
     });
 
     test('uses the connector gateway ARM contract', async () => {
-        let getStatusCode: number | undefined;
+        let responseStatusCode: number | undefined;
         let getArguments: unknown[] | undefined;
         let createArguments: unknown[] | undefined;
         const createdResource: GenericResource = {
@@ -91,8 +92,11 @@ suite('Connector Namespace wizard steps', () => {
         const resourcesClient = {
             get: async (...args: unknown[]) => {
                 getArguments = args;
-                if (getStatusCode) {
-                    throw Object.assign(new Error('Request failed.'), { statusCode: getStatusCode });
+                if (responseStatusCode) {
+                    throw new RestError('Request failed.', {
+                        statusCode: responseStatusCode,
+                        code: responseStatusCode === 404 ? 'ResourceNotFound' : undefined,
+                    });
                 }
                 return createdResource;
             },
@@ -102,7 +106,7 @@ suite('Connector Namespace wizard steps', () => {
             },
         } as unknown as ConnectorNamespaceResourcesClient;
         const client = new AzureConnectorNamespaceClient(async () => resourcesClient);
-        const context = { valuesToMask: [] } as unknown as ConnectorGatewayClientContext;
+        const context = {} as AzExtClientContext;
 
         assert.strictEqual(await client.isNameAvailable(context, 'rg', 'test-namespace'), false);
         assert.deepStrictEqual(getArguments, [
@@ -114,23 +118,13 @@ suite('Connector Namespace wizard steps', () => {
             ConnectorNamespaceApiVersion,
         ]);
 
-        getStatusCode = 404;
+        responseStatusCode = 404;
         assert.strictEqual(await client.isNameAvailable(context, 'rg', 'test-namespace'), true);
 
-        getStatusCode = 500;
-        await assert.rejects(
-            client.isNameAvailable(context, 'rg', 'test-namespace'),
-            /Unable to check Connector Namespace name availability/,
-        );
+        responseStatusCode = 500;
+        await assert.rejects(client.isNameAvailable(context, 'rg', 'test-namespace'), /Request failed/);
 
-        assert.deepStrictEqual(await client.create(context, 'rg', 'test-namespace', 'eastus'), {
-            ...createdResource,
-            identity: undefined,
-            managedBy: undefined,
-            properties: undefined,
-            tags: undefined,
-            type: undefined,
-        });
+        assert.strictEqual(await client.create(context, 'rg', 'test-namespace', 'eastus'), createdResource);
         assert.deepStrictEqual(createArguments, [
             'rg',
             webProvider,
@@ -154,6 +148,27 @@ suite('Connector Namespace wizard steps', () => {
                 updateIntervalInMs: 3000,
             },
         ]);
+    });
+
+    test('preserves namespace lookup errors other than HTTP 404', async () => {
+        for (const error of [
+            new RestError('Access denied.', { statusCode: 403, code: 'AuthorizationFailed' }),
+            new RestError('Request failed.', { statusCode: 500 }),
+            new RestError('Request failed.', { code: RestError.REQUEST_SEND_ERROR }),
+            new Error('Unexpected failure.'),
+            new UserCancelledError(),
+        ]) {
+            const resourcesClient: ConnectorNamespaceResourcesClient = {
+                get: async () => { throw error; },
+                beginCreateOrUpdateAndWait: async () => assert.fail('Name validation must not create a connector namespace.'),
+            };
+            const client = new AzureConnectorNamespaceClient(async () => resourcesClient);
+
+            await assert.rejects(
+                client.isNameAvailable({} as AzExtClientContext, 'rg', 'test-namespace'),
+                actual => actual === error,
+            );
+        }
     });
 
     test('creates the namespace with the selected resource group and location', async () => {
@@ -195,4 +210,41 @@ suite('Connector Namespace wizard steps', () => {
         assert.deepStrictEqual(context.valuesToMask, ['test-namespace']);
         assert.strictEqual(step.shouldExecute(context), false);
     });
+
+    for (const scenario of [
+        { name: 'an existing resource group', newResourceGroupName: undefined },
+        { name: 'a newly created resource group', newResourceGroupName: 'selected-rg' },
+        { name: 'an existing resource group after creation is denied', newResourceGroupName: 'denied-rg' },
+    ]) {
+        test(`uses ${scenario.name} once the resource group is resolved`, async () => {
+            const createdResource: GenericResource = {
+                id: '/subscriptions/sub/resourceGroups/selected-rg/providers/Microsoft.Web/connectorGateways/test-namespace',
+                name: 'test-namespace',
+                location: 'eastus',
+            };
+            const client: ConnectorNamespaceClient = {
+                isNameAvailable: async () => true,
+                create: async (_context, resourceGroupName, namespaceName, location) => {
+                    assert.strictEqual(resourceGroupName, 'selected-rg');
+                    assert.strictEqual(namespaceName, 'test-namespace');
+                    assert.strictEqual(location, 'eastus');
+                    return createdResource;
+                },
+            };
+            const context = {
+                resourceGroup: { name: 'selected-rg', location: 'eastus' },
+                newResourceGroupName: scenario.newResourceGroupName,
+                newConnectorNamespaceName: 'test-namespace',
+                _location: {
+                    name: 'eastus',
+                    displayName: 'East US',
+                },
+                valuesToMask: [],
+            } as unknown as IConnectorNamespaceWizardContext;
+
+            await new ConnectorNamespaceCreateStep(client).execute(context, { report: () => undefined });
+
+            assert.strictEqual(context.connectorNamespace, createdResource);
+        });
+    }
 });

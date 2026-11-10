@@ -3,19 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, UserCancelledError, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { UserCancelledError, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { createConnectorNamespace } from '../../commands/createFunction/connectorSteps/createConnectorNamespace';
+import { type MessageItem } from 'vscode';
+import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { parseJson } from '../../utils/parseJson';
-import {
-    type ConnectorTriggerF5Dependencies,
-    type ConnectorTriggerLocalBinding,
-    type ConnectorTriggerProjectMetadata,
-} from './connectorTriggerF5Contracts';
+import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerLocalBinding } from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
     isValidConnectorPollingEndpoint,
@@ -23,102 +18,71 @@ import {
 } from './connectorTriggerF5Setup';
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
 
-const pollingEndpointSuffix = '__pollingEndpoint';
-const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
-const connectorSourceGlob = '**/*.{cs,py,js,ts}';
-
 export async function validateConnectorNamespacePreDebug(
     context: IActionContext,
     projectPath: string,
     injectedDependencies?: ConnectorTriggerF5Dependencies,
 ): Promise<void> {
-    const dependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
-    if (dependencies) {
-        let target: ConnectorTriggerProjectMetadata | undefined;
-        try {
-            target = await dependencies.projectStore.read(projectPath);
-        } catch (error) {
-            throw new ConnectorTriggerF5SetupError(error);
+    try {
+        const dependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
+        const bindings = await dependencies.bindingResolver.find(context, projectPath);
+        context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
+        if (bindings.length === 0) {
+            return;
         }
 
-        context.telemetry.properties.connectorF5HandoffDetected = String(!!target);
-        if (target) {
-            context.telemetry.properties.connectorPollTriggerDetected = 'true';
-            try {
-                const binding = await dependencies.bindingResolver.resolve(context, projectPath, target);
-                const settingsValid = await areConnectorTriggerSettingsValid(context, projectPath, binding);
-                context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
-                if (settingsValid) {
-                    await dependencies.projectStore.markComplete(projectPath);
-                    context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
-                    return;
-                }
-
-                const configure: vscode.MessageItem = { title: localize('configureConnectorTrigger', 'Configure') };
-                const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
-                const result = await context.ui.showWarningMessage(
-                    localize(
-                        'connectorTriggerConfigurationRequiredForDebug',
-                        "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
-                    ),
-                    { modal: true, stepName: 'missingConnectorTriggerSettings' },
-                    configure,
-                    debugAnyway,
-                );
-                if (result === debugAnyway) {
-                    context.telemetry.properties.connectorF5SetupResult = 'debugAnyway';
-                    return;
-                }
-                if (result !== configure) {
-                    throw new UserCancelledError('missingConnectorTriggerSettings');
-                }
-
-                await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
-                return;
-            } catch (error) {
-                if (parseError(error).isUserCancelledError) {
-                    throw error;
-                }
-                throw error instanceof ConnectorTriggerF5SetupError ?
-                    error :
-                    new ConnectorTriggerF5SetupError(error);
-            }
+        const settingsValid = (await Promise.all(bindings.map(async binding =>
+            await areConnectorTriggerSettingsValid(context, projectPath, binding)))).every(Boolean);
+        context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
+        if (settingsValid) {
+            context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
+            return;
         }
+
+        const configure: MessageItem = { title: localize('configureConnectorTrigger', 'Configure') };
+        const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
+        const singleEvent = bindings.length === 1;
+        const result = await context.ui.showWarningMessage(
+            singleEvent ? localize(
+                'connectorTriggerConfigurationRequiredForDebug',
+                "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
+            ) : localize(
+                'connectorMultipleEventsRequireConfiguration',
+                'This project has multiple polling Connector Trigger events with incomplete settings. Automatic F5 setup supports one polling event per project. Configure each event using its binding-specific polling endpoint and Trigger Config setting in local.settings.json, then retry F5. Debug Anyway does not configure any events.',
+            ),
+            { modal: true, stepName: 'missingConnectorTriggerSettings' },
+            ...(singleEvent ? [configure, debugAnyway] : [debugAnyway]),
+        );
+        if (result === debugAnyway) {
+            context.telemetry.properties.connectorF5SetupResult = 'debugAnyway';
+            return;
+        }
+        if (!singleEvent || result !== configure) {
+            throw new UserCancelledError('missingConnectorTriggerSettings');
+        }
+
+        const binding = bindings[0];
+        if (hasInvalidEnvironmentOverride(binding)) {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorInvalidEnvironmentOverride',
+                'An invalid environment-variable override prevents Connector Trigger setup from updating its effective settings. Correct or remove the override, restart VS Code, and retry F5.',
+            ));
+        }
+        const metadata = await dependencies.projectStore.read(projectPath);
+        context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
+        await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, dependencies);
+    } catch (error) {
+        if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
+            throw error;
+        }
+        if (error instanceof ConnectorTriggerProjectMetadataError) {
+            throw new ConnectorTriggerF5SetupError(error, localize(
+                'connectorSetupInvalidProjectIdentity',
+                'Correct or remove this project\'s azureFunctions.connectorTriggerProjects v1 entry, then retry F5 to select the connector and event explicitly.',
+            ));
+        }
+        throw new ConnectorTriggerF5SetupError(error);
     }
-
-    const connectionPrefixes = await findPollingConnectorConnectionPrefixes(projectPath);
-    context.telemetry.properties.connectorPollTriggerDetected = String(connectionPrefixes.size > 0);
-
-    if (connectionPrefixes.size === 0) {
-        return;
-    }
-
-    const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-    const areSettingsValid = [...connectionPrefixes].every(prefix => {
-        const key = `${prefix}${pollingEndpointSuffix}`;
-        return isValidPollingEndpoint(process.env[key] ?? settings.Values?.[key]);
-    });
-    context.telemetry.properties.connectorNamespaceSettingsValid = String(areSettingsValid);
-
-    if (areSettingsValid) {
-        return;
-    }
-
-    const createNamespace: vscode.MessageItem = { title: localize('createConnectorNamespace', 'Create Connector Namespace') };
-    const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
-    const message = localize(
-        'connectorNamespaceRequiredForDebug',
-        'This project has a polling connector trigger without a valid Connector Namespace polling endpoint. Create a Connector Namespace now? You will still need to configure its Trigger Config endpoint in "{0}".',
-        localSettingsFileName,
-    );
-    const result = await context.ui.showWarningMessage(message, { modal: true, stepName: 'missingConnectorNamespaceSettings' }, createNamespace, debugAnyway);
-    context.telemetry.properties.connectorNamespaceCreateSelected = String(result === createNamespace);
-
-    if (result !== createNamespace) {
-        return;
-    }
-
-    await createConnectorNamespace(context);
 }
 
 export async function areConnectorTriggerSettingsValid(
@@ -126,100 +90,25 @@ export async function areConnectorTriggerSettingsValid(
     projectPath: string,
     binding: ConnectorTriggerLocalBinding,
 ): Promise<boolean> {
-    const pollingEndpointKey = `${binding.connectionSettingName}${pollingEndpointSuffix}`;
+    const pollingEndpointKey = `${binding.connectionSettingName}__pollingEndpoint`;
     const triggerConfigKey = binding.triggerConfigSettingName;
-    maskValue(context, pollingEndpointKey);
-    maskValue(context, triggerConfigKey);
-
+    for (const key of [pollingEndpointKey, triggerConfigKey]) {
+        if (!context.valuesToMask.includes(key)) {
+            context.valuesToMask.push(key);
+        }
+    }
     const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
     return isValidConnectorPollingEndpoint(process.env[pollingEndpointKey] ?? settings.Values?.[pollingEndpointKey]) &&
         isValidTriggerConfigReference(process.env[triggerConfigKey] ?? settings.Values?.[triggerConfigKey]);
-}
-
-export async function findPollingConnectorConnectionPrefixes(projectPath: string): Promise<Set<string>> {
-    const prefixes = new Set<string>();
-    const functionJsonFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(projectPath, '**/function.json'), excludedFolders);
-
-    for (const file of functionJsonFiles) {
-        const data = parseJson((await AzExtFsExtra.readFile(file.fsPath)).toString());
-        for (const prefix of getPollingConnectorConnectionPrefixesFromFunctionJson(data)) {
-            prefixes.add(prefix);
-        }
-    }
-
-    const sourceFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(projectPath, connectorSourceGlob), excludedFolders);
-    for (const file of sourceFiles) {
-        const content = (await AzExtFsExtra.readFile(file.fsPath)).toString();
-        for (const prefix of getPollingConnectorConnectionPrefixes(content)) {
-            prefixes.add(prefix);
-        }
-    }
-
-    return prefixes;
-}
-
-export function getPollingConnectorConnectionPrefixesFromFunctionJson(data: unknown): string[] {
-    if (!isRecord(data) || !Array.isArray(data.bindings)) {
-        return [];
-    }
-
-    return data.bindings
-        .filter(binding =>
-            isRecord(binding) &&
-            equalsIgnoreCase(binding.type, 'connectorTrigger') &&
-            equalsIgnoreCase(binding.deliveryMode, 'Poll') &&
-            typeof binding.connection === 'string' &&
-            !!binding.connection.trim())
-        .map(binding => (binding as Record<string, string>).connection.trim());
-}
-
-export function getPollingConnectorConnectionPrefixes(content: string): string[] {
-    return [
-        ...getConnectionsFromBlocks(content, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/gi, /DeliveryMode\s*=\s*(?:\w+\.)*Poll\b/i, /Connection\s*=\s*["']([^"']+)["']/i),
-        ...getConnectionsFromBlocks(content, /@\w*\.?connector_trigger\s*\(([\s\S]*?)\)\s*(?:\r?\n)/gi, /delivery_mode\s*=\s*(?:\w+\.)*POLL\b/i, /connection\s*=\s*["']([^"']+)["']/i),
-        ...getConnectionsFromBlocks(content, /\b(?:app\.)?connectorTrigger\s*\([^,]+,\s*\{([\s\S]*?)\bhandler\s*:/gi, /deliveryMode\s*:\s*["']Poll["']/i, /connection\s*:\s*["']([^"']+)["']/i),
-    ];
-}
-
-export function isValidPollingEndpoint(value: string | undefined): boolean {
-    if (!value || value.includes('<') || value.includes('>')) {
-        return false;
-    }
-
-    try {
-        const url = new URL(value);
-        return (url.protocol === 'https:' || url.protocol === 'http:') && !!url.hostname;
-    } catch {
-        return false;
-    }
 }
 
 export function isValidTriggerConfigReference(value: string | undefined): boolean {
     return !!value?.trim() && !value.includes('<') && !value.includes('>');
 }
 
-function getConnectionsFromBlocks(content: string, blockPattern: RegExp, pollPattern: RegExp, connectionPattern: RegExp): string[] {
-    const connections: string[] = [];
-    for (const match of content.matchAll(blockPattern)) {
-        const block = match[1];
-        const connectionMatch = pollPattern.test(block) ? connectionPattern.exec(block) : undefined;
-        if (connectionMatch?.[1].trim()) {
-            connections.push(connectionMatch[1].trim());
-        }
-    }
-    return connections;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
-function equalsIgnoreCase(value: unknown, expected: string): boolean {
-    return typeof value === 'string' && value.toLowerCase() === expected.toLowerCase();
-}
-
-function maskValue(context: IActionContext, value: string): void {
-    if (value && !context.valuesToMask.includes(value)) {
-        context.valuesToMask.push(value);
-    }
+function hasInvalidEnvironmentOverride(binding: ConnectorTriggerLocalBinding): boolean {
+    const endpoint = process.env[`${binding.connectionSettingName}__pollingEndpoint`];
+    const config = process.env[binding.triggerConfigSettingName];
+    return endpoint !== undefined && !isValidConnectorPollingEndpoint(endpoint) ||
+        config !== undefined && !isValidTriggerConfigReference(config);
 }

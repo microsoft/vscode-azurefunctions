@@ -392,6 +392,90 @@ suite('Connector Trigger parameter webview', () => {
 });
 
 suite('Connector Trigger editable setup webview', () => {
+    test('explicitly associates a metadata-free single event using only selected-connector API metadata', async () => {
+        const calls: string[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async (_context, target) => {
+                calls.push('namespaces');
+                assert.strictEqual(target.connectorId, 'office365');
+                assert.strictEqual(target.operationId, 'OnNewEmailV3');
+                return [];
+            },
+            listConnections: async () => [],
+        }, createSetupScopes({
+            listConnectors: async () => {
+                calls.push('connectors');
+                return [{ id: 'office365', label: 'Office 365 Outlook' }];
+            },
+            listEvents: async (_context, _scope, connectorId) => {
+                calls.push(`events:${connectorId}`);
+                return [{ id: 'OnNewEmailV3', label: 'When a new email arrives (V3)' }];
+            },
+        }), false);
+        await fixture.initialize();
+        assert.deepStrictEqual(calls, ['connectors']);
+        assert.strictEqual(fixture.form.state.canApprove, false);
+        assert.strictEqual(fixture.form.state.connectorId, '');
+        assert.strictEqual(fixture.form.state.eventId, '');
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.match(html, /without a saved connector\/event association/);
+        assert.match(html, /id="setup-connector"/);
+        assert.match(html, /id="setup-event"/);
+        await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
+        assert.deepStrictEqual(calls, ['connectors', 'events:office365']);
+        assert.strictEqual(fixture.form.state.canApprove, false);
+        await fixture.send({ command: 'selectEvent', id: fixture.form.state.eventOptions[0].id });
+        assert.deepStrictEqual(calls, ['connectors', 'events:office365', 'namespaces']);
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        const plan = await fixture.send({ command: 'approveSetup' });
+        assert.strictEqual(plan?.target.connectorId, 'office365');
+        assert.strictEqual(plan?.target.operationId, 'OnNewEmailV3');
+        assert.strictEqual(fixture.request.metadata, undefined);
+        await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
+        assert.match(fixture.form.state.error ?? '', /choices are locked/i);
+        assert.deepStrictEqual(calls, ['connectors', 'events:office365', 'namespaces']);
+    });
+
+    test('scope changes discard stale event metadata and require a new explicit association', async () => {
+        let finishEvents: ((events: { id: string; label: string }[]) => void) | undefined;
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listEvents: async () => await new Promise(resolve => { finishEvents = resolve; }),
+        }), false);
+        await fixture.initialize();
+        const pending = fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
+        assert.ok(finishEvents);
+        await fixture.send({ command: 'selectRegion', id: fixture.form.state.regionOptions[1].id });
+        finishEvents([{ id: 'stale-event', label: 'Stale event' }]);
+        await pending;
+        assert.strictEqual(fixture.form.state.connectorId, '');
+        assert.strictEqual(fixture.form.state.eventId, '');
+        assert.deepStrictEqual(fixture.form.state.eventOptions, []);
+        assert.strictEqual(fixture.form.state.scopeReady, false);
+        assert.strictEqual(fixture.form.state.canApprove, false);
+    });
+
+    test('empty or inaccessible event metadata is explicit and cannot approve setup', async () => {
+        for (const fails of [false, true]) {
+            const fixture = await createSetupForm(undefined, createSetupScopes({
+                listEvents: async () => {
+                    if (fails) {
+                        throw new Error('private-event-response');
+                    }
+                    return [];
+                },
+            }), false);
+            await fixture.initialize();
+            await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
+            assert.strictEqual(fixture.form.state.canApprove, false);
+            assert.strictEqual(fixture.form.state.scopeReady, false);
+            assert.match(fixture.form.state.error ?? '', fails ? /could not be loaded/i : /no supported polling events/i);
+            assert.doesNotMatch(JSON.stringify(fixture.form.state), /private-event-response/);
+        }
+    });
+
     test('uses the Azure subscription filter by default, switches lists and preserves a still-visible scope', async () => {
         const modes: boolean[] = [];
         const fixture = await createSetupForm(undefined, createSetupScopes({
@@ -520,7 +604,7 @@ suite('Connector Trigger editable setup webview', () => {
         assert.strictEqual(plan?.target.subscription.id, 'other-subscription');
         assert.strictEqual(plan?.target.region, 'westus');
         assert.strictEqual(JSON.stringify(fixture.request.metadata), metadataBefore);
-        assert.deepStrictEqual(Object.keys(fixture.request.metadata).sort(), ['connectorId', 'operationId', 'version']);
+        assert.deepStrictEqual(Object.keys(fixture.request.metadata ?? {}).sort(), ['connectorId', 'operationId', 'version']);
         await fixture.send({ command: 'selectSubscription', id: fixture.form.state.subscriptionOptions[0].id });
         assert.strictEqual(fixture.form.state.subscriptionId, fixture.form.state.subscriptionOptions[1].id);
         assert.deepStrictEqual(targets, [{ subscription: 'other-subscription', region: 'westus' }]);
@@ -773,10 +857,11 @@ async function createSetupForm(
         listNamespaces: async () => [], listConnections: async () => [],
     },
     scopes: ConnectorTriggerSetupScopes = createSetupScopes(),
+    hasMetadata = true,
 ) {
     const context = await createTestActionContext();
     const request: ConnectorTriggerSetupRequest = {
-        metadata: { version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3' },
+        metadata: hasMetadata ? { version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3' } : undefined,
         projectPath: 'C:\\fixture-project',
         binding: { connectionSettingName: 'CustomConnection', triggerConfigSettingName: 'CustomTriggerConfig' },
         localSettings: [
@@ -812,6 +897,8 @@ function createSetupScopes(overrides: Partial<ConnectorTriggerSetupScopes> = {})
             environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },
         }),
         listRegions: async () => [{ id: 'eastus', label: 'East US' }, { id: 'westus', label: 'West US' }],
+        listConnectors: async () => [{ id: 'office365', label: 'Office 365 Outlook' }],
+        listEvents: async () => [{ id: 'OnNewEmailV3', label: 'When a new email arrives (V3)' }],
         signIn: async () => undefined,
         ...overrides,
     };

@@ -20,6 +20,8 @@ import {
     readConnectorTriggerProjectMetadata,
     writeConnectorTriggerProjectMetadata,
 } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { ProjectLanguage } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import {
     type ConnectorTriggerConnection,
@@ -233,6 +235,74 @@ suite('Connector Trigger F5 setup', () => {
             /required-value|inbox-id|gateway-id|subscription-id|tenant-id/i,
         );
         ui.assertConsumed();
+    });
+
+    test('does not use stale identity metadata to configure a project without actual polling bindings', async () => {
+        const fail = async (): Promise<never> => assert.fail('No connector work is authorized without an actual Poll binding.');
+        const dependencies = createDependencies(createGateway(createGatewayState()), {
+            resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
+        }, { markComplete: fail, write: fail });
+        dependencies.bindingResolver.find = async () => [];
+        dependencies.projectStore.read = fail;
+        dependencies.openSetup = fail;
+        const context = await createContext(new ScriptedUi([], [], []));
+        await validateConnectorNamespacePreDebug(context, projectPath, dependencies);
+        assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'false');
+    });
+
+    for (const incomplete of [0, 1, 2]) {
+        test(`checks every actual multi-event binding and ${incomplete ? 'diagnoses unsupported incomplete setup' : 'skips all-configured setup'} (${incomplete} incomplete)`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-boundary-'));
+            const ui = new ScriptedUi([], [], incomplete ? ['Debug Anyway'] : []);
+            const context = await createContext(ui);
+            const fail = async (): Promise<never> => assert.fail('Multi-event F5 must not read singular identity metadata, open setup or call Azure.');
+            const state = createGatewayState();
+            const dependencies = createDependencies(createGateway(state), {
+                resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
+            }, { markComplete: fail, write: fail });
+            dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
+            dependencies.projectStore.read = fail;
+            dependencies.openSetup = fail;
+            try {
+                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, projectMetadata);
+                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, { connectorId: 'office365', operationId: 'OnFlaggedEmailV3' });
+                const bindings = await dependencies.bindingResolver.find(context, tempProject);
+                assert.strictEqual(bindings.length, 2);
+                const values = Object.fromEntries(bindings.flatMap((binding, index) => [
+                    [`${binding.connectionSettingName}__pollingEndpoint`, 'https://example.invalid/api/connectorGateways/fixture'],
+                    [binding.triggerConfigSettingName, index < incomplete ? '' : 'configured-trigger'],
+                ]));
+                await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: values });
+                const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
+                await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
+                if (incomplete) {
+                    assert.match(ui.warnings[0].message, /multiple polling.*supports one polling event/i);
+                    assert.deepStrictEqual(ui.warnings[0].items, ['Debug Anyway']);
+                    assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
+                } else {
+                    assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+                }
+                assert.strictEqual(await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8'), before);
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+                ui.assertConsumed();
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
+
+    test('binding discovery errors fail closed without exposing the underlying response', async () => {
+        const fail = async (): Promise<never> => assert.fail();
+        const dependencies = createDependencies(createGateway(createGatewayState()), {
+            resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
+        }, { markComplete: fail, write: fail });
+        dependencies.bindingResolver.find = async () => { throw new Error('private-discovery-response'); };
+        await assert.rejects(
+            validateConnectorNamespacePreDebug(await createContext(new ScriptedUi([], [], [])), projectPath, dependencies),
+            error => error instanceof Error && !error.message.includes('private-discovery-response') &&
+                'code' in error && error.code === 'connectorTriggerF5SetupFailed',
+        );
     });
 
     test('reuses deterministic resources after cancellation without creating duplicates', async () => {
@@ -919,15 +989,18 @@ suite('Connector Trigger F5 setup', () => {
         retryUi.assertConsumed();
     });
 
-    test('configures an authenticated nested Outlook folder from identity-only project metadata and selected provisioning scope', async () => {
+    for (const hasMetadata of [true, false]) {
+    test(`configures an authenticated nested Outlook folder ${hasMetadata ? 'with v1 identity' : 'by explicitly associating a metadata-free single event'}`, async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-folders-'));
-        const source = `app.connectorTrigger('OnNewEmailV3', {
+        let source = `app.connectorTrigger('MyCustomMailRegistration', {
     deliveryMode: 'Poll',
     connection: 'ConnectorNamespace',
     triggerConfigName: '%OnNewEmailTriggerConfigName%',
     handler: async () => undefined,
 });
 `;
+        let sourcePath = path.join(tempProject, 'function.ts');
+        let discoveredBinding = binding;
         const state = createGatewayState();
         const requests: ConnectorTriggerDynamicInvokeRequest[] = [];
         let accessConfigured = false;
@@ -964,6 +1037,7 @@ suite('Connector Trigger F5 setup', () => {
         };
         const ui = new ScriptedUi(
             [
+                ...hasMetadata ? [] : ['Office 365 Outlook', 'When a new email arrives (V3)'],
                 /Create a new Connector Namespace/,
                 /Create a new connector connection/,
                 'Inbox',
@@ -974,17 +1048,35 @@ suite('Connector Trigger F5 setup', () => {
             ['Configure', /Open Sign-in Page/],
         );
         try {
-            await AzExtFsExtra.writeFile(path.join(tempProject, 'function.ts'), source);
+            if (hasMetadata) {
+                await AzExtFsExtra.writeFile(sourcePath, source);
+            } else {
+                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, projectMetadata);
+                const sourceFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(tempProject, '**/*.ts'));
+                assert.strictEqual(sourceFiles.length, 1);
+                sourcePath = sourceFiles[0].fsPath;
+                source = (await AzExtFsExtra.readFile(sourcePath)).toString();
+                const bindings = await dependencies.bindingResolver.find(await createContext(ui), tempProject);
+                assert.strictEqual(bindings.length, 1);
+                discoveredBinding = bindings[0];
+                assert.notStrictEqual(discoveredBinding.triggerConfigSettingName, binding.triggerConfigSettingName);
+            }
             await AzExtFsExtra.writeFile(path.join(tempProject, '.gitignore'), 'local.settings.json\n');
             await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
                 IsEncrypted: false,
-                Values: { UnrelatedSetting: 'keep-this-value' },
+                Values: {
+                    UnrelatedSetting: 'keep-this-value',
+                    [`${discoveredBinding.connectionSettingName}__pollingEndpoint`]: '',
+                    [discoveredBinding.triggerConfigSettingName]: '',
+                },
             });
-            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            if (hasMetadata) {
+                await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            }
             const metadataPath = path.join(tempProject, '.vscode', 'settings.json');
-            const metadataBefore = await fs.promises.readFile(metadataPath, 'utf8');
+            const metadataBefore = hasMetadata ? await fs.promises.readFile(metadataPath, 'utf8') : undefined;
             assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
-            assert.doesNotMatch(metadataBefore, /subscription|tenant|region|environment|management\.azure/);
+            assert.doesNotMatch(metadataBefore ?? '', /subscription|tenant|region|environment|management\.azure/);
 
             await validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies);
 
@@ -1006,26 +1098,31 @@ suite('Connector Trigger F5 setup', () => {
                 IsEncrypted: false,
                 Values: {
                     UnrelatedSetting: 'keep-this-value',
-                    ['ConnectorNamespace__pollingEndpoint']:
+                    [`${discoveredBinding.connectionSettingName}__pollingEndpoint`]:
                         'https://example.logic.azure.com/api/connectorGateways/gateway-id',
-                    OnNewEmailTriggerConfigName: state.triggerConfigName,
+                    [discoveredBinding.triggerConfigSettingName]: state.triggerConfigName,
                 },
             });
-            assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(tempProject), projectMetadata);
-            assert.strictEqual((await AzExtFsExtra.readFile(path.join(tempProject, 'function.ts'))).toString(), source);
+            assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(tempProject), hasMetadata ? projectMetadata : undefined);
+            assert.strictEqual((await AzExtFsExtra.readFile(sourcePath)).toString(), source);
             const repeatContext = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(repeatContext, tempProject, dependencies);
             assert.strictEqual(repeatContext.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
             assert.strictEqual(requests.length, 3);
             assert.strictEqual(state.namespaceCreateCount, 1);
             assert.strictEqual(state.connectionCreateCount, 1);
-            assert.strictEqual(await fs.promises.readFile(metadataPath, 'utf8'), metadataBefore);
+            if (hasMetadata) {
+                assert.strictEqual(await fs.promises.readFile(metadataPath, 'utf8'), metadataBefore);
+            } else {
+                assert.strictEqual(await AzExtFsExtra.pathExists(metadataPath), false);
+            }
             assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
             ui.assertConsumed();
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
     });
+    }
 
     test('skips scope selection and Azure setup for identity-only metadata with valid runtime settings', async () => {
         const tempProject = path.join(os.tmpdir(), `connector-f5-${Date.now()}`);
@@ -1042,6 +1139,7 @@ suite('Connector Trigger F5 setup', () => {
         const fail = async (): Promise<never> => assert.fail('Azure setup must not run for valid settings.');
         const dependencies: ConnectorTriggerF5Dependencies = {
             bindingResolver: {
+                find: async () => [binding],
                 resolve: async () => binding,
             },
             gateway: {
@@ -1076,7 +1174,7 @@ suite('Connector Trigger F5 setup', () => {
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
-            assert.strictEqual(completed, 1);
+            assert.strictEqual(completed, 0);
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
             assert.strictEqual((await AzExtFsExtra.readFile(settingsPath)).toString(), before);
@@ -1423,6 +1521,7 @@ function createDependencies(
 ): ConnectorTriggerF5Dependencies {
     return {
         bindingResolver: {
+            find: async () => [binding],
             resolve: async () => binding,
         },
         gateway,
@@ -1451,6 +1550,11 @@ function createScriptedSetupSession(
         listSubscriptions: async () => [{ id: target.subscription.id, label: 'Selected provisioning subscription' }],
         getSubscription: async () => target.subscription,
         listRegions: async () => [{ id: target.region, label: 'Selected provisioning region' }],
+        listConnectors: async () => [{ id: target.connectorId, label: 'Office 365 Outlook' }],
+        listEvents: async (_context, _scope, connectorId) => {
+            assert.strictEqual(connectorId, target.connectorId);
+            return [{ id: target.operationId, label: 'When a new email arrives (V3)' }];
+        },
         signIn: async () => assert.fail('This controlled test is already signed in.'),
     }, () => undefined);
     const cancellation = new vscode.CancellationTokenSource();
@@ -1466,6 +1570,20 @@ function createScriptedSetupSession(
             await form.handleMessage({ command: 'selectSubscription', revision: ++revision, id: form.state.subscriptionOptions[0].id });
             assert.strictEqual(form.state.canApprove, false);
             await form.handleMessage({ command: 'selectRegion', revision: ++revision, id: form.state.regionOptions[0].id });
+            if (!request.metadata) {
+                assert.strictEqual(form.state.canApprove, false);
+                const connector = await context.ui.showQuickPick(form.state.connectorOptions.map(option => ({
+                    label: option.label, data: option.id,
+                })), {});
+                assert.ok(!Array.isArray(connector));
+                await form.handleMessage({ command: 'selectConnector', revision: ++revision, id: connector.data });
+                assert.strictEqual(form.state.canApprove, false);
+                const event = await context.ui.showQuickPick(form.state.eventOptions.map(option => ({
+                    label: option.label, data: option.id,
+                })), {});
+                assert.ok(!Array.isArray(event));
+                await form.handleMessage({ command: 'selectEvent', revision: ++revision, id: event.data });
+            }
             assert.strictEqual(form.state.error, undefined);
             if (form.state.namespaceId === 'new') {
                 const selected = await context.ui.showQuickPick(form.state.namespaceOptions.map(option => ({

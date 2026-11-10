@@ -19,6 +19,7 @@ import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
+    ConnectorTriggerF5SetupError,
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerF5Dependencies,
@@ -37,12 +38,14 @@ import {
     type ConnectorTriggerSetupSession,
 } from './connectorTriggerF5Contracts';
 
+export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
+
 const connectionPollIntervalMs = 3000;
 const connectionPollTimeoutMs = 3 * 60 * 1000;
 
 interface ConnectorTriggerF5WizardContext extends IActionContext {
     projectPath: string;
-    metadata: ConnectorTriggerProjectMetadata;
+    metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
     names?: ConnectorTriggerResourceNames;
@@ -61,24 +64,10 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     metadataCompleted?: boolean;
 }
 
-export class ConnectorTriggerF5SetupError extends Error {
-    public readonly code = 'connectorTriggerF5SetupFailed';
-
-    public constructor(
-        cause?: unknown,
-        message = localize(
-            'connectorTriggerF5SetupFailed',
-            'Connector Trigger setup could not be completed. Check your Azure access and network connection, then retry debugging.',
-        ),
-    ) {
-        super(message, { cause });
-    }
-}
-
 export async function runConnectorTriggerF5Setup(
     context: IActionContext,
     projectPath: string,
-    metadata: ConnectorTriggerProjectMetadata,
+    metadata: ConnectorTriggerProjectMetadata | undefined,
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
 ): Promise<void> {
@@ -611,6 +600,12 @@ function assertSetupActive(context: ConnectorTriggerF5WizardContext): void {
 
 async function createSetupRequest(context: ConnectorTriggerF5WizardContext): Promise<ConnectorTriggerSetupRequest> {
     const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
+    if (settings.IsEncrypted) {
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorSetupEncryptedSettings',
+            'Decrypt local.settings.json using the Azure Functions extension, then retry F5. Encrypted settings were not changed.',
+        ));
+    }
     const keys = [
         { name: `${context.binding.connectionSettingName}__pollingEndpoint`, purpose: 'pollingEndpoint' },
         { name: context.binding.triggerConfigSettingName, purpose: 'triggerConfig' },
@@ -643,8 +638,10 @@ function maskSetupValues(context: ConnectorTriggerF5WizardContext): void {
         context.target?.subscription.environment.name ?? '',
         context.target?.subscription.environment.resourceManagerEndpointUrl ?? '',
         context.target?.region ?? '',
-        context.metadata.connectorId,
-        context.metadata.operationId,
+        context.metadata?.connectorId ?? '',
+        context.metadata?.operationId ?? '',
+        context.target?.connectorId ?? '',
+        context.target?.operationId ?? '',
         context.binding.connectionSettingName,
         context.binding.triggerConfigSettingName,
         context.names?.resourceGroupName ?? '',

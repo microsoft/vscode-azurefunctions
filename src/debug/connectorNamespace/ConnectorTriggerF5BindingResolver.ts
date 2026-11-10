@@ -4,10 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import {
-    findPollingConnectorBindings,
-    selectPollingConnectorBinding,
-} from '../../connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { localize } from '../../localize';
 import {
     type ConnectorTriggerBindingResolver,
     type ConnectorTriggerLocalBinding,
@@ -15,18 +13,28 @@ import {
 } from './connectorTriggerF5Contracts';
 
 export class ProjectConnectorTriggerBindingResolver implements ConnectorTriggerBindingResolver {
+    public async find(context: IActionContext, projectPath: string): Promise<ConnectorTriggerLocalBinding[]> {
+        const bindings = await findPollingConnectorBindings(projectPath);
+        for (const binding of bindings) {
+            maskValue(context, binding.connectionSettingName);
+            maskValue(context, binding.triggerConfigSettingName);
+        }
+        return bindings;
+    }
+
     public async resolve(
         context: IActionContext,
         projectPath: string,
-        metadata: ConnectorTriggerProjectMetadata,
+        _metadata: ConnectorTriggerProjectMetadata,
     ): Promise<ConnectorTriggerLocalBinding> {
-        const binding = selectPollingConnectorBinding(
-            await findPollingConnectorBindings(projectPath),
-            metadata.operationId,
-        );
-        maskValue(context, binding.connectionSettingName);
-        maskValue(context, binding.triggerConfigSettingName);
-        return binding;
+        const bindings = await this.find(context, projectPath);
+        if (bindings.length !== 1) {
+            throw new Error(localize(
+                'connectorSingleBindingRequired',
+                'Automatic Connector Trigger setup requires exactly one polling event. Configure each event using its binding-specific local settings before retrying F5.',
+            ));
+        }
+        return bindings[0];
     }
 }
 

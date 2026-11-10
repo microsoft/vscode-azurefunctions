@@ -3,11 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import {
-    type ConnectorTriggerInputDefinition,
-    type ConnectorTriggerInputOption,
-    type ConnectorTriggerInputType,
-} from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+type ConnectorTriggerInputType = 'array' | 'boolean' | 'integer' | 'number' | 'object' | 'string';
+
+interface ConnectorTriggerInputOption {
+    label: string;
+    value: string;
+}
+
+interface ConnectorTriggerInputDefinition {
+    name: string;
+    label: string;
+    description?: string;
+    type: ConnectorTriggerInputType;
+    format?: string;
+    required: boolean;
+    defaultValue?: string | number | boolean;
+    options?: ConnectorTriggerInputOption[];
+    dynamic: boolean;
+    sensitive: boolean;
+    visibility?: string;
+}
 
 type JsonRecord = Record<string, unknown>;
 

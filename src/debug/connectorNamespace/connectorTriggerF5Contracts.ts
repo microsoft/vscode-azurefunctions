@@ -6,8 +6,23 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type CancellationToken } from 'vscode';
 import { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { localize } from '../../localize';
 
 export { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+
+export class ConnectorTriggerF5SetupError extends Error {
+    public readonly code = 'connectorTriggerF5SetupFailed';
+
+    public constructor(
+        cause?: unknown,
+        message = localize(
+            'connectorTriggerF5SetupFailed',
+            'Connector Trigger setup could not be completed. Check your Azure access and network connection, then retry debugging.',
+        ),
+    ) {
+        super(message, { cause });
+    }
+}
 
 export type ConnectorTriggerParameterValue =
     string |
@@ -39,6 +54,7 @@ export interface ConnectorTriggerProjectMetadataStore {
 }
 
 export interface ConnectorTriggerBindingResolver {
+    find(context: IActionContext, projectPath: string): Promise<ConnectorTriggerLocalBinding[]>;
     /**
      * Resolves the actual Poll binding Connection prefix and TriggerConfigName setting reference
      * from project metadata. Implementations must not derive either key from Azure resource names.
@@ -314,7 +330,7 @@ export interface ConnectorTriggerResourceNames {
 }
 
 export interface ConnectorTriggerSetupRequest {
-    metadata: ConnectorTriggerProjectMetadata;
+    metadata?: ConnectorTriggerProjectMetadata;
     projectPath: string;
     binding: ConnectorTriggerLocalBinding;
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
@@ -324,8 +340,12 @@ export interface ConnectorTriggerSetupScopes {
     listSubscriptions(context: IActionContext, showAll: boolean): Promise<{ id: string; label: string }[]>;
     getSubscription(context: IActionContext, id: string): Promise<ConnectorTriggerSetupTarget['subscription']>;
     listRegions(context: IActionContext, subscriptionId: string): Promise<{ id: string; label: string; regionCategory?: string }[]>;
+    listConnectors(context: IActionContext, scope: ConnectorTriggerSetupScope): Promise<{ id: string; label: string }[]>;
+    listEvents(context: IActionContext, scope: ConnectorTriggerSetupScope, connectorId: string): Promise<{ id: string; label: string }[]>;
     signIn(context: IActionContext): Promise<void>;
 }
+
+export type ConnectorTriggerSetupScope = Pick<ConnectorTriggerSetupTarget, 'subscription' | 'region'>;
 
 export type ConnectorTriggerSetupStatus = 'provisioning' | 'authenticating' | 'loadingParameters' | 'parameters' | 'saving';
 

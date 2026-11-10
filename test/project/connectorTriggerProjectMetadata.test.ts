@@ -3,16 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { ConfigurationTarget, Position, Uri, WorkspaceEdit, workspace } from 'vscode';
-import {
-    ProjectTemplateCreator,
-    type ProjectTemplateCreationOptions,
-} from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
     ConnectorTriggerProjectMetadataError,
     connectorTriggerProjectMetadataVersion,
@@ -21,14 +17,9 @@ import {
     type ConnectorTriggerProjectMetadata,
     type ConnectorTriggerProjectMetadataErrorCode,
 } from '../../src/connectorTrigger/connectorTriggerProjectMetadata';
-import { parseConnectorTriggerOutputMetadata } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import { connectorTriggerProjectsSetting, ProjectLanguage } from '../../src/constants';
 import { parseJson } from '../../src/utils/parseJson';
 import { updateGlobalSetting, updateWorkspaceSetting } from '../../src/vsCodeConfig/settings';
-import {
-    TemplateCategory,
-    type IProjectTemplate,
-} from '../../src/templates/projectTemplates/IProjectTemplate';
 import { getTestWorkspaceFolder } from '../global.test';
 
 const settingKey = `azureFunctions.${connectorTriggerProjectsSetting}`;
@@ -93,123 +84,6 @@ suite('Connector trigger project metadata', () => {
         assert.deepStrictEqual(await readSettings(projectPath), {
             'editor.tabSize': 2,
             [settingKey]: { '.': createMetadata() },
-        });
-        await assertNoLegacyArtifact(projectPath);
-    });
-
-    test('ProjectTemplateCreator persists the VS Code setting before reporting success', async () => {
-        const metadata = createMetadata();
-        let projectCreated = false;
-        const creator = new ProjectTemplateCreator({
-            onProjectCreated: () => {
-                assert.deepStrictEqual(JSON.parse(fs.readFileSync(
-                    path.join(projectPath, '.vscode', 'settings.json'), 'utf8',
-                )), { [settingKey]: { '.': metadata } });
-                assert.strictEqual(fs.existsSync(path.join(projectPath, '.azurefunctions')), false);
-                projectCreated = true;
-            },
-        }) as unknown as TestableProjectTemplateCreator;
-        creator.confirmTargetNotEmpty = async () => undefined;
-        creator.isGitInstalled = async () => false;
-        creator.downloadAndExtractZip = async (_context, _repositoryUrl, _archiveRef, destination) => {
-            await AzExtFsExtra.ensureDir(path.join(destination, 'src', 'functions'));
-            await AzExtFsExtra.writeFile(path.join(destination, 'host.json'), '{}');
-            await AzExtFsExtra.writeFile(
-                path.join(destination, 'src', 'functions', 'onNewEmail.ts'),
-                `app.connectorTrigger('OnNewEmail', {
-    deliveryMode: 'Poll',
-    connection: 'ConnectorNamespace',
-    triggerConfigName: '%ConnectorTriggerConfigName%',
-    handler: async () => undefined,
-});
-`,
-            );
-        };
-        creator.tryOpenReadme = async () => undefined;
-        creator.promptAndOpenProject = async () => undefined;
-
-        await creator.createProject(
-            await createTestActionContext(),
-            createProjectTemplate(),
-            ProjectLanguage.TypeScript,
-            projectPath,
-            'details',
-            { connectorTriggerMetadata: metadata },
-        );
-
-        assert.strictEqual(projectCreated, true);
-        assert.strictEqual(
-            await AzExtFsExtra.pathExists(
-                path.join(projectPath, 'src', 'functions', 'onNewEmail.ts'),
-            ),
-            true,
-        );
-        assert.strictEqual(
-            await AzExtFsExtra.pathExists(
-                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
-            ),
-            false,
-        );
-        assert.deepStrictEqual(
-            await readConnectorTriggerProjectMetadata(projectPath),
-            metadata,
-        );
-        await assertNoLegacyArtifact(projectPath);
-    });
-
-    test('ProjectTemplateCreator adds a Connector Trigger to an existing supported project', async () => {
-        const metadata = createMetadata('act', 'TrigNewContact');
-        const outputMetadata = parseConnectorTriggerOutputMetadata(
-            JSON.parse(await fs.promises.readFile(
-                path.join(
-                    __dirname,
-                    '..',
-                    '..',
-                    'test',
-                    'fixtures',
-                    'connectorTriggerPicker',
-                    'actTrigNewContactSwagger.json',
-                ),
-                'utf8',
-            )),
-            metadata.operationId,
-        );
-        let projectCreated = false;
-        const creator = new ProjectTemplateCreator({
-            onProjectCreated: () => {
-                assert.strictEqual(fs.existsSync(path.join(projectPath, '.vscode', 'settings.json')), true);
-                assert.strictEqual(fs.existsSync(path.join(projectPath, '.azurefunctions')), false);
-                projectCreated = true;
-            },
-        });
-
-        await creator.addConnectorTrigger(
-            await createTestActionContext(),
-            ProjectLanguage.TypeScript,
-            projectPath,
-            metadata,
-            outputMetadata,
-        );
-
-        assert.strictEqual(projectCreated, true);
-        assert.strictEqual(
-            await AzExtFsExtra.pathExists(
-                path.join(projectPath, 'src', 'functions', 'connectorTriggerFunction.ts'),
-            ),
-            false,
-        );
-        assert.strictEqual(
-            await AzExtFsExtra.pathExists(
-                path.join(projectPath, 'src', 'functions', 'trigNewContactFunction.ts'),
-            ),
-            true,
-        );
-        assert.deepStrictEqual(
-            await readConnectorTriggerProjectMetadata(projectPath),
-            metadata,
-        );
-        assert.deepStrictEqual(await readSettings(projectPath), {
-            [settingKey]: { '.': metadata },
         });
         await assertNoLegacyArtifact(projectPath);
     });
@@ -466,51 +340,6 @@ function createMetadata(
         connectorId,
         operationId,
     };
-}
-
-function createProjectTemplate(): IProjectTemplate {
-    return {
-        id: 'connector-trigger-typescript',
-        displayName: 'Connector Trigger',
-        shortDescription: 'Connector Trigger project',
-        categories: [TemplateCategory.Other],
-        languages: [ProjectLanguage.TypeScript],
-        repositoryUrl: 'https://example.invalid/connector-trigger',
-        connectorTrigger: {
-            operations: [{
-                operationId: 'OnNewEmail',
-                functionName: 'OnNewEmail',
-                ownedPaths: ['src/functions/onNewEmail.ts'],
-            }],
-        },
-    };
-}
-
-interface TestableProjectTemplateCreator {
-    createProject(
-        actionContext: IActionContext,
-        template: IProjectTemplate,
-        language: string,
-        projectPath: string,
-        entryPoint?: 'card' | 'details',
-        options?: ProjectTemplateCreationOptions,
-    ): Promise<void>;
-    confirmTargetNotEmpty(
-        actionContext: IActionContext,
-        projectPath: string,
-    ): Promise<void>;
-    downloadAndExtractZip(
-        context: IActionContext,
-        repositoryUrl: string,
-        archiveRef: string,
-        destination: string,
-    ): Promise<void>;
-    isGitInstalled(): Promise<boolean>;
-    promptAndOpenProject(
-        actionContext: IActionContext,
-        projectPath: string,
-    ): Promise<void>;
-    tryOpenReadme(projectPath: string): Promise<void>;
 }
 
 async function assertMetadataError(

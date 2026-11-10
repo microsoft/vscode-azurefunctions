@@ -15,7 +15,7 @@ import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { ConnectorTriggerPickerController, type ConnectorTriggerPickerLaunchOptions } from '../createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
+import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from '../createNewProject/FunctionsTemplateGalleryController';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
@@ -27,18 +27,18 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
-    private readonly _showConnectorTriggerPicker: (options: ConnectorTriggerPickerLaunchOptions) => void;
+    private readonly _showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void;
 
     public constructor(
         options: IFunctionListStepOptions,
-        showConnectorTriggerPicker: (options: ConnectorTriggerPickerLaunchOptions) => void = launchOptions => {
-            ConnectorTriggerPickerController.createOrShow(ext.context, launchOptions);
+        showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void = launchOptions => {
+            FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
         }) {
         super();
         this._options = options;
         this._isProjectWizard = options.isProjectWizard;
         this._functionSettings = options.functionSettings || {};
-        this._showConnectorTriggerPicker = showConnectorTriggerPicker;
+        this._showTemplateGallery = showTemplateGallery;
     }
 
     public async configureBeforePrompt(context: IFunctionWizardContext): Promise<void> {
@@ -115,10 +115,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.telemetry.properties.reloaded = 'true';
             } else if (result === connectorGallery.id) {
                 const language = nonNullProp(context, 'language');
-                this._showConnectorTriggerPicker({
-                    isProjectWizard: this._isProjectWizard,
-                    language,
-                    languageModel: context.languageModel,
+                this._showTemplateGallery({
                     initialLocation: context.projectPath,
                     initialFilters: {
                         language: language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase(),
@@ -129,7 +126,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.telemetry.properties.flow = connectorGallery.telemetryFlow;
                 context.telemetry.properties.templateId = connectorGallery.id;
                 // Hand off before the classic wizard executes any project creation steps.
-                throw new UserCancelledError('connectorTriggerPicker');
+                throw new UserCancelledError('templateGallery');
             } else {
                 context.functionTemplate = result;
             }
@@ -156,10 +153,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .sort((a, b) => sortTemplates(a, b))
             .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
 
-        if (!context.containerizedProject && !this._options.templateId &&
+        if (this._isProjectWizard && !context.containerizedProject && !this._options.templateId &&
             (isPythonV2Plus(language, languageModel) ||
                 language === ProjectLanguage.CSharp ||
-                (language === ProjectLanguage.TypeScript && isNodeV4Plus(context)))) {
+                isNodeV4Plus(context))) {
             const label = localize('connectorTrigger', 'Connector Trigger');
             const index = picks.findIndex(p => typeof p.data === 'object' &&
                 sortTemplates(p.data, { id: connectorGallery.id, name: label }) > 0);

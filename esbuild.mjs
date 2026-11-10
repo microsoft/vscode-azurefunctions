@@ -30,9 +30,9 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
-configs.connectorTriggerPicker = createWebviewEsbuildConfig({
+configs.connectorTriggerSetup = createWebviewEsbuildConfig({
     entryPoints: {
-        connectorTriggerPicker: './src/webview/connectorTriggerPicker/index.tsx',
+        connectorTriggerSetup: './src/webview/connectorTriggerParameters/index.tsx',
     },
     jsx: 'automatic',
     outdir: './dist/webview',

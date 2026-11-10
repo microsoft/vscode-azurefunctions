@@ -20,6 +20,7 @@ import {
     type ConnectorTriggerSetupRequest,
     type ConnectorTriggerSetupStatus,
     type ConnectorTriggerSetupScopes,
+    type ConnectorTriggerSetupScope,
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerResourceNames,
 } from './connectorTriggerF5Contracts';
@@ -28,8 +29,12 @@ import { createConnectorTriggerResourceNames } from './connectorTriggerF5Setup';
 export class ConnectorTriggerSetupForm {
     private readonly subscriptionOptions = new Map<string, { id: string; label: string }>();
     private readonly regionOptions = new Map<string, { id: string; label: string; regionCategory?: string }>();
+    private readonly connectorOptions = new Map<string, { id: string; label: string }>();
+    private readonly eventOptions = new Map<string, { id: string; label: string }>();
     private subscriptionId = '';
     private regionId = '';
+    private connectorId = '';
+    private eventId = '';
     private subscription?: ConnectorTriggerSetupTarget['subscription'];
     private subscriptionsLoaded = false;
     private showingAllSubscriptions = false;
@@ -76,6 +81,11 @@ export class ConnectorTriggerSetupForm {
             subscriptionId: this.subscriptionId,
             regionOptions: [...this.regionOptions].map(([id, option]) => ({ id, label: option.label, regionCategory: option.regionCategory })),
             regionId: this.regionId,
+            connectorOptions: [...this.connectorOptions].map(([id, option]) => ({ id, label: option.label })),
+            connectorId: this.connectorId,
+            eventOptions: [...this.eventOptions].map(([id, option]) => ({ id, label: option.label })),
+            eventId: this.eventId,
+            regionReady: !!this.scope,
             scopeReady: !!this.target,
             tenant: this.subscription?.tenantId,
             cloud: this.subscription?.environment.name,
@@ -117,6 +127,8 @@ export class ConnectorTriggerSetupForm {
         this.connectionOptions.clear();
         this.subscriptionOptions.clear();
         this.regionOptions.clear();
+        this.connectorOptions.clear();
+        this.eventOptions.clear();
         this.subscription = undefined;
     }
 
@@ -156,6 +168,12 @@ export class ConnectorTriggerSetupForm {
             case 'reloadSetup':
                 if (this.target) {
                     await this.loadNamespaces();
+                } else if (this.scope) {
+                    if (this.connectorOptions.has(this.connectorId)) {
+                        await this.loadEvents();
+                    } else {
+                        await this.loadConnectors();
+                    }
                 } else if (this.subscriptionOptions.has(this.subscriptionId)) {
                     await this.loadSubscription();
                 } else {
@@ -179,6 +197,24 @@ export class ConnectorTriggerSetupForm {
                     break;
                 }
                 this.regionId = message.id;
+                this.resetIdentity();
+                this.resetResources();
+                await this.loadIdentity();
+                return undefined;
+            case 'selectConnector':
+                if (this.request.metadata || !this.connectorOptions.has(message.id)) {
+                    this.error = invalidResourceSelection();
+                    break;
+                }
+                this.connectorId = message.id;
+                await this.loadEvents();
+                return undefined;
+            case 'selectEvent':
+                if (this.request.metadata || !this.eventOptions.has(message.id)) {
+                    this.error = invalidResourceSelection();
+                    break;
+                }
+                this.eventId = message.id;
                 this.resetResources();
                 await this.loadNamespaces();
                 return undefined;
@@ -220,11 +256,19 @@ export class ConnectorTriggerSetupForm {
         return undefined;
     }
 
-    private get target(): ConnectorTriggerSetupTarget | undefined {
+    private get scope(): ConnectorTriggerSetupScope | undefined {
         const region = this.regionOptions.get(this.regionId);
-        return this.subscription && region ? {
-            ...this.request.metadata, subscription: this.subscription, region: region.id,
-        } : undefined;
+        return this.subscription && region ? { subscription: this.subscription, region: region.id } : undefined;
+    }
+
+    private get target(): ConnectorTriggerSetupTarget | undefined {
+        const scope = this.scope;
+        const connector = this.connectorOptions.get(this.connectorId);
+        const event = this.eventOptions.get(this.eventId);
+        const metadata = this.request.metadata ?? (connector && event ? {
+            version: 1 as const, connectorId: connector.id, operationId: event.id,
+        } : undefined);
+        return scope && metadata ? { ...metadata, ...scope } : undefined;
     }
 
     private get plan(): ConnectorTriggerSetupPlan | undefined {
@@ -294,6 +338,85 @@ export class ConnectorTriggerSetupForm {
         this.connectionOptions.clear();
     }
 
+    private resetIdentity(): void {
+        this.connectorId = '';
+        this.eventId = '';
+        this.connectorOptions.clear();
+        this.eventOptions.clear();
+    }
+
+    private async loadIdentity(): Promise<void> {
+        if (this.request.metadata) {
+            await this.loadNamespaces();
+        } else {
+            await this.loadConnectors();
+        }
+    }
+
+    private async loadConnectors(): Promise<void> {
+        const scope = this.scope;
+        if (!scope) {
+            return;
+        }
+        const generation = ++this.generation;
+        this.resetIdentity();
+        this.resetResources();
+        this.loading = true;
+        this.loadError = undefined;
+        this.notify();
+        try {
+            const connectors = await this.scopes.listConnectors(this.context, scope);
+            if (this.disposed || generation !== this.generation) {
+                return;
+            }
+            for (const connector of connectors) {
+                maskValue(this.context, connector.id);
+                maskValue(this.context, connector.label);
+                this.connectorOptions.set(`connector-${++this.nextOptionId}`, connector);
+            }
+            this.loading = false;
+            if (connectors.length === 0) {
+                this.loadError = localize('connectorSetupNoConnectors', 'No connectors are available in this region. Choose another region or reload.');
+            }
+            this.notify();
+        } catch (error) {
+            this.handleLoadError(error, generation);
+        }
+    }
+
+    private async loadEvents(): Promise<void> {
+        const scope = this.scope;
+        const connector = this.connectorOptions.get(this.connectorId);
+        if (!scope || !connector) {
+            return;
+        }
+        const generation = ++this.generation;
+        this.eventId = '';
+        this.eventOptions.clear();
+        this.resetResources();
+        this.loading = true;
+        this.loadError = undefined;
+        this.notify();
+        try {
+            const events = await this.scopes.listEvents(this.context, scope, connector.id);
+            if (this.disposed || generation !== this.generation) {
+                return;
+            }
+            for (const event of events) {
+                maskValue(this.context, event.id);
+                maskValue(this.context, event.label);
+                this.eventOptions.set(`event-${++this.nextOptionId}`, event);
+            }
+            this.loading = false;
+            if (events.length === 0) {
+                this.loadError = localize('connectorSetupNoEvents', 'This connector has no supported polling events in this region. Choose another connector or reload.');
+            }
+            this.notify();
+        } catch (error) {
+            this.handleLoadError(error, generation);
+        }
+    }
+
     private async loadSubscriptions(showAll = this.showingAllSubscriptions): Promise<void> {
         const previous = this.subscriptionOptions.get(this.subscriptionId);
         const previousRegion = this.regionOptions.get(this.regionId)?.id;
@@ -301,6 +424,7 @@ export class ConnectorTriggerSetupForm {
         this.subscription = undefined;
         this.regionId = '';
         this.regionOptions.clear();
+        this.resetIdentity();
         this.resetResources();
         this.loading = true;
         this.error = undefined;
@@ -342,6 +466,7 @@ export class ConnectorTriggerSetupForm {
         this.subscription = undefined;
         this.regionId = '';
         this.regionOptions.clear();
+        this.resetIdentity();
         this.resetResources();
         this.loading = true;
         this.error = undefined;
@@ -373,7 +498,7 @@ export class ConnectorTriggerSetupForm {
             this.regionId = [...this.regionOptions].find(([, region]) => region.id === previousRegion)?.[0] ?? '';
             this.loading = false;
             if (this.regionId) {
-                await this.loadNamespaces();
+                await this.loadIdentity();
             } else {
                 this.notify();
             }
@@ -487,7 +612,7 @@ export class ConnectorTriggerSetupForm {
             throw error;
         }
         this.loading = false;
-        this.loadError = localize('connectorSetupResourceLoadFailed', 'Azure subscriptions, regions or resources could not be loaded. Check your Azure access and connection, then reload.');
+        this.loadError = localize('connectorSetupResourceLoadFailed', 'Azure subscriptions, regions, connector events or resources could not be loaded. Check your Azure access and connection, then reload.');
         this.context.telemetry.properties.connectorF5ResourceLoadResult = 'failed';
         this.notify();
     }
@@ -526,8 +651,9 @@ function setupStatus(phase: ConnectorSetupResourceState['phase']): string {
 
 export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSetupRequest): ConnectorTriggerSetupViewModel {
     return {
-        connector: request.metadata.connectorId,
-        event: request.metadata.operationId,
+        connector: request.metadata?.connectorId ?? '',
+        event: request.metadata?.operationId ?? '',
+        identityRequired: !request.metadata,
         localSettings: request.localSettings.map(setting => ({
             name: setting.name,
             action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
@@ -577,6 +703,9 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             selectRegion: localize('connectorSetupSelectRegion', 'Select a region'),
             signIn: localize('connectorSetupSignIn', 'Sign in to Azure'),
             scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. This subscription and region are used only for this setup and are not saved to the project setting.'),
+            identityNotice: localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
+            selectConnector: localize('connectorSetupSelectConnector', 'Select the authored connector'),
+            selectEvent: localize('connectorSetupSelectEvent', 'Select the authored polling event'),
         },
     };
 }

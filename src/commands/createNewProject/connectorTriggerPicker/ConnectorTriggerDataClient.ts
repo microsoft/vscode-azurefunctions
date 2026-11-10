@@ -8,17 +8,12 @@ import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import {
     createGenericClient,
     LocationListStep,
-    parseAzureResourceId,
     type AzExtLocation,
     type AzExtPipelineResponse,
     type ILocationWizardContext,
 } from '@microsoft/vscode-azext-azureutils';
 import { createSubscriptionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import {
-    ConnectorNamespaceApiVersion,
-    ConnectorNamespaceResourceType,
-    webProvider,
-} from '../../../constants';
+import { ConnectorNamespaceResourceType, webProvider } from '../../../constants';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
@@ -26,7 +21,6 @@ import {
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
-    type ConnectorNamespaceOption,
     type ConnectorTriggerLocationOption,
     type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption,
@@ -51,11 +45,6 @@ export interface ConnectorTriggerCatalogResult {
 export interface ConnectorTriggerOperationMetadataResult {
     pollOperations: ConnectorTriggerOperationOption[];
     webhookOperations: ConnectorTriggerOperationOption[];
-}
-
-export interface ConnectorNamespaceResult {
-    namespaces: ConnectorNamespaceOption[];
-    failedSubscriptionCount: number;
 }
 
 export interface ConnectorSubscription {
@@ -87,12 +76,6 @@ export type ConnectorArmClientFactory = (
 interface ArmListResult<T> {
     value?: T[];
     nextLink?: string | null;
-}
-
-interface ConnectorGatewayDefinition {
-    id?: string;
-    name?: string;
-    location?: string;
 }
 
 interface ManagedApiDefinition {
@@ -133,7 +116,6 @@ interface ManagedApiOperation {
             family?: string;
             revision?: number;
         };
-        inputsDefinition?: unknown;
     };
 }
 
@@ -209,59 +191,6 @@ export class ConnectorTriggerDataClient {
         return (await this.getSubscription(subscriptionId)).context;
     }
 
-    public async listNamespaces(context: IActionContext): Promise<ConnectorNamespaceResult> {
-        const subscriptions = await this.getSubscriptions(true);
-        const results = await Promise.allSettled(subscriptions.map(async subscription => {
-            const clientContext = Object.assign({}, context, subscription.context);
-            const client = await this.armClientFactory(clientContext);
-            const endpoint = getResourceManagerEndpoint(subscription.context);
-            const url = requestUtils.createRequestUrl(
-                `${endpoint}/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Web/connectorGateways`,
-                { 'api-version': ConnectorNamespaceApiVersion },
-            );
-            const resources = await listAll<ConnectorGatewayDefinition>(client, url);
-            return resources.flatMap(resource => {
-                if (!resource.id || !resource.name) {
-                    return [];
-                }
-
-                const parsedId = parseAzureResourceId(resource.id);
-                return [{
-                    id: resource.id,
-                    name: resource.name,
-                    label: resource.name,
-                    location: resource.location ?? '',
-                    resourceGroup: parsedId.resourceGroup,
-                    subscriptionId: subscription.subscriptionId,
-                    subscriptionName: subscription.subscriptionDisplayName,
-                }];
-            });
-        }));
-
-        const namespaces: ConnectorNamespaceOption[] = [];
-        let failedSubscriptionCount = 0;
-        for (const result of results) {
-            if (result.status === 'fulfilled') {
-                namespaces.push(...result.value);
-            } else {
-                failedSubscriptionCount += 1;
-            }
-        }
-
-        if (subscriptions.length > 0 && failedSubscriptionCount === subscriptions.length) {
-            throw new Error(localize(
-                'connectorNamespacesLoadFailed',
-                'Unable to load Connector Namespaces from your Azure subscriptions.',
-            ));
-        }
-
-        namespaces.sort((left, right) =>
-            left.name.localeCompare(right.name) ||
-            left.subscriptionName.localeCompare(right.subscriptionName));
-
-        return { namespaces, failedSubscriptionCount };
-    }
-
     public async getCatalog(
         context: IActionContext,
         azureContext: ConnectorTriggerAzureContext,
@@ -287,37 +216,6 @@ export class ConnectorTriggerDataClient {
             ...result,
             source: 'live',
         };
-    }
-
-    public async listCatalog(
-        context: IActionContext,
-        namespace: ConnectorNamespaceOption,
-    ): Promise<ConnectorTriggerCatalog> {
-        const subscription = await this.getSubscription(namespace.subscriptionId);
-
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const namespaceUrl = `${endpoint}${namespace.id}`;
-        const managedApisUrl = requestUtils.createRequestUrl(
-            `${namespaceUrl}/managedApis`,
-            { 'api-version': ConnectorNamespaceApiVersion },
-        );
-        const operationsUrl = requestUtils.createRequestUrl(
-            `${namespaceUrl}/managedApiOperations`,
-            {
-                'api-version': ConnectorNamespaceApiVersion,
-                '$filter': "operationRole eq 'Trigger'",
-                '$top': '250',
-            },
-        );
-
-        const [managedApis, managedApiOperations] = await Promise.all([
-            listAll<ManagedApiDefinition>(client, managedApisUrl),
-            listAll<ManagedApiOperation>(client, operationsUrl),
-        ]);
-
-        return createCatalog(managedApis, managedApiOperations);
     }
 
     private async listLocationCatalog(

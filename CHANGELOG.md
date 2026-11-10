@@ -1,14 +1,5 @@
 # Change Log
 
-## Unreleased
-
-### Added
-* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Add live Connector Trigger project authoring and first-debug Azure setup
-
-### Fixed
-* [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
-* [[5255](https://github.com/microsoft/vscode-azurefunctions/pull/5255)] Keep all live polling connector events selectable, separate lazily confirmed webhook-only connectors, and use pinned generic connector samples with event-specific names and verified SDK payload types when no specialized template owns the Poll event
-
 ## 1.22.2 - 2026-09-25
 
 ### Fixed

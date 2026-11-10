@@ -28,7 +28,7 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
             if (action === HandleUriActions.downloadContentAndSetupProject) {
                 const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
                 if (!isLoggedIn) {
-                    await vscode.commands.executeCommand('azureResourceGroups.logIn');
+                    await vscode.commands.executeCommand('azure-account.login');
                 }
 
                 const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });

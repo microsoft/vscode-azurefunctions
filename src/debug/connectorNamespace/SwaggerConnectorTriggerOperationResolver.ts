@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { isConnectorBuiltInTextSuggestion, parseConnectorSwaggerInputs } from '../../commands/createNewProject/connectorTriggerPicker/connectorTriggerInputs';
+import { isConnectorBuiltInTextSuggestion, parseConnectorSwaggerInputs } from './connectorTriggerInputs';
 import { localize } from '../../localize';
 import { ConnectorTriggerF5SetupError } from './connectorTriggerF5Setup';
 import {

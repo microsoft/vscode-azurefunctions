@@ -5,8 +5,8 @@
 
 import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController } from '@microsoft/vscode-azext-webview';
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { getConnectorTriggerPickerBundleLocation } from '../../commands/createNewProject/connectorTriggerPicker/connectorTriggerPickerBundleLocation';
 import { escapeWebviewInitialData } from '../../commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import { localize } from '../../localize';
 import { type ConnectorTriggerParametersViewModel } from '../../webview/connectorTriggerParameters/ConnectorTriggerParametersViewModel';
@@ -50,7 +50,11 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             viewModel,
             vscode.ViewColumn.Active,
             undefined,
-            getConnectorTriggerPickerBundleLocation(extensionContext),
+            {
+                distDir: path.join(extensionContext.extensionPath, 'dist', 'webview'),
+                scriptFileName: 'connectorTriggerSetup.js',
+                styleFileName: 'connectorTriggerSetup.css',
+            },
         );
         this.resourceForm = new ConnectorTriggerSetupForm(context, request, gateway, scopes, state => {
             void this.panel.webview.postMessage({ command: 'setupState', state });
@@ -133,7 +137,9 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
     private async handleMessage(message: unknown): Promise<void> {
         const command = message && typeof message === 'object' && 'command' in message ? message.command : undefined;
         if (this.parameterForm && ![
-            'initializeSetup', 'selectSubscription', 'selectRegion', 'signInSetup', 'selectNamespace', 'selectConnection', 'editResource', 'approveSetup', 'reloadSetup',
+            'initializeSetup', 'selectSubscription', 'selectRegion', 'selectConnector', 'selectEvent',
+            'signInSetup', 'loadAllSubscriptions', 'loadFilteredSubscriptions',
+            'selectNamespace', 'selectConnection', 'editResource', 'approveSetup', 'reloadSetup',
         ].includes(typeof command === 'string' ? command : '')) {
             const values = await this.parameterForm.handleMessage(message);
             if (values !== undefined && this.parameterCompletion) {

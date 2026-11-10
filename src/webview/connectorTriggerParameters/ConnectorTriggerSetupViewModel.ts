@@ -8,6 +8,7 @@ import { type ConnectorTriggerSetupStatus } from '../../debug/connectorNamespace
 export interface ConnectorTriggerSetupViewModel {
     connector: string;
     event: string;
+    identityRequired: boolean;
     localSettings: {
         name: string;
         action: string;
@@ -55,6 +56,9 @@ export interface ConnectorTriggerSetupViewModel {
         selectRegion: string;
         signIn: string;
         scopeNotice: string;
+        identityNotice: string;
+        selectConnector: string;
+        selectEvent: string;
     };
 }
 
@@ -76,6 +80,11 @@ export interface ConnectorSetupResourceState {
     subscriptionId: string;
     regionOptions: ConnectorSetupResourceOption[];
     regionId: string;
+    connectorOptions: ConnectorSetupResourceOption[];
+    connectorId: string;
+    eventOptions: ConnectorSetupResourceOption[];
+    eventId: string;
+    regionReady: boolean;
     scopeReady: boolean;
     tenant?: string;
     cloud?: string;
@@ -92,7 +101,7 @@ export interface ConnectorSetupResourceState {
 }
 
 export type ConnectorSetupAction =
-    | { command: 'selectSubscription' | 'selectRegion' | 'selectNamespace' | 'selectConnection'; id: string }
+    | { command: 'selectSubscription' | 'selectRegion' | 'selectConnector' | 'selectEvent' | 'selectNamespace' | 'selectConnection'; id: string }
     | { command: 'editResource'; field: ConnectorSetupNameField; text: string }
     | { command: 'approveSetup' | 'reloadSetup' | 'signInSetup' | 'loadAllSubscriptions' | 'loadFilteredSubscriptions' };
 
@@ -119,7 +128,9 @@ export function applyConnectorSetupAction(
         connectionId: action.command === 'selectConnection' ? action.id : current.connectionId,
         subscriptionId: action.command === 'selectSubscription' ? action.id : current.subscriptionId,
         regionId: action.command === 'selectSubscription' ? '' : action.command === 'selectRegion' ? action.id : current.regionId,
-        scopeReady: action.command === 'selectSubscription' || action.command === 'selectRegion' ? false : current.scopeReady,
+        connectorId: action.command === 'selectConnector' ? action.id : current.connectorId,
+        eventId: action.command === 'selectConnector' ? '' : action.command === 'selectEvent' ? action.id : current.eventId,
+        scopeReady: ['selectSubscription', 'selectRegion', 'selectConnector', 'selectEvent'].includes(action.command) ? false : current.scopeReady,
     };
 }
 
@@ -142,6 +153,8 @@ export function isConnectorSetupMessage(value: unknown): value is ConnectorSetup
             return true;
         case 'selectSubscription':
         case 'selectRegion':
+        case 'selectConnector':
+        case 'selectEvent':
         case 'selectNamespace':
         case 'selectConnection':
             return 'id' in value && typeof value.id === 'string';
