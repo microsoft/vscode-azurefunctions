@@ -1,5 +1,6 @@
 {
     "azureFunctions.azureInvoke.title": "Azure Invoke",
+    "azureFunctions.mcpServer.label": "Azure Functions Extension Tools",
     "azureFunctions.azureInvoke.add": "Add Invocations...",
     "azureFunctions.azureInvoke.open": "Open Invocation",
     "azureFunctions.azureInvoke.saveCollection": "Save Collection...",

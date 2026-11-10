@@ -37,6 +37,11 @@ export interface TestApi {
      * Testing utilities for overriding internal state.
      */
     testing: {
+        startMcpServer(): Promise<{
+            serverUri: vscode.Uri;
+            headers: Record<string, string>;
+            disposable: Disposable;
+        }>;
         setIgnoreBundle(ignoreBundle: boolean | undefined): void;
         /**
          * Register an onActionStartHandler in the BUNDLE's @microsoft/vscode-azext-utils instance.

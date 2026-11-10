@@ -9,11 +9,17 @@ import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-az
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
+import { registerMcpTool } from '@microsoft/vscode-inproc-mcp/mcp';
+import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
 import { BlobInvocationEditors } from './webviews/azureInvoke/extension/BlobInvocationEditors';
 import { TimerInvocationEditors } from './webviews/azureInvoke/extension/TimerInvocationEditors';
+import { listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/azureInvoke/blobInvocationTools';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
+import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
+import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
+import { runHttpInvocationTool } from './chat/tools/azureInvoke/runHttpInvocationTool';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
@@ -28,7 +34,7 @@ import { deployProductionSlot } from './commands/deploy/deploy';
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { disposeFuncTaskReadyEmitter, startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
-import { func } from './constants';
+import { func, mcpServerId } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { GoDebugProvider, registerGoDebugSessionCleanup } from './debug/GoDebugProvider';
@@ -43,6 +49,7 @@ import { disposeFuncHostTaskEmitters, registerFuncHostTaskEvents, terminalEventR
 import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getResourceGroupsApi } from './getExtensionApi';
+import { localize } from './localize';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
 import { AzureInvokeTreeDataProvider } from './tree/azureInvoke/AzureInvokeTreeDataProvider';
@@ -62,6 +69,7 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new DockerCliContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
+    let startMcpServerForTests: TestApi['testing']['startMcpServer'] | undefined;
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
@@ -121,6 +129,29 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             },
             azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, blobs: azureInvokeBlobs, timers: azureInvokeTimers }
         });
+
+        const mcpOptions: McpProviderOptions = {
+            id: mcpServerId,
+            serverLabel: localize('azureFunctions.mcpServer.label', 'Azure Functions Extension Tools'),
+            serverVersion: context.extension.packageJSON.version,
+            transport: 'tcp',
+            eagerlyStart: true,
+            registerTools: server => {
+                registerMcpTool(server, createHttpInvocationTool(azureInvokeProvider));
+                registerMcpTool(server, listHttpInvocationsTool(azureInvokeProvider));
+                registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
+                registerMcpTool(server, listBlobInvocationsTool(azureInvokeProvider));
+                registerMcpTool(server, uploadBlobInvocationTool(azureInvokeBlobs));
+            },
+        };
+        registerMcpHttpProvider(context, mcpOptions);
+        if (process.env.VSCODE_RUNNING_TESTS) {
+            startMcpServerForTests = async () => {
+                const server = await startInProcHttpServer(mcpOptions);
+                context.subscriptions.push(server.disposable);
+                return server;
+            };
+        }
 
         registerFuncHostTaskEvents();
         registerFunctionHostDebugView(context);
@@ -201,6 +232,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 getIgnoreBundle: () => ext.ignoreBundle
             },
             testing: {
+                startMcpServer: () => {
+                    if (!startMcpServerForTests) {
+                        throw new Error('The Azure Functions MCP server was not registered.');
+                    }
+                    return startMcpServerForTests();
+                },
                 setIgnoreBundle: (ignoreBundle) => {
                     ext.ignoreBundle = ignoreBundle;
                 },
