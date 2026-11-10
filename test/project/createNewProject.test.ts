@@ -9,6 +9,7 @@ import { TemplateSource } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { shouldSkipVersion } from '../global.test';
+import { runWithDotnetSupportDate } from '../utils/runWithDotnetSupportDate';
 import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelVersion } from './validateProject';
@@ -89,7 +90,11 @@ for (const testCase of testCases) {
                 await runWithTestActionContext('createProject', async context => {
                     const testApi = getCachedTestApi();
                     testApi.commands.registerTemplateSource(context, source);
-                    await createAndValidateProject(context, testCase);
+                    if (testCase.language === ProjectLanguage.CSharp) {
+                        await runWithDotnetSupportDate(() => createAndValidateProject(context, testCase));
+                    } else {
+                        await createAndValidateProject(context, testCase);
+                    }
                 });
             }
         });

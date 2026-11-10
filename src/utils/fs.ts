@@ -8,6 +8,7 @@ import * as crypto from "crypto";
 import * as path from 'path';
 import { FileType, type MessageItem } from "vscode";
 import { localize } from "../localize";
+import { parseJson } from './parseJson';
 
 export async function copyFolder(context: IActionContext, fromPath: string, toPath: string): Promise<void> {
     const files = await AzExtFsExtra.readDirectory(fromPath);
@@ -28,7 +29,7 @@ export async function confirmEditJsonFile(context: IActionContext, fsPath: strin
     let newData: {};
     if (await AzExtFsExtra.pathExists(fsPath)) {
         try {
-            newData = await editJson(await AzExtFsExtra.readJSON<{}>(fsPath));
+            newData = await editJson(parseJson((await AzExtFsExtra.readFile(fsPath)).toString()));
         } catch (error) {
             if (parseError(error).isUserCancelledError) {
                 throw error;

@@ -29,6 +29,7 @@ import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 import { createNewProjectInternal } from './createNewProject';
+import { tryGetFunctionProjectRoot } from './verifyIsProject';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -434,11 +435,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private async initializeProjectForVSCode(actionContext: IActionContext, projectPath: string, language: string): Promise<void> {
         this.sendProgress(localize('initializingGalleryProject', 'Initializing project for VS Code...'));
         const projectLanguage = Object.values(ProjectLanguage).find(value => value === language);
-        await initProjectForVSCode(actionContext, projectPath, projectLanguage, {
-            useProjectFolderAsWorkspace: true,
-            useProjectLanguageModel: true,
-            requireProject: true,
-        });
+        const functionProjectPath = await tryGetFunctionProjectRoot(actionContext, projectPath, 'prompt', 'project');
+        if (!functionProjectPath) {
+            throw new Error(localize('missingFunctionsProject', 'No Azure Functions project was found. The project must contain a host.json file.'));
+        }
+        await initProjectForVSCode(actionContext, functionProjectPath, projectLanguage, projectPath);
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {

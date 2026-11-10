@@ -13,6 +13,7 @@ import type { TestApi } from '../src/testApi';
 import { type AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, NodeModelVersion, validateProject, type IValidateProjectOptions } from './project/validateProject';
+import { runWithDotnetSupportDate } from './utils/runWithDotnetSupportDate';
 import { getTestApi } from './utils/testApiAccess';
 
 suite(`AzureFunctionsExtensionApi`, () => {
@@ -93,7 +94,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /8.*isolated/i, 'Company.Function', 'Anonymous'], bundleRegisterHandler, async () => {
+        await runWithDotnetSupportDate(() => runWithInputs('api.createFunction', [language, /8.*isolated/i, 'Company.Function', 'Anonymous'], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -104,7 +105,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 },
                 targetFramework: ['net8.0', 'net9.0', 'net10.0']
             });
-        });
+        }));
 
         const validateOptions: IValidateProjectOptions = getCSharpValidateOptions('net8.0', FuncVersion.v4, 1, projectSubpath, workspaceFolder);
         // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
@@ -122,7 +123,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const projectSubpath = 'api';
         const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
-        await runWithInputs('api.createFunction', [language, /10/i], bundleRegisterHandler, async () => {
+        await runWithDotnetSupportDate(() => runWithInputs('api.createFunction', [language, /10/i], bundleRegisterHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,
@@ -131,6 +132,6 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 functionSettings: { authLevel: 'anonymous' },
                 targetFramework: ['net8.0', 'net9.0']
             });
-        });
+        }));
     });
 });

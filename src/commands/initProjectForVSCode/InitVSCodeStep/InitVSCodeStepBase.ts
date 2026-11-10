@@ -139,9 +139,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
 
         // remove new tasks that have an identical existing task
         newTasks = newTasks.filter(t1 => {
-            // improve JSON.stringify comparison by sorting keys first
+            // improve JSON.stringify comparison by sorting keys first, including nested objects such as `options.cwd`
             function stringifySorted(value: {}) {
-                return JSON.stringify(value, Object.keys(value).sort());
+                return JSON.stringify(value, (_key, val: unknown) => {
+                    if (val && typeof val === 'object' && !Array.isArray(val)) {
+                        return Object.fromEntries(Object.entries(val).sort(([a], [b]) => a.localeCompare(b)));
+                    }
+                    return val;
+                });
             }
             const t1String = stringifySorted(t1);
             return !existingTasks?.some(t2 => {
