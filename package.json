@@ -91,6 +91,14 @@
             }
         },
         "views": {
+            "azure": [
+                {
+                    "id": "azureFunctions.azureInvoke",
+                    "name": "%azureFunctions.azureInvoke.title%",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure-functions.svg"
+                }
+            ],
             "debug": [
                 {
                     "id": "azureFunctions.funcHostDebugView",
@@ -101,7 +109,25 @@
                 }
             ]
         },
+        "viewsWelcome": [
+            {
+                "view": "azureFunctions.azureInvoke",
+                "contents": "%azureFunctions.azureInvoke.welcome%"
+            }
+        ],
         "commands": [
+            {
+                "command": "azureFunctions.azureInvoke.saveCollection",
+                "title": "%azureFunctions.azureInvoke.saveCollection%",
+                "category": "Azure Functions",
+                "icon": "$(save-all)"
+            },
+            {
+                "command": "azureFunctions.azureInvoke.openCollection",
+                "title": "%azureFunctions.azureInvoke.openCollection%",
+                "category": "Azure Functions",
+                "icon": "$(folder-opened)"
+            },
             {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
@@ -552,6 +578,16 @@
                 }
             ],
             "view/title": [
+                {
+                    "command": "azureFunctions.azureInvoke.openCollection",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.saveCollection",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@3"
+                },
                 {
                     "submenu": "azureFunctions.submenus.workspaceActions",
                     "when": "view == azureWorkspace",
