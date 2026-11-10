@@ -18,6 +18,7 @@ import { listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from './chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from './chat/tools/azureInvoke/runHttpInvocationTool';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -62,6 +63,7 @@ import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTas
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
+import { CollectionReviews } from './webviews/azureInvoke/extension/CollectionReviews';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
@@ -111,11 +113,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
         const azureInvokeBlobs = new BlobInvocationEditors(context, azureInvokeProvider);
         const azureInvokeTimers = new TimerInvocationEditors(context, azureInvokeProvider);
+        const azureInvokeReviews = new CollectionReviews(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
             azureInvokeBlobs,
             azureInvokeTimers,
+            azureInvokeReviews,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
@@ -138,9 +142,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             eagerlyStart: true,
             registerTools: server => {
                 registerMcpTool(server, createHttpInvocationTool(azureInvokeProvider));
+                registerMcpTool(server, proposeInvocationCollectionTool(azureInvokeReviews));
+                registerMcpTool(server, getInvocationCollectionReviewTool(azureInvokeReviews));
+                registerMcpTool(server, getInvocationDiagnosticsTool(azureInvokeReviews));
+                registerMcpTool(server, draftHttpInvocationTool(azureInvokeProvider, azureInvokeReviews));
                 registerMcpTool(server, listHttpInvocationsTool(azureInvokeProvider));
                 registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
                 registerMcpTool(server, listBlobInvocationsTool(azureInvokeProvider));
+                registerMcpTool(server, selectBlobInvocationFileTool(azureInvokeReviews));
                 registerMcpTool(server, uploadBlobInvocationTool(azureInvokeBlobs));
             },
         };

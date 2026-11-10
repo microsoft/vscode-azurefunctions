@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import * as z from 'zod/mini';
 import { createHttpInvocationTool } from '../src/chat/tools/azureInvoke/createHttpInvocationTool';
 import { listBlobInvocationsTool } from '../src/chat/tools/azureInvoke/blobInvocationTools';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from '../src/chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
@@ -27,8 +28,11 @@ import { HttpRequestEditors } from '../src/webviews/azureInvoke/extension/HttpRe
 import { BlobInvocationEditors } from '../src/webviews/azureInvoke/extension/BlobInvocationEditors';
 import { TimerInvocationEditors } from '../src/webviews/azureInvoke/extension/TimerInvocationEditors';
 import { type BlobInvocation, type BlobUploadState } from '../src/webviews/azureInvoke/shared/blobInvocation';
+import { CollectionReviews } from '../src/webviews/azureInvoke/extension/CollectionReviews';
+import { CollectionReviewController } from '../src/webviews/azureInvoke/extension/CollectionReviewController';
 import { sendHttpRequest } from '../src/webviews/azureInvoke/extension/sendHttpRequest';
 import { type HttpInvocation, type HttpRequest } from '../src/webviews/azureInvoke/shared/httpRequest';
+import { type BlobInvocationCandidate, type HttpInvocationCandidate, type InvocationCandidate } from '../src/webviews/azureInvoke/shared/collectionReview';
 import { type TimerInvocation } from '../src/webviews/azureInvoke/shared/timerInvocation';
 import { formatResponseBody } from '../src/webviews/azureInvoke/views/formatResponseBody';
 import { getTestApi } from './utils/testApiAccess';
@@ -180,6 +184,9 @@ suite('Azure Invoke', () => {
         return { method: 'GET', url: `${baseUrl}/echo`, headers: [], query: [], body: '', ...overrides };
     }
 
+    function httpCandidate(overrides: Partial<HttpInvocationCandidate> = {}): HttpInvocationCandidate {
+        return { id: 'http', name: 'Get order', group: 'Orders', trigger: 'http', auth: 'anonymous', request: request(), description: 'An HTTP request template.', ...overrides };
+    }
 
     function accountChain(): [HttpInvocation, HttpInvocation] {
         return [
@@ -1369,6 +1376,389 @@ suite('Azure Invoke', () => {
         }
     });
 
+    test('AI can propose, confirm, and execute a saved response-linked collection without opening editors', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const reviews = new CollectionReviews(context, provider, async () => { /* no-op */ });
+        let controller: Awaited<ReturnType<CollectionReviews['open']>> | undefined;
+        const open = reviews.open.bind(reviews);
+        reviews.open = async (candidates, id) => controller = await open(candidates, id);
+        const mcp = await startInProcHttpServer({
+            id: mcpServerId, serverLabel: 'Linked collection test', serverVersion: '1.0.0', transport: 'tcp',
+            registerTools: server => {
+                registerMcpTool(server, proposeInvocationCollectionTool(reviews));
+                registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
+                registerMcpTool(server, draftHttpInvocationTool(provider, reviews));
+                registerMcpTool(server, runHttpInvocationTool(provider, editors));
+            },
+        });
+        const rpc = createMcpClient(mcp);
+        const [source, target] = accountChain();
+        try {
+            await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'linked-test', version: '1.0.0' } });
+            await rpc('notifications/initialized', {}, true);
+            const candidates = [source, target].map(item => httpCandidate({ ...item, group: 'Accounts' }));
+            const result = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
+                .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates } }));
+            const reviewId = result.result.structuredContent.reviewId;
+            assert.ok(controller);
+            const before = receivedRequests;
+            await runEditorScript(controller, `
+                const source = document.querySelector('.case[data-id="${source.id}"]');
+                const target = document.querySelector('.case[data-id="${target.id}"]');
+                target.querySelector('.case-toggle').click();
+                if (target.querySelector('.request-preview')) throw new Error('Inventory contains a request editor.');
+                source.querySelector('[data-case-id]').click();
+                document.querySelector('#confirm-collection').click();
+                await waitFor(() => !document.querySelector('#review-error').hidden);
+                if (!document.querySelector('#review-error').textContent.includes('prerequisite')) throw new Error('Unselected prerequisite was accepted.');
+                source.querySelector('[data-case-id]').click();
+                document.querySelector('#confirm-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+            `);
+            assert.strictEqual(receivedRequests, before);
+            const approved = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
+            assert.ok(JSON.stringify(approved).includes(target.id));
+            const approvedTarget = reviews.getApproved(reviewId).cases.find(item => item.id === target.id);
+            assert.ok(approvedTarget?.trigger === 'http');
+            assert.deepStrictEqual(approvedTarget.dependencyIds, [source.id]);
+            assert.strictEqual(provider.getRequests().length, 2, 'Confirm did not save the invocations directly.');
+            assert.deepStrictEqual(provider.getChildren(), [{ group: 'Accounts' }]);
+            assert.strictEqual(provider.getChildren({ group: 'Accounts' }).length, 2);
+            const confirmedSource = reviews.getDraftId(reviewId, source.id);
+            const confirmedTarget = reviews.getDraftId(reviewId, target.id);
+            assert.ok(confirmedSource);
+            assert.ok(confirmedTarget);
+            assert.strictEqual(provider.getRequest(confirmedTarget)?.request.bindings?.[0].sourceId, confirmedSource);
+            const draft = (item: HttpInvocation) => ({ ...item.request, name: item.name, reviewId, candidateId: item.id });
+            const savedSchema = z.object({ result: z.object({ structuredContent: z.object({ id: z.string() }) }) });
+            const savedSource = savedSchema.parse(await rpc('tools/call', { name: 'draft_http_invocation', arguments: draft(source) })).result.structuredContent.id;
+            const savedTarget = savedSchema.parse(await rpc('tools/call', { name: 'draft_http_invocation', arguments: draft(target) })).result.structuredContent.id;
+            assert.strictEqual(savedSource, confirmedSource);
+            assert.strictEqual(savedTarget, confirmedTarget);
+            assert.strictEqual(provider.getRequest(savedTarget)?.group, 'Accounts');
+            assert.strictEqual(provider.getRequest(savedSource)?.group, 'Accounts');
+            assert.strictEqual(provider.getRequest(savedTarget)?.request.bindings?.[0].sourceId, savedSource);
+            const ran = z.object({ result: runResultSchema }).parse(await rpc('tools/call', {
+                name: 'run_http_invocation', arguments: { id: savedTarget },
+            })).result;
+            assert.notStrictEqual(ran.isError, true);
+            assert.ok(JSON.parse(ran.structuredContent.body ?? '').id.startsWith('account/'));
+            assert.strictEqual(accountBodies[accountBodies.length - 1], source.request.body);
+            assert.strictEqual(receivedRequests, before + 2);
+            assert.strictEqual(provider.getRequests().length, 2);
+            const savedTargetInvocation = provider.getRequest(savedTarget);
+            assert.ok(savedTargetInvocation);
+            const treeItem = provider.getTreeItem(savedTargetInvocation);
+            assert.ok(treeItem.description);
+            assert.ok(treeItem.iconPath instanceof vscode.ThemeIcon);
+            assert.strictEqual(treeItem.iconPath.id, 'pass');
+            assert.strictEqual(editors.size, 0);
+        } finally {
+            reviews.dispose();
+            editors.dispose();
+            provider.dispose();
+            await mcp.disposable.dispose();
+        }
+    });
+
+    test('collection inventory shows read-only summaries and explains an empty selection on confirmation', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const reviews = new CollectionReviews(context, provider);
+        const [source, target] = accountChain();
+        const before = receivedRequests;
+        try {
+            const controller = await reviews.open([httpCandidate(source), httpCandidate(target)]);
+            await runEditorScript(controller, `
+                const row = document.querySelector('.case[data-id="${target.id}"]');
+                row.querySelector('.case-toggle').click();
+                if (row.querySelector('.endpoint').textContent !== ${JSON.stringify(`${target.request.method} ${target.request.url}`)}) throw new Error('HTTP summary is missing its method or endpoint.');
+                if (!row.querySelector('.case-prerequisites').textContent.includes(${JSON.stringify(source.name)})) throw new Error('Required prerequisite is missing.');
+                if (document.querySelector('.case-details input, .case-details select, .case-details textarea, .send-preview, .run-preview-chain')) throw new Error('Inventory contains editing or execution controls.');
+                const main = document.querySelector('main');
+                main.style.width = '240px';
+                if (main.scrollWidth > main.clientWidth) throw new Error('Inventory overflows a narrow panel.');
+                main.style.width = '';
+                document.querySelector('.select-all input').click();
+                const confirm = document.querySelector('#confirm-collection');
+                if (confirm.disabled) throw new Error('Empty selection disabled Confirm.');
+                confirm.click();
+                if (document.querySelector('#review-error').hidden || !document.querySelector('#review-error').textContent.includes('Select at least one')) throw new Error('Empty selection was not explained.');
+                document.querySelector('.select-all input').click();
+                confirm.click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+            `);
+            assert.strictEqual(provider.getRequests().length, 2);
+            assert.strictEqual(receivedRequests, before);
+            const saved = provider.getRequest(reviews.getDraftId(controller.reviewId, source.id) ?? '');
+            assert.deepStrictEqual(saved?.request, source.request);
+        } finally {
+            reviews.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('AI collection review gates drafting and shows headless progress', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const continuedReviews: string[] = [];
+        const reviews = new CollectionReviews(context, provider, async reviewId => { continuedReviews.push(reviewId); });
+        let controller: Awaited<ReturnType<CollectionReviews['open']>> | undefined;
+        const open = reviews.open.bind(reviews);
+        reviews.open = async (candidates, reviewId) => controller = await open(candidates, reviewId);
+        const mcp = await startInProcHttpServer({
+            id: mcpServerId, serverLabel: 'Azure Invoke review test', serverVersion: '1.0.0', transport: 'tcp',
+            registerTools: server => {
+                registerMcpTool(server, proposeInvocationCollectionTool(reviews));
+                registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
+                registerMcpTool(server, draftHttpInvocationTool(provider, reviews));
+                registerMcpTool(server, runHttpInvocationTool(provider, editors));
+            },
+        });
+        const rpc = createMcpClient(mcp);
+        const existing = invocation();
+        provider.saveRequest(existing);
+        const before = receivedRequests;
+        try {
+            await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'review-test', version: '1.0.0' } });
+            await rpc('notifications/initialized', {}, true);
+            const candidates: InvocationCandidate[] = [
+                httpCandidate({ id: 'create', name: "Create customer's order", auth: 'required' }),
+                httpCandidate({ id: 'invalid', name: 'Read error response', request: request({ url: `${baseUrl}/error` }) }),
+                { id: 'timer', name: 'Queued cleanup', group: 'Maintenance', trigger: 'queue', endpoint: 'cleanup', description: 'A queue trigger discovered in the project.' },
+            ];
+            const proposed = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
+                .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates } }));
+            const reviewId = proposed.result.structuredContent.reviewId;
+            assert.ok(controller);
+            const draft = { ...invocation().request, name: 'Create order', reviewId, candidateId: 'create' };
+            for (const [name, args] of [
+                ['get_invocation_collection_review', { reviewId }],
+                ['draft_http_invocation', draft],
+            ] as const) {
+                const rejected = z.object({ result: z.object({ isError: z.boolean() }) }).parse(await rpc('tools/call', { name, arguments: args }));
+                assert.strictEqual(rejected.result.isError, true);
+            }
+            assert.deepStrictEqual(provider.getRequests(), [existing]);
+            assert.strictEqual(receivedRequests, before);
+            assert.strictEqual(editors.size, 0);
+            await runEditorScript(controller, `
+                if (document.querySelector('#confirm-collection').disabled) throw new Error('HTTP templates were not preselected.');
+                if ([...document.querySelectorAll('.case-details')].some(details => !details.hidden)) throw new Error('Templates start expanded.');
+                if (document.querySelectorAll('.case-group').length !== 2) throw new Error('Related requests were not grouped.');
+                if (!document.querySelector('[data-case-id="timer"]').disabled) throw new Error('Unsupported trigger is selectable.');
+                if (document.querySelector('.case[data-id="create"] .case-status').textContent !== 'HTTP Trigger') throw new Error('HTTP trigger description is missing.');
+                if (document.querySelector('.case[data-id="timer"] .case-status').textContent !== 'Queue Trigger') throw new Error('Unsupported trigger description includes extra status text.');
+                if (document.querySelector('.case[data-id="timer"] .case-status').title !== 'Queue Trigger / Not yet supported') throw new Error('Unsupported status tooltip is missing.');
+                const selected = document.querySelector('[data-case-id="create"]');
+                document.querySelector('[data-case-id="invalid"]').click();
+                document.querySelector('.case-toggle').click();
+                if (document.querySelector('.case-details').hidden) throw new Error('Request details did not expand.');
+                if (document.querySelector('.auth-required').title !== 'Authentication required') throw new Error('Authentication indicator is missing.');
+                document.querySelector('#confirm-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                if (!selected.disabled) throw new Error('Confirmed selection can still be edited.');
+            `);
+            assert.deepStrictEqual(continuedReviews, [], 'Confirm launched an unsolicited Copilot turn.');
+            assert.strictEqual(provider.getRequests().length, 2);
+            assert.ok(reviews.getDraftId(reviewId, 'create'));
+            const approved = z.object({
+                result: z.object({ structuredContent: z.object({ cases: z.array(z.object({ id: z.string(), comment: z.string() })) }) }),
+            }).parse(await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } }));
+            assert.deepStrictEqual(approved.result.structuredContent.cases, [{ id: 'create', comment: '' }]);
+            for (const candidateId of ['invalid', 'timer', 'unknown']) {
+                const rejected = z.object({ result: z.object({ isError: z.boolean() }) }).parse(await rpc('tools/call', {
+                    name: 'draft_http_invocation', arguments: { ...draft, candidateId },
+                }));
+                assert.strictEqual(rejected.result.isError, true);
+            }
+            const draftedSchema = z.object({ result: z.object({ structuredContent: z.object({ id: z.string() }) }) });
+            const created = draftedSchema.parse(await rpc('tools/call', { name: 'draft_http_invocation', arguments: draft }));
+            const invocationId = created.result.structuredContent.id;
+            const revised = draftedSchema.parse(await rpc('tools/call', { name: 'draft_http_invocation', arguments: { ...draft, body: '{"orderId":42}' } }));
+            assert.strictEqual(revised.result.structuredContent.id, invocationId);
+            assert.strictEqual(provider.getRequests().length, 2);
+            assert.strictEqual(provider.getRequest(invocationId)?.request.body, '{"orderId":42}');
+            assert.strictEqual(provider.getRequestStatus(invocationId), 'Ready');
+            assert.strictEqual(editors.size, 0);
+            assert.strictEqual(receivedRequests, before);
+            const ran = z.object({ result: runResultSchema }).parse(await rpc('tools/call', {
+                name: 'run_http_invocation', arguments: { id: invocationId },
+            }));
+            assert.strictEqual(ran.result.structuredContent.status, 200);
+            assert.strictEqual(receivedRequests, before + 1);
+            assert.strictEqual(editors.size, 0);
+            assert.match(provider.getRequestStatus(invocationId), /^200, \d+ ms$/);
+            await runEditorScript(controller, `
+                await waitFor(() => document.querySelector('.case-status').title.startsWith('HTTP Trigger / 200, '));
+                if (document.querySelector('.case-status').textContent !== 'HTTP Trigger') throw new Error('Execution status changed the trigger description.');
+                if (!document.querySelector('[data-case-id="create"]').checked) throw new Error('Approved selection was not restored.');
+                if (document.querySelector('[data-comment-id]')) throw new Error('Inventory contains a feedback editor.');
+            `);
+            const saved = provider.getRequest(invocationId);
+            assert.ok(saved);
+            await runEditorScript(editors.open(saved, true), `
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                if (JSON.parse(document.querySelector('#response-body').textContent).body !== '{"orderId":42}') throw new Error('Headless response was not available on demand.');
+            `);
+            assert.deepStrictEqual(provider.getRequest(existing.id), existing);
+        } finally {
+            mcp.disposable.dispose();
+            reviews.dispose();
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('AI collection reviews reject unsupported selections and expire on cancellation or replacement', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const reviews = new CollectionReviews(context, provider, async () => { throw new Error('Chat must not open for an invalid selection.'); });
+        const candidates: InvocationCandidate[] = [
+            httpCandidate(),
+            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'queue', endpoint: '', description: 'Unsupported queue.' },
+        ];
+        try {
+            const first = await reviews.open(candidates);
+            await runEditorScript(first, `
+                for (const selections of [
+                    null,
+                    [],
+                    [{ id: 'timer', comment: '' }],
+                    [{ id: 'unknown', comment: '' }],
+                    [{ id: 'http', comment: '' }, { id: 'http', comment: '' }],
+                    [{ id: 'http', comment: 'x'.repeat(2001) }],
+                ]) {
+                    document.querySelector('#review-error').hidden = true;
+                    window.testApi.postMessage({ command: 'confirmCollection', selections });
+                    await waitFor(() => !document.querySelector('#review-error').hidden);
+                }
+            `);
+            assert.throws(() => reviews.getApproved(first.reviewId), /Confirm the active collection review/);
+            const second = await reviews.open(candidates);
+            assert.throws(() => reviews.getApproved(first.reviewId), /Confirm the active collection review/);
+            await runEditorScript(second, `
+                document.querySelector('#cancel-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Review cancelled.'));
+                if (!document.querySelector('#confirm-collection').hidden) throw new Error('A cancelled review can be confirmed.');
+            `);
+            assert.throws(() => reviews.getApproved(second.reviewId), /Confirm the active collection review/);
+            const third = await reviews.open(candidates);
+            third.panel.dispose();
+            assert.throws(() => reviews.getApproved(third.reviewId), /Confirm the active collection review/);
+            await assert.rejects(reviews.open([candidates[0], candidates[0]]), /unique IDs/);
+            assert.deepStrictEqual(provider.getRequests(), []);
+        } finally {
+            reviews.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('confirmation retries an atomic save without starting chat or duplicating saved requests', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        let attempts = 0;
+        const save = provider.saveRequests.bind(provider);
+        provider.saveRequests = invocations => {
+            if (++attempts === 1) {
+                throw new Error('Could not save the reviewed requests.');
+            }
+            save(invocations);
+        };
+        const reviews = new CollectionReviews(context, provider, async () => { throw new Error('Confirm must not start chat.'); });
+        try {
+            const controller = await reviews.open([httpCandidate()]);
+            await runEditorScript(controller, `
+                document.querySelector('.case-toggle').click();
+                const confirm = document.querySelector('#confirm-collection');
+                if (confirm.textContent !== 'Confirm') throw new Error('Confirm label is incorrect.');
+                confirm.click();
+                await waitFor(() => !document.querySelector('#review-error').hidden);
+                if (confirm.hidden || confirm.disabled) throw new Error('Save failure cannot be retried.');
+                if (document.querySelector('[data-case-id="http"]').disabled) throw new Error('Failed save locked the selection.');
+                confirm.click();
+                await waitFor(() => confirm.hidden && document.querySelector('#review-error').hidden);
+                window.testApi.postMessage({ command: 'confirmCollection', selections: [] });
+            `);
+            assert.strictEqual(attempts, 2);
+            assert.strictEqual(reviews.getApproved(controller.reviewId).cases[0].comment, '');
+            assert.strictEqual(provider.getRequests().length, 1);
+            controller.panel.dispose();
+            assert.strictEqual(reviews.getApproved(controller.reviewId).cases[0].id, 'http');
+            await reviews.open([httpCandidate({ id: 'next', name: 'Next order' })]);
+            assert.throws(() => reviews.getDraftId(controller.reviewId, 'http'), /Confirm the active collection review/);
+        } finally {
+            reviews.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('AI review loading becomes the proposal in the same panel and cancelled discovery cannot reopen it', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const discoveries: string[] = [];
+        const reviews = new CollectionReviews(context, provider, async id => { discoveries.push(id); });
+        try {
+            const controller = await reviews.start();
+            assert.ok(controller.panel.webview.html.includes('class="spinner"'));
+            await runEditorScript(controller, `
+                if (document.querySelector('#review-loading').hidden) throw new Error('Discovery loading indicator is missing.');
+                if (!document.querySelector('#confirm-collection').hidden) throw new Error('Loading review can be confirmed.');
+                if (document.querySelectorAll('.case').length) throw new Error('Loading page contains invented templates.');
+            `);
+            const definition = proposeInvocationCollectionTool(reviews);
+            const tool = new McpTool(definition.name, definition.execute, definition);
+            const result = await tool.executeMcp({ reviewId: controller.reviewId, candidates: [httpCandidate()] },
+                { signal: new AbortController().signal, requestId: 'loading-proposal' });
+            assert.ok(!('isError' in result && result.isError));
+            assert.ok(!controller.isDisposed);
+            await runEditorScript(controller, `
+                await waitFor(() => document.querySelector('#review-loading').hidden && document.querySelectorAll('.case').length === 1);
+                if (!document.querySelector('[data-case-id="http"]').checked) throw new Error('Discovered HTTP template was not selected.');
+                if (!document.querySelector('.case-details').hidden) throw new Error('Discovered template was expanded.');
+            `);
+            assert.deepStrictEqual(discoveries, [controller.reviewId]);
+            assert.deepStrictEqual(provider.getRequests(), []);
+            const cancelled = await reviews.start();
+            await runEditorScript(cancelled, `
+                document.querySelector('#cancel-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Review cancelled.'));
+            `);
+            await assert.rejects(reviews.open([httpCandidate()], cancelled.reviewId), /no longer active/);
+            assert.deepStrictEqual(provider.getRequests(), []);
+        } finally {
+            reviews.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('review discovery failures replace the spinner with an actionable error', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        let cancelled = false;
+        const controller = new CollectionReviewController(context, 'loading-failure', undefined, () => [], () => { cancelled = true; }, () => [], async () => { /* no-op */ }, async () => { /* no-op */ });
+        try {
+            await controller.failLoading(false);
+            await runEditorScript(controller, `
+                await waitFor(() => !document.querySelector('#review-error').hidden);
+                if (!document.querySelector('#review-loading').hidden) throw new Error('Failed discovery kept spinning.');
+                if (!document.querySelector('#confirm-collection').hidden) throw new Error('Failed discovery can be confirmed.');
+                if (!document.querySelector('#review-error').textContent.includes('Author Collection with AI')) throw new Error('Discovery error gives no recovery action.');
+            `);
+            assert.strictEqual(cancelled, true);
+        } finally {
+            controller.panel.dispose();
+        }
+    });
 
 
     test('non-loopback targets are blocked before any request in their chain is sent', async () => {
@@ -1753,7 +2143,325 @@ suite('Azure Invoke', () => {
             };
         }
 
+        function blobCandidate(): BlobInvocationCandidate {
+            return {
+                id: 'blob-import', name: 'Import inventory', group: 'Inventory', trigger: 'blob',
+                description: 'Source binding inventory-imports/{name}; manual upload only.',
+                request: {
+                    target: { kind: 'azurite', url: storageUrl },
+                    container: 'inventory-imports', blobName: '', contentType: 'text/csv',
+                },
+            };
+        }
 
+        test('authors mixed collections through MCP with private file capture and read-only metadata', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider, async () => { /* no-op */ });
+            let controller: CollectionReviewController | undefined;
+            const open = reviews.open.bind(reviews);
+            reviews.open = async (candidates, id, revision) => controller = await open(candidates, id, revision);
+            const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc-blob-author-'));
+            const file = vscode.Uri.file(path.join(directory, 'user-private-fixture.bin'));
+            const bytes = Buffer.from('private-authoring-fixture\0\xff', 'utf8');
+            await fs.writeFile(file.fsPath, bytes);
+            let picks = 0;
+            let cancelPicker = false;
+            const handler = registerOnActionStartHandler(action => {
+                if (action.callbackId === 'azureFunctions.azureInvoke.selectBlobFile') {
+                    action.ui.showOpenDialog = async () => {
+                        picks++;
+                        if (cancelPicker) {
+                            throw new UserCancelledError();
+                        }
+                        return [file];
+                    };
+                }
+            });
+            const mcp = await startInProcHttpServer({
+                id: mcpServerId, serverLabel: 'Blob authoring test', serverVersion: '1.0.0', transport: 'tcp',
+                registerTools: server => {
+                    registerMcpTool(server, proposeInvocationCollectionTool(reviews));
+                    registerMcpTool(server, selectBlobInvocationFileTool(reviews));
+                    registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
+                },
+            });
+            const rpc = createMcpClient(mcp);
+            const [source, target] = accountChain();
+            const candidates = [httpCandidate(source), httpCandidate(target), blobCandidate()];
+            const before = receivedRequests;
+            try {
+                await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'blob-authoring', version: '1.0.0' } });
+                await rpc('notifications/initialized', {}, true);
+                const proposed = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
+                    .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates } }));
+                const reviewId = proposed.result.structuredContent.reviewId;
+                assert.ok(controller);
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="blob-import"]');
+                    if (!row.querySelector('[data-case-id]').checked || row.querySelector('[data-case-id]').disabled) throw new Error('Blob fixture is not supported and selected.');
+                    if (row.querySelector('.case-status').textContent !== 'Blob Trigger') throw new Error('Blob trigger description includes extra status text.');
+                    if (row.querySelector('.case-status').title !== 'Blob Trigger / Supported / Manual only') throw new Error('Manual status tooltip is missing.');
+                    row.querySelector('.case-toggle').click();
+                    if (row.querySelector('.send-preview') || row.querySelector('.run-preview-chain')) throw new Error('Blob row can upload a preview.');
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/') throw new Error('Binding-derived container was lost.');
+                    if (row.querySelector('input:not([type="checkbox"]), select, textarea')) throw new Error('Blob metadata is editable.');
+                    if (document.querySelector('#confirm-collection').disabled) throw new Error('A missing file disabled confirmation.');
+                    if (row.querySelector('.case-warning').hidden) throw new Error('Missing file has no row warning.');
+                `);
+                const selected = await rpc('tools/call', {
+                    name: 'select_blob_invocation_file', arguments: { reviewId, candidateId: 'blob-import' },
+                });
+                const selectedResult = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string(), candidateId: z.string(), fileSelected: z.literal(true) }) }) }).parse(selected);
+                assert.deepStrictEqual(selectedResult.result.structuredContent, { reviewId, candidateId: 'blob-import', fileSelected: true });
+                assert.ok(!JSON.stringify(selected).includes(file.fsPath));
+                assert.ok(!JSON.stringify(selected).includes('user-private-fixture'));
+                assert.ok(!JSON.stringify(selected).includes(bytes.toString('base64')));
+                cancelPicker = true;
+                const cancelled = z.object({ result: z.object({ isError: z.literal(true) }) }).parse(await rpc('tools/call', {
+                    name: 'select_blob_invocation_file', arguments: { reviewId, candidateId: 'blob-import' },
+                }));
+                assert.strictEqual(cancelled.result.isError, true);
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="blob-import"]');
+                    if (row.querySelector('.blob-file-name').textContent !== 'user-private-fixture.bin') throw new Error('MCP picker did not update the review.');
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/user-private-fixture.bin') throw new Error('Chosen filename was not defaulted.');
+                    if (!row.querySelector('.case-warning').hidden) throw new Error('Captured file did not clear the warning.');
+                    document.querySelector('#confirm-collection').click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(picks, 2);
+                assert.strictEqual(provider.getInvocations().length, 3);
+                assert.strictEqual(provider.getRequests().length, 2);
+                const blobId = reviews.getDraftId(reviewId, 'blob-import');
+                assert.ok(blobId);
+                const saved = provider.getBlobInvocation(blobId);
+                assert.ok(saved);
+                assert.strictEqual(saved.request.container, 'inventory-imports');
+                assert.strictEqual(saved.request.blobName, 'user-private-fixture.bin');
+                assert.strictEqual(saved.request.content, bytes.toString('base64'));
+                assert.strictEqual(saved.request.fileName, 'user-private-fixture.bin');
+                assert.strictEqual(provider.getRequest(blobId), undefined);
+                const targetId = reviews.getDraftId(reviewId, target.id);
+                assert.ok(targetId);
+                assert.strictEqual(provider.getRequest(targetId)?.request.bindings?.[0].sourceId, reviews.getDraftId(reviewId, source.id));
+                assert.strictEqual(receivedRequests, before);
+                assert.strictEqual(uploads.length, 0);
+                assert.strictEqual(containers.size, 0);
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection(provider.getInvocations())), provider.getInvocations());
+                const rejected = z.object({ result: z.object({ isError: z.literal(true) }) }).parse(await rpc('tools/call', {
+                    name: 'select_blob_invocation_file', arguments: { reviewId, candidateId: 'blob-import' },
+                }));
+                assert.strictEqual(rejected.result.isError, true);
+                assert.strictEqual(picks, 2);
+            } finally {
+                handler.dispose();
+                reviews.dispose();
+                provider.dispose();
+                await mcp.disposable.dispose();
+                await fs.remove(directory);
+            }
+        });
+
+        test('incomplete Blob rows expand together and can be excluded without blocking confirmation', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider);
+            try {
+                const controller = await reviews.open([httpCandidate(), blobCandidate(), { ...blobCandidate(), id: 'second-blob', name: 'Import another file' }]);
+                await runEditorScript(controller, `
+                    const confirm = document.querySelector('#confirm-collection');
+                    const rows = [...document.querySelectorAll('.case')].filter(row => row.querySelector('.choose-blob-file'));
+                    confirm.click();
+                    if (document.querySelector('#review-error').hidden) throw new Error('Missing files have no notification.');
+                    for (const row of rows) {
+                        if (row.querySelector('.case-details').hidden || row.querySelector('.case-warning').hidden) throw new Error('An incomplete row was not highlighted and expanded.');
+                        row.querySelector('[data-case-id]').click();
+                        if (!row.querySelector('.case-warning').hidden || !row.querySelector('.case-requirement').hidden) throw new Error('Unchecked row still requires a file.');
+                    }
+                    if (!document.querySelector('#review-error').hidden) throw new Error('Resolved requirements left a stale error.');
+                    if (confirm.disabled) throw new Error('Unchecked Blob invocations blocked confirmation.');
+                    confirm.click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(provider.getInvocations().length, 1);
+                assert.strictEqual(provider.getRequests().length, 1);
+            } finally {
+                reviews.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('review file picking handles cancellation and size limits, and requires a real capture before atomic saving', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider, async () => { /* no-op */ });
+            const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc-blob-review-'));
+            const oversized = vscode.Uri.file(path.join(directory, 'oversized.bin'));
+            const empty = vscode.Uri.file(path.join(directory, 'empty.bin'));
+            await fs.writeFile(oversized.fsPath, Buffer.alloc(5 * 1024 * 1024 + 1));
+            await fs.writeFile(empty.fsPath, Buffer.alloc(0));
+            let picks = 0;
+            const handler = registerOnActionStartHandler(action => {
+                if (action.callbackId === 'azureFunctions.azureInvoke.reviewCollection') {
+                    action.ui.showOpenDialog = async () => {
+                        picks++;
+                        if (picks === 1 || picks === 4) {
+                            throw new UserCancelledError();
+                        }
+                        return [picks === 2 ? oversized : empty];
+                    };
+                }
+            });
+            try {
+                const candidate = blobCandidate();
+                candidate.request.blobName = 'incoming/empty.bin';
+                const controller = await reviews.open([httpCandidate(), candidate]);
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="blob-import"]');
+                    const checkbox = row.querySelector('[data-case-id]');
+                    const confirm = document.querySelector('#confirm-collection');
+                    checkbox.click();
+                    if (confirm.disabled) throw new Error('Unchecked Blob fixture blocked HTTP confirmation.');
+                    checkbox.click();
+                    if (confirm.disabled) throw new Error('Missing file disabled confirmation.');
+                    if (row.querySelector('.case-warning').hidden) throw new Error('Missing file has no warning.');
+                    confirm.click();
+                    await waitFor(() => !document.querySelector('#review-error').hidden);
+                    if (!document.querySelector('#review-error').textContent.includes('Choose a file')) throw new Error('Missing file was not explained.');
+                    if (row.querySelector('.case-details').hidden) throw new Error('Confirm did not expand the incomplete row.');
+                    if (document.activeElement !== row.querySelector('.choose-blob-file')) throw new Error('Confirm did not focus the file picker.');
+                    window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: '' }, { id: 'blob-import', comment: '' }] });
+                    await waitFor(() => document.querySelector('#review-error').textContent.includes('each selected Blob'));
+                    const pick = async () => {
+                        const finished = new Promise(resolve => {
+                            let started = false;
+                            const listen = event => {
+                                if (event.data.command !== 'state') return;
+                                if (event.data.selectingBlobFile) started = true;
+                                else if (started) { window.removeEventListener('message', listen); resolve(); }
+                            };
+                            window.addEventListener('message', listen);
+                        });
+                        row.querySelector('.choose-blob-file').click();
+                        await finished;
+                    };
+                    await pick();
+                    if (!document.querySelector('#review-error').hidden || confirm.disabled || row.querySelector('.case-warning').hidden) throw new Error('Cancellation changed readiness or disabled confirmation.');
+                    await pick();
+                    await waitFor(() => !document.querySelector('#review-error').hidden);
+                    if (!document.querySelector('#review-error').textContent.includes('5 MB')) throw new Error('Oversized fixture was not rejected.');
+                    if (confirm.disabled || row.querySelector('.case-warning').hidden) throw new Error('Oversized fixture changed readiness or disabled confirmation.');
+                    await pick();
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/incoming/empty.bin') throw new Error('Choosing a file overwrote the concrete destination.');
+                    if (row.querySelector('.blob-file-name').textContent !== 'empty.bin' || confirm.disabled) throw new Error('Valid empty file was rejected.');
+                    if (!row.querySelector('.case-warning').hidden || !row.querySelector('.case-requirement').hidden) throw new Error('Valid file did not clear the warning.');
+                    await pick();
+                    if (row.querySelector('.blob-file-name').textContent !== 'empty.bin' || !document.querySelector('#review-error').hidden || confirm.disabled) throw new Error('Cancellation lost the existing captured file.');
+                    confirm.click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(picks, 4);
+                assert.strictEqual(provider.getInvocations().length, 2);
+                const blob = provider.getInvocations().find(item => item.id === reviews.getDraftId(controller.reviewId, 'blob-import'));
+                assert.ok(blob && 'trigger' in blob && blob.trigger === 'blob');
+                assert.strictEqual(blob.request.content, '');
+                assert.strictEqual(blob.request.encoding, 'base64');
+                assert.strictEqual(blob.request.blobName, 'incoming/empty.bin');
+                assert.strictEqual(uploads.length, 0);
+            } finally {
+                handler.dispose();
+                reviews.dispose();
+                provider.dispose();
+                await fs.remove(directory);
+            }
+        });
+
+        test('rejects stale Blob file selection after review replacement, revision, closure, and cancellation', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider, async () => { /* no-op */ });
+            const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc-blob-stale-'));
+            const file = vscode.Uri.file(path.join(directory, 'private.bin'));
+            await fs.writeFile(file.fsPath, 'private-stale-fixture');
+            try {
+                for (const change of ['replace', 'revise', 'close', 'cancel', 'abort'] as const) {
+                    const controller = await reviews.open([httpCandidate(), blobCandidate()]);
+                    const action = await createTestActionContext();
+                    let choose: (uris: vscode.Uri[]) => void = () => { throw new Error('Picker did not start.'); };
+                    let started: () => void = () => { /* no-op */ };
+                    const opened = new Promise<void>(resolve => { started = resolve; });
+                    action.ui.showOpenDialog = async () => {
+                        started();
+                        return await new Promise<vscode.Uri[]>(resolve => { choose = resolve; });
+                    };
+                    await assert.rejects(reviews.selectBlobFile(action, 'wrong-review', 'blob-import'), /active collection review/);
+                    await assert.rejects(reviews.selectBlobFile(action, controller.reviewId, 'http'), /active collection review/);
+                    const cancellation = new AbortController();
+                    const pending = reviews.selectBlobFile(action, controller.reviewId, 'blob-import', cancellation.signal);
+                    await opened;
+                    await assert.rejects(reviews.selectBlobFile(action, controller.reviewId, 'blob-import'), /file picker/);
+                    if (change === 'replace') {
+                        await reviews.open([blobCandidate()]);
+                    } else if (change === 'revise') {
+                        await controller.setCandidates([blobCandidate()]);
+                    } else if (change === 'close') {
+                        controller.panel.dispose();
+                    } else if (change === 'abort') {
+                        cancellation.abort();
+                    } else {
+                        await runEditorScript(controller, `
+                            document.querySelector('#cancel-collection').click();
+                            await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Review cancelled.'));
+                        `);
+                    }
+                    choose([file]);
+                    await assert.rejects(pending, change === 'abort' ? isUserCancelledError : /review changed while choosing a file/);
+                    assert.strictEqual(controller.hasBlobFile('blob-import'), false);
+                }
+                assert.deepStrictEqual(provider.getInvocations(), []);
+                assert.strictEqual(uploads.length, 0);
+                const controller = await reviews.open([blobCandidate()]);
+                const action = await createTestActionContext();
+                action.ui.showOpenDialog = async () => [vscode.Uri.file(path.join(directory, 'not-found-private.bin'))];
+                await assert.rejects(reviews.selectBlobFile(action, controller.reviewId, 'blob-import'), error =>
+                    error instanceof Error && /Could not read/.test(error.message) && !error.message.includes(directory));
+                assert.strictEqual(controller.hasBlobFile('blob-import'), false);
+            } finally {
+                reviews.dispose();
+                provider.dispose();
+                await fs.remove(directory);
+            }
+        });
+
+        test('Blob authoring rejects invalid destinations and cannot supply HTTP prerequisites', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider);
+            const blob = blobCandidate();
+            try {
+                for (const request of [
+                    { ...blob.request, target: { kind: 'azurite' as const, url: 'https://example.com/devstoreaccount1' } },
+                    { ...blob.request, container: 'Invalid Container' },
+                    { ...blob.request, blobName: '{name}' },
+                ]) {
+                    await assert.rejects(reviews.open([{ ...blob, request }]), /Azurite|concrete Blob name/);
+                }
+                await assert.rejects(reviews.open([blob, httpCandidate({
+                    request: request({ dependsOn: [blob.id] }),
+                })]), /prerequisite request is unavailable/);
+                assert.deepStrictEqual(provider.getInvocations(), []);
+                assert.strictEqual(uploads.length, 0);
+            } finally {
+                reviews.dispose();
+                provider.dispose();
+            }
+        });
 
         test('mixed collections preserve Blob fixtures but HTTP discovery, runs, and dependencies exclude them', async () => {
             const context = (await getTestApi()).extensionVariables.getContext();
@@ -2025,6 +2733,59 @@ suite('Azure Invoke', () => {
             }
         });
 
+        test('Timer proposals show read-only details and save selected invocations without invoking', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider, async () => { /* no-op */ });
+            const timer = { ...timerInvocation(), group: 'Maintenance', description: 'Run cleanup manually; the host owns the schedule.' };
+            let controller: CollectionReviewController | undefined;
+            const open = reviews.open.bind(reviews);
+            reviews.open = async (candidates, id, revision) => controller = await open(candidates, id, revision);
+            const mcp = await startInProcHttpServer({
+                id: mcpServerId, serverLabel: 'Timer authoring test', serverVersion: '1.0.0', transport: 'tcp',
+                registerTools: server => {
+                    registerMcpTool(server, proposeInvocationCollectionTool(reviews));
+                    registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
+                },
+            });
+            const rpc = createMcpClient(mcp);
+            const before = receivedRequests;
+            try {
+                await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'timer-authoring', version: '1.0.0' } });
+                await rpc('notifications/initialized', {}, true);
+                const proposed = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) })
+                    .parse(await rpc('tools/call', { name: 'propose_invocation_collection', arguments: { candidates: [httpCandidate(), timer] } }));
+                assert.ok(controller);
+                const reviewId = proposed.result.structuredContent.reviewId;
+                await runEditorScript(controller, `
+                    const row = document.querySelector('.case[data-id="cleanup-timer"]');
+                    if (!row.querySelector('[data-case-id]').checked || row.querySelector('[data-case-id]').disabled) throw new Error('Timer proposal is not selected and supported.');
+                    if (row.querySelector('.case-status').textContent !== 'Timer Trigger') throw new Error('Timer row includes extra description text.');
+                    row.querySelector('.case-toggle').click();
+                    if (row.querySelector('.send-preview, .run-preview-chain')) throw new Error('Timer proposal can execute a preview.');
+                    if (row.querySelector('input:not([type="checkbox"]), select, textarea')) throw new Error('Timer metadata is editable.');
+                    if (row.querySelector('.endpoint').textContent !== ${JSON.stringify(timer.request.functionName)}) throw new Error('Timer function name is missing.');
+                    if (!row.querySelector('.hint').textContent.includes(${JSON.stringify(timer.request.schedule)})) throw new Error('Timer schedule is missing.');
+                    row.querySelector('[data-case-id]').click();
+                    if (row.querySelector('[data-case-id]').checked) throw new Error('Timer selection did not change.');
+                    row.querySelector('[data-case-id]').click();
+                    document.querySelector('#confirm-collection').click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(reviews.getApproved(reviewId).cases.length, 2);
+                assert.strictEqual(receivedRequests, before);
+                const saved = provider.getInvocations().find(value => 'trigger' in value && value.trigger === 'timer');
+                assert.ok(saved && 'trigger' in saved && saved.trigger === 'timer');
+                assert.strictEqual(saved.request.functionName, timer.request.functionName);
+                assert.strictEqual(provider.getRequests().length, 1);
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection(provider.getInvocations())), provider.getInvocations());
+            } finally {
+                mcp.disposable.dispose();
+                reviews.dispose();
+                provider.dispose();
+            }
+        });
 
 
         test('closing a Timer editor cancels an in-flight invocation and host failures are not retried or exposed', async () => {
@@ -2151,7 +2912,7 @@ suite('Azure Invoke', () => {
             const discovered = z.object({ result: z.object({ tools: z.array(z.object({ name: z.string() })) }) })
                 .parse(await rpc('tools/list', {}));
             assert.deepStrictEqual(discovered.result.tools.map(tool => tool.name).sort(), [
-                'create_http_invocation', 'list_blob_invocations', 'list_http_invocations', 'run_http_invocation', 'upload_blob_invocation',
+                'create_http_invocation', 'draft_http_invocation', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
             ]);
             const listed = z.object({
                 result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), name: z.string(), method: z.string(), dependencyIds: z.array(z.string()) })) }) }),
