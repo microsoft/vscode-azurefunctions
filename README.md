@@ -26,6 +26,16 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
     > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
 1. If the selected folder is not already open, select "Open in current window" to open it
 
+## Create Connector Trigger functions
+
+In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription and supported region, select one connector, then select one or more polling events and choose **Create functions**.
+
+Each selected event creates a separate function with its own trigger-configuration setting. Events can share a Connector Namespace and connection. Non-deprecated webhook events remain visible, but cannot be created yet. JavaScript continues to use the existing filtered Template Gallery.
+
+Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event F5 setup is deferred, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
+
+Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files, local settings, or VS Code configuration; conflicting project files are reported before copying.
+
 ## Run the serverless app locally
 
 This extension integrates with the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local) to let you run your project locally before publishing to Azure.

@@ -96,10 +96,12 @@ interface ManagedApiDefinition {
 
 interface ManagedApiOperation {
     name?: string;
+    deprecated?: boolean;
     properties?: {
         summary?: string;
         description?: string;
         visibility?: string;
+        deprecated?: boolean;
         isTrigger?: boolean;
         operationRole?: string;
         trigger?: unknown;
@@ -115,6 +117,7 @@ interface ManagedApiOperation {
         annotation?: {
             family?: string;
             revision?: number;
+            status?: string;
         };
     };
 }
@@ -521,6 +524,10 @@ function createCatalog(
             !connectorId ||
             visibility === 'internal' ||
             visibility === 'hideinui' ||
+            operation.deprecated === true ||
+            operation.properties?.deprecated === true ||
+            operation.properties?.annotation?.status?.toLowerCase() === 'deprecated' ||
+            /\[deprecated\]|\(deprecated\)/i.test(operation.properties?.summary ?? '') ||
             (!includeWebhooks && isWebhook)) {
             continue;
         }

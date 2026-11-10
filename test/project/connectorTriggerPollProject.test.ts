@@ -8,9 +8,10 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProject, ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
-import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { CancellationTokenSource } from 'vscode';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
@@ -37,6 +38,63 @@ suite('Connector trigger Poll project scaffolding', () => {
             projectPath,
             { recursive: true, useTrash: false },
         );
+    });
+
+    for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
+        test(`adds an idempotent ${language} batch without changing existing configured functions or settings`, async () => {
+            if (language === ProjectLanguage.CSharp) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+<ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+            }
+            if (language === ProjectLanguage.Python) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'function_app.py'), 'import azure.functions as func\n\napp = func.FunctionApp()\n');
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions==2.4.0b1\n');
+            }
+            const settingsPath = path.join(projectPath, 'local.settings.json');
+            const settings = '{"IsEncrypted":false,"Values":{"CustomConfig":"configured"}}';
+            await AzExtFsExtra.writeFile(settingsPath, settings);
+            const selection = { connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent', 'on-third', 'on_third'] };
+
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            const bindings = await findPollingConnectorBindings(projectPath);
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+
+            assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
+            assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), selection.operationIds.sort());
+            assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 4);
+            assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), settings);
+        });
+    }
+
+    test('preflights the entire batch before writing any handler', async () => {
+        await AzExtFsExtra.ensureDir(path.join(projectPath, 'src', 'functions'));
+        const existing = "app.http('SecondEvent', { handler: async () => ({}) });";
+        const existingPath = path.join(projectPath, 'src', 'functions', 'existing.ts');
+        await AzExtFsExtra.writeFile(existingPath, existing);
+
+        await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
+            connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
+        }), /already registered/);
+
+        assert.strictEqual(await AzExtFsExtra.readFile(existingPath), existing);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'firstEventFunction.ts')), false);
+    });
+
+    test('rejects normalized registration collisions before writing and handles cancellation', async () => {
+        assert.throws(() => validateConnectorTriggerSelections({
+            connectorId: 'custom', operationIds: ['on/event', 'on.event'],
+        }), /same function name/);
+        const cancellation = new CancellationTokenSource();
+        cancellation.cancel();
+        try {
+            await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
+                connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
+            }, undefined, cancellation.token), /cancel/i);
+            assert.deepStrictEqual(await fs.promises.readdir(projectPath), []);
+        } finally {
+            cancellation.dispose();
+        }
     });
 
     test('adds an event-specific C# Poll binding from the live Act schema', async () => {

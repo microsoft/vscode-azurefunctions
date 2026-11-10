@@ -1,0 +1,263 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import { AzExtFsExtra, AzureWizard, UserCancelledError, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
+import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
+import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
+import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
+import { ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
+import { localize } from '../../localize';
+import { getLocalSettingsJson } from '../../funcConfig/local.settings';
+import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
+import { cpUtils } from '../../utils/cpUtils';
+import { isPathEqual } from '../../utils/fs';
+import { requestUtils } from '../../utils/requestUtils';
+import { extractZip } from '../../utils/zipUtils';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
+import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
+import { OpenBehaviorStep } from './OpenBehaviorStep';
+import { OpenFolderStep } from './OpenFolderStep';
+
+export interface ProjectTemplateCreatorCallbacks {
+    onProjectCreated?(): void;
+    reportProgress?(detail: string): void;
+}
+
+export interface ConnectorProjectCreationOptions {
+    selection: ConnectorTriggerSelections;
+    outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
+    cancellationToken: vscode.CancellationToken;
+}
+
+export class ProjectTemplateCreator {
+    public constructor(private readonly callbacks: ProjectTemplateCreatorCallbacks = {}) { }
+
+    public async createProject(
+        context: IActionContext, template: IProjectTemplate, language: ProjectLanguage,
+        projectPath: string, options: ConnectorProjectCreationOptions,
+    ): Promise<void> {
+        const selections = validateConnectorTriggerSelections(options.selection);
+        const generic = isGenericConnectorTriggerTemplate(template, language);
+        const ownership = template.connectorTrigger;
+        if (!generic && !ownership) {
+            throw new Error(localize('connectorTriggerOwnershipMissing', 'The selected connector project template is missing operation ownership metadata.'));
+        }
+        const functionNames = selections.map(selection =>
+            ownership?.operations.find(operation => operation.operationId === selection.operationId)?.functionName ??
+            getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId).functionName);
+        if (new Set(functionNames.map(name => name.toLowerCase())).size !== functionNames.length) {
+            throw new Error(localize('connectorTemplateFunctionCollision', 'The selected events would register the same template function. Choose a different combination of events.'));
+        }
+        context.valuesToMask.push(projectPath);
+        context.telemetry.properties.connectorTriggerTemplate = generic ? 'generic' : 'specialized';
+        context.telemetry.properties.language = language;
+        const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
+        try {
+            const source = await this.downloadTemplate(context, template, temporaryDirectory);
+            this.checkCancellation(options);
+            this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
+            if (generic) {
+                await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
+            } else if (ownership) {
+                const ownedIds = selections.map(selection => selection.operationId)
+                    .filter(operationId => ownership.operations.some(operation => operation.operationId === operationId));
+                await materializeConnectorTriggerTemplateOperations(source, ownership, ownedIds);
+                const additionalIds = selections.map(selection => selection.operationId).filter(id => !ownedIds.includes(id));
+                if (additionalIds.length > 0) {
+                    await ensureConnectorTriggerPollProjects(source, language,
+                        { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
+                }
+            }
+            const registrations = await findConnectorTriggerRegistrations(source);
+            const bindings = await findPollingConnectorBindings(source);
+            if (registrations.length !== selections.length || bindings.length !== selections.length ||
+                functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
+                    bindings.filter(binding => binding.functionName === name).length !== 1)) {
+                throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));
+            }
+            await this.prepareLocalSettings(context, source);
+            if (selections.length > 1 && !generic) {
+                const readmePath = path.join(source, 'README.md');
+                const readme = await AzExtFsExtra.pathExists(readmePath) ? await AzExtFsExtra.readFile(readmePath) : '';
+                await AzExtFsExtra.writeFile(readmePath, `${readme.trimEnd()}
+
+## Selected Connector Trigger functions
+
+${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
+                    `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
+
+Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included. The starter's Azure provisioning hooks are single-event examples, not multi-event setup.
+`);
+            }
+            this.checkCancellation(options);
+            this.reportProgress(localize('settingUpConnectorProject', 'Setting up project files...'));
+            await this.copyPreparedProject(source, projectPath, options);
+            this.checkCancellation(options);
+            this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
+            await initProjectForVSCode(context, projectPath, language);
+            context.telemetry.properties.result = 'Succeeded';
+            this.callbacks.onProjectCreated?.();
+            void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
+            await this.promptAndOpenProject(context, projectPath);
+        } finally {
+            await AzExtFsExtra.deleteResource(temporaryDirectory, { recursive: true, useTrash: false });
+        }
+    }
+
+    private checkCancellation(options: ConnectorProjectCreationOptions): void {
+        if (options.cancellationToken.isCancellationRequested) {
+            throw new UserCancelledError('connectorProjectCreation');
+        }
+    }
+
+    private reportProgress(detail: string): void {
+        this.callbacks.reportProgress?.(detail);
+    }
+
+    private async prepareLocalSettings(context: IActionContext, source: string): Promise<void> {
+        const bindings = await findPollingConnectorBindings(source);
+        const configNames = bindings.map(binding => binding.triggerConfigSettingName.toLowerCase());
+        if (new Set(configNames).size !== configNames.length) {
+            throw new Error(localize('connectorTriggerConfigCollision', 'Each selected event must have its own trigger configuration setting.'));
+        }
+        const settingsPath = path.join(source, 'local.settings.json');
+        const settings = await getLocalSettingsJson(context, settingsPath);
+        if (settings.IsEncrypted) {
+            throw new Error(localize('connectorTemplateSettingsEncrypted', 'The connector project template must contain unencrypted example settings.'));
+        }
+        settings.Values ??= {};
+        for (const binding of bindings) {
+            for (const key of [binding.triggerConfigSettingName, `${binding.connectionSettingName}__pollingEndpoint`]) {
+                if (settings.Values[key] === undefined || /^<[^>]+>$/.test(settings.Values[key])) {
+                    settings.Values[key] = '';
+                }
+            }
+        }
+        await AzExtFsExtra.writeJSON(settingsPath, settings);
+    }
+
+    private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
+        const rawRef = template.gitRef?.trim() || template.branch?.trim() || 'main';
+        const repositoryPath = path.join(temporaryDirectory, 'repository');
+        let gitAvailable: boolean;
+        try {
+            await cpUtils.executeCommand(undefined, undefined, 'git', ['--version']);
+            gitAvailable = true;
+        } catch {
+            context.telemetry.properties.connectorTemplateDownload = 'zip';
+            gitAvailable = false;
+        }
+        if (gitAvailable) {
+            context.telemetry.properties.connectorTemplateDownload = 'git';
+            this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
+            if (/^[a-f\d]{40}$/i.test(rawRef)) {
+                await cpUtils.executeCommand(undefined, undefined, 'git', [
+                    'clone', '--depth', '1', '--filter=blob:none', '--no-checkout', template.repositoryUrl, repositoryPath,
+                ]);
+                await cpUtils.executeCommand(undefined, repositoryPath, 'git', ['fetch', '--depth', '1', 'origin', rawRef]);
+                await cpUtils.executeCommand(undefined, repositoryPath, 'git', ['checkout', '--detach', 'FETCH_HEAD']);
+            } else {
+                await cpUtils.executeCommand(undefined, undefined, 'git', [
+                    'clone', '--depth', '1', '--branch', rawRef.replace(/^refs\/(?:heads|tags)\//, ''), template.repositoryUrl, repositoryPath,
+                ]);
+            }
+        } else {
+            const archiveRef = rawRef.startsWith('refs/') || template.gitRef ? rawRef : `refs/heads/${rawRef}`;
+            const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
+            const zipPath = path.join(temporaryDirectory, 'template.zip');
+            const extractionPath = path.join(temporaryDirectory, 'extracted');
+            await requestUtils.downloadFile(context, url, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
+            await AzExtFsExtra.ensureDir(extractionPath);
+            await extractZip(zipPath, extractionPath);
+            const entries = await AzExtFsExtra.readDirectory(extractionPath);
+            if (entries.length !== 1 || entries[0].type !== vscode.FileType.Directory) {
+                throw new Error(localize('connectorTemplateArchiveInvalid', 'The connector project template archive has an unexpected layout.'));
+            }
+            await AzExtFsExtra.copy(path.join(extractionPath, entries[0].name), repositoryPath, { overwrite: false });
+        }
+        const relative = template.folderPath && template.folderPath !== '.' ? template.folderPath : template.subdirectory ?? '.';
+        const source = path.resolve(repositoryPath, relative);
+        const normalized = path.relative(repositoryPath, source);
+        if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized) ||
+            !await AzExtFsExtra.pathExists(path.join(source, 'host.json'))) {
+            throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
+        }
+        return source;
+    }
+
+    private async copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
+        const files: { source: string; destination: string }[] = [];
+        const visit = async (directory: string, relative: string): Promise<void> => {
+            for (const entry of await AzExtFsExtra.readDirectory(directory)) {
+                if (entry.name === '.git') {
+                    continue;
+                }
+                const sourcePath = path.join(directory, entry.name);
+                const destinationPath = path.join(destination, relative, entry.name);
+                if (entry.type === vscode.FileType.Directory) {
+                    await visit(sourcePath, path.join(relative, entry.name));
+                } else if (entry.type === vscode.FileType.File) {
+                    if (await AzExtFsExtra.pathExists(destinationPath)) {
+                        if (entry.name.startsWith('.') || relative.split(path.sep)[0] === '.vscode' ||
+                            (relative === '' && entry.name === 'local.settings.json')) {
+                            continue;
+                        }
+                        const [sourceContent, destinationContent] = await Promise.all([
+                            fs.promises.readFile(sourcePath), fs.promises.readFile(destinationPath),
+                        ]);
+                        if (!sourceContent.equals(destinationContent)) {
+                            throw new Error(localize(
+                                'connectorProjectTargetConflict',
+                                'The destination contains conflicting project files. Choose an empty folder or retry with the same event selection. No existing files were overwritten.',
+                            ));
+                        }
+                        continue;
+                    }
+                    files.push({ source: sourcePath, destination: destinationPath });
+                }
+            }
+        };
+        await visit(source, '');
+        this.checkCancellation(options);
+        for (const file of files) {
+            this.checkCancellation(options);
+            await AzExtFsExtra.ensureDir(path.dirname(file.destination));
+            await AzExtFsExtra.copy(file.source, file.destination, { overwrite: false });
+        }
+    }
+
+    private async promptAndOpenProject(context: IActionContext, projectPath: string): Promise<void> {
+        if (vscode.workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
+            return;
+        }
+        const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
+            projectPath, workspacePath: projectPath, workspaceFolder: undefined,
+            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
+        });
+        const wizard = new AzureWizard(wizardContext, {
+            title: localize('openProject', 'Open new project'),
+            promptSteps: [new OpenBehaviorStep()],
+            executeSteps: [new OpenFolderStep()],
+        });
+        try {
+            await wizard.prompt();
+            await wizard.execute();
+        } catch (error) {
+            if (!isUserCancelledError(error)) {
+                throw error;
+            }
+        }
+    }
+}

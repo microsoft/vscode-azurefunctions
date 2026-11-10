@@ -299,6 +299,31 @@ suite('Connector trigger data client', () => {
         );
     });
 
+    test('omits explicitly deprecated events without hiding supported webhook events', async () => {
+        const event = { isNotification: true, summary: 'Visible event' };
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(): Promise<unknown> {
+                    return { value: [
+                        { name: 'VisiblePoll', properties: event },
+                        { name: 'VisibleWebhook', properties: { ...event, isNotification: false, isWebhook: true } },
+                        { name: 'DeprecatedTopLevel', deprecated: true, properties: event },
+                        { name: 'DeprecatedProperty', properties: { ...event, deprecated: true } },
+                        { name: 'DeprecatedAnnotation', properties: { ...event, annotation: { status: 'Deprecated' } } },
+                        { name: 'DeprecatedSummary', properties: { ...event, summary: 'An old event [DEPRECATED]' } },
+                    ] };
+                },
+            }),
+        );
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        }, 'office365');
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['VisiblePoll']);
+        assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['VisibleWebhook']);
+    });
+
     test('loads the selected live output schema without scanning other connectors', async () => {
         const requests: string[] = [];
         const fixture = JSON.parse(await fs.promises.readFile(

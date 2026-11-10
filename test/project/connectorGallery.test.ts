@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import { createApplyFilters } from '../../node_modules/@microsoft/vscode-azext-webview/dist/esm/src/webview/TemplateGallery/applyFilters';
 import { FunctionListStep } from '../../src/commands/createFunction/FunctionListStep';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
-import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
+import { type ConnectorTriggerPickerLaunchOptions } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { connectorGallery, ProjectLanguage, TemplateFilter } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
@@ -83,7 +83,7 @@ suite('Connector Gallery', () => {
     ] as const) {
         test(`opens connector gallery with ${language} and preserves the project folder`, async () => {
             const context = await createContext({ language, languageModel });
-            let launchOptions: TemplateGalleryLaunchOptions | undefined;
+            let launchOptions: ConnectorTriggerPickerLaunchOptions | undefined;
             const step = new FunctionListStep({
                 isProjectWizard: true, templateId: undefined, functionSettings: undefined,
             }, options => { launchOptions = options; });
@@ -96,6 +96,8 @@ suite('Connector Gallery', () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);
             });
             assert.deepStrictEqual(launchOptions, {
+                language,
+                languageModel,
                 initialLocation: context.projectPath,
                 initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
             });

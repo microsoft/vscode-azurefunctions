@@ -15,7 +15,8 @@ import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from '../createNewProject/FunctionsTemplateGalleryController';
+import { ConnectorTriggerPickerController, type ConnectorTriggerPickerLaunchOptions } from '../createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
+import { FunctionsTemplateGalleryController } from '../createNewProject/FunctionsTemplateGalleryController';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
@@ -27,12 +28,16 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
-    private readonly _showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void;
+    private readonly _showTemplateGallery: (options: ConnectorTriggerPickerLaunchOptions) => void;
 
     public constructor(
         options: IFunctionListStepOptions,
-        showTemplateGallery: (options: TemplateGalleryLaunchOptions) => void = launchOptions => {
-            FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
+        showTemplateGallery: (options: ConnectorTriggerPickerLaunchOptions) => void = launchOptions => {
+            if (launchOptions.language === ProjectLanguage.JavaScript) {
+                FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
+            } else {
+                ConnectorTriggerPickerController.createOrShow(ext.context, launchOptions);
+            }
         }) {
         super();
         this._options = options;
@@ -116,6 +121,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else if (result === connectorGallery.id) {
                 const language = nonNullProp(context, 'language');
                 this._showTemplateGallery({
+                    language,
+                    languageModel: context.languageModel,
                     initialLocation: context.projectPath,
                     initialFilters: {
                         language: language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase(),
