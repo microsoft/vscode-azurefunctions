@@ -459,11 +459,22 @@ azurefunctions-extensions-connectors
 
     test('does not interpret inherited object properties as SDK capabilities', () => {
         for (const name of ['constructor', 'toString', '__proto__']) {
-            assert.deepStrictEqual(getConnectorTriggerSdkBinding(name, name), {
-                csharp: undefined, python: undefined,
-                typescript: { helper: undefined, importPath: undefined, itemType: undefined },
-            });
+            for (const connector of [name, 'office365']) {
+                assert.deepStrictEqual(getConnectorTriggerSdkBinding(connector, name), {
+                    csharp: undefined, python: undefined,
+                    typescript: { helper: undefined, importPath: undefined, itemType: undefined },
+                });
+            }
         }
+    });
+
+    test('normalizes connector casing without treating different operation revisions as equivalent', () => {
+        assert.deepStrictEqual(
+            getConnectorTriggerSdkBinding('GitHub', 'IssueOpened'),
+            getConnectorTriggerSdkBinding('github', 'IssueOpened'),
+        );
+        assert.strictEqual(getConnectorTriggerSdkBinding('github', 'issueopened').csharp, undefined);
+        assert.strictEqual(getConnectorTriggerSdkBinding('office365', 'OnNewEmailV2').typescript.helper, undefined);
     });
 
     for (const range of ['*', '>=22 || >=26', '<25', 'invalid']) {

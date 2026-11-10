@@ -22,6 +22,7 @@ import {
 import { type ConnectorTriggerSelection } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
+import { connectorSdkVersions } from './connectorTriggerSdkBindings.generated';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -246,7 +247,7 @@ export async function updateCSharpConnectorExtension(
     );
     if (usesSdkPayload) {
         const sdkPattern = /(<PackageReference\s+Include="Azure\.Connectors\.Sdk"\s+Version=")([^"]+)("\s*\/>)/i;
-        const minimumVersion = '0.15.0-preview.1';
+        const minimumVersion = connectorSdkVersions.csharp;
         updated = sdkPattern.test(updated) ? updated.replace(
             sdkPattern,
             (_match, prefix: string, version: string, suffix: string) =>
@@ -281,18 +282,14 @@ async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> 
             engines?: Record<string, string>;
         }>(packagePath) : {};
     const dependencies = packageJson.dependencies ??= {};
-    for (const [name, version] of Object.entries({
-        '@azure/functions': '4.17.0',
-        '@azure/functions-extensions-connectors': '0.2.0-preview',
-        '@azure/connectors': '0.4.0-preview',
-    })) {
+    for (const [name, version] of Object.entries(connectorSdkVersions.node)) {
         if (!hasMinimumVersion(dependencies[name], version)) {
             dependencies[name] = `^${version}`;
         }
     }
     const engines = packageJson.engines ??= {};
-    if (!hasMinimumVersion(engines.node, '24.0.0')) {
-        engines.node = '>=24.0.0';
+    if (!hasMinimumVersion(engines.node, connectorSdkVersions.nodeMinimumVersion)) {
+        engines.node = `>=${connectorSdkVersions.nodeMinimumVersion}`;
     }
     await AzExtFsExtra.writeJSON(packagePath, packageJson);
 }
@@ -358,10 +355,7 @@ export async function updatePythonFunctionsSdk(
         requirements = `${requirements.trimEnd()}${lineEnding}${functionsRequirements}`;
     }
     if (usesSdkPayload) {
-        for (const [name, version] of [
-            ['azurefunctions-extensions-connectors', '1.0.0b4'],
-            ['azure-connectors', '0.6.0b1'],
-        ]) {
+        for (const [name, version] of Object.entries(connectorSdkVersions.python)) {
             const pattern = new RegExp(`^${name}(?:[<>=!~].*)?$`, 'im');
             requirements = pattern.test(requirements) ?
                 requirements.replace(pattern, `${name}>=${version}`) :

@@ -88,7 +88,9 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 Connector Trigger handlers use the exact selected connector and operation, not a model inferred from an action response or a similar name. Node.js prefers that event's named extension helper, then `connectorTrigger` with a verified SDK item type, then `connectorTrigger` with unknown items. C# uses a declared SDK callback payload, or `ConnectorEvent<string>` when no mapping is verified. Python imports a typed Functions adapter only when both the event's SDK model and that specific annotation adapter are supported; otherwise it binds to `str`. Python leaves cardinality and batch size at their defaults.
 
-The capability table in `src/connectorTrigger/connectorTriggerSdkBindings.ts` records the verified package versions. Node.js projects require Node.js 24 or later. Python's published adapter and SDK versions are currently `1.0.0b4` and `0.6.0b1`, respectively; final `1.0.0` packages are not yet published. Existing handlers and local setting values are preserved.
+The SDK capability snapshot is generated, not maintained connector by connector. Existing handlers and local setting values are preserved. Node.js projects require Node.js 24 or later.
+
+Mappings improve author-time imports, SDK binding conversion, and IntelliSense; they do not enable event delivery. The runtime payload contains JSON fields and values, not language-specific imports, SDK versions, or Functions adapter availability. Unmapped events remain usable through the raw/untyped binding. SDK package-format changes can still require changes to the generator until the SDKs expose a complete cross-runtime metadata manifest.
 
 ### "unable to get local issuer certificate" on a corporate network
 
@@ -110,6 +112,12 @@ There are a couple of ways you can contribute to this repo:
   * Open the terminal (press <kbd>CTRL</kbd>+ <kbd>\`</kbd>) and run `npm install`.
   * To build, press <kbd>F1</kbd> and type in `Tasks: Run Build Task`.
   * Debug: press <kbd>F5</kbd> to start debugging the extension.
+
+### Refreshing Connector Trigger SDK metadata
+
+Update the package pins in `scripts/connectorSdkBindings/update.mjs` and run `npm run update-connector-sdk-bindings`. Review and commit `src/connectorTrigger/connectorTriggerSdkBindings.generated.ts`; do not edit individual entries. The command installs the pinned packages in a temporary directory and reads .NET's `Triggers.Operations` registries, Python's `TRIGGER_OPERATIONS` and adapter type metadata, and Node's SDK declarations and exported helper signatures. Named Node helpers are joined to SDK operation constant names within the matching connector module; aliases without a matching identifier use the generic helper. Generated SDK dependency minimums come from the same pins, and the Node.js minimum comes from the Functions package's engine requirement.
+
+Refreshing needs Node.js 24+, Python 3.10+ with pip, and the .NET 8+ SDK. Python can be selected with `AZFUNC_TEST_PYTHON`. Use `npm run update-connector-sdk-bindings -- --check` to verify reproducibility and `npm run test-connector-sdk-bindings` for the offline generator tests. Normal extension builds and project creation use the checked-in snapshot offline and require none of this discovery tooling.
 
 ### Legal
 
