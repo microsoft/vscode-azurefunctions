@@ -11,6 +11,7 @@ import { type ResourceGraphClient } from '@azure/arm-resourcegraph';
 import { type ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { type SqlManagementClient } from '@azure/arm-sql';
 import { type ServiceClient } from '@azure/core-client';
+import { type BlobServiceClient } from '@azure/storage-blob';
 import { AzExtClientType, AzExtSubscriptionClientType, createAzureClient, createAzureSubscriptionClient, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
@@ -46,4 +47,10 @@ export async function createAppInsightsClient(context: AzExtClientContext): Prom
 export async function createResourceGraphClient(context: AzExtClientContext): Promise<ResourceGraphClient> {
     // For typecast reasoning, see: https://github.com/microsoft/vscode-azuretools/pull/2184
     return createAzureSubscriptionClient(context, (await import('@azure/arm-resourcegraph')).ResourceGraphClient as unknown as AzExtSubscriptionClientType<ResourceGraphClient>);
+}
+
+export async function createAzuriteBlobServiceClient(url: string): Promise<BlobServiceClient> {
+    const { BlobServiceClient } = await import('@azure/storage-blob');
+    const emulator = BlobServiceClient.fromConnectionString('UseDevelopmentStorage=true');
+    return new BlobServiceClient(url, emulator.credential, { retryOptions: { maxTries: 1 } });
 }
