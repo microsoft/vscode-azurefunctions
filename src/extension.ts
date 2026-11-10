@@ -12,6 +12,7 @@ import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vsc
 import { registerMcpTool } from '@microsoft/vscode-inproc-mcp/mcp';
 import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
+import { TimerInvocationEditors } from './webviews/azureInvoke/extension/TimerInvocationEditors';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
@@ -106,9 +107,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
         const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+        const azureInvokeTimers = new TimerInvocationEditors(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
             azureInvokeEditors,
+            azureInvokeTimers,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
@@ -120,7 +123,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     schedulerClient
                 }
             },
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors }
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, timers: azureInvokeTimers }
         });
 
         const mcpOptions: McpProviderOptions = {

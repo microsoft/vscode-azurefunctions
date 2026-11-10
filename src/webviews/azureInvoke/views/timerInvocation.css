@@ -1,0 +1,14 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+#timer-form > label { display: grid; gap: 6px; margin-bottom: 16px; }
+.timer-schedule { display: grid; gap: 6px; }
+.timer-schedule code { overflow-wrap: anywhere; }
+.timer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#breakpoint-guidance { min-height: 76px; font-family: inherit; }
+#breakpoint-guidance::placeholder { color: var(--vscode-input-placeholderForeground); }
+#receipt { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; }
+#receipt dt { color: var(--vscode-descriptionForeground); }
+#receipt dd { margin: 0; }
