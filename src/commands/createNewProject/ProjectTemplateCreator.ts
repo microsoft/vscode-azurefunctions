@@ -25,7 +25,7 @@ import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
 import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
+import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
@@ -106,7 +106,7 @@ Configure every event separately before running or deploying. Authoring does not
             await this.copyPreparedProject(source, projectPath, options);
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
-            await initProjectForVSCode(context, projectPath, language);
+            await initProjectForVSCodeAtProjectRoot(context, projectPath, language);
             context.telemetry.properties.result = 'Succeeded';
             this.callbacks.onProjectCreated?.();
             void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));

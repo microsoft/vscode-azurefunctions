@@ -8,12 +8,15 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource } from 'vscode';
+import { CancellationTokenSource, Uri, workspace } from 'vscode';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
-import { ProjectLanguage } from '../../src/constants';
+import { ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { nonNullValue } from '../../src/utils/nonNull';
+import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
 
 suite('Connector project batch creation', () => {
     let root: string;
@@ -87,6 +90,93 @@ suite('Connector project batch creation', () => {
         ), /same template function/);
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
     });
+
+    for (const { projectSubpath, childOpen } of [
+        { projectSubpath: undefined, childOpen: true },
+        { projectSubpath: 'existing', childOpen: true },
+        { projectSubpath: undefined, childOpen: false },
+    ]) {
+        test(`initializes the selected ${childOpen ? 'open' : 'unopened'} child instead of the parent's ${projectSubpath ? 'configured' : 'root'} project`, async function () {
+            this.timeout(30_000);
+            const parent = path.join(root, 'parent');
+            destination = path.join(parent, 'connector');
+            const existingProject = projectSubpath ? path.join(parent, projectSubpath) : parent;
+            await AzExtFsExtra.ensureDir(path.join(parent, '.vscode'));
+            await AzExtFsExtra.ensureDir(existingProject);
+            await AzExtFsExtra.ensureDir(destination);
+            await AzExtFsExtra.writeJSON(path.join(existingProject, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeFile(path.join(existingProject, 'function_app.py'), 'import azure.functions as func\n');
+            await AzExtFsExtra.writeFile(path.join(existingProject, 'requirements.txt'), 'azure-functions\n');
+            await AzExtFsExtra.writeJSON(path.join(parent, '.vscode', 'settings.json'), {
+                'azureFunctions.projectLanguage': ProjectLanguage.Python,
+                'azureFunctions.projectSubpath': projectSubpath,
+                'azureFunctions.deploySubpath': projectSubpath || '.',
+                'azureFunctions.preDeployTask': 'func: pack',
+            });
+            await AzExtFsExtra.writeJSON(path.join(parent, '.vscode', 'tasks.json'), {
+                version: '2.0.0', tasks: [{ type: 'func', command: 'host start', problemMatcher: '$func-python-watch' }],
+            });
+            await AzExtFsExtra.writeJSON(path.join(parent, '.vscode', 'launch.json'), {
+                version: '0.2.0', configurations: [{ name: 'Python', type: 'debugpy', request: 'attach' }],
+            });
+            const configFiles = ['settings.json', 'tasks.json', 'launch.json'];
+            const originalConfig = await Promise.all(configFiles.map(file => fs.promises.readFile(path.join(parent, '.vscode', file))));
+            await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node' },
+            });
+            await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+            await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
+                name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
+            });
+            const creator = new ProjectTemplateCreator();
+            // Replace only the download; exercise materialization, copying and VS Code initialization.
+            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                    listener.dispose();
+                    resolve();
+                });
+            });
+            const folders = [{ uri: Uri.file(parent) }, ...(childOpen ? [{ uri: Uri.file(destination) }] : [])];
+            assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, ...folders));
+            await added;
+            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            try {
+                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
+
+                for (const [index, file] of configFiles.entries()) {
+                    assert.deepStrictEqual(await fs.promises.readFile(path.join(parent, '.vscode', file)), originalConfig[index], `Parent ${file} changed`);
+                }
+                assert.deepStrictEqual((await fs.promises.readdir(path.join(parent, '.vscode'))).sort(), configFiles.sort());
+                const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
+                assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
+                assert.strictEqual(settings['azureFunctions.deploySubpath'], '.');
+                assert.strictEqual(settings['azureFunctions.preDeployTask'], 'npm prune (functions)');
+                const tasks = await AzExtFsExtra.readJSON<{ tasks: { label: string; options?: { cwd?: string } }[] }>(path.join(destination, '.vscode', 'tasks.json'));
+                assert.ok(tasks.tasks.some(task => task.label === 'npm build (functions)'));
+                assert.ok(tasks.tasks.every(task => !task.options?.cwd));
+                const launch = await AzExtFsExtra.readJSON<{ configurations: { type: string }[] }>(path.join(destination, '.vscode', 'launch.json'));
+                assert.ok(launch.configurations.some(config => config.type === 'node'));
+                assert.ok(await AzExtFsExtra.pathExists(path.join(destination, '.vscode', 'extensions.json')));
+                assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+            } finally {
+                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                        listener.dispose();
+                        resolve();
+                    });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, folders.length));
+                await removed;
+            }
+        });
+    }
 
     test('rejects destination conflicts before copying any file', async () => {
         await AzExtFsExtra.writeFile(path.join(source, 'first.txt'), 'new');

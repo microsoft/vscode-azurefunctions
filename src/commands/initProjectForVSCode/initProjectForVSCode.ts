@@ -10,6 +10,7 @@ import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
+import { isPathEqual } from '../../utils/fs';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
@@ -42,6 +43,20 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         return;
     }
 
+    await initializeProject(context, projectPath, workspacePath, workspaceFolder, language);
+}
+
+/**
+ * Initializes a known project root without discovering another project in a containing workspace.
+ */
+export async function initProjectForVSCodeAtProjectRoot(context: IActionContext, projectPath: string, language?: ProjectLanguage): Promise<void> {
+    const workspaceFolder = workspace.workspaceFolders?.find(folder => isPathEqual(folder.uri.fsPath, projectPath));
+    await initializeProject(context, projectPath, projectPath, workspaceFolder, language);
+}
+
+async function initializeProject(
+    context: IActionContext, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder | undefined, language?: ProjectLanguage,
+): Promise<void> {
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
     const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
