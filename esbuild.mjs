@@ -36,6 +36,7 @@ await autoEsbuildOrWatch(configs);
 const webviewBuild = await context({
     entryPoints: {
         views: 'src/webviews/azureInvoke/views/httpRequestView.ts',
+        timerInvocation: 'src/webviews/azureInvoke/views/timerInvocation.ts',
     },
     outdir: 'dist/azureInvoke',
     bundle: true,

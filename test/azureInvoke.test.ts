@@ -16,8 +16,10 @@ import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvoke
 import { parseInvocationCollection, serializeInvocationCollection } from '../src/tree/azureInvoke/invocationCollection';
 import { HttpRequestController } from '../src/webviews/azureInvoke/extension/HttpRequestController';
 import { HttpRequestEditors } from '../src/webviews/azureInvoke/extension/HttpRequestEditors';
+import { TimerInvocationEditors } from '../src/webviews/azureInvoke/extension/TimerInvocationEditors';
 import { sendHttpRequest } from '../src/webviews/azureInvoke/extension/sendHttpRequest';
 import { type HttpInvocation, type HttpRequest } from '../src/webviews/azureInvoke/shared/httpRequest';
+import { type TimerInvocation } from '../src/webviews/azureInvoke/shared/timerInvocation';
 import { formatResponseBody } from '../src/webviews/azureInvoke/views/formatResponseBody';
 import { getTestApi } from './utils/testApiAccess';
 
@@ -1078,6 +1080,109 @@ suite('Azure Invoke', () => {
 
 
 
+    suite('manual Timer invocations', () => {
+        function timerInvocation(functionName = 'CleanupTimer'): TimerInvocation {
+            return {
+                id: 'cleanup-timer', name: "Timer's </script><img src=x>", group: 'Maintenance', trigger: 'timer',
+                request: { hostUrl: baseUrl, functionName, schedule: '0 */5 * * * *' },
+            };
+        }
+
+        test('saves and invokes a Timer once through the local host without creating a scheduler', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation();
+            const before = timerRequests.length;
+            try {
+                await runEditorScript(editors.open(timer, false), `
+                    if (document.querySelector('h1 img')) throw new Error('Timer name was interpreted as HTML.');
+                    if (document.querySelector('.subtitle').textContent !== 'Timer Trigger') throw new Error('Timer trigger description is missing.');
+                    if (document.querySelector('#schedule').textContent !== '0 */5 * * * *' || document.querySelector('input#schedule')) throw new Error('Configured schedule is not read-only reference information.');
+                    document.querySelector('#save').click();
+                    await waitFor(() => document.querySelector('#save-status').textContent === 'Saved for this session');
+                    document.querySelector('#run').click();
+                    await waitFor(() => !document.querySelector('#receipt').hidden);
+                    if (!document.querySelector('#invocation-status').textContent.includes('function execution not observed')) throw new Error('Host acceptance claimed function success.');
+                    if (document.querySelector('main').textContent.includes('private-timer-host-body')) throw new Error('Host body was displayed.');
+                `);
+                assert.strictEqual(timerRequests.length, before + 1);
+                assert.deepStrictEqual(timerRequests.at(-1), {
+                    url: '/admin/functions/CleanupTimer', method: 'POST', body: '{"input":""}', contentType: 'application/json',
+                });
+                assert.deepStrictEqual(provider.getTimerInvocation(timer.id), timer);
+                assert.deepStrictEqual(provider.getRequests(), []);
+                assert.strictEqual(provider.getTreeItem(timer).description, 'Timer Trigger');
+                assert.strictEqual(provider.getTreeItem(timer).contextValue, 'azureInvoke.timer');
+                assert.strictEqual(provider.getRequestRunStatus(timer.id).statusCode, 202);
+                assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection([timer])), [timer]);
+                assert.strictEqual(JSON.parse(serializeInvocationCollection([timer])).version, 4);
+                assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 3, invocations: [timer] })), /version 4/);
+                const http = invocation();
+                assert.throws(() => provider.saveRequest({
+                    ...http, request: { ...http.request, dependsOn: [timer.id] },
+                }), /prerequisite request is unavailable/);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+
+
+        test('closing a Timer editor cancels an in-flight invocation and host failures are not retried or exposed', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation('SlowTimer');
+            const before = timerRequests.length;
+            try {
+                const editor = editors.open(timer, false);
+                const received = new Promise<void>(resolve => server.once('request', () => resolve()));
+                const pending = editors.run(await createTestActionContext(), timer);
+                const cancelled = assert.rejects(pending, isUserCancelledError);
+                await received;
+                editor.dispose();
+                await cancelled;
+                assert.strictEqual(editors.size, 0);
+                const failed = timerInvocation('MissingTimer');
+                await assert.rejects(editors.run(await createTestActionContext(), failed), (error: unknown) => {
+                    assert.ok(error instanceof Error);
+                    assert.match(error.message, /HTTP 404/);
+                    assert.ok(!error.message.includes('private-timer-host-body'));
+                    return true;
+                });
+                assert.strictEqual(timerRequests.length, before + 2);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+
+        test('Timer targets reject remote hosts, credentials, paths, and malformed function names before sending', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const editors = new TimerInvocationEditors(context, provider);
+            const timer = timerInvocation();
+            const action = await createTestActionContext();
+            const before = receivedRequests;
+            try {
+                for (const hostUrl of ['https://example.com', `${baseUrl}/api`, `${baseUrl}?code=private`, `${baseUrl}#fragment`, baseUrl.replace('://', '://user:password@')]) {
+                    await assert.rejects(editors.run(action, { ...timer, request: { ...timer.request, hostUrl } }), /loopback Functions host/);
+                }
+                for (const functionName of ['', '../OtherFunction', 'Contains/Slash', 'Contains space']) {
+                    await assert.rejects(editors.run(action, { ...timer, request: { ...timer.request, functionName } }), /function name/);
+                }
+                assert.strictEqual(receivedRequests, before);
+            } finally {
+                editors.dispose();
+                provider.dispose();
+            }
+        });
+    });
 
     test('manual trigger commands open the matching bundled HTTP, Blob, and Timer editors', async () => {
         const api = await getTestApi();
@@ -1093,6 +1198,15 @@ suite('Azure Invoke', () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
             });
             await vscode.window.tabGroups.close(await waitForInvocationTab());
+            await ui.runWithInputs(['Timer trigger'], async () => {
+                await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
+            });
+            const findTimerTab = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab =>
+                tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('azureInvokeTimer'));
+            await waitForTabChange(() => !!findTimerTab());
+            const timerTab = findTimerTab();
+            assert.ok(timerTab);
+            await vscode.window.tabGroups.close(timerTab);
         } finally {
             handler.dispose();
         }
