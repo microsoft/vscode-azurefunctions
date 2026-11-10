@@ -43,5 +43,10 @@ extends:
         displayName: Install .NET 9.0
         inputs:
           version: 9.0.x
+      - task: UsePythonVersion@0
+        displayName: Use Python 3.12
+        inputs:
+          versionSpec: '3.12'
+          addToPath: true
     ${{ if eq(parameters.enableLongRunningTests, true) }}:
       testARMServiceConnection: ${{ variables.testARMServiceConnection }}
