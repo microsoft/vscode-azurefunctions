@@ -52,6 +52,7 @@ import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableT
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
+import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
@@ -97,8 +98,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
         const azureInvokeProvider = new AzureInvokeTreeDataProvider();
+        const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
         context.subscriptions.push(
             azureInvokeProvider,
+            azureInvokeEditors,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
         );
 
@@ -110,7 +113,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     schedulerClient
                 }
             },
-            azureInvoke: { provider: azureInvokeProvider }
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors }
         });
 
         registerFuncHostTaskEvents();

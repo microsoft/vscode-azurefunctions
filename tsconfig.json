@@ -23,6 +23,7 @@
         ]
     },
     "exclude": [
+        "src/webviews/azureInvoke/views",
         "**/node_modules",
         ".vscode-test",
         "**/dist",

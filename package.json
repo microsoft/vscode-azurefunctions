@@ -117,6 +117,17 @@
         ],
         "commands": [
             {
+                "command": "azureFunctions.azureInvoke.add",
+                "title": "%azureFunctions.azureInvoke.add%",
+                "category": "Azure Functions",
+                "icon": "$(add)"
+            },
+            {
+                "command": "azureFunctions.azureInvoke.open",
+                "title": "%azureFunctions.azureInvoke.open%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.azureInvoke.saveCollection",
                 "title": "%azureFunctions.azureInvoke.saveCollection%",
                 "category": "Azure Functions",
@@ -579,6 +590,11 @@
             ],
             "view/title": [
                 {
+                    "command": "azureFunctions.azureInvoke.add",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "azureFunctions.azureInvoke.openCollection",
                     "when": "view == azureFunctions.azureInvoke",
                     "group": "navigation@2"
@@ -1014,6 +1030,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.azureInvoke.open",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.useClassicTemplateFeed",
                     "when": "never"
@@ -1644,8 +1664,8 @@
         "vscode:prepublish": "npm run build",
         "build": "npm run build:esbuild & npm run build:check",
         "build:esbuild": "node esbuild.mjs",
-        "build:check": "tsgo --noEmit",
-        "check": "tsgo --noEmit",
+        "build:check": "tsgo --noEmit && tsgo --noEmit -p src/webviews/azureInvoke/views",
+        "check": "tsgo --noEmit && tsgo --noEmit -p src/webviews/azureInvoke/views",
         "compile": "tsgo -watch",
         "version": "tsgo --version",
         "cleanReadme": "node scripts/cleanReadme.mjs",

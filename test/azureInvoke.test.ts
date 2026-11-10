@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, isUserCancelledError, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, isUserCancelledError, registerOnActionStartHandler, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs-extra';
 import { createServer, type Server } from 'http';
@@ -14,8 +14,12 @@ import * as vscode from 'vscode';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
 import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { parseInvocationCollection, serializeInvocationCollection } from '../src/tree/azureInvoke/invocationCollection';
+import { HttpRequestController } from '../src/webviews/azureInvoke/extension/HttpRequestController';
+import { HttpRequestEditors } from '../src/webviews/azureInvoke/extension/HttpRequestEditors';
 import { sendHttpRequest } from '../src/webviews/azureInvoke/extension/sendHttpRequest';
 import { type HttpInvocation, type HttpRequest } from '../src/webviews/azureInvoke/shared/httpRequest';
+import { formatResponseBody } from '../src/webviews/azureInvoke/views/formatResponseBody';
+import { getTestApi } from './utils/testApiAccess';
 
 suite('Azure Invoke', () => {
     let server: Server;
@@ -26,6 +30,19 @@ suite('Azure Invoke', () => {
     const timerRequests: { url: string; method: string; body: string; contentType?: string }[] = [];
     let accountNumber = 0;
     const compactResponseJson = '{"items":[{"id":9007199254740993,"amount":1.2300e+4,"zero":-0}],"message":"<img src=x>","empty":[]}';
+    const formattedResponseJson = [
+        '{',
+        '  "items": [',
+        '    {',
+        '      "id": 9007199254740993,',
+        '      "amount": 1.2300e+4,',
+        '      "zero": -0',
+        '    }',
+        '  ],',
+        '  "message": "<img src=x>",',
+        '  "empty": []',
+        '}',
+    ].join('\n');
 
     suiteSetup(async () => {
         server = createServer(async (request, response) => {
@@ -493,11 +510,270 @@ suite('Azure Invoke', () => {
         }
     });
 
+    const editorDocuments = new WeakMap<object, string>();
+    let editorInteractionSequence = 0;
+
+    async function runEditorScript(controller: { readonly panel: vscode.WebviewPanel }, script: string): Promise<void> {
+        let timer: NodeJS.Timeout | undefined;
+        let subscription: vscode.Disposable | undefined;
+        try {
+            await new Promise<void>((resolve, reject) => {
+                timer = setTimeout(() => reject(new Error('Azure Invoke editor did not finish the interaction.')), 10000);
+                subscription = controller.panel.webview.onDidReceiveMessage((message: unknown) => {
+                    if (message && typeof message === 'object' && 'testResult' in message) {
+                        if (message.testResult === true) {
+                            resolve();
+                        } else {
+                            reject(new Error(String(message.testResult)));
+                        }
+                    }
+                });
+                const html = editorDocuments.get(controller) ?? controller.panel.webview.html;
+                editorDocuments.set(controller, html);
+                const nonce = /nonce="([^"]+)"/.exec(html)?.[1];
+                assert.ok(nonce);
+                controller.panel.webview.html = html.replace('acquireVsCodeApi()', 'window.testApi = acquireVsCodeApi()')
+                    .replace('</body>', `<script nonce="${nonce}" data-test-interaction="${++editorInteractionSequence}">
+                        async function waitFor(predicate) {
+                            if (predicate()) return;
+                            await new Promise((resolve, reject) => {
+                                const observer = new MutationObserver(check);
+                                const timer = setTimeout(() => finish(new Error('Editor state did not update: ' + predicate.toString())), 4000);
+                                function finish(error) {
+                                    observer.disconnect();
+                                    clearTimeout(timer);
+                                    window.removeEventListener('message', check);
+                                    if (error) reject(error); else resolve();
+                                }
+                                function check() {
+                                    try {
+                                        if (predicate()) finish();
+                                    } catch (error) {
+                                        finish(error);
+                                    }
+                                }
+                                observer.observe(document, { childList: true, subtree: true, attributes: true, characterData: true });
+                                window.addEventListener('message', check);
+                                check();
+                            });
+                        }
+                        (async () => {
+                            let receiveInitialReview;
+                            const initialReview = new Promise(resolve => {
+                                receiveInitialReview = event => {
+                                    if (event.data.command === 'proposal') {
+                                        window.removeEventListener('message', receiveInitialReview);
+                                        setTimeout(resolve, 0);
+                                    }
+                                };
+                                window.addEventListener('message', receiveInitialReview);
+                            });
+                            await waitFor(() => document.querySelector('#save') || document.querySelector('#confirm-collection'));
+                            if (document.querySelector('#confirm-collection')) {
+                                await initialReview;
+                            } else {
+                                window.removeEventListener('message', receiveInitialReview);
+                            }
+                            ${script}
+                            window.testApi.postMessage({ command: 'ready', testResult: true });
+                        })().catch(error => window.testApi.postMessage({ command: 'ready', testResult: error.message }));
+                    </script></body>`);
+            });
+        } finally {
+            clearTimeout(timer);
+            subscription?.dispose();
+        }
+    }
+
+    test('renames, saves, closes, and reopens a real request editor with its saved fields', async () => {
+        const extensionContext = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(extensionContext);
+        const provider = new AzureInvokeTreeDataProvider();
+        const draft = { ...provider.createRequest(), group: 'Customers' };
+        const name = "Customer's </script><img src=x>";
+        const ui = new TestUserInput(vscode);
+        const handler = registerOnActionStartHandler(context => {
+            if (context.callbackId === 'azureFunctions.azureInvoke.rename') {
+                context.ui = ui;
+            }
+        });
+        const controllers: HttpRequestController[] = [];
+        try {
+            const controller = new HttpRequestController(extensionContext, draft, false, saved => provider.saveRequest(saved));
+            controllers.push(controller);
+            await ui.runWithInputs([name], () => runEditorScript(controller, `
+                document.querySelector('#rename').click();
+                await waitFor(() => document.querySelector('#invocation-name').textContent === decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}'));
+                document.querySelector('#url').value = '${baseUrl}/echo';
+                document.querySelector('#body').value = 'saved body for a future POST';
+                document.querySelector('#query-rows input').value = 'tag';
+                document.querySelectorAll('#query-rows input')[1].value = 'saved query';
+                document.querySelector('#header-rows input').value = 'x-functions-key';
+                document.querySelectorAll('#header-rows input')[1].value = 'example-key';
+                document.querySelector('#request-form').dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('#save').click();
+                await waitFor(() => document.querySelector('#save').disabled && document.querySelector('#save-status').textContent === 'Saved for this session');
+                document.querySelector('#url').value = '${baseUrl}/unsaved';
+                document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
+                if (document.querySelector('#save').disabled) throw new Error('Editing did not enable Save.');
+            `));
+            assert.strictEqual(controller.panel.title, name);
+            controller.panel.dispose();
+            const saved = provider.getRequest(draft.id);
+            assert.ok(saved);
+            assert.strictEqual(saved.name, name);
+            assert.strictEqual(saved.group, 'Customers');
+            assert.strictEqual(saved.request.url, `${baseUrl}/echo`);
+            assert.strictEqual(saved.request.body, 'saved body for a future POST');
+            assert.strictEqual(saved.request.headers[0].value, 'example-key');
+
+            const reopened = new HttpRequestController(extensionContext, saved, true, updated => provider.saveRequest(updated));
+            controllers.push(reopened);
+            await runEditorScript(reopened, `
+                if (document.querySelector('#invocation-name').textContent !== decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}')) throw new Error('Saved name was not restored.');
+                if (document.querySelector('#invocation-name img')) throw new Error('Name was interpreted as HTML.');
+                if (document.querySelector('#url').value !== '${baseUrl}/echo') throw new Error('Saved URL was not restored.');
+                if (document.querySelector('#body').value !== 'saved body for a future POST' || !document.querySelector('#body').disabled) throw new Error('Disabled request body was not retained.');
+                if (document.querySelectorAll('#query-rows input')[1].value !== 'saved query') throw new Error('Query parameters were not restored.');
+                if (document.querySelectorAll('#header-rows input')[1].value !== 'example-key') throw new Error('Headers were not restored.');
+                if (!document.querySelector('#save').disabled) throw new Error('Unchanged saved request was marked dirty.');
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                if (JSON.parse(document.querySelector('#response-body').textContent).body !== '') throw new Error('GET sent the disabled body.');
+            `);
+        } finally {
+            controllers.forEach(controller => controller.panel.dispose());
+            handler.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('response formatting preserves non-JSON bodies, malformed JSON, primitives, and original JSON tokens', () => {
+        assert.strictEqual(formatResponseBody(compactResponseJson), formattedResponseJson);
+        for (const body of ['', '  plain text\nunchanged  ', '<html>Not JSON</html>', '{"incomplete":', '{"trailing":true,}', '/* comment */ {"value":1}', 'null', 'true', '42', '[]', '{}', '"literal\\nvalue"']) {
+            assert.strictEqual(formatResponseBody(body), body);
+        }
+        assert.strictEqual(formatResponseBody('{"escaped":"\\u0061\\n\\\"","duplicate":1,"duplicate":2}'),
+            '{\n  "escaped": "\\u0061\\n\\\"",\n  "duplicate": 1,\n  "duplicate": 2\n}');
+    });
+
+    test('JSON responses are indented in both the request editor and collection preview without changing values', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const invocation = { ...provider.createRequest(), request: request({ url: `${baseUrl}/format-json` }) };
+        const editor = new HttpRequestController(context, invocation, false, saved => provider.saveRequest(saved));
+        try {
+            await runEditorScript(editor, `
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                if (document.querySelector('#response-body').textContent !== ${JSON.stringify(formattedResponseJson)}) throw new Error('The request editor did not indent JSON while preserving its original values.');
+                if (document.querySelector('#response-body img')) throw new Error('The response was interpreted as HTML.');
+            `);
+            provider.saveRequest(invocation);
+        } finally {
+            editor.panel.dispose();
+            provider.dispose();
+        }
+    });
 
 
 
 
 
+    test('generated inputs reject reserved binding names and invalid or stale linked request fields', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const source = { id: 'input-source', name: 'Input source', request: request({ method: 'POST', body: '{"email":"invoke-{{guid}}@example.com"}' }) };
+        const target = {
+            id: 'use-input', name: 'Use input',
+            request: request({ query: [{ name: 'email', value: '{{email}}' }], bindings: [{ name: 'email', sourceId: source.id, pointer: '/request/body/email' }] }),
+        };
+        provider.saveRequests([target, source]);
+        try {
+            const action = await createTestActionContext();
+            const before = receivedRequests;
+            assert.throws(() => provider.saveRequest({ ...target, request: { ...target.request, bindings: [{ name: 'guid', sourceId: source.id, pointer: '/body' }] } }), /other than guid/);
+            await assert.rejects(editors.sendRequest(action, { ...target, request: { ...target.request, url: 'http://{{guid}}/echo' } }, undefined, true), /fixed HTTP/);
+            assert.strictEqual(receivedRequests, before, 'An invalid generator destination ran its prerequisite.');
+            await editors.sendRequest(action, target, undefined, true);
+            provider.saveRequest({ ...source, request: { ...source.request, body: '{"email":"changed-{{guid}}@example.com"}' } });
+            await assert.rejects(editors.sendRequest(action, target), /current successful result/);
+            provider.saveRequest({ ...source, request: { ...source.request, body: 'not JSON' } });
+            await assert.rejects(editors.sendRequest(action, target, undefined, true), /linked request body is not valid JSON/);
+            provider.saveRequest({ ...source, request: { ...source.request, body: '{}' } });
+            await assert.rejects(editors.sendRequest(action, target, undefined, true), /selected request or response field is missing/);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('dependency pickers filter by name or ID, support keyboard selection, and list only chosen prerequisites', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const sources = Array.from({ length: 30 }, (_, index) => ({ id: `source-${index}`, name: `Create resource ${index}`, request: request() }));
+        provider.saveRequests(sources);
+        const target = { id: 'search-target', name: 'Search dependencies', request: request() };
+        const controller = editors.open(target, false);
+        try {
+            await runEditorScript(controller, `
+                document.querySelector('#dependencies-tab').click();
+                const section = document.querySelector('.response-bindings');
+                const picker = section.querySelector('.request-picker input');
+                if (section.querySelectorAll('.prerequisite-list label').length) throw new Error('Available requests were all listed.');
+                picker.focus();
+                picker.value = 'RESOURCE 29';
+                picker.dispatchEvent(new Event('input', { bubbles: true }));
+                if (section.querySelectorAll('.request-options [role="option"]').length !== 1) throw new Error('Case-insensitive filtering failed.');
+                picker.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+                if (!picker.getAttribute('aria-activedescendant')) throw new Error('Keyboard navigation is not accessible.');
+                picker.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                if (section.querySelectorAll('.prerequisite-list label').length !== 1) throw new Error('Selected prerequisite was not displayed.');
+                section.querySelector('.prerequisite-list input').click();
+                if (section.querySelectorAll('.prerequisite-list label').length) throw new Error('Removed prerequisite is still selected.');
+                section.querySelector(':scope > button').click();
+                const row = section.querySelector('.binding-row');
+                row.querySelector('input').value = 'accountId';
+                const source = row.querySelector('.request-picker input');
+                source.focus();
+                source.value = 'does not exist';
+                source.dispatchEvent(new Event('input', { bubbles: true }));
+                if (row.querySelector('.request-picker-empty').hidden) throw new Error('Empty search gives no feedback.');
+                source.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                source.value = 'source-7';
+                source.dispatchEvent(new Event('input', { bubbles: true }));
+                const options = row.querySelectorAll('[role="option"]');
+                if (options.length !== 1 || options[0].dataset.sourceId !== 'source-7') throw new Error('ID search selected the wrong request.');
+                source.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+                source.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                if (source.value !== 'Create resource 7') throw new Error('Chosen request label is missing.');
+                source.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+                source.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                if (source.getAttribute('aria-expanded') !== 'false') throw new Error('Escape did not close the picker.');
+                if (!section.querySelector('.prerequisite-list input').disabled) throw new Error('Implied prerequisite can be removed.');
+                document.querySelector('#save').click();
+                await waitFor(() => document.querySelector('#save').disabled);
+            `);
+            assert.deepStrictEqual(provider.getRequest(target.id)?.request.bindings, [{ name: 'accountId', sourceId: 'source-7', pointer: '/body/id' }]);
+            assert.strictEqual(provider.getRequest(target.id)?.request.dependsOn, undefined);
+            const saved = provider.getRequest(target.id);
+            assert.ok(saved);
+            controller.panel.dispose();
+            provider.saveRequest({ ...sources[7], name: 'Renamed source' });
+            await runEditorScript(editors.open(saved, true), `
+                await waitFor(() => document.querySelector('.binding-row .request-picker input').value === 'Renamed source');
+                if (document.documentElement.scrollWidth > window.innerWidth) throw new Error('Dependency picker overflows the page.');
+            `);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
 
     test('batch saving validates the entire dependency graph before changing the collection', () => {
         const provider = new AzureInvokeTreeDataProvider();
@@ -522,17 +798,304 @@ suite('Azure Invoke', () => {
         }
     });
 
+    test('users can author response links, run a chain, and reuse its output without repeating POST', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const [source, target] = accountChain();
+        provider.saveRequest(source);
+        const editor = editors.open({ ...target, request: { ...target.request, bindings: undefined } }, false);
+        const before = receivedRequests;
+        const accounts = accountBodies.length;
+        try {
+            await runEditorScript(editor, `
+                document.querySelector('#dependencies-tab').click();
+                if (document.querySelectorAll('.prerequisite-list label').length) throw new Error('Every available request is listed as a prerequisite.');
+                document.querySelector('.response-bindings > button').click();
+                const row = document.querySelector('.binding-row');
+                row.querySelector('input').value = 'accountId';
+                const picker = row.querySelector('.request-picker input');
+                picker.focus();
+                picker.value = 'create acc';
+                picker.dispatchEvent(new Event('input', { bubbles: true }));
+                row.querySelector('[role="option"]').click();
+                row.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));
+                if (document.querySelector('#run-chain').hidden) throw new Error('Run chain is unavailable.');
+                document.querySelector('#save').click();
+                await waitFor(() => document.querySelector('#save').disabled);
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#error').hidden);
+                if (!document.querySelector('#error').textContent.includes('current successful result')) throw new Error('Missing prerequisites were not explained.');
+                document.querySelector('#run-chain').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                const first = JSON.parse(document.querySelector('#response-body').textContent);
+                if (!first.id.startsWith('account/') || !first.id.endsWith(' ?#')) throw new Error('The response ID was not encoded into the URL correctly.');
+                if (!document.querySelector('#url').value.includes('{{accountId}}')) throw new Error('The variable was replaced in the saved definition.');
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                if (JSON.parse(document.querySelector('#response-body').textContent).id !== first.id) throw new Error('Send did not reuse the prior result.');
+            `);
+            assert.strictEqual(receivedRequests, before + 3);
+            assert.strictEqual(accountBodies.length, accounts + 1);
+            assert.deepStrictEqual(provider.getRequest(target.id)?.request.bindings, target.request.bindings);
+            const content = serializeInvocationCollection(provider.getRequests());
+            assert.strictEqual(JSON.parse(content).version, 2);
+            assert.ok(!content.includes(`account/${accountNumber} ?#`));
+            assert.deepStrictEqual(parseInvocationCollection(content), provider.getRequests());
+            assert.strictEqual(editors.size, 1);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('response links preserve JSON types, safely encode values, and select headers, arrays, and escaped keys', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const [source] = accountChain();
+        provider.saveRequest(source);
+        const target: HttpInvocation = {
+            id: 'typed-values', name: 'Use response values',
+            request: request({
+                method: 'POST', headers: [{ name: 'Content-Type', value: 'application/json' }, { name: 'x-account', value: '{{accountId}}' }],
+                query: [{ name: 'id', value: '{{accountId}}' }, { name: 'unused', value: '{{notDefined}}', enabled: false }],
+                body: '{"id":"{{accountId}}","count":"{{count}}","active":"{{active}}","nothing":"{{nothing}}","profile":"{{profile}}","text":"Hello {{display}}","first":"{{first}}","escaped":"{{escaped}}","status":"{{status}}","location":"{{location}}"}',
+                bindings: [
+                    ['accountId', '/body/id'], ['count', '/body/count'], ['active', '/body/active'], ['nothing', '/body/nothing'],
+                    ['profile', '/body/profile'], ['display', '/body/profile/name'], ['first', '/body/items/0/id'],
+                    ['escaped', '/body/a~1b/~0id'], ['status', '/status'], ['location', '/headers/location'],
+                ].map(([name, pointer]) => ({ name, pointer, sourceId: source.id })),
+            }),
+        };
+        provider.saveRequest(target);
+        try {
+            const result = await editors.sendRequest(await createTestActionContext(), target, undefined, true);
+            const echo = JSON.parse(result.body);
+            const body = JSON.parse(echo.body);
+            assert.strictEqual(body.count, 0);
+            assert.strictEqual(body.active, false);
+            assert.strictEqual(body.nothing, null);
+            assert.deepStrictEqual(body.profile, { name: 'A "quoted" name\n' });
+            assert.strictEqual(body.text, 'Hello A "quoted" name\n');
+            assert.strictEqual(body.first, 'first');
+            assert.strictEqual(body.escaped, 42);
+            assert.strictEqual(body.status, 201);
+            assert.strictEqual(body.location, `${baseUrl}/accounts/${encodeURIComponent(body.id)}`);
+            assert.strictEqual(echo.headers['x-account'], body.id);
+            assert.strictEqual(new URL(echo.url, baseUrl).searchParams.get('id'), body.id);
+            assert.strictEqual(new URL(echo.url, baseUrl).searchParams.has('unused'), false);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+
+    test('dependent runs reject missing fields, failed or changed prerequisites, and invalid templates without stale fallback', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const [source, target] = accountChain();
+        provider.replaceRequests([target, source]);
+        try {
+            const action = await createTestActionContext();
+            const before = receivedRequests;
+            await assert.rejects(editors.sendRequest(action, target), /current successful result/);
+            assert.strictEqual(receivedRequests, before);
+            await editors.sendRequest(action, source);
+            const afterSource = receivedRequests;
+            await assert.rejects(editors.sendRequest(action, { ...target, request: {
+                ...target.request, bindings: [{ name: 'accountId', sourceId: source.id, pointer: '/body/missing' }],
+            } }), /selected request or response field is missing/);
+            assert.strictEqual(receivedRequests, afterSource);
+            await editors.sendRequest(action, target);
+            provider.saveRequest({ ...source, request: { ...source.request, body: '{"changed":true}' } });
+            await assert.rejects(editors.sendRequest(action, target), /current successful result/);
+            provider.saveRequest({ ...source, request: request({ url: `${baseUrl}/error` }) });
+            const afterFailure = receivedRequests;
+            await assert.rejects(editors.sendRequest(action, target, undefined, true), /prerequisite returned a non-success/);
+            assert.strictEqual(receivedRequests, afterFailure + 1);
+            await assert.rejects(editors.sendRequest(action, target), /current successful result/);
+            provider.saveRequest(source);
+            const beforeInvalid = receivedRequests;
+            for (const invalid of [
+                { ...target.request, url: `${baseUrl}/accounts/{{missing}}` },
+                { ...target.request, url: 'http://{{accountId}}/accounts' },
+                { ...target.request, url: `${baseUrl}/accounts/{id}` },
+                { ...target.request, method: 'POST' as const, body: '{"id":{{accountId}}}' },
+                { ...target.request, method: 'POST' as const, body: '{"{{guid}}":"value"}' },
+            ]) {
+                await assert.rejects(editors.sendRequest(action, { ...target, request: invalid }, undefined, true));
+            }
+            assert.strictEqual(receivedRequests, beforeInvalid, 'An invalid target ran a mutating prerequisite.');
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('dependency graphs reject cycles and missing sources and execute shared prerequisites only once', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const [source, target] = accountChain();
+        const left = { ...target, id: 'left', name: 'Left' };
+        const right = { ...target, id: 'right', name: 'Right' };
+        const root = { id: 'root', name: 'Both', request: request({ dependsOn: [left.id, right.id] }) };
+        provider.replaceRequests([root, left, right, source]);
+        try {
+            assert.throws(() => provider.saveRequest({ ...source, request: { ...source.request, dependsOn: [root.id] } }), /cycle/);
+            assert.throws(() => provider.saveRequest({ ...root, request: request({ dependsOn: ['missing'] }) }), /unavailable/);
+            assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 2, invocations: [target] })), /unavailable/);
+            assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 1, invocations: [source, target] })), /version 2/);
+            const before = receivedRequests;
+            const accounts = accountBodies.length;
+            await editors.sendRequest(await createTestActionContext(), root, undefined, true);
+            assert.strictEqual(receivedRequests, before + 4);
+            assert.strictEqual(accountBodies.length, accounts + 1);
+            await editors.sendRequest(await createTestActionContext(), root);
+            assert.strictEqual(receivedRequests, before + 5);
+            await editors.sendRequest(await createTestActionContext(), source);
+            const afterSource = receivedRequests;
+            await assert.rejects(editors.sendRequest(await createTestActionContext(), root), /current successful result/);
+            assert.strictEqual(receivedRequests, afterSource, 'An old transitive result was reused.');
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('chain cancellation aborts its prerequisite and overlapping runs cannot repeat side effects', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const source = { id: 'slow-source', name: 'Slow source', request: request({ url: `${baseUrl}/slow` }) };
+        const target = { id: 'after-slow', name: 'After slow', request: request({ dependsOn: [source.id] }) };
+        provider.replaceRequests([source, target]);
+        const abort = new AbortController();
+        const started = new Promise<void>(resolve => server.once('request', () => resolve()));
+        const before = receivedRequests;
+        const pending = editors.sendRequest(await createTestActionContext(), target, abort.signal, true);
+        try {
+            await started;
+            await assert.rejects(editors.sendRequest(await createTestActionContext(), source), /already running/);
+            abort.abort();
+            await assert.rejects(pending, isUserCancelledError);
+            assert.strictEqual(receivedRequests, before + 1);
+            await assert.rejects(editors.sendRequest(await createTestActionContext(), target), /current successful result/);
+            assert.strictEqual(receivedRequests, before + 1);
+        } finally {
+            abort.abort();
+            await pending.catch(() => { /* no-op */ });
+            editors.dispose();
+            provider.dispose();
+        }
+    });
 
 
 
 
+    test('non-loopback targets are blocked before any request in their chain is sent', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const address = Object.values(os.networkInterfaces()).flat().find(address => address?.family === 'IPv4' && !address.internal);
+        assert.ok(address);
+        let remoteRequests = 0;
+        const fixture = createServer((_request, response) => {
+            remoteRequests++;
+            response.end('private non-local response');
+        });
+        await new Promise<void>(resolve => fixture.listen(0, address.address, resolve));
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const [source] = accountChain();
+        const target = { id: 'non-local-target', name: 'Remote request', request: request({ url: `http://${address.address}:${(fixture.address() as AddressInfo).port}/echo`, dependsOn: [source.id] }) };
+        provider.saveRequests([source, target]);
+        const before = receivedRequests;
+        const accounts = accountBodies.length;
+        try {
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                for (const action of ['#run-chain', '#send']) {
+                    document.querySelector('#error').hidden = true;
+                    document.querySelector(action).click();
+                    await waitFor(() => !document.querySelector('#error').hidden);
+                    if (!document.querySelector('#error').textContent.includes('limited support')) throw new Error(action + ' did not explain the local-only limit.');
+                    if (!document.querySelector('#response-body').hidden) throw new Error(action + ' displayed a response.');
+                }
+            `);
+            await assert.rejects(editors.sendRequest(await createTestActionContext(), target, undefined, true), /limited support/);
+            assert.strictEqual(remoteRequests, 0, 'A non-loopback request was sent.');
+            assert.strictEqual(receivedRequests, before, 'A local prerequisite ran before the chain was rejected.');
+            assert.strictEqual(accountBodies.length, accounts);
+            assert.deepStrictEqual(provider.getRequest(target.id), target, 'Remote URLs can still be saved.');
+        } finally {
+            editors.dispose();
+            provider.dispose();
+            fixture.closeAllConnections();
+            await new Promise<void>((resolve, reject) => fixture.close(error => error ? reject(error) : resolve()));
+        }
+    });
+
+
+    function findInvocationTab(name?: string): vscode.Tab | undefined {
+        return vscode.window.tabGroups.all.flatMap(group => group.tabs).find(candidate =>
+            candidate.input instanceof vscode.TabInputWebview && candidate.input.viewType.includes('azureInvokeHttpRequest') &&
+            (name === undefined || candidate.label === name));
+    }
+
+    async function waitForTabChange(predicate: () => boolean): Promise<void> {
+        if (predicate()) {
+            return;
+        }
+        await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => {
+                subscription.dispose();
+                reject(new Error('The Azure Invoke tab did not update.'));
+            }, 5000);
+            const subscription = vscode.window.tabGroups.onDidChangeTabs(() => {
+                if (predicate()) {
+                    clearTimeout(timer);
+                    subscription.dispose();
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async function waitForInvocationTab(name?: string): Promise<vscode.Tab> {
+        await waitForTabChange(() => !!findInvocationTab(name));
+        const tab = findInvocationTab(name);
+        assert.ok(tab);
+        return tab;
+    }
 
 
 
 
-
-
-
-
+    test('manual trigger commands open the matching bundled HTTP, Blob, and Timer editors', async () => {
+        const api = await getTestApi();
+        const ui = new TestUserInput(vscode);
+        const handler = api.testing.registerOnActionStartHandler(context => {
+            if (context.callbackId === 'azureFunctions.azureInvoke.add') {
+                context.ui = ui;
+                context.errorHandling.rethrow = true;
+            }
+        });
+        try {
+            await ui.runWithInputs(['HTTP trigger'], async () => {
+                await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
+            });
+            await vscode.window.tabGroups.close(await waitForInvocationTab());
+        } finally {
+            handler.dispose();
+        }
+    });
 
 });

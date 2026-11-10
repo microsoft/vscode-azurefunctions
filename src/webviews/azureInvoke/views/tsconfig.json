@@ -1,0 +1,11 @@
+{
+    "extends": "../../../../tsconfig.json",
+    "compilerOptions": {
+        "lib": ["es2022", "dom", "dom.iterable"],
+        "types": [],
+        // CSS side-effect imports are bundled by esbuild
+        "noUncheckedSideEffectImports": false
+    },
+    "include": ["*.ts", "../shared/*.ts"],
+    "exclude": []
+}
