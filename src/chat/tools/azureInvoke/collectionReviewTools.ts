@@ -148,10 +148,10 @@ export function proposeInvocationCollectionTool(reviews: CollectionReviews): Cop
             'For inventory-imports/{name}, use container inventory-imports and an empty blobName to use the chosen file name. For nested or suffix-constrained bindings, propose a concrete compatible path. Never copy {name} or other binding placeholders into a blob destination. ' +
             'If an endpoint or binding cannot be inferred safely, ask for the non-secret configuration instead of guessing. Use application/octet-stream when no content type is known. Do not include file contents, credentials, or local file paths in proposals. ' +
             'Use trigger http only for HTTP endpoints; trigger kinds other than HTTP, Blob, and Timer remain unsupported. ' +
-            'Open a grouped review with HTTP, Blob, and Timer cases preselected. Users can edit metadata, choose files, manually send HTTP previews, uncheck cases, and add feedback. Blob and Timer rows have no execution preview. ' +
-            'For Blob file selection, follow the agent\'s Choose Blob files workflow. Ask through vscode/askQuestions before opening a native picker; call select_blob_invocation_file only when the user explicitly chooses to select a file now. Do not ask for file contents or paths in chat or reopen a cancelled picker without another user request. ' +
-            'This tool never sends requests, uploads blobs, or saves invocations. Manual preview results stay in the webview and are not returned to AI. ' +
-            'Then stop and wait. Confirm saves selected HTTP requests and captured Blob fixtures directly in the tree, preserving local edits and translating HTTP dependency IDs. ' +
+            'Open a grouped read-only inventory with HTTP, Blob, and Timer cases preselected. Users can uncheck cases and choose Blob files; the review marks Blob cases that still need a file. ' +
+            'Do not ask about Blob files in chat or through a question tool. Call select_blob_invocation_file only when the user explicitly asks in chat to choose a file. Do not ask for file contents or paths in chat or reopen a cancelled picker without another user request. ' +
+            'This tool never sends requests, uploads blobs, or saves invocations. ' +
+            'Then stop and wait. Confirm saves selected HTTP requests, captured Blob fixtures, and Timer invocations directly in the tree, translating HTTP dependency IDs. ' +
             'It does not continue chat or send HTTP. On a later request to run tests, use list_http_invocations to find their saved IDs. ' +
             'Never draft or run requests before confirmation. Never include real credentials or secret configuration values in a proposal.',
         inputSchema: proposalSchema,
@@ -167,7 +167,7 @@ export function proposeInvocationCollectionTool(reviews: CollectionReviews): Cop
             const controller = await reviews.open(input.candidates, input.reviewId, input.revision);
             return {
                 reviewId: controller.reviewId,
-                message: localize('azureInvoke.reviewOpened', 'Updated the collection review. Follow the agent\'s Choose Blob files workflow before opening any file picker, then wait for Confirm or Request changes. Confirm saves selected invocations in the tree. Nothing has been saved, sent, or uploaded.'),
+                message: localize('azureInvoke.reviewOpened', 'Updated the collection review. The review marks Blob invocations that need a file; do not ask about files in chat. Wait for the user to confirm. Confirm saves selected invocations in the tree. Nothing has been saved, sent, or uploaded.'),
             };
         }), 'collectionReview'),
     };
@@ -202,7 +202,7 @@ export function selectBlobInvocationFileTool(reviews: CollectionReviews): Copilo
         name: 'select_blob_invocation_file',
         title: localize('azureInvoke.selectBlobInvocationFile', 'Azure Invoke: Choose a file for a proposed Blob fixture'),
         description: 'Ask the user to choose a local fixture file through the native VS Code file picker for one Blob candidate in the active, unconfirmed collection review. ' +
-            'First propose the Blob metadata inferred from project bindings and emulator configuration with propose_invocation_collection, then follow the agent\'s Choose Blob files workflow. Only call this tool when the user explicitly chooses to select a file now, never automatically after a proposal or revision. Supply its reviewId and the stable Blob candidateId. ' +
+            'First propose the Blob metadata inferred from project bindings and emulator configuration with propose_invocation_collection. Only call this tool when the user explicitly asks in chat to choose a file, never automatically after a proposal or revision. The review already offers Choose file... and marks missing files. Supply its reviewId and the stable Blob candidateId. ' +
             'Captures the selected bytes privately, up to 5 MB, rather than retaining a live path. An empty blobName uses the selected file name; a configured concrete path is preserved. ' +
             'Returns only IDs and fileSelected, never file contents, filename, or local path. Do not read the file through other tools, request its contents in chat, or repeat the picker after cancellation unless asked. ' +
             'This tool does not save, upload, execute dependencies, or start services. The user reviews the draft and selects Confirm to save it. ' +

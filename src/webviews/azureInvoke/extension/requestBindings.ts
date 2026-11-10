@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUUID } from 'crypto';
-import { isIPv4 } from 'net';
 import { localize } from '../../../localize';
 import { type HttpRequest, type HttpResponse } from '../shared/httpRequest';
-import { prepareHttpRequest } from './sendHttpRequest';
+import { assertLoopbackUrl, isLoopbackHost, prepareHttpRequest } from './sendHttpRequest';
 
 const variablePattern = /\{\{([a-z_][a-z0-9_]{0,63})\}\}/gi;
 
@@ -74,9 +73,11 @@ export function validateRequestTemplate(request: HttpRequest): void {
 }
 
 export function isLocalHttpRequest(request: HttpRequest): boolean {
-    const hostname = new URL(request.url).hostname;
-    return hostname === 'localhost' || hostname === 'localhost.' || hostname === '[::1]' ||
-        (isIPv4(hostname) && hostname.startsWith('127.'));
+    return isLoopbackHost(new URL(request.url).hostname);
+}
+
+export function assertLocalHttpRequest(request: HttpRequest): void {
+    assertLoopbackUrl(new URL(request.url));
 }
 
 export function resolveRequestBindings(request: HttpRequest, getResult: (id: string) => HttpInvocationResult): HttpRequest {

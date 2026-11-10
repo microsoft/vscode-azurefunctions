@@ -62,7 +62,7 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                 title: updatingSaved ? localize('azureInvoke.reviewFixesTitle', 'Review saved request changes') : localize('azureInvoke.reviewTitle', 'Build your test collection'),
                 introduction: updatingSaved ?
                     localize('azureInvoke.reviewFixesIntroduction', 'Expand each request to review the proposed fields. Prerequisites are included for context. Apply updates selected saved requests in place without sending them or editing application code. Uncheck requests you do not want to update. To ask for a different proposal, return to chat.') :
-                    localize('azureInvoke.reviewIntroduction', 'Review HTTP requests and manual Blob and Timer invocations. Expand a row to edit values, choose a file, or leave feedback. Confirm saves selected entries without executing them.'),
+                    localize('azureInvoke.reviewIntroduction', 'Select invocations to save without running them. Expand a row for details or required files. Edit saved entries from the Azure Invoke tree.'),
                 selectAll: localize('azureInvoke.selectAllInvocations', 'Select all supported invocations'),
                 comment: localize('azureInvoke.reviewComment', 'Feedback for Copilot'),
                 unsupported: localize('azureInvoke.unsupportedTrigger', 'Not yet supported'),
@@ -85,8 +85,8 @@ export class CollectionReviewController extends WebviewController<CollectionRevi
                     contentType: localize('azureInvoke.blobContentType', 'Content type'),
                     file: localize('azureInvoke.chooseBlobFile', 'Choose file...'),
                     noFile: localize('azureInvoke.noBlobFile', 'No file selected'),
-                    hint: localize('azureInvoke.blobReviewHint', 'Choose a file of at most 5 MB. Its captured contents stay private. Confirm saves this manual fixture without uploading it. Later uploads overwrite blobs with the same name.'),
-                    fileRequired: localize('azureInvoke.blobReviewFileRequired', 'Choose a file for each selected Blob fixture, or uncheck it before confirming.'),
+                    hint: localize('azureInvoke.blobReviewHint', 'Choose a file up to 5 MB. Its contents stay private. Confirm saves it without uploading.'),
+                    fileRequired: localize('azureInvoke.blobReviewFileRequired', 'Choose a file for this Blob invocation, or uncheck it before confirming.'),
                 },
                 timer: {
                     hostUrl: localize('azureInvoke.timerHostUrl', 'Functions host URL'),

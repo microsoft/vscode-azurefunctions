@@ -8,10 +8,8 @@ import { type CollectionReviewConfiguration } from '../shared/collectionReview';
 
 export class BlobRequestEditor {
     public readonly element = document.createElement('fieldset');
-    private readonly inputs = {
-        target: document.createElement('input'), container: document.createElement('input'),
-        blobName: document.createElement('input'), contentType: document.createElement('input'),
-    };
+    private definition: BlobUploadDefinition;
+    private readonly destination = document.createElement('p');
     private readonly fileLabel = document.createElement('span');
     private fileName: string | undefined;
 
@@ -19,21 +17,11 @@ export class BlobRequestEditor {
         request: BlobUploadDefinition,
         labels: CollectionReviewConfiguration['labels']['blob'],
         chooseFile: () => void,
-        changed: () => void,
     ) {
+        this.definition = copyBlobDefinition(request);
         this.element.className = 'blob-request-editor';
-        for (const key of ['target', 'container', 'blobName', 'contentType'] as const) {
-            const label = document.createElement('label');
-            label.className = 'request-field';
-            const caption = document.createElement('span');
-            caption.textContent = labels[key];
-            const input = this.inputs[key];
-            input.type = 'text';
-            input.className = `blob-${key}`;
-            input.addEventListener('input', changed);
-            label.append(caption, input);
-            this.element.append(label);
-        }
+        this.destination.className = 'endpoint';
+        this.element.append(this.destination);
         this.setRequest(request);
         const picker = document.createElement('button');
         picker.type = 'button';
@@ -52,27 +40,19 @@ export class BlobRequestEditor {
     }
 
     public get request(): BlobUploadDefinition {
-        return {
-            target: { kind: 'azurite', url: this.inputs.target.value },
-            container: this.inputs.container.value,
-            blobName: this.inputs.blobName.value,
-            contentType: this.inputs.contentType.value,
-        };
+        return copyBlobDefinition(this.definition);
     }
 
     public setRequest(request: BlobUploadDefinition): void {
-        const definition = copyBlobDefinition(request);
-        for (const key of ['target', 'container', 'blobName', 'contentType'] as const) {
-            this.inputs[key].value = key === 'target' ? definition.target.url : definition[key];
-        }
+        this.definition = copyBlobDefinition(request);
+        this.destination.textContent = `${this.definition.container}/${this.definition.blobName}`;
     }
 
     public setFileName(fileName: string): void {
         this.fileName = fileName;
         this.fileLabel.textContent = fileName;
-        const blobName = this.inputs.blobName;
-        if (!blobName.value) {
-            blobName.value = fileName;
+        if (!this.definition.blobName) {
+            this.setRequest({ ...this.definition, blobName: fileName });
         }
     }
 

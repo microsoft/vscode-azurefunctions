@@ -7,6 +7,7 @@ import { createHttpHeaders, createPipelineRequest } from '@azure/core-rest-pipel
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { validateHeaderName, validateHeaderValue } from 'http';
+import { isIPv4 } from 'net';
 import { localize } from '../../../localize';
 import { StringDecoder } from 'string_decoder';
 import { isHttpRequest, type HttpResponse } from '../shared/httpRequest';
@@ -27,6 +28,18 @@ export function getShareableHttpResponse(response: HttpResponse, shareBody: bool
             ...(bodyLimit === undefined ? {} : { bodyTruncated: Buffer.byteLength(response.body) > bodyLimit }),
         } : {}),
     };
+}
+
+export function isLoopbackHost(hostname: string): boolean {
+    return hostname === 'localhost' || hostname === 'localhost.' || hostname === '[::1]' ||
+        (isIPv4(hostname) && hostname.startsWith('127.'));
+}
+
+// Temporary limit until each remote invocation type has its own safety design.
+export function assertLoopbackUrl(url: URL): void {
+    if (!isLoopbackHost(url.hostname)) {
+        throw new Error(localize('azureInvoke.remoteNotSupported', 'Azure Invoke has limited support for now and can only send requests to localhost, 127.x.x.x, or [::1]. Support for remote endpoints is coming later.'));
+    }
 }
 
 class ResponseTooLargeError extends Error {
@@ -105,6 +118,7 @@ export function prepareHttpRequest(input: unknown) {
 
 export async function sendHttpRequest(context: IActionContext, request: unknown, abortSignal: AbortSignal, timeout: number | undefined): Promise<HttpResponse> {
     const { input, url, headers } = prepareHttpRequest(request);
+    assertLoopbackUrl(url);
     const started = Date.now();
     const timeoutAbort = new AbortController();
     const timer = timeout === undefined ? undefined : setTimeout(() => timeoutAbort.abort(), timeout);

@@ -9,7 +9,7 @@ import { localize } from '../../../localize';
 import { copyInvocation, planInvocationChain } from '../../../tree/azureInvoke/invocationCollection';
 import { getRequestDependencies, type HttpInvocation, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
 import { HttpRequestRunner, InvocationBlockedError } from './HttpRequestRunner';
-import { isLocalHttpRequest, resolveRequestBindings, validateRequestTemplate, type HttpInvocationResult } from './requestBindings';
+import { assertLocalHttpRequest, isLocalHttpRequest, resolveRequestBindings, validateRequestTemplate, type HttpInvocationResult } from './requestBindings';
 
 interface RunOutput extends HttpInvocationResult {
     definition: string;
@@ -90,7 +90,11 @@ export class HttpInvocationRunner implements Disposable {
         this.outputs.delete(invocation.id);
         const plan = planInvocationChain(invocation, this.getInvocation);
         const executing = options.runDependencies ? plan : [plan[plan.length - 1]];
-        executing.forEach(item => validateRequestTemplate(item.request));
+        for (const item of executing) {
+            validateRequestTemplate(item.request);
+            // Reject the whole chain before any local prerequisite can mutate data.
+            assertLocalHttpRequest(item.request);
+        }
         if (executing.some(item => this.reservations.has(item.id))) {
             throw new Error(localize('azureInvoke.chainBusy', 'A request in this chain is already running. Wait or cancel it before starting another run.'));
         }

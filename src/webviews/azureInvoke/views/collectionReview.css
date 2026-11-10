@@ -8,7 +8,7 @@
 .select-all { display: flex; align-items: center; gap: 10px; }
 input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrink: 0; accent-color: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder)); }
 .select-all { margin: 24px 0 16px; }
-.case-list { display: grid; gap: 26px; }
+.case-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; }
 .group-heading { margin: 0 0 10px; }
 .case { border-bottom: 1px solid var(--vscode-panel-border); overflow-wrap: anywhere; }
 .case:first-of-type { border-top: 1px solid var(--vscode-panel-border); }
@@ -23,12 +23,13 @@ input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrin
 .auth-indicator svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
 .case-details { padding: 6px 0 22px 26px; }
 .case-description { margin: 0 0 20px; line-height: 1.6; color: var(--vscode-descriptionForeground); }
+.case-warning { display: inline-flex; color: var(--vscode-editorWarning-foreground); flex-shrink: 0; }
+.case-warning svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.case-requirement { color: var(--vscode-editorWarning-foreground); margin: 0 0 12px; line-height: 1.6; }
 .endpoint { font-family: var(--vscode-editor-font-family); color: var(--vscode-descriptionForeground); font-size: 12px; }
-.comment-label { display: grid; gap: 8px; margin-top: 16px; color: var(--vscode-descriptionForeground); font-size: 12px; }
-.comment-label textarea { min-height: 64px; font-family: var(--vscode-font-family); }
 .case-status { color: var(--vscode-descriptionForeground); font-size: 12px; flex-shrink: 0; max-width: 35%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .request-preview fieldset { padding: 0; border: 0; margin: 0; min-width: 0; }
-.blob-request-editor, .timer-request-editor { padding: 0; border: 0; margin: 0; min-width: 0; }
+.blob-request-editor { padding: 0; border: 0; margin: 0; min-width: 0; }
 .blob-file-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .blob-file-name { overflow-wrap: anywhere; }
 .request-field { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: start; gap: 12px; margin-bottom: 14px; }
@@ -43,8 +44,6 @@ input[type="checkbox"] { width: 16px; min-height: 16px; height: 16px; flex-shrin
 .request-field textarea { min-height: 120px; }
 .preview-actions { display: flex; gap: 8px; margin-top: 18px; }
 .preview-response { margin-top: 20px; }
-.diagnose-preview { margin-top: 12px; }
-.diagnosis-hint { margin-top: 20px; }
 #diagnosis-notice { line-height: 1.6; }
 .preview-response output { display: block; margin-bottom: 10px; }
 .preview-error { color: var(--vscode-errorForeground); overflow-wrap: anywhere; }

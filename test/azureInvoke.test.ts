@@ -18,7 +18,7 @@ import * as z from 'zod/mini';
 import { createHttpInvocationTool } from '../src/chat/tools/azureInvoke/createHttpInvocationTool';
 import { getBlobInvocationDebugContextTool, listBlobInvocationsTool, uploadBlobInvocationTool } from '../src/chat/tools/azureInvoke/blobInvocationTools';
 import { debugHttpInvocationTool, getHttpInvocationDebugContextTool } from '../src/chat/tools/azureInvoke/debugHttpInvocationTools';
-import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from '../src/chat/tools/azureInvoke/collectionReviewTools';
+import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from '../src/chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from '../src/chat/tools/azureInvoke/savedHttpInvocationTools';
@@ -695,7 +695,8 @@ suite('Azure Invoke', () => {
                 if (document.querySelector('#response-body').textContent !== ${JSON.stringify(formattedResponseJson)}) throw new Error('The request editor did not indent JSON while preserving its original values.');
                 if (document.querySelector('#response-body img')) throw new Error('The response was interpreted as HTML.');
             `);
-            const review = await reviews.open([httpCandidate({ request: invocation.request })]);
+            provider.saveRequest(invocation);
+            const review = reviews.openChanges([{ invocation, request: { method: 'GET' }, reason: 'Review the response.' }]);
             await runEditorScript(review, `
                 document.querySelector('.case-toggle').click();
                 document.querySelector('.send-preview').click();
@@ -1011,7 +1012,7 @@ suite('Azure Invoke', () => {
             await runEditorScript(controller, `
                 if (document.querySelector('main > h1').textContent !== 'Review saved request changes') throw new Error('The review looks like new collection authoring.');
                 if (document.querySelector('.comment-label')) throw new Error('Private saved fields have a feedback-sharing path.');
-                if (!document.querySelector('#diagnose-failed').hidden) throw new Error('Saved private fields have a preview-diagnosis path.');
+                if (document.querySelector('#diagnose-failed')) throw new Error('Saved private fields have a preview-diagnosis path.');
                 const row = document.querySelector('[data-id="${target.id}"]');
                 row.querySelector('.case-toggle').click();
                 if (row.querySelector('.request-preview textarea').value !== '{"name":"Synthetic holding"}') throw new Error('The proposed body is missing.');
@@ -1401,7 +1402,7 @@ suite('Azure Invoke', () => {
                     document.querySelector('#run-chain').click();
                     await waitFor(() => !document.querySelector('#error').hidden);
                     if (!document.querySelector('#error').classList.contains('request-warning')) throw new Error('The blocked request is still presented as a failure.');
-                    if (!document.querySelector('#debug-response').hidden) throw new Error('Debugging is offered for a request that never ran.');
+                    if (!document.querySelector('#debug-response').disabled) throw new Error('Debugging is offered for a request that never ran.');
                 `);
                 assert.strictEqual(receivedRequests, before + 1, 'A blocked request was sent.');
                 assert.strictEqual((provider.getTreeItem(source).iconPath as vscode.ThemeIcon).id, 'error');
@@ -1426,35 +1427,6 @@ suite('Azure Invoke', () => {
             }
         });
     }
-
-    test('blocked review previews warn without being offered as independent failures to diagnose', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        let diagnosisId: string | undefined;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, _revision, id) => { diagnosisId = id; });
-        const source = httpCandidate({ id: 'failed-source', request: request({ url: `${baseUrl}/error` }) });
-        const target = httpCandidate({ id: 'blocked-preview', request: request({ dependsOn: [source.id] }) });
-        try {
-            const controller = await reviews.open([source, target]);
-            await runEditorScript(controller, `
-                const source = document.querySelector('[data-id="${source.id}"]');
-                const target = document.querySelector('[data-id="${target.id}"]');
-                target.querySelector('.case-toggle').click();
-                target.querySelector('.run-preview-chain').click();
-                await waitFor(() => !target.querySelector('.preview-error').hidden);
-                if (!target.querySelector('.preview-error').classList.contains('request-warning')) throw new Error('The blocked preview is not a warning.');
-                if (!target.querySelector('.diagnose-preview').hidden) throw new Error('The blocked request is offered as an independent failure.');
-                document.querySelector('#diagnose-failed').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-            `);
-            assert.ok(diagnosisId);
-            assert.deepStrictEqual(reviews.getDiagnostics(controller.reviewId, diagnosisId).cases.map(candidate => candidate.id), [source.id]);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
 
     test('dependent runs reject missing fields, failed or changed prerequisites, and invalid templates without stale fallback', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
@@ -1579,7 +1551,7 @@ suite('Azure Invoke', () => {
         }
     });
 
-    test('AI can propose, preview, confirm, and execute a saved response-linked collection without opening editors', async () => {
+    test('AI can propose, confirm, and execute a saved response-linked collection without opening editors', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
         assert.ok(context);
         const provider = new AzureInvokeTreeDataProvider();
@@ -1611,14 +1583,8 @@ suite('Azure Invoke', () => {
             await runEditorScript(controller, `
                 const source = document.querySelector('.case[data-id="${source.id}"]');
                 const target = document.querySelector('.case[data-id="${target.id}"]');
-                source.querySelector('.case-toggle').click();
-                source.querySelector('.request-field textarea').value = '{"name":"kept local"}';
                 target.querySelector('.case-toggle').click();
-                target.querySelector('.run-preview-chain').click();
-                await waitFor(() => !target.querySelector('.preview-response-body').hidden);
-                if (!JSON.parse(target.querySelector('.preview-response-body').textContent).id.startsWith('account/')) throw new Error('Review chain did not use the created ID.');
-                window.dispatchEvent(new MessageEvent('message', { data: { command: 'preview', version: JSON.parse(decodeURIComponent(window.config._initialData)).version, id: '${source.id}', message: { command: 'requestStarted', saved: false, sequence: 1 } } }));
-                if (document.querySelector('#confirm-collection').disabled) throw new Error('Confirmation still busy: ' + [...document.querySelectorAll('.request-preview')].map(preview => preview.querySelector('output').textContent + '/' + preview.querySelector('.cancel-preview').hidden).join(','));
+                if (target.querySelector('.request-preview')) throw new Error('Inventory contains a request editor.');
                 source.querySelector('[data-case-id]').click();
                 document.querySelector('#confirm-collection').click();
                 await waitFor(() => !document.querySelector('#review-error').hidden);
@@ -1627,9 +1593,9 @@ suite('Azure Invoke', () => {
                 document.querySelector('#confirm-collection').click();
                 await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
             `);
-            assert.strictEqual(receivedRequests, before + 2);
+            assert.strictEqual(receivedRequests, before);
             const approved = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
-            assert.ok(!JSON.stringify(approved).includes('kept local'));
+            assert.ok(JSON.stringify(approved).includes(target.id));
             const approvedTarget = reviews.getApproved(reviewId).cases.find(item => item.id === target.id);
             assert.ok(approvedTarget?.trigger === 'http');
             assert.deepStrictEqual(approvedTarget.dependencyIds, [source.id]);
@@ -1655,8 +1621,8 @@ suite('Azure Invoke', () => {
             })).result;
             assert.notStrictEqual(ran.isError, true);
             assert.ok(JSON.parse(ran.structuredContent.body ?? '').id.startsWith('account/'));
-            assert.strictEqual(accountBodies[accountBodies.length - 1], '{"name":"kept local"}');
-            assert.strictEqual(receivedRequests, before + 4);
+            assert.strictEqual(accountBodies[accountBodies.length - 1], source.request.body);
+            assert.strictEqual(receivedRequests, before + 2);
             assert.strictEqual(provider.getRequests().length, 2);
             const savedTargetInvocation = provider.getRequest(savedTarget);
             assert.ok(savedTargetInvocation);
@@ -1673,275 +1639,39 @@ suite('Azure Invoke', () => {
         }
     });
 
-    test('feedback switches confirmation to a change request without saving invocations', async () => {
+    test('collection inventory shows read-only summaries and explains an empty selection on confirmation', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
         assert.ok(context);
         const provider = new AzureInvokeTreeDataProvider();
-        const reviews = new CollectionReviews(context, provider, async () => { });
-        try {
-            const controller = await reviews.open([httpCandidate()]);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                const feedback = document.querySelector('[data-comment-id="http"]');
-                const confirm = document.querySelector('#confirm-collection');
-                feedback.value = '   ';
-                feedback.dispatchEvent(new Event('input', { bubbles: true }));
-                if (confirm.textContent !== 'Confirm') throw new Error('Whitespace requests changes.');
-                feedback.value = 'Add the pagination query parameters.';
-                feedback.dispatchEvent(new Event('input', { bubbles: true }));
-                if (confirm.textContent !== 'Request changes') throw new Error('Feedback did not switch the action to Request changes.');
-                document.querySelector('[data-case-id="http"]').click();
-                if (confirm.disabled) throw new Error('Feedback on an unchecked row cannot be submitted.');
-                feedback.value = '';
-                feedback.dispatchEvent(new Event('input', { bubbles: true }));
-                if (confirm.textContent !== 'Confirm') throw new Error('Cleared feedback did not restore Confirm.');
-                if (!confirm.disabled) throw new Error('Empty selection can be confirmed.');
-                window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: 'Feedback must not be saved.' }] });
-                await waitFor(() => !document.querySelector('#review-error').hidden);
-                if (!document.querySelector('#review-error').textContent.includes('Request changes')) throw new Error('Host accepted feedback as confirmation.');
-            `);
-            assert.deepStrictEqual(provider.getRequests(), []);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('MCP feedback revisions refresh stable cases, preserve private edits, and save only after clean confirmation', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const existing = invocation();
-        provider.saveRequest(existing);
-        const candidates: InvocationCandidate[] = [
-            httpCandidate({
-                id: 'create', name: 'Create account', group: 'Accounts', request: request({
-                    method: 'POST', url: `${baseUrl}/accounts`,
-                    headers: [{ name: 'x-functions-key', value: '', enabled: false }],
-                    body: '{"name":"Account {{guid}}","email":"invoke-{{guid}}@example.com"}',
-                }),
-            }),
-            httpCandidate({ id: 'list', name: 'List accounts', group: 'Accounts', request: request({ url: `${baseUrl}/accounts` }) }),
-            httpCandidate({
-                id: 'get', name: 'Get account', group: 'Accounts', request: request({
-                    url: `${baseUrl}/accounts/{{accountId}}`,
-                    bindings: [{ name: 'accountId', sourceId: 'create', pointer: '/body/id' }],
-                }),
-            }),
-            { id: 'timer', name: 'Cleanup', group: 'Maintenance', trigger: 'queue', endpoint: '', description: 'Unsupported queue.' },
-        ];
-        const revisions: number[] = [];
-        const readSchema = z.object({
-            result: z.object({
-                structuredContent: z.object({
-                    revision: z.number(), state: z.string(),
-                    cases: z.array(z.object({
-                        id: z.string(), selected: z.boolean(), comment: z.string(), reviewedFields: z.array(z.string()),
-                    })),
-                }),
-            }),
-        });
-        const reviews = new CollectionReviews(context, provider, async (reviewId, revision) => {
-            assert.ok(revision);
-            revisions.push(revision);
-            const feedback = readSchema.parse(await rpc('tools/call', {
-                name: 'get_invocation_collection_review', arguments: { reviewId },
-            })).result.structuredContent;
-            assert.strictEqual(feedback.state, 'changesRequested');
-            assert.strictEqual(feedback.revision, revision);
-            assert.deepStrictEqual(feedback.cases.map(item => [item.id, item.selected]), [['create', true], ['list', false], ['get', true]]);
-            assert.deepStrictEqual(feedback.cases.find(item => item.id === 'create')?.reviewedFields, ['headers', 'body']);
-            assert.strictEqual(feedback.cases.find(item => item.id === (revision === 1 ? 'list' : 'get'))?.comment,
-                revision === 1 ? 'Add supported pagination and sorting query names.' : 'Name this Get account by ID.');
-            const rawFeedback = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
-            assert.ok(!JSON.stringify(rawFeedback).includes('private-review-body'));
-            assert.ok(!JSON.stringify(rawFeedback).includes('private-review-key'));
-            const prematureDraft = z.object({ result: z.object({ isError: z.boolean() }) }).parse(await rpc('tools/call', {
-                name: 'draft_http_invocation', arguments: { reviewId, candidateId: 'create', name: 'Create account', ...request() },
-            }));
-            assert.strictEqual(prematureDraft.result.isError, true);
-            const updated: InvocationCandidate[] = candidates.flatMap(candidate => {
-                if (candidate.trigger !== 'http') {
-                    return [];
-                }
-                return [{
-                    ...candidate,
-                    name: candidate.id === 'create' ? 'Create test account' : candidate.id === 'get' && revision === 2 ? 'Get account by ID' : candidate.name,
-                    request: candidate.id === 'list' ? {
-                        ...candidate.request,
-                        query: ['page', 'pageSize', 'sort', 'filter'].map(name => ({ name, value: '', enabled: false })),
-                    } : candidate.id === 'create' ? { ...candidate.request, body: '{"name":"AI revision {{guid}}"}' } : candidate.request,
-                }];
-            });
-            const stale = z.object({ result: z.object({ isError: z.boolean() }) }).parse(await rpc('tools/call', {
-                name: 'propose_invocation_collection', arguments: { reviewId, revision: revision + 1, candidates: updated },
-            }));
-            assert.strictEqual(stale.result.isError, true);
-            const revised = z.object({ result: z.object({ structuredContent: z.object({ reviewId: z.string() }) }) }).parse(await rpc('tools/call', {
-                name: 'propose_invocation_collection', arguments: { reviewId, revision, candidates: updated },
-            }));
-            assert.strictEqual(revised.result.structuredContent.reviewId, reviewId);
-            assert.deepStrictEqual(provider.getRequests(), [existing]);
-            if (revision === 2) {
-                throw new Error('A late chat error must not overwrite the refreshed review.');
-            }
-        });
-        const mcp = await startInProcHttpServer({
-            id: mcpServerId, serverLabel: 'Azure Invoke feedback test', serverVersion: '1.0.0', transport: 'tcp',
-            registerTools: server => {
-                registerMcpTool(server, proposeInvocationCollectionTool(reviews));
-                registerMcpTool(server, getInvocationCollectionReviewTool(reviews));
-                registerMcpTool(server, draftHttpInvocationTool(provider, reviews));
-            },
-        });
-        const rpc = createMcpClient(mcp);
+        const reviews = new CollectionReviews(context, provider);
+        const [source, target] = accountChain();
         const before = receivedRequests;
         try {
-            await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'feedback-test', version: '1.0.0' } });
-            await rpc('notifications/initialized', {}, true);
-            const controller = await reviews.open(candidates);
+            const controller = await reviews.open([httpCandidate(source), httpCandidate(target)]);
             await runEditorScript(controller, `
-                let proposalVersion = JSON.parse(decodeURIComponent(window.config._initialData)).version;
-                window.addEventListener('message', event => { if (event.data.command === 'proposal') proposalVersion = event.data.version; });
-                const source = document.querySelector('[data-id="create"]');
-                source.querySelector('.case-toggle').click();
-                source.querySelector('.request-preview textarea').value = '{"name":"private-review-body"}';
-                const key = source.querySelectorAll('.preview-entries')[1].querySelectorAll('input')[1];
-                key.value = 'private-review-key';
-                key.dispatchEvent(new Event('input', { bubbles: true }));
-                source.querySelector('.send-preview').click();
-                await waitFor(() => !source.querySelector('.preview-response-body').hidden);
-                const list = document.querySelector('[data-id="list"]');
-                list.querySelector('[data-case-id]').click();
-                list.querySelector('.case-toggle').click();
-                list.querySelector('[data-comment-id]').value = 'Add supported pagination and sorting query names.';
-                list.querySelector('[data-comment-id]').dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => source !== document.querySelector('[data-id="create"]') && document.querySelector('#review-loading').hidden);
-                if (document.querySelector('[data-id="create"] .case-name').textContent !== 'Create test account') throw new Error('Stable-ID revision did not rerender.');
-                if (document.querySelector('[data-id="create"] .request-preview textarea').value !== '{"name":"private-review-body"}') throw new Error('Revision replaced a private body.');
-                if (document.querySelector('[data-id="create"] .case-details').hidden) throw new Error('Revision collapsed an expanded row.');
-                if (!document.querySelector('[data-id="create"] .preview-response-body').hidden) throw new Error('Revision retained an outdated preview result.');
-                window.dispatchEvent(new MessageEvent('message', { data: { command: 'preview', version: proposalVersion - 1, id: 'create', message: { command: 'requestStarted', saved: false, sequence: 999 } } }));
-                window.dispatchEvent(new MessageEvent('message', { data: { command: 'state', version: proposalVersion - 1, state: 'revising', selections: [], statuses: [] } }));
-                if (document.querySelector('#confirm-collection').disabled || !document.querySelector('#review-loading').hidden) throw new Error('Stale revision messages changed the current review.');
-                if (document.querySelector('[data-case-id="list"]').checked) throw new Error('Revision reselected an unchecked case.');
-                const names = [...document.querySelectorAll('[data-id="list"] .preview-entries')[0].querySelectorAll('input')].filter(input => input.placeholder === 'Name').map(input => input.value).filter(Boolean);
-                if (JSON.stringify(names) !== JSON.stringify(['page', 'pageSize', 'sort', 'filter'])) throw new Error('GET query names are missing from the revised draft.');
-                if ([...document.querySelectorAll('[data-comment-id]')].some(input => input.value)) throw new Error('Applied feedback was not cleared.');
-                if (document.querySelector('#confirm-collection').textContent !== 'Confirm') throw new Error('Revised review cannot be confirmed.');
-                if (!document.querySelector('[data-case-id="timer"]').disabled) throw new Error('Revision removed the unsupported trigger.');
-                const comment = document.querySelector('[data-comment-id="get"]');
-                comment.value = 'Name this Get account by ID.';
-                comment.dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => document.querySelector('[data-id="get"] .case-name').textContent === 'Get account by ID' && document.querySelector('#review-loading').hidden);
-                if (document.querySelector('[data-case-id="list"]').checked) throw new Error('Second revision lost the selection.');
-                if (!document.querySelector('#review-error').hidden) throw new Error('Late chat error overwrote an accepted revision.');
-            `);
-            assert.deepStrictEqual(revisions, [1, 2]);
-            assert.strictEqual(receivedRequests, before + 1, 'Feedback sent requests beyond the manual preview.');
-            assert.deepStrictEqual(provider.getRequests(), [existing]);
-            assert.throws(() => reviews.getApproved(controller.reviewId), /Confirm the active collection review/);
-            await runEditorScript(controller, `
-                await waitFor(() => document.querySelector('[data-id="get"] .case-name').textContent === 'Get account by ID' && document.querySelector('#review-loading').hidden);
-                const body = document.querySelector('[data-id="create"] .request-preview textarea');
-                if (body.value !== '{"name":"private-review-body"}') throw new Error('Readiness replay lost a private edit.');
-                body.value = '{"name":"private-review-body","editedAgain":true}';
-                let replayed = false;
-                window.addEventListener('message', event => { if (event.data.command === 'proposal') replayed = true; });
-                window.testApi.postMessage({ command: 'ready' });
-                await waitFor(() => replayed);
-                if (!body.value.includes('editedAgain')) throw new Error('Duplicate readiness replay overwrote an unsaved edit.');
-                if (!document.querySelector('#review-error').hidden) throw new Error('Late chat failure persisted into the revised review.');
-                document.querySelector('[data-case-id="list"]').click();
-                document.querySelector('#confirm-collection').click();
+                const row = document.querySelector('.case[data-id="${target.id}"]');
+                row.querySelector('.case-toggle').click();
+                if (row.querySelector('.endpoint').textContent !== ${JSON.stringify(`${target.request.method} ${target.request.url}`)}) throw new Error('HTTP summary is missing its method or endpoint.');
+                if (!row.querySelector('.case-prerequisites').textContent.includes(${JSON.stringify(source.name)})) throw new Error('Required prerequisite is missing.');
+                if (document.querySelector('.case-details input, .case-details select, .case-details textarea, .send-preview, .run-preview-chain')) throw new Error('Inventory contains editing or execution controls.');
+                const main = document.querySelector('main');
+                main.style.width = '240px';
+                if (main.scrollWidth > main.clientWidth) throw new Error('Inventory overflows a narrow panel.');
+                main.style.width = '';
+                document.querySelector('.select-all input').click();
+                const confirm = document.querySelector('#confirm-collection');
+                if (confirm.disabled) throw new Error('Empty selection disabled Confirm.');
+                confirm.click();
+                if (document.querySelector('#review-error').hidden || !document.querySelector('#review-error').textContent.includes('Select at least one')) throw new Error('Empty selection was not explained.');
+                document.querySelector('.select-all input').click();
+                confirm.click();
                 await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
             `);
-            assert.strictEqual(provider.getRequests().length, 4);
-            const sourceId = reviews.getDraftId(controller.reviewId, 'create');
-            const targetId = reviews.getDraftId(controller.reviewId, 'get');
-            const listId = reviews.getDraftId(controller.reviewId, 'list');
-            assert.ok(sourceId && targetId && listId);
-            assert.deepStrictEqual(provider.getRequest(sourceId)?.request.headers, [{ name: 'x-functions-key', value: 'private-review-key', enabled: true }]);
-            assert.strictEqual(provider.getRequest(sourceId)?.request.body, '{"name":"private-review-body","editedAgain":true}');
-            assert.deepStrictEqual(provider.getRequest(targetId)?.request.bindings, [{ name: 'accountId', sourceId, pointer: '/body/id' }]);
-            assert.deepStrictEqual(provider.getRequest(listId)?.request.query, ['page', 'pageSize', 'sort', 'filter'].map(name => ({ name, value: '', enabled: false })));
-            assert.deepStrictEqual(provider.getRequest(existing.id), existing);
-            assert.strictEqual(receivedRequests, before + 1, 'Confirmation sent additional requests.');
-            assert.deepStrictEqual(revisions, [1, 2], 'Clean confirmation started another chat turn.');
-        } finally {
-            mcp.disposable.dispose();
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('feedback failures retain editable notes, reject stale revisions, and allow cancellation during chat', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const revisions: number[] = [];
-        let rejectPending: ((error: Error) => void) | undefined;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, revision) => {
-            assert.ok(revision);
-            revisions.push(revision);
-            if (revision === 1) {
-                throw new Error('Could not open Copilot Chat. Retry Request changes.');
-            }
-            if (revision === 2) {
-                throw new UserCancelledError();
-            }
-            await new Promise<void>((_resolve, reject) => { rejectPending = reject; });
-        });
-        const before = receivedRequests;
-        try {
-            const controller = await reviews.open([httpCandidate()]);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                const comment = document.querySelector('[data-comment-id="http"]');
-                comment.value = 'Add the supported GET query names.';
-                comment.dispatchEvent(new Event('input', { bubbles: true }));
-                const confirm = document.querySelector('#confirm-collection');
-                confirm.click();
-                await waitFor(() => !document.querySelector('#review-error').hidden);
-                if (!document.querySelector('#review-loading').hidden || confirm.hidden || confirm.disabled) throw new Error('Failed chat cannot be retried.');
-                if (comment.disabled || comment.value !== 'Add the supported GET query names.') throw new Error('Failed chat lost feedback.');
-                confirm.click();
-                await waitFor(() => !document.querySelector('#review-error').hidden);
-                if (!document.querySelector('#review-loading').hidden || confirm.hidden || confirm.disabled) throw new Error('Cancelled chat kept the review locked.');
-            `);
-            assert.deepStrictEqual(revisions, [1, 2]);
-            assert.strictEqual(reviews.getReview(controller.reviewId).state, 'changesRequested');
-            assert.strictEqual(reviews.getReview(controller.reviewId).cases[0].comment, 'Add the supported GET query names.');
-            await assert.rejects(reviews.open([httpCandidate()], undefined, 2), /active review ID/);
-            await assert.rejects(reviews.open([httpCandidate()], controller.reviewId, 1), /no longer active/);
-            await runEditorScript(controller, `
-                await waitFor(() => document.querySelector('[data-comment-id="http"]').value === 'Add the supported GET query names.');
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => !document.querySelector('#review-loading').hidden);
-                if (document.querySelector('#review-loading h1').textContent !== 'Updating your collection') throw new Error('Revision loading indicator is missing.');
-                window.testApi.postMessage({ command: 'requestChanges', selections: [] });
-                window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: '' }] });
-                window.testApi.postMessage({ command: 'previewRequest', id: 'http', request: ${JSON.stringify(request())} });
-                await waitFor(() => document.querySelector('.preview-error').textContent.includes('active review'));
-                let replayed = false;
-                window.addEventListener('message', event => { if (event.data.command === 'proposal') replayed = true; });
-                window.testApi.postMessage({ command: 'ready' });
-                await waitFor(() => replayed);
-                if (document.querySelector('#review-loading').hidden) throw new Error('A rejected preview unlocked the pending revision.');
-                document.querySelector('#cancel-collection').click();
-                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Review cancelled.'));
-                if (!document.querySelector('#confirm-collection').hidden) throw new Error('Cancelled revision can be confirmed.');
-            `);
-            rejectPending?.(new Error('Late chat failure after cancellation.'));
-            assert.deepStrictEqual(revisions, [1, 2, 3]);
-            await assert.rejects(reviews.open([httpCandidate()], controller.reviewId, 3), /no longer active/);
-            assert.throws(() => reviews.getReview(controller.reviewId), /Confirm the active collection review/);
-            assert.deepStrictEqual(provider.getRequests(), []);
+            assert.strictEqual(provider.getRequests().length, 2);
             assert.strictEqual(receivedRequests, before);
+            const saved = provider.getRequest(reviews.getDraftId(controller.reviewId, source.id) ?? '');
+            assert.deepStrictEqual(saved?.request, source.request);
         } finally {
-            rejectPending?.(new UserCancelledError());
             reviews.dispose();
             provider.dispose();
         }
@@ -2044,7 +1774,7 @@ suite('Azure Invoke', () => {
                 await waitFor(() => document.querySelector('.case-status').title.startsWith('HTTP Trigger / 200, '));
                 if (document.querySelector('.case-status').textContent !== 'HTTP Trigger') throw new Error('Execution status changed the trigger description.');
                 if (!document.querySelector('[data-case-id="create"]').checked) throw new Error('Approved selection was not restored.');
-                if (document.querySelector('[data-comment-id="create"]').value !== '') throw new Error('Confirmed review gained feedback.');
+                if (document.querySelector('[data-comment-id]')) throw new Error('Inventory contains a feedback editor.');
             `);
             const saved = provider.getRequest(invocationId);
             assert.ok(saved);
@@ -2205,72 +1935,6 @@ suite('Azure Invoke', () => {
         }
     });
 
-    test('expanded HTTP previews send only enabled values and keep local edits without exposing them to AI', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const reviews = new CollectionReviews(context, provider, async () => { });
-        const template = httpCandidate({
-            request: request({
-                query: [{ name: 'page', value: '', enabled: false }],
-                headers: [{ name: 'x-functions-key', value: '', enabled: false }],
-            }),
-        });
-        const before = receivedRequests;
-        try {
-            const controller = await reviews.open([template]);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                const query = document.querySelectorAll('.preview-entries')[0];
-                if (query.querySelector('input').value !== 'page') throw new Error('Known query name is missing.');
-                if (query.querySelectorAll('input')[1].value || query.querySelector('input[type="checkbox"]').checked) throw new Error('A default query value was invented or enabled.');
-                document.querySelector('.send-preview').click();
-                await waitFor(() => !document.querySelector('.preview-response-body').hidden);
-                const result = JSON.parse(document.querySelector('.preview-response-body').textContent);
-                if (result.url !== '/echo' || result.headers['x-functions-key']) throw new Error('Disabled template parameters were sent.');
-            `);
-            assert.strictEqual(receivedRequests, before + 1);
-            assert.deepStrictEqual(provider.getRequests(), []);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                const queryValue = document.querySelectorAll('.preview-entries')[0].querySelectorAll('input')[1];
-                queryValue.value = '42';
-                queryValue.dispatchEvent(new Event('input', { bubbles: true }));
-                const headerValue = document.querySelectorAll('.preview-entries')[1].querySelectorAll('input')[1];
-                headerValue.value = 'local-preview-secret';
-                headerValue.dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('.send-preview').click();
-                await waitFor(() => !document.querySelector('.preview-response-body').hidden && document.querySelector('.preview-response-body').textContent.includes('page=42'));
-                const result = JSON.parse(document.querySelector('.preview-response-body').textContent);
-                if (result.headers['x-functions-key'] !== 'local-preview-secret') throw new Error('Filled header was not sent.');
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
-            `);
-            assert.strictEqual(receivedRequests, before + 2);
-            assert.strictEqual(provider.getRequests().length, 1, 'Confirm did not save manual fields.');
-            assert.deepStrictEqual(reviews.getApproved(controller.reviewId).cases[0].reviewedFields, ['headers', 'query']);
-            const getDefinition = getInvocationCollectionReviewTool(reviews);
-            const read = new McpTool(getDefinition.name, getDefinition.execute, getDefinition);
-            const approved = await read.executeMcp({ reviewId: controller.reviewId }, { signal: new AbortController().signal, requestId: 'read-private-review' });
-            assert.ok(!('isError' in approved && approved.isError));
-            assert.ok(!JSON.stringify(approved).includes('local-preview-secret'));
-            assert.ok(!JSON.stringify(approved).includes('"42"'));
-            const definition = draftHttpInvocationTool(provider, reviews);
-            const draft = new McpTool(definition.name, definition.execute, definition);
-            const drafted = await draft.executeMcp({
-                reviewId: controller.reviewId, candidateId: template.id, name: template.name, ...request(),
-            }, { signal: new AbortController().signal, requestId: 'draft-reviewed-values' });
-            assert.ok(!('isError' in drafted && drafted.isError));
-            const saved = provider.getRequests()[0];
-            assert.deepStrictEqual(saved.request.query, [{ name: 'page', value: '42', enabled: true }]);
-            assert.deepStrictEqual(saved.request.headers, [{ name: 'x-functions-key', value: 'local-preview-secret', enabled: true }]);
-            assert.ok(!findInvocationTab(template.name));
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
     test('debugging shares chosen evidence and replays exact captured inputs without rerunning prerequisites', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
         assert.ok(context);
@@ -2307,13 +1971,13 @@ suite('Azure Invoke', () => {
             assert.ok('isError' in unauthorized && unauthorized.isError);
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
-                if (!document.querySelector('#debug-response').hidden) throw new Error('Debugging is offered without a result.');
-                if (!document.querySelector('#breakpoint-guidance-field').hidden) throw new Error('Breakpoint guidance is offered without a result.');
+                const actions = document.querySelector('#debug-actions');
+                if (actions.hidden || !document.querySelector('#debug-response').disabled) throw new Error('Debugging is offered without a result.');
+                if (actions.compareDocumentPosition(document.querySelector('.response-section')) !== Node.DOCUMENT_POSITION_FOLLOWING) throw new Error('Breakpoint controls are not above the response.');
                 document.querySelector('#run-chain').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
-                if (document.querySelector('#debug-response').hidden) throw new Error('The response has no debug entry point.');
+                if (document.querySelector('#debug-response').disabled) throw new Error('The response has no debug entry point.');
                 if (document.querySelector('#debug-response').textContent !== 'Run with Copilot breakpoints') throw new Error('The HTTP breakpoint action does not match other triggers.');
-                if (document.querySelector('#breakpoint-guidance-field').hidden) throw new Error('Inline breakpoint guidance is missing.');
                 const guidance = document.querySelector('#breakpoint-guidance');
                 guidance.value = 'x'.repeat(501);
                 guidance.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2367,7 +2031,7 @@ suite('Azure Invoke', () => {
             assert.ok('isError' in repeated && repeated.isError);
             assert.strictEqual(receivedRequests, before + 3);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#breakpoint-guidance').value = '   ';
                 document.querySelector('#breakpoint-guidance').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#debug-response').click();
@@ -2447,7 +2111,7 @@ suite('Azure Invoke', () => {
             assert.ok(saved);
             const editor = editors.open(saved, true);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#body').value = 'unsaved snapshot body';
                 document.querySelector('#body').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#debug-response').click();
@@ -2529,7 +2193,7 @@ suite('Azure Invoke', () => {
             assert.strictEqual((await editors.sendRequest(actionContext, target)).status, 201);
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
@@ -2571,7 +2235,7 @@ suite('Azure Invoke', () => {
             const original = await editors.sendRequest(actionContext, target, undefined, true);
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
@@ -2625,7 +2289,7 @@ suite('Azure Invoke', () => {
             assert.strictEqual(opened.length, 0);
             sessionId = 'debug-session-one';
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-error').textContent.includes('unavailable'));
                 if (document.querySelector('#debug-response').disabled) throw new Error('Chat failure left debugging disabled.');
@@ -2634,7 +2298,7 @@ suite('Azure Invoke', () => {
             await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[0].debugId), /no longer active/);
             failChat = false;
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
@@ -2645,7 +2309,7 @@ suite('Azure Invoke', () => {
             sessionId = 'debug-session-one';
             await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[1].debugId), /no longer active/);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
@@ -2685,7 +2349,7 @@ suite('Azure Invoke', () => {
             await assert.rejects(() => editors.sendRequest(actionContext, target), /timed out/);
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
-                await waitFor(() => !document.querySelector('#debug-response').hidden);
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
                 document.querySelector('#debug-response').click();
                 await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
             `);
@@ -2699,7 +2363,7 @@ suite('Azure Invoke', () => {
                 await waitFor(() => !document.querySelector('#abort').hidden);
                 document.querySelector('#abort').click();
                 await waitFor(() => document.querySelector('#error').textContent === 'Request cancelled.');
-                if (!document.querySelector('#debug-response').hidden) throw new Error('A cancelled replay still offers debugging.');
+                if (!document.querySelector('#debug-response').disabled) throw new Error('A cancelled replay still offers debugging.');
             `);
             await assert.rejects(pending, error => isUserCancelledError(error));
         } finally {
@@ -2712,428 +2376,45 @@ suite('Azure Invoke', () => {
         }
     });
 
-    test('debugging refuses a non-local response before opening Copilot Chat', async () => {
+    test('non-loopback targets are blocked before any request in their chain is sent', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
         assert.ok(context);
         const address = Object.values(os.networkInterfaces()).flat().find(address => address?.family === 'IPv4' && !address.internal);
         assert.ok(address);
+        let remoteRequests = 0;
         const fixture = createServer((_request, response) => {
-            response.writeHead(500);
+            remoteRequests++;
             response.end('private non-local response');
         });
         await new Promise<void>(resolve => fixture.listen(0, address.address, resolve));
         const provider = new AzureInvokeTreeDataProvider();
-        let chatCalls = 0;
-        const editors = new HttpRequestEditors(context, provider, {
-            resolveSession: async () => ({ id: 'existing-local-debugger' }),
-            openChat: async () => { chatCalls++; },
-        });
-        const target = { id: 'non-local-debug', name: 'Remote response', request: request({ url: `http://${address.address}:${(fixture.address() as AddressInfo).port}/error` }) };
-        provider.saveRequest(target);
+        const editors = new HttpRequestEditors(context, provider);
+        const [source] = accountChain();
+        const target = { id: 'non-local-target', name: 'Remote request', request: request({ url: `http://${address.address}:${(fixture.address() as AddressInfo).port}/echo`, dependsOn: [source.id] }) };
+        provider.saveRequests([source, target]);
+        const before = receivedRequests;
+        const accounts = accountBodies.length;
         try {
             const editor = editors.open(target, true);
             await runEditorScript(editor, `
-                document.querySelector('#send').click();
-                await waitFor(() => !document.querySelector('#response-body').hidden);
-                document.querySelector('#debug-response').click();
-                await waitFor(() => document.querySelector('#debug-error').textContent.includes('only localhost'));
-                if (document.querySelector('#response-body').textContent !== 'private non-local response') throw new Error('The local response display changed.');
+                for (const action of ['#run-chain', '#send']) {
+                    document.querySelector('#error').hidden = true;
+                    document.querySelector(action).click();
+                    await waitFor(() => !document.querySelector('#error').hidden);
+                    if (!document.querySelector('#error').textContent.includes('limited support')) throw new Error(action + ' did not explain the local-only limit.');
+                    if (!document.querySelector('#response-body').hidden) throw new Error(action + ' displayed a response.');
+                }
             `);
-            assert.strictEqual(chatCalls, 0);
+            await assert.rejects(editors.sendRequest(await createTestActionContext(), target, undefined, true), /limited support/);
+            assert.strictEqual(remoteRequests, 0, 'A non-loopback request was sent.');
+            assert.strictEqual(receivedRequests, before, 'A local prerequisite ran before the chain was rejected.');
+            assert.strictEqual(accountBodies.length, accounts);
+            assert.deepStrictEqual(provider.getRequest(target.id), target, 'Remote URLs can still be saved.');
         } finally {
             editors.dispose();
             provider.dispose();
             fixture.closeAllConnections();
             await new Promise<void>((resolve, reject) => fixture.close(error => error ? reject(error) : resolve()));
-        }
-    });
-
-    test('failed preview diagnosis shares only chosen evidence through MCP without changing or running drafts', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const diagnoses: { reviewId: string; diagnosisId: string }[] = [];
-        const reviews = new CollectionReviews(context, provider, async (reviewId, revision, diagnosisId) => {
-            assert.strictEqual(revision, undefined);
-            assert.ok(diagnosisId);
-            diagnoses.push({ reviewId, diagnosisId });
-        });
-        const definition = getInvocationDiagnosticsTool(reviews);
-        const mcp = await startInProcHttpServer({
-            id: mcpServerId, serverLabel: 'Preview diagnosis test', serverVersion: '1.0.0', transport: 'tcp',
-            registerTools: server => { registerMcpTool(server, definition); },
-        });
-        const rpc = createMcpClient(mcp);
-        const template = httpCandidate({
-            request: request({
-                method: 'POST', url: `${baseUrl}/diagnosis-error`, body: '{}',
-                headers: [{ name: 'x-functions-key', value: '', enabled: false }],
-            }),
-        });
-        const before = receivedRequests;
-        try {
-            await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'diagnosis-test', version: '1.0.0' } });
-            await rpc('notifications/initialized', {}, true);
-            const controller = await reviews.open([template, httpCandidate({ id: 'healthy' })]);
-            const premature = await rpc('tools/call', { name: definition.name, arguments: { reviewId: controller.reviewId, diagnosisId: 'unapproved' } });
-            assert.strictEqual(z.object({ result: z.object({ isError: z.boolean() }) }).parse(premature).result.isError, true);
-            await runEditorScript(controller, `
-                if (!document.querySelector('#diagnose-failed').hidden) throw new Error('Diagnosis is available before a failure.');
-                const failed = document.querySelector('[data-id="http"]');
-                failed.querySelector('.case-toggle').click();
-                const privateHeader = failed.querySelectorAll('.preview-entries')[1].querySelectorAll('input')[1];
-                privateHeader.value = 'local-private-diagnosis-value';
-                privateHeader.dispatchEvent(new Event('input', { bubbles: true }));
-                failed.querySelector('textarea[data-comment-id]').value = 'Keep my local fields.';
-                failed.querySelector('textarea[data-comment-id]').dispatchEvent(new Event('input', { bubbles: true }));
-                failed.querySelector('.send-preview').click();
-                await waitFor(() => !failed.querySelector('.preview-response-body').hidden);
-                if (failed.querySelector('.diagnose-preview').hidden) throw new Error('Failed preview has no diagnosis action.');
-                const healthy = document.querySelector('[data-id="healthy"]');
-                healthy.querySelector('.case-toggle').click();
-                healthy.querySelector('.send-preview').click();
-                await waitFor(() => !healthy.querySelector('.preview-response-body').hidden);
-                if (!healthy.querySelector('.diagnose-preview').hidden) throw new Error('Successful preview has a failure action.');
-                if (!document.querySelector('.diagnosis-hint').textContent.includes('sensitive data')) throw new Error('Sharing notice is missing.');
-                failed.querySelector('.diagnose-preview').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-                if (privateHeader.value !== 'local-private-diagnosis-value' || privateHeader.disabled) throw new Error('Diagnosis changed or locked local edits.');
-                if (failed.querySelector('textarea[data-comment-id]').value !== 'Keep my local fields.') throw new Error('Diagnosis changed feedback.');
-                if (document.querySelector('#confirm-collection').textContent !== 'Request changes') throw new Error('Diagnosis submitted or cleared feedback.');
-            `);
-            assert.strictEqual(diagnoses.length, 1);
-            const result = await rpc('tools/call', { name: definition.name, arguments: diagnoses[0] });
-            const cases = z.object({
-                result: z.object({ structuredContent: z.object({ cases: z.array(z.object({
-                    id: z.string(), request: z.unknown(), reviewedFields: z.array(z.string()),
-                    diagnostic: z.object({ outcome: z.string(), status: z.number(), body: z.string(), headers: z.array(z.object({ name: z.string(), value: z.string() })) }),
-                })) }) }),
-            }).parse(result).result.structuredContent.cases;
-            assert.strictEqual(cases.length, 1);
-            assert.strictEqual(cases[0].id, template.id);
-            assert.deepStrictEqual(cases[0].request, template.request);
-            assert.deepStrictEqual(cases[0].reviewedFields, ['headers']);
-            assert.strictEqual(cases[0].diagnostic.status, 422);
-            assert.strictEqual(cases[0].diagnostic.body, '{"error":"name is required"}');
-            assert.ok(cases[0].diagnostic.headers.some(header => header.name === 'content-type'));
-            for (const privateValue of ['local-private-diagnosis-value', 'private-diagnosis-cookie', 'private-diagnosis-key', 'private-diagnosis-header']) {
-                assert.ok(!JSON.stringify(result).includes(privateValue));
-            }
-            assert.throws(() => reviews.getReview(controller.reviewId), /Confirm the active collection review/);
-            assert.deepStrictEqual(provider.getRequests(), []);
-            assert.strictEqual(receivedRequests, before + 2, 'Diagnosis sent an additional HTTP request.');
-        } finally {
-            mcp.disposable.dispose();
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('collection diagnosis includes failures but not successful or cancelled previews and expires on rerun', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        let diagnosisId: string | undefined;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, _revision, id) => { diagnosisId = id; });
-        const templates = [
-            httpCandidate({ id: 'failed', request: request({ url: `${baseUrl}/error` }) }),
-            httpCandidate({ id: 'transport', request: request({ url: `${baseUrl}/drop` }) }),
-            httpCandidate({ id: 'cancelled', request: request({ url: `${baseUrl}/slow` }) }),
-        ];
-        const before = receivedRequests;
-        try {
-            const controller = await reviews.open(templates);
-            await runEditorScript(controller, `
-                for (const id of ['failed', 'transport']) {
-                    const row = document.querySelector('[data-id="' + id + '"]');
-                    row.querySelector('.case-toggle').click();
-                    row.querySelector('.send-preview').click();
-                    await waitFor(() => !row.querySelector('.preview-response-body').hidden || !row.querySelector('.preview-error').hidden);
-                }
-                const cancelled = document.querySelector('[data-id="cancelled"]');
-                cancelled.querySelector('.case-toggle').click();
-                cancelled.querySelector('.send-preview').click();
-                await waitFor(() => !cancelled.querySelector('.cancel-preview').hidden);
-                if (!document.querySelector('#diagnose-failed').disabled) throw new Error('Diagnosis is enabled during execution.');
-                cancelled.querySelector('.cancel-preview').click();
-                await waitFor(() => cancelled.querySelector('.preview-error').textContent === 'Request cancelled.');
-                if (!cancelled.querySelector('.diagnose-preview').hidden) throw new Error('Cancellation is treated as a failure.');
-                document.querySelector('#diagnose-failed').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-            `);
-            assert.ok(diagnosisId);
-            const cases = reviews.getDiagnostics(controller.reviewId, diagnosisId).cases;
-            assert.deepStrictEqual(cases.map(item => item.id), ['failed', 'transport']);
-            assert.strictEqual(cases[0].diagnostic.outcome, 'response');
-            assert.strictEqual(cases[1].diagnostic.outcome, 'requestError');
-            const sentAfterPreviews = receivedRequests;
-            assert.ok(sentAfterPreviews >= before + 2 && sentAfterPreviews <= before + 3);
-            await runEditorScript(controller, `
-                const failed = document.querySelector('[data-id="failed"]');
-                failed.querySelector('.case-toggle').click();
-                const url = failed.querySelector('input[type="url"]');
-                url.value = '${baseUrl}/echo';
-                url.dispatchEvent(new Event('input', { bubbles: true }));
-                if (!failed.querySelector('.diagnose-preview').hidden) throw new Error('Changed request still offers diagnosis for an old result.');
-                failed.querySelector('.send-preview').click();
-                await waitFor(() => !failed.querySelector('.preview-response-body').hidden && JSON.parse(failed.querySelector('.preview-response-body').textContent).url === '/echo');
-            `);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-            assert.strictEqual(receivedRequests, sentAfterPreviews + 1);
-            assert.deepStrictEqual(provider.getRequests(), []);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('diagnosis failures keep drafts editable and reject stale or forged failure selections', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        let diagnosisId: string | undefined;
-        let chatCalls = 0;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, _revision, id) => {
-            diagnosisId = id;
-            chatCalls++;
-            if (chatCalls === 1) {
-                throw new Error('Copilot Chat is unavailable.');
-            }
-        });
-        const template = httpCandidate({ request: request({ url: `${baseUrl}/error` }) });
-        try {
-            const controller = await reviews.open([template]);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                document.querySelector('.send-preview').click();
-                await waitFor(() => !document.querySelector('.preview-response-body').hidden);
-                document.querySelector('.diagnose-preview').click();
-                await waitFor(() => !document.querySelector('#review-error').hidden);
-                if (!document.querySelector('#review-error').textContent.includes('unavailable')) throw new Error('Chat failure is not actionable.');
-                if (document.querySelector('input[type="url"]').disabled || document.querySelector('#confirm-collection').disabled) throw new Error('Chat failure left the review locked.');
-            `);
-            assert.ok(diagnosisId);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-            await runEditorScript(controller, `
-                window.testApi.postMessage({
-                    command: 'diagnoseRequests', ids: ['http'],
-                    requests: [{ id: 'http', request: ${JSON.stringify(request({ url: `${baseUrl}/echo` }))} }],
-                });
-                await waitFor(() => document.querySelector('#review-error').textContent.includes('changed after its preview'));
-            `);
-            assert.strictEqual(chatCalls, 1);
-            await runEditorScript(controller, `
-                window.testApi.postMessage({ command: 'diagnoseRequests', ids: ['unknown'], requests: [] });
-                await waitFor(() => document.querySelector('#review-error').textContent.includes('failed HTTP previews'));
-                document.querySelector('.case-toggle').click();
-                document.querySelector('.diagnose-preview').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-            `);
-            assert.strictEqual(chatCalls, 2);
-            assert.ok(diagnosisId);
-            assert.strictEqual(reviews.getDiagnostics(controller.reviewId, diagnosisId).cases.length, 1);
-            await runEditorScript(controller, `
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
-                if (!document.querySelector('#diagnose-failed').hidden) throw new Error('Confirmed review still offers diagnosis.');
-            `);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('diagnosis rejects changed prerequisites, handles configuration errors, and expires with review changes', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        let diagnosisId: string | undefined;
-        let diagnoses = 0;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, _revision, id) => {
-            if (id) {
-                diagnosisId = id;
-                diagnoses++;
-            }
-        });
-        const templates = [
-            httpCandidate({ id: 'source' }),
-            httpCandidate({ id: 'failed', request: request({ url: `${baseUrl}/error`, dependsOn: ['source'] }) }),
-        ];
-        try {
-            const controller = await reviews.open(templates);
-            await runEditorScript(controller, `
-                const failed = document.querySelector('[data-id="failed"]');
-                failed.querySelector('.case-toggle').click();
-                failed.querySelector('.run-preview-chain').click();
-                await waitFor(() => !failed.querySelector('.preview-response-body').hidden);
-                const source = document.querySelector('[data-id="source"]');
-                source.querySelector('.case-toggle').click();
-                source.querySelector('input[type="url"]').value = '${baseUrl}/echo?edited=true';
-                source.querySelector('input[type="url"]').dispatchEvent(new Event('input', { bubbles: true }));
-                failed.querySelector('.diagnose-preview').click();
-                await waitFor(() => document.querySelector('#review-error').textContent.includes('changed after its preview'));
-                failed.querySelector('.run-preview-chain').click();
-                await waitFor(() => !failed.querySelector('.preview-response-body').hidden);
-                failed.querySelector('.diagnose-preview').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-                failed.querySelector('textarea[data-comment-id]').value = 'Review the generated request.';
-                failed.querySelector('textarea[data-comment-id]').dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('#confirm-collection').click();
-                await waitFor(() => document.querySelector('#review-loading h1').textContent === 'Updating your collection');
-            `);
-            assert.strictEqual(diagnoses, 1);
-            assert.ok(diagnosisId);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-            await reviews.open(templates, controller.reviewId, reviews.getReview(controller.reviewId).revision);
-            const before = receivedRequests;
-            await runEditorScript(controller, `
-                const failed = document.querySelector('[data-id="failed"]');
-                failed.querySelector('.case-toggle').click();
-                failed.querySelector('input[type="url"]').value = '${baseUrl}/api/:id';
-                failed.querySelector('input[type="url"]').dispatchEvent(new Event('input', { bubbles: true }));
-                if (failed.querySelector('.send-preview').disabled) throw new Error('Configuration preview is disabled.');
-                if (!failed.querySelector('form').checkValidity()) throw new Error('Configuration preview form is invalid.');
-                if (failed.querySelector('.case-details').hidden) throw new Error('Configuration preview details are collapsed.');
-                failed.querySelector('.send-preview').click();
-                await waitFor(() => !failed.querySelector('.preview-error').hidden || !failed.querySelector('.preview-response-body').hidden);
-                if (!failed.querySelector('.preview-error').textContent.includes('route placeholders')) throw new Error('Expected an unresolved-route configuration failure.');
-                failed.querySelector('.diagnose-preview').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-            `);
-            assert.strictEqual(diagnoses, 2);
-            assert.ok(diagnosisId);
-            const cases = reviews.getDiagnostics(controller.reviewId, diagnosisId).cases;
-            assert.strictEqual(cases[0].diagnostic.outcome, 'requestError');
-            assert.deepStrictEqual(cases[0].reviewedFields, ['url']);
-            assert.strictEqual(receivedRequests, before, 'Configuration diagnosis sent an HTTP request.');
-            await runEditorScript(controller, `
-                document.querySelector('#cancel-collection').click();
-                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Review cancelled.'));
-            `);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-            await reviews.open([httpCandidate()]);
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('diagnosis bounds shared response evidence and withholds bodies for non-local chains', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const editors = new HttpRequestEditors(context, provider);
-        let diagnosisId: string | undefined;
-        const reviews = new CollectionReviews(context, provider, async (_reviewId, _revision, id) => { diagnosisId = id; });
-        const address = Object.values(os.networkInterfaces()).flat().find(address => address?.family === 'IPv4' && !address.internal);
-        assert.ok(address, 'A local network interface is required to exercise non-loopback response sharing.');
-        const nonLocalServer = createServer((request, response) => {
-            response.writeHead(request.url === '/error' ? 503 : 200, { 'content-type': 'application/json' });
-            response.end('{"error":"local fixture on a non-loopback interface"}');
-        });
-        await new Promise<void>(resolve => nonLocalServer.listen(0, address.address, resolve));
-        const nonLocalBase = `http://${address.address}:${(nonLocalServer.address() as AddressInfo).port}`;
-        const templates = [
-            ...Array.from({ length: 10 }, (_, index) => httpCandidate({ id: `large-${index}`, request: request({ url: `${baseUrl}/large-error` }) })),
-            httpCandidate({ id: 'remote', request: request({ url: `${nonLocalBase}/error` }) }),
-            httpCandidate({ id: 'source', request: request({ url: `${nonLocalBase}/echo` }) }),
-            httpCandidate({ id: 'dependent', request: request({ url: `${baseUrl}/error`, dependsOn: ['source'] }) }),
-        ];
-        try {
-            provider.saveRequests(templates);
-            const inspectionDefinition = getHttpInvocationInspectionTool(editors);
-            const inspectionTool = new McpTool(inspectionDefinition.name, inspectionDefinition.execute, inspectionDefinition);
-            for (const id of ['large-0', 'remote', 'dependent']) {
-                const invocation = provider.getRequest(id);
-                assert.ok(invocation);
-                await editors.sendRequest(await createTestActionContext(), invocation, undefined, id === 'dependent');
-                const result = z.object({ structuredContent: z.object({
-                    diagnostic: z.object({ body: z.optional(z.string()), bodyTruncated: z.optional(z.boolean()), headers: z.optional(z.array(z.object({ name: z.string() }))) }),
-                }) }).parse(await inspectionTool.executeMcp({ id }, { signal: new AbortController().signal, requestId: 'saved-inspection-privacy' }));
-                const diagnostic = result.structuredContent.diagnostic;
-                if (id === 'large-0') {
-                    assert.strictEqual(Buffer.byteLength(diagnostic.body ?? ''), 64 * 1024);
-                    assert.strictEqual(diagnostic.bodyTruncated, true);
-                    assert.ok(!diagnostic.body?.includes('\ufffd'));
-                } else {
-                    assert.strictEqual(diagnostic.body, undefined);
-                    assert.strictEqual(diagnostic.headers, undefined);
-                }
-            }
-            const controller = await reviews.open(templates);
-            await runEditorScript(controller, `
-                for (const id of ${JSON.stringify(templates.filter(item => item.id !== 'source').map(item => item.id))}) {
-                    const row = document.querySelector('[data-id="' + id + '"]');
-                    row.querySelector('.case-toggle').click();
-                    row.querySelector(id === 'dependent' ? '.run-preview-chain' : '.send-preview').click();
-                    await waitFor(() => !row.querySelector('.preview-response-body').hidden || !row.querySelector('.preview-error').hidden);
-                    if (!row.querySelector('.preview-error').hidden) throw new Error(id + ': ' + row.querySelector('.preview-error').textContent);
-                }
-                document.querySelector('#diagnose-failed').click();
-                await waitFor(() => document.querySelector('#diagnosis-notice').textContent.includes('Opened Copilot Chat'));
-            `);
-            assert.ok(diagnosisId);
-            const cases = reviews.getDiagnostics(controller.reviewId, diagnosisId).cases;
-            let totalBodyBytes = 0;
-            for (const item of cases) {
-                assert.strictEqual(item.diagnostic.outcome, 'response');
-                if (item.diagnostic.outcome !== 'response') {
-                    assert.fail('Expected a completed HTTP response.');
-                }
-                if (item.id.startsWith('large-')) {
-                    const size = Buffer.byteLength(item.diagnostic.body ?? '');
-                    assert.ok(size <= 64 * 1024);
-                    totalBodyBytes += size;
-                    assert.strictEqual(item.diagnostic.bodyTruncated, true);
-                    assert.ok(!item.diagnostic.body?.includes('\ufffd'));
-                } else {
-                    assert.strictEqual(item.diagnostic.status, 503);
-                    assert.strictEqual(item.diagnostic.body, undefined);
-                    assert.strictEqual(item.diagnostic.headers, undefined);
-                }
-            }
-            assert.strictEqual(cases.length, 12);
-            assert.strictEqual(totalBodyBytes, 512 * 1024);
-            controller.panel.dispose();
-            assert.throws(() => reviews.getDiagnostics(controller.reviewId, diagnosisId ?? ''), /no longer active/);
-        } finally {
-            nonLocalServer.closeAllConnections();
-            await new Promise<void>((resolve, reject) => nonLocalServer.close(error => error ? reject(error) : resolve()));
-            reviews.dispose();
-            editors.dispose();
-            provider.dispose();
-        }
-    });
-
-    test('HTTP previews support cancellation and refuse unresolved route placeholders or confirmation while running', async () => {
-        const context = (await getTestApi()).extensionVariables.getContext();
-        assert.ok(context);
-        const provider = new AzureInvokeTreeDataProvider();
-        const reviews = new CollectionReviews(context, provider, async () => { throw new Error('Running preview must not be approved.'); });
-        try {
-            const controller = await reviews.open([httpCandidate({ request: request({ url: `${baseUrl}/slow` }) })]);
-            await runEditorScript(controller, `
-                document.querySelector('.case-toggle').click();
-                document.querySelector('.send-preview').click();
-                await waitFor(() => !document.querySelector('.cancel-preview').hidden);
-                if (!document.querySelector('#confirm-collection').disabled) throw new Error('Confirmation is enabled while sending.');
-                window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: '' }] });
-                await waitFor(() => !document.querySelector('#review-error').hidden);
-                if (!document.querySelector('#review-error').textContent.includes('running previews')) throw new Error('Server accepted confirmation while sending.');
-                document.querySelector('.cancel-preview').click();
-                await waitFor(() => document.querySelector('.preview-error').textContent === 'Request cancelled.');
-                if (document.querySelector('.send-preview').disabled) throw new Error('Preview stayed busy after cancellation.');
-                document.querySelector('.request-preview input[type="url"]').value = '${baseUrl}/api/posts/{id}';
-                document.querySelector('.send-preview').click();
-                await waitFor(() => document.querySelector('.preview-error').textContent.includes('route placeholders'));
-            `);
-            assert.throws(() => reviews.getApproved(controller.reviewId), /Confirm the active collection review/);
-            assert.deepStrictEqual(provider.getRequests(), []);
-        } finally {
-            reviews.dispose();
-            provider.dispose();
         }
     });
 
@@ -3516,7 +2797,7 @@ suite('Azure Invoke', () => {
             };
         }
 
-        test('authors mixed collections through MCP with private file capture and revision-safe metadata edits', async () => {
+        test('authors mixed collections through MCP with private file capture and read-only metadata', async () => {
             const context = (await getTestApi()).extensionVariables.getContext();
             assert.ok(context);
             const provider = new AzureInvokeTreeDataProvider();
@@ -3567,8 +2848,10 @@ suite('Azure Invoke', () => {
                     if (row.querySelector('.case-status').title !== 'Blob Trigger / Supported / Manual only') throw new Error('Manual status tooltip is missing.');
                     row.querySelector('.case-toggle').click();
                     if (row.querySelector('.send-preview') || row.querySelector('.run-preview-chain')) throw new Error('Blob row can upload a preview.');
-                    if (row.querySelector('.blob-container').value !== 'inventory-imports') throw new Error('Binding-derived container was lost.');
-                    if (!document.querySelector('#confirm-collection').disabled) throw new Error('Confirmation accepted a missing file.');
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/') throw new Error('Binding-derived container was lost.');
+                    if (row.querySelector('input:not([type="checkbox"]), select, textarea')) throw new Error('Blob metadata is editable.');
+                    if (document.querySelector('#confirm-collection').disabled) throw new Error('A missing file disabled confirmation.');
+                    if (row.querySelector('.case-warning').hidden) throw new Error('Missing file has no row warning.');
                 `);
                 const selected = await rpc('tools/call', {
                     name: 'select_blob_invocation_file', arguments: { reviewId, candidateId: 'blob-import' },
@@ -3586,42 +2869,8 @@ suite('Azure Invoke', () => {
                 await runEditorScript(controller, `
                     const row = document.querySelector('.case[data-id="blob-import"]');
                     if (row.querySelector('.blob-file-name').textContent !== 'user-private-fixture.bin') throw new Error('MCP picker did not update the review.');
-                    if (row.querySelector('.blob-blobName').value !== 'user-private-fixture.bin') throw new Error('Chosen filename was not defaulted.');
-                    row.querySelector('.blob-container').value = 'private-container';
-                    row.querySelector('.blob-blobName').value = 'nested/private-destination.bin';
-                    row.querySelector('.blob-target').value = 'http://localhost:12345/devstoreaccount1';
-                    const comment = row.querySelector('[data-comment-id]');
-                    comment.value = 'Use a binary content type.';
-                    comment.dispatchEvent(new Event('input', { bubbles: true }));
-                    document.querySelector('#confirm-collection').click();
-                    await waitFor(() => !document.querySelector('#review-loading').hidden);
-                `);
-                const feedback = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
-                for (const privateValue of ['private-container', 'private-destination', '12345', 'user-private-fixture', file.fsPath, bytes.toString('base64')]) {
-                    assert.ok(!JSON.stringify(feedback).includes(privateValue), `Review leaked ${privateValue}.`);
-                }
-                const reviewedBlob = reviews.getReview(reviewId).cases.find(candidate => candidate.trigger === 'blob');
-                assert.ok(reviewedBlob?.trigger === 'blob');
-                assert.strictEqual(reviewedBlob.fileSelected, true);
-                assert.deepStrictEqual(reviewedBlob.reviewedFields, ['target', 'container', 'blobName']);
-                const revised: BlobInvocationCandidate = {
-                    ...blobCandidate(),
-                    request: { ...blobCandidate().request, container: 'revised-imports', contentType: 'application/octet-stream' },
-                };
-                const revision = await rpc('tools/call', {
-                    name: 'propose_invocation_collection',
-                    arguments: { reviewId, revision: 1, candidates: [candidates[0], candidates[1], revised] },
-                });
-                assert.ok(!JSON.stringify(revision).includes('"isError":true'));
-                assert.ok(controller);
-                await fs.remove(file.fsPath);
-                await runEditorScript(controller, `
-                    const row = document.querySelector('.case[data-id="blob-import"]');
-                    if (row.querySelector('.blob-file-name').textContent !== 'user-private-fixture.bin') throw new Error('Revision lost the captured file.');
-                    if (row.querySelector('.blob-container').value !== 'private-container' || row.querySelector('.blob-blobName').value !== 'nested/private-destination.bin') throw new Error('Revision overwrote private metadata.');
-                    if (row.querySelector('.blob-target').value !== 'http://localhost:12345/devstoreaccount1') throw new Error('Revision overwrote the private endpoint.');
-                    if (row.querySelector('.blob-contentType').value !== 'application/octet-stream') throw new Error('Unedited metadata did not adopt the revision.');
-                    if (row.querySelector('[data-comment-id]').value) throw new Error('Applied feedback was not cleared.');
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/user-private-fixture.bin') throw new Error('Chosen filename was not defaulted.');
+                    if (!row.querySelector('.case-warning').hidden) throw new Error('Captured file did not clear the warning.');
                     document.querySelector('#confirm-collection').click();
                     await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
                 `);
@@ -3632,8 +2881,8 @@ suite('Azure Invoke', () => {
                 assert.ok(blobId);
                 const saved = provider.getBlobInvocation(blobId);
                 assert.ok(saved);
-                assert.strictEqual(saved.request.container, 'private-container');
-                assert.strictEqual(saved.request.blobName, 'nested/private-destination.bin');
+                assert.strictEqual(saved.request.container, 'inventory-imports');
+                assert.strictEqual(saved.request.blobName, 'user-private-fixture.bin');
                 assert.strictEqual(saved.request.content, bytes.toString('base64'));
                 assert.strictEqual(saved.request.fileName, 'user-private-fixture.bin');
                 assert.strictEqual(provider.getRequest(blobId), undefined);
@@ -3655,6 +2904,36 @@ suite('Azure Invoke', () => {
                 provider.dispose();
                 await mcp.disposable.dispose();
                 await fs.remove(directory);
+            }
+        });
+
+        test('incomplete Blob rows expand together and can be excluded without blocking confirmation', async () => {
+            const context = (await getTestApi()).extensionVariables.getContext();
+            assert.ok(context);
+            const provider = new AzureInvokeTreeDataProvider();
+            const reviews = new CollectionReviews(context, provider);
+            try {
+                const controller = await reviews.open([httpCandidate(), blobCandidate(), { ...blobCandidate(), id: 'second-blob', name: 'Import another file' }]);
+                await runEditorScript(controller, `
+                    const confirm = document.querySelector('#confirm-collection');
+                    const rows = [...document.querySelectorAll('.case')].filter(row => row.querySelector('.choose-blob-file'));
+                    confirm.click();
+                    if (document.querySelector('#review-error').hidden) throw new Error('Missing files have no notification.');
+                    for (const row of rows) {
+                        if (row.querySelector('.case-details').hidden || row.querySelector('.case-warning').hidden) throw new Error('An incomplete row was not highlighted and expanded.');
+                        row.querySelector('[data-case-id]').click();
+                        if (!row.querySelector('.case-warning').hidden || !row.querySelector('.case-requirement').hidden) throw new Error('Unchecked row still requires a file.');
+                    }
+                    if (!document.querySelector('#review-error').hidden) throw new Error('Resolved requirements left a stale error.');
+                    if (confirm.disabled) throw new Error('Unchecked Blob invocations blocked confirmation.');
+                    confirm.click();
+                    await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
+                `);
+                assert.strictEqual(provider.getInvocations().length, 1);
+                assert.strictEqual(provider.getRequests().length, 1);
+            } finally {
+                reviews.dispose();
+                provider.dispose();
             }
         });
 
@@ -3681,7 +2960,9 @@ suite('Azure Invoke', () => {
                 }
             });
             try {
-                const controller = await reviews.open([httpCandidate(), blobCandidate()]);
+                const candidate = blobCandidate();
+                candidate.request.blobName = 'incoming/empty.bin';
+                const controller = await reviews.open([httpCandidate(), candidate]);
                 await runEditorScript(controller, `
                     const row = document.querySelector('.case[data-id="blob-import"]');
                     const checkbox = row.querySelector('[data-case-id]');
@@ -3689,9 +2970,15 @@ suite('Azure Invoke', () => {
                     checkbox.click();
                     if (confirm.disabled) throw new Error('Unchecked Blob fixture blocked HTTP confirmation.');
                     checkbox.click();
-                    window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: '' }, { id: 'blob-import', comment: '' }] });
+                    if (confirm.disabled) throw new Error('Missing file disabled confirmation.');
+                    if (row.querySelector('.case-warning').hidden) throw new Error('Missing file has no warning.');
+                    confirm.click();
                     await waitFor(() => !document.querySelector('#review-error').hidden);
-                    if (!document.querySelector('#review-error').textContent.includes('Choose a file')) throw new Error('Forged confirmation bypassed file capture.');
+                    if (!document.querySelector('#review-error').textContent.includes('Choose a file')) throw new Error('Missing file was not explained.');
+                    if (row.querySelector('.case-details').hidden) throw new Error('Confirm did not expand the incomplete row.');
+                    if (document.activeElement !== row.querySelector('.choose-blob-file')) throw new Error('Confirm did not focus the file picker.');
+                    window.testApi.postMessage({ command: 'confirmCollection', selections: [{ id: 'http', comment: '' }, { id: 'blob-import', comment: '' }] });
+                    await waitFor(() => document.querySelector('#review-error').textContent.includes('each selected Blob'));
                     const pick = async () => {
                         const finished = new Promise(resolve => {
                             let started = false;
@@ -3705,17 +2992,16 @@ suite('Azure Invoke', () => {
                         row.querySelector('.choose-blob-file').click();
                         await finished;
                     };
-                    row.querySelector('.case-toggle').click();
                     await pick();
-                    if (!document.querySelector('#review-error').hidden || !confirm.disabled) throw new Error('Cancellation displayed an error or supplied a file.');
+                    if (!document.querySelector('#review-error').hidden || confirm.disabled || row.querySelector('.case-warning').hidden) throw new Error('Cancellation changed readiness or disabled confirmation.');
                     await pick();
                     await waitFor(() => !document.querySelector('#review-error').hidden);
                     if (!document.querySelector('#review-error').textContent.includes('5 MB')) throw new Error('Oversized fixture was not rejected.');
-                    if (!confirm.disabled) throw new Error('Oversized fixture enabled confirmation.');
-                    row.querySelector('.blob-blobName').value = 'incoming/empty.bin';
+                    if (confirm.disabled || row.querySelector('.case-warning').hidden) throw new Error('Oversized fixture changed readiness or disabled confirmation.');
                     await pick();
-                    if (row.querySelector('.blob-blobName').value !== 'incoming/empty.bin') throw new Error('Choosing a file overwrote the concrete destination.');
+                    if (row.querySelector('.endpoint').textContent !== 'inventory-imports/incoming/empty.bin') throw new Error('Choosing a file overwrote the concrete destination.');
                     if (row.querySelector('.blob-file-name').textContent !== 'empty.bin' || confirm.disabled) throw new Error('Valid empty file was rejected.');
+                    if (!row.querySelector('.case-warning').hidden || !row.querySelector('.case-requirement').hidden) throw new Error('Valid file did not clear the warning.');
                     await pick();
                     if (row.querySelector('.blob-file-name').textContent !== 'empty.bin' || !document.querySelector('#review-error').hidden || confirm.disabled) throw new Error('Cancellation lost the existing captured file.');
                     confirm.click();
@@ -4271,7 +3557,7 @@ suite('Azure Invoke', () => {
             }
         });
 
-        test('Timer proposals preserve private edits and unchecked selections through review without invoking', async () => {
+        test('Timer proposals show read-only details and save selected invocations without invoking', async () => {
             const context = (await getTestApi()).extensionVariables.getContext();
             assert.ok(context);
             const provider = new AzureInvokeTreeDataProvider();
@@ -4302,36 +3588,20 @@ suite('Azure Invoke', () => {
                     if (row.querySelector('.case-status').textContent !== 'Timer Trigger') throw new Error('Timer row includes extra description text.');
                     row.querySelector('.case-toggle').click();
                     if (row.querySelector('.send-preview, .run-preview-chain')) throw new Error('Timer proposal can execute a preview.');
-                    if (!row.querySelector('.timer-schedule').readOnly) throw new Error('Proposal lets the user change the function schedule.');
-                    row.querySelector('.timer-functionName').value = 'PrivateTimer';
+                    if (row.querySelector('input:not([type="checkbox"]), select, textarea')) throw new Error('Timer metadata is editable.');
+                    if (row.querySelector('.endpoint').textContent !== ${JSON.stringify(timer.request.functionName)}) throw new Error('Timer function name is missing.');
+                    if (!row.querySelector('.hint').textContent.includes(${JSON.stringify(timer.request.schedule)})) throw new Error('Timer schedule is missing.');
                     row.querySelector('[data-case-id]').click();
-                    const comment = row.querySelector('[data-comment-id]');
-                    comment.value = 'Keep the timer, but use a clearer name.';
-                    comment.dispatchEvent(new Event('input', { bubbles: true }));
-                    document.querySelector('#confirm-collection').click();
-                    await waitFor(() => !document.querySelector('#review-loading').hidden);
-                `);
-                const feedback = await rpc('tools/call', { name: 'get_invocation_collection_review', arguments: { reviewId } });
-                assert.ok(!JSON.stringify(feedback).includes('PrivateTimer'));
-                const reviewed = reviews.getReview(reviewId);
-                const selected = reviewed.cases.find(candidate => candidate.id === timer.id);
-                assert.ok(selected);
-                assert.strictEqual(selected.selected, false);
-                assert.deepStrictEqual(selected.reviewedFields, ['functionName']);
-                const revised = { ...timer, name: 'Run cleanup timer', request: { ...timer.request, functionName: 'ProposedTimer' } };
-                await reviews.open([httpCandidate(), revised], reviewId, reviewed.revision);
-                await runEditorScript(controller, `
-                    const row = document.querySelector('.case[data-id="cleanup-timer"]');
-                    if (row.querySelector('[data-case-id]').checked) throw new Error('Revision reselected an unchecked Timer.');
-                    if (row.querySelector('.timer-functionName').value !== 'PrivateTimer') throw new Error('Revision overwrote the private function name.');
+                    if (row.querySelector('[data-case-id]').checked) throw new Error('Timer selection did not change.');
                     row.querySelector('[data-case-id]').click();
                     document.querySelector('#confirm-collection').click();
                     await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Confirmed.'));
                 `);
+                assert.strictEqual(reviews.getApproved(reviewId).cases.length, 2);
                 assert.strictEqual(receivedRequests, before);
                 const saved = provider.getInvocations().find(value => 'trigger' in value && value.trigger === 'timer');
                 assert.ok(saved && 'trigger' in saved && saved.trigger === 'timer');
-                assert.strictEqual(saved.request.functionName, 'PrivateTimer');
+                assert.strictEqual(saved.request.functionName, timer.request.functionName);
                 assert.strictEqual(provider.getRequests().length, 1);
                 assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection(provider.getInvocations())), provider.getInvocations());
             } finally {

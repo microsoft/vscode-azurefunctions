@@ -79,7 +79,9 @@ input:focus, select:focus, textarea:focus, button:focus-visible, pre:focus-visib
 .response-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vscode-panel-border); }
 .response-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 output { font-family: var(--vscode-editor-font-family); }
-.response-actions { margin-top: 16px; }
+.debug-actions { margin-top: 16px; }
+.debug-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.debug-actions .hint { margin-bottom: 0; }
 .breakpoint-guidance { display: grid; gap: 6px; margin-bottom: 12px; }
 .breakpoint-guidance > span { color: var(--vscode-descriptionForeground); }
 #breakpoint-guidance { min-height: 76px; font-family: inherit; }

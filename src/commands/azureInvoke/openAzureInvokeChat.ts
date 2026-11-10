@@ -34,7 +34,7 @@ export async function openAzureInvokeChat(reviewId: string, revision?: number, d
                     `Review: \`${reviewId}\``,
                     '',
                     'Follow your "Discover and propose" workflow across all workspace projects.',
-                    'Propose grouped HTTP requests and manual Blob and Timer invocations with propose_invocation_collection. Follow "Choose Blob files" before any file picker.',
+                    'Propose grouped HTTP requests and manual Blob and Timer invocations with propose_invocation_collection. Do not ask about Blob files; the review handles them.',
                     'Stop for my review. Do not save or execute.',
                 ].join('\n'));
 }

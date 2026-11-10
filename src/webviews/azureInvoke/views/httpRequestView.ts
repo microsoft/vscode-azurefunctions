@@ -70,6 +70,16 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 </section>
                 <section id="dependencies-panel" role="tabpanel" aria-labelledby="dependencies-tab" hidden></section>
             </form>
+            <div id="debug-actions" class="debug-actions" hidden>
+                <label class="breakpoint-guidance">
+                    <span data-label="guidance"></span>
+                    <textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea>
+                </label>
+                <div class="debug-buttons"><button id="debug-response" type="button" class="secondary" data-label="debug"></button></div>
+                <p id="debug-hint" class="hint" data-label="debugHint"></p>
+                <p id="debug-notice" role="status" hidden></p>
+                <p id="debug-error" role="alert" hidden></p>
+            </div>
             <section class="response-section" aria-labelledby="response-heading">
                 <div class="response-heading"><h2 id="response-heading" data-label="response"></h2><output id="status" role="status"></output></div>
                 <p id="saved-invocation-hint" class="hint" data-label="savedInvocationHint" hidden></p>
@@ -77,16 +87,6 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 <p id="error" role="alert" hidden></p>
                 <pre id="response-body" tabindex="0" hidden></pre>
                 <details id="response-headers" hidden><summary data-label="headers"></summary><pre></pre></details>
-                <div class="response-actions">
-                    <label id="breakpoint-guidance-field" class="breakpoint-guidance" hidden>
-                        <span data-label="guidance"></span>
-                        <textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea>
-                    </label>
-                    <button id="debug-response" type="button" class="secondary" data-label="debug" hidden></button>
-                    <p id="debug-hint" class="hint" data-label="debugHint" hidden></p>
-                    <p id="debug-notice" role="status" hidden></p>
-                    <p id="debug-error" role="alert" hidden></p>
-                </div>
             </section>
         </main>`;
 
@@ -289,21 +289,19 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     const guidance = getElement<HTMLTextAreaElement>('#breakpoint-guidance');
     guidance.placeholder = labels.guidancePlaceholder;
     guidance.title = labels.guidancePrivacy;
-    const debugHint = getElement('#debug-hint');
     const debugNotice = getElement('#debug-notice');
     const debugError = getElement('#debug-error');
+    getElement('#debug-actions').hidden = !configuration.debugAvailable;
     let sending = false;
     let debugging = false;
     let hasResult = false;
     let sequence = 0;
     function updateDebugControls(): void {
-        debug.hidden = !configuration.debugAvailable || savedRevision < 0 || !hasResult || sending;
-        debugHint.hidden = debug.hidden;
-        getElement('#breakpoint-guidance-field').hidden = debug.hidden;
-        debug.disabled = sending || debugging || guidance.value.length > guidance.maxLength;
+        debug.disabled = savedRevision < 0 || !hasResult || sending || debugging || guidance.value.length > guidance.maxLength;
         guidance.disabled = sending || debugging;
     }
     guidance.addEventListener('input', updateDebugControls);
+    updateDebugControls();
     debug.title = labels.debugHint;
     debug.addEventListener('click', () => {
         debugging = true;

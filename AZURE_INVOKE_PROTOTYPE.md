@@ -23,13 +23,13 @@ For user-facing instructions, start with [Azure Invoke in the README](README.md#
 
 The [README](README.md#azure-invoke) owns the user-facing workflows and limits. Implementation owners are listed in the [code map](#code-map); the [validation checkpoint](#validation-checkpoint) distinguishes the full-suite run from later focused checks.
 
-### Question before file selection
+### Blob file selection
 
-`resources/agents/azure-invoke.agent.md` owns the Choose Blob files workflow. Initial discovery, revisions, the chat handoff, and proposal/file-selection tool guidance now require question-first, opt-in file selection. The README describes the user-facing choices.
+`resources/agents/azure-invoke.agent.md` owns the Choose Blob files workflow. The review's row warning and **Choose file...** button replace the earlier chat question. The agent no longer asks about files and opens the picker only when explicitly asked in chat.
 
-This is agent guidance, not a new runtime consent gate. The review's explicit **Choose file...** button still works directly, and native client tool approval is unchanged.
+This is agent guidance, not a runtime consent gate. Native client tool approval is unchanged.
 
-The user also showed a picker still open after the chat reported that its MCP call timed out. That behavior was not reproduced locally or fixed in this session; question-first instructions alone should not be described as a timeout fix.
+The user also showed a picker still open after the chat reported that its MCP call timed out. That behavior was not reproduced locally or fixed in this session; removing the chat question does not fix it either.
 
 ## Pick back up
 
@@ -55,9 +55,9 @@ Browser-only previews of the webview bundle do not exercise extension state, too
 | Collection files | Explicit JSON import/export. Import replaces the current collection and closes request editors after confirmation. Export warns that definitions can contain plaintext credentials. |
 | Dependencies | Searchable prerequisite/source pickers, order-only prerequisites, response and resolved-input selectors, and variable substitution. |
 | Runtime generation | `{{guid}}` generates one UUID per request execution, shared across its occurrences within that request. |
-| Guided AI authoring | Workspace discovery through a bundled custom agent, a grouped editable review, manual previews, iterative feedback, and direct saving on Confirm. |
+| Guided AI authoring | Workspace discovery through a bundled custom agent, a grouped read-only inventory, private Blob file selection, and direct saving on Confirm. |
 | Workspace editing | Source, test, configuration, and documentation changes through the same custom agent when part of the user's development task. |
-| Preview diagnosis | Explicit per-request or collection-wide sharing of failed preview evidence for read-only source-based diagnosis. |
+| Legacy preview diagnosis | Backend snapshot and tool support remains for existing clients. Authoring no longer offers previews or diagnosis actions. |
 | Saved-request fixes | Last-run status discovery, approved evidence inspection, and field replacements reviewed before updating existing saved IDs. |
 | Debug replay | The same agent chooses breakpoints through Microsoft DebugMCP and replays captured local inputs against an existing VS Code debug session. |
 | MCP execution | Headless creation, review tools, saved-request discovery, and execution with prerequisite chains and restricted response sharing. |
@@ -73,26 +73,17 @@ The flow is:
 Author Collection with AI
   -> loading review + Azure Invoke chat
   -> agent reads project source and proposes complete request templates
-  -> grouped editable review
-       -> Send / Run chain: real HTTP previews, no collection save
-       -> failed previews: Diagnose with Copilot / Diagnose failed requests
-            -> read-only explanation in chat, no request or application edits
-       -> feedback present: Request changes
-            -> agent reads submitted feedback
-            -> complete revised proposal replaces the same review
-            -> review again
-       -> no feedback: Confirm
+  -> grouped read-only inventory
+       -> select invocations and choose required Blob files
+       -> Confirm
+            -> missing requirements: explain and expand incomplete rows
             -> selected definitions saved atomically in the tree
-            -> later execution is a separate user request
+            -> later editing and execution use saved entries
 ```
 
-Supported rows start checked and collapsed. Related invocations share a resource heading. HTTP rows show authentication evidence, editable request fields, dependencies, a response preview, and feedback. Blob and Timer rows use the manual authoring flows described in the README, without execution previews.
+The [README](README.md#create-invocations-with-ai) owns the inventory's visible fields, warning indicators, file-selection behavior, and confirmation UX. The authoring renderer does not expose request editing, preview execution, diagnosis, or feedback controls. Saved-request update reviews retain their request editor and preview.
 
-Nonempty feedback in any supported row, including an unchecked row, changes the action to **Request changes**. Whitespace alone does not. Submitting feedback saves nothing and starts a revision-specific chat turn containing the review identifier and revision number, not private request values.
-
-The revision tool reads explicitly submitted comments and selected flags. A replacement proposal must target the active review and current requested revision. Existing case IDs preserve selection and local edits. Processed comments clear after a replacement is accepted. Stale proposals, closed reviews, and premature drafting are rejected. Chat failures leave notes editable and retryable, and the user can cancel while chat is pending.
-
-Without feedback, **Confirm** saves the selected requests' current fields directly. It does not start another chat turn or send HTTP. The whole selected dependency graph must be valid and include its prerequisites. Saving is atomic and repeated confirmation does not create duplicates. Existing saved entries remain intact.
+**Confirm** saves selected definitions without another chat turn or execution. The whole selected dependency graph must be valid and include its prerequisites. Saving is atomic and repeated confirmation does not create duplicates. Existing saved entries remain intact.
 
 Proposal candidate IDs are translated together into new stable saved invocation IDs. Review groups are preserved as optional invocation groups and appear as collapsible folders in the saved tree. Ungrouped requests stay at the root. Authentication annotations, descriptions, and feedback belong only to the review.
 
@@ -110,23 +101,23 @@ The agent's instructions and tool descriptions establish these defaults:
 
 These are model instructions, not a deterministic route scanner or a guarantee that every language/framework will be discovered correctly. Review the proposal against the application.
 
-Automatic draft execution and a run-and-correct authoring loop are **not implemented**. Authoring proposes drafts and may open native Blob file selection, but HTTP review previews remain manual. Explicit diagnosis and saved-request repair do not provide runtime feedback during initial authoring. Do not describe generated requests as tested unless their actual execution evidence supports that claim.
+Automatic draft execution and a run-and-correct authoring loop are **not implemented**. Authoring proposes drafts and may open native Blob file selection, but does not execute requests. Do not describe generated requests as tested unless their actual execution evidence supports that claim.
 
-### Local edits and preview isolation
+### Legacy review protocol
 
-Manual request values stay local. The read-review tool returns the original AI proposal, submitted comments, dependency IDs, and the names of locally edited fields. It does not return the edited field values.
+The backend still accepts revision, preview, and diagnosis messages for existing clients. These are not controls in the authoring inventory. Manual request values stay local. The read-review tool returns original proposals, submitted comments, dependency IDs, and edited field names, not edited values.
 
 Local edits take priority over later AI revisions. This is a field-level merge for method, URL, headers, query, body, bindings, and `dependsOn`. It is not a per-parameter or per-JSON-property merge. Editing one header or query entry makes that entire field locally authoritative; an AI addition within that field can be hidden by the override.
 
 Review previews have a separate execution cache from saved requests. Confirm saves definitions, not preview results or generated inputs. A saved dependent may need **Run chain** before **Send** can reuse its prerequisites, even if its review preview worked.
 
-### Failed preview diagnosis
+### Legacy failed preview diagnosis
 
 The diagnosis actions authorize a snapshot of selected failed previews for `get_invocation_diagnostics`. Chat receives only review and diagnosis identifiers. The controller supplies backend-recorded results, original proposals, changed field names, and prerequisite IDs, not private edited request values. It rejects successful, blocked, cancelled, forged, and stale previews. Rerunning previews, revising, confirming, cancelling, replacing, or closing the review invalidates the snapshot.
 
 Response sharing follows the execution tool's local-only policy, with additional limits of 64 KB per failure and 512 KB total. Truncation is explicit and preserves UTF-8 boundaries. The review warns that bodies may contain sensitive data, including values echoed by the application. Non-local chains expose status and timing only.
 
-The agent classifies evidence as a request-configuration problem, likely application bug, environment or authentication blocker, or uncertain cause. The diagnosis tool only reads captured evidence; request corrections use existing feedback and **Request changes**. Follow-up application fixes can use the agent's workspace editing tools. See the README for the user-facing flow and action defaults.
+The diagnosis tool only reads captured evidence. New collection authoring has no diagnosis actions. For current saved-request inspection and repair, use the flow below.
 
 ## Saved-request inspection and reviewed fixes
 
@@ -156,7 +147,7 @@ Inspection tokens belong to `HttpRequestEditors`, with one current token per ins
 
 ## Saved-request debugging prototype
 
-The response panel's **Run with Copilot breakpoints** action uses the same custom agent and Microsoft DebugMCP, not the headless `debugmcp/mcp-debugger` project. The agent can add and list breakpoints and inspect debugger status, but its allowed tools do not include launch, stop, step, continue, expression evaluation, or variable-value inspection.
+The HTTP editor's **Run with Copilot breakpoints** action uses the same custom agent and Microsoft DebugMCP, not the headless `debugmcp/mcp-debugger` project. The agent can add and list breakpoints and inspect debugger status, but its allowed tools do not include launch, stop, step, continue, expression evaluation, or variable-value inspection.
 
 `httpRequestView` keeps optional inline guidance separate from request fields and includes it only in `debugRequest`. `HttpRequestEditors` masks and validates the guidance, then captures it with the single-use target. `get_http_invocation_debug_context` returns it only with matching authorization; the chat handoff still contains opaque IDs. The README owns the user-facing guidance and replay behavior.
 
@@ -377,7 +368,7 @@ Transport runs in the extension host using `azureFunctions.requestTimeout`. Requ
 | Decision | Reason and consequence |
 | --- | --- |
 | Custom agent plus a visible AI entry point | Generic tool names were not enough to make API testing discoverable or ensure a consistent authoring flow. The entry point supplies a review ID and concrete instructions. |
-| Complete editable proposals before saving | Users can inspect and preview the actual requests rather than approve vague scenario descriptions. |
+| Selection-first inventory | Keep proposed names and request definitions consistent. Edit and execute requests after saving, rather than in the inventory. |
 | Confirm saves directly | Saving should not depend on another model turn. HTTP execution remains a separate action. |
 | Feedback requests revisions instead of saving notes | Comments should change the proposal before it becomes the collection. Revision IDs reject stale replies. |
 | Headless AI operations | Creating or running a collection should not open dozens of request tabs. Progress belongs in the tree and review. |
