@@ -20,11 +20,13 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
+import { type AzureInvokeTreeDataProvider } from '../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { telemetryUtils } from '../utils/telemetryUtils';
+import { type HttpRequestEditors } from '../webviews/azureInvoke/extension/HttpRequestEditors';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
@@ -34,6 +36,7 @@ import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSe
 import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { registerAzureInvokeCommands } from './azureInvoke/registerAzureInvokeCommands';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
@@ -87,14 +90,20 @@ import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
-export function registerCommands(
+export function registerCommands({ services, azureInvoke }: {
     services: {
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
             emulatorClient: DurableTaskSchedulerEmulatorClient,
             schedulerClient: DurableTaskSchedulerClient
         }
-    }): void {
+    },
+    azureInvoke: {
+        provider: AzureInvokeTreeDataProvider,
+        editors: HttpRequestEditors
+    }
+}): void {
+    registerAzureInvokeCommands(azureInvoke.provider, azureInvoke.editors);
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
