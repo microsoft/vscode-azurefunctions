@@ -611,7 +611,7 @@ function ensurePythonImports(
         'List',
         ...(needsSchemaImports ? ['Any', 'Dict', 'Optional'] : []),
     ]);
-    const typingPattern = /^from typing import ([^\r\n]+)$/m;
+    const typingPattern = /^from typing import ([A-Za-z_]\w*(?:[ \t]*,[ \t]*[A-Za-z_]\w*)*)[ \t]*$/m;
     const typingMatch = typingPattern.exec(result);
     if (typingMatch) {
         const imports = new Set(
