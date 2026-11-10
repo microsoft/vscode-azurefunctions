@@ -32,6 +32,8 @@ In the classic **Create New Project** flow, choose **Connector Trigger** for a C
 
 Each selected event creates a separate function with its own trigger-configuration setting. Events can share a Connector Namespace and connection. Non-deprecated webhook events remain visible, but cannot be created yet. JavaScript continues to use the existing filtered Template Gallery.
 
+Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
+
 Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event F5 setup is deferred, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
 
 Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files, local settings, or VS Code configuration; conflicting project files are reported before copying.

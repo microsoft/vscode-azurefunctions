@@ -184,12 +184,63 @@ suite('Connector trigger data client', () => {
             isNotification: true,
         }]);
         assert.ok(requests.some(request =>
-            request.includes('/managedApis/office365/apiOperations?') &&
-            new URL(request).searchParams.get('api-version') === '2016-06-01',
+            request.includes('/managedApis/office365?') &&
+            new URL(request).searchParams.get('api-version') === '2022-09-01-preview' &&
+            new URL(request).searchParams.get('export') === 'true',
         ));
+        assert.ok(!requests.some(request => request.includes('/apiOperations?')));
     });
 
-    test('preserves real nonfeatured Poll operation shapes', async () => {
+    test('loads events from the selected regional exported connector definition', async () => {
+        const requests: string[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription('sub-one', 'Subscription One', 'AzureCloud', 'https://management.azure.com/')],
+            async () => ({
+                async get(url: string): Promise<unknown> {
+                    requests.push(url);
+                    return { properties: { swagger: {
+                        swagger: '2.0',
+                        paths: {
+                            '/poll': { get: {
+                                operationId: 'PollEvent', summary: 'A polling event', 'x-ms-trigger': 'batch',
+                                'x-ms-notification': true,
+                            } },
+                            '/single': { get: {
+                                operationId: 'SinglePollEvent', summary: 'A single polling event', 'x-ms-trigger': 'single',
+                            } },
+                            '/subscribe': {
+                                'x-ms-notification-content': { schema: { type: 'object' } },
+                                post: {
+                                    operationId: 'WebhookEvent', summary: 'A webhook event', 'x-ms-trigger': 'single',
+                                },
+                                delete: { operationId: 'DeleteSubscription' },
+                            },
+                        },
+                    } } };
+                },
+            }),
+        );
+
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'West Central US', regionDisplayName: 'West Central US',
+        }, 'office365');
+
+        assert.strictEqual(requests.length, 1);
+        const request = new URL(requests[0]);
+        assert.strictEqual(request.origin, 'https://management.azure.com');
+        assert.strictEqual(request.pathname,
+            '/subscriptions/sub-one/providers/Microsoft.Web/locations/westcentralus/managedApis/office365');
+        assert.strictEqual(request.searchParams.get('api-version'), '2022-09-01-preview');
+        assert.strictEqual(request.searchParams.get('export'), 'true');
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['PollEvent', 'SinglePollEvent']);
+        assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['WebhookEvent']);
+        assert.strictEqual(metadata.pollOperations[0].isNotification, true);
+        assert.strictEqual(metadata.pollOperations[1].isNotification, false);
+        assert.strictEqual(metadata.webhookOperations[0].isNotification, false);
+    });
+
+    test('preserves nonfeatured operation identities and webhook classifications', async () => {
         const fixture = JSON.parse(await fs.promises.readFile(
             path.join(
                 __dirname,
@@ -201,14 +252,35 @@ suite('Connector trigger data client', () => {
                 'nonFeaturedOperations.json',
             ),
             'utf8',
-        )) as Record<string, unknown>;
+        )) as Record<string, { value: {
+            name: string;
+            properties: { summary?: string; trigger?: string; visibility?: string; isWebhook?: boolean; isNotification?: boolean };
+        }[] }>;
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
             async () => ({
                 async get(url: string): Promise<unknown> {
-                    const connectorId = /\/managedApis\/([^/]+)\/apiOperations/.exec(url)?.[1];
+                    const connectorId = /\/managedApis\/([^/]+)$/.exec(new URL(url).pathname)?.[1];
                     assert.ok(connectorId);
-                    return fixture[decodeURIComponent(connectorId)];
+                    assert.strictEqual(new URL(url).searchParams.get('export'), 'true');
+                    return { properties: { swagger: {
+                        swagger: '2.0',
+                        paths: Object.fromEntries(fixture[decodeURIComponent(connectorId)].value.map(operation => [
+                            `/${operation.name}`,
+                            {
+                                ...(operation.properties.isWebhook ? {
+                                    'x-ms-notification-content': { schema: { type: 'object' } },
+                                } : {}),
+                                get: {
+                                    operationId: operation.name,
+                                    summary: operation.properties.summary,
+                                    'x-ms-trigger': operation.properties.trigger,
+                                    'x-ms-visibility': operation.properties.visibility,
+                                    'x-ms-notification': operation.properties.isNotification,
+                                },
+                            },
+                        ])),
+                    } } };
                 },
             }),
         );
@@ -299,20 +371,35 @@ suite('Connector trigger data client', () => {
         );
     });
 
-    test('omits explicitly deprecated events without hiding supported webhook events', async () => {
-        const event = { isNotification: true, summary: 'Visible event' };
+    test('omits deprecated and internal events without hiding advanced, preview or webhook events', async () => {
+        const event = { 'x-ms-trigger': 'batch', summary: 'Visible event' };
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
             async () => ({
                 async get(): Promise<unknown> {
-                    return { value: [
-                        { name: 'VisiblePoll', properties: event },
-                        { name: 'VisibleWebhook', properties: { ...event, isNotification: false, isWebhook: true } },
-                        { name: 'DeprecatedTopLevel', deprecated: true, properties: event },
-                        { name: 'DeprecatedProperty', properties: { ...event, deprecated: true } },
-                        { name: 'DeprecatedAnnotation', properties: { ...event, annotation: { status: 'Deprecated' } } },
-                        { name: 'DeprecatedSummary', properties: { ...event, summary: 'An old event [DEPRECATED]' } },
-                    ] };
+                    const operations = [
+                        { ...event, operationId: 'VisiblePoll' },
+                        { ...event, operationId: 'AdvancedPoll', 'x-ms-visibility': 'advanced' },
+                        { ...event, operationId: 'PreviewPoll', 'x-ms-api-annotation': { status: 'Preview' } },
+                        { ...event, operationId: 'DeprecatedBoolean', deprecated: true },
+                        { ...event, operationId: 'DeprecatedAnnotation', 'x-ms-api-annotation': { status: 'Deprecated' } },
+                        { ...event, operationId: 'DeprecatedSummary', summary: 'An old event [DEPRECATED]' },
+                        { ...event, operationId: 'DeprecatedSummaryParentheses', summary: 'An old event (deprecated)' },
+                        { ...event, operationId: 'Internal', 'x-ms-visibility': 'Internal' },
+                        { ...event, operationId: 'Hidden', 'x-ms-visibility': 'hideInUI' },
+                    ];
+                    return {
+                        swagger: '2.0',
+                        paths: {
+                            ...Object.fromEntries(operations.map(operation => [`/${operation.operationId}`, { get: operation }])),
+                            '/subscribe': {
+                                'x-ms-notification-content': { schema: { type: 'object' } },
+                                post: { ...event, operationId: 'VisibleWebhook', 'x-ms-trigger': 'single' },
+                                put: { ...event, operationId: 'DeprecatedWebhook', deprecated: true },
+                                delete: { operationId: 'DeleteSubscription' },
+                            },
+                        },
+                    };
                 },
             }),
         );
@@ -320,8 +407,103 @@ suite('Connector trigger data client', () => {
             subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
             region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
         }, 'office365');
-        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['VisiblePoll']);
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['AdvancedPoll', 'PreviewPoll', 'VisiblePoll']);
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['VisibleWebhook']);
+    });
+
+    test('inherits connector annotation status unless the event overrides it', async () => {
+        const event = { 'x-ms-trigger': 'single' };
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(): Promise<unknown> {
+                    return { properties: { swagger: {
+                        swagger: '2.0',
+                        info: { 'x-ms-api-annotation': { status: 'Deprecated' } },
+                        paths: {
+                            '/old': { get: { ...event, operationId: 'OldEvent' } },
+                            '/current': { get: {
+                                ...event, operationId: 'CurrentEvent', 'x-ms-api-annotation': { status: 'Production' },
+                            } },
+                            '/preview': { get: {
+                                ...event, operationId: 'PreviewEvent', 'x-ms-api-annotation': { status: 'Preview' },
+                            } },
+                        },
+                    } } };
+                },
+            }),
+        );
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        }, 'office365');
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['CurrentEvent', 'PreviewEvent']);
+        assert.deepStrictEqual(metadata.webhookOperations, []);
+    });
+
+    test('reads additional Swagger paths and deduplicates event identities', async () => {
+        const event = { operationId: 'QueryEvent', 'x-ms-trigger': 'batch' };
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(): Promise<unknown> {
+                    return {
+                        swagger: '2.0',
+                        paths: { '/event': { get: event } },
+                        'x-ms-paths': {
+                            '/event?mode=all': { get: event },
+                            '/head': { head: {
+                                operationId: 'HeadEvent', 'x-ms-trigger': 'single',
+                                description: 'Fallback description', 'x-ms-trigger-hint': 'How to fire this event',
+                            } },
+                        },
+                    };
+                },
+            }),
+        );
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        }, 'office365');
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['HeadEvent', 'QueryEvent']);
+        assert.strictEqual(metadata.pollOperations[0].description, 'How to fire this event');
+        assert.ok(metadata.pollOperations.every(operation => !operation.isWebhook && !operation.isNotification));
+    });
+
+    test('reports invalid exports instead of returning an empty event list or falling back to apiOperations', async () => {
+        const invalidDefinitions: unknown[] = [
+            undefined, null, {}, { properties: { swagger: 'https://example.invalid/swagger' } },
+            { properties: { swagger: { paths: [] } } },
+        ];
+        let definition: unknown;
+        const requests: string[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(url: string): Promise<unknown> {
+                    requests.push(url);
+                    return definition;
+                },
+            }),
+        );
+        const azureContext = {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        };
+        for (definition of invalidDefinitions) {
+            await assert.rejects(
+                client.listConnectorOperationMetadata(await createTestActionContext(), azureContext, 'office365'),
+                /Unable to load events for the selected connector/,
+            );
+        }
+        definition = { properties: { swagger: { swagger: '2.0', paths: {} } } };
+        assert.deepStrictEqual(
+            await client.listConnectorOperationMetadata(await createTestActionContext(), azureContext, 'office365'),
+            { pollOperations: [], webhookOperations: [] },
+        );
+        assert.strictEqual(requests.length, invalidDefinitions.length + 1);
+        assert.ok(requests.every(request => new URL(request).searchParams.get('export') === 'true'));
+        assert.ok(requests.every(request => !request.includes('/apiOperations')));
     });
 
     test('loads the selected live output schema without scanning other connectors', async () => {
@@ -348,6 +530,16 @@ suite('Connector trigger data client', () => {
             }),
         );
 
+        const operations = await client.listConnectorOperationMetadata(
+            await createTestActionContext(),
+            {
+                subscriptionId: 'sub-one',
+                subscriptionName: 'Subscription One',
+                region: 'usgovvirginia',
+                regionDisplayName: 'US Gov Virginia',
+            },
+            'act',
+        );
         const metadata = await client.getConnectorOperationOutputMetadata(
             await createTestActionContext(),
             {
@@ -360,9 +552,11 @@ suite('Connector trigger data client', () => {
             'TrigNewContact',
         );
 
+        assert.deepStrictEqual(operations.pollOperations.map(operation => operation.id), ['TrigNewContact']);
         assert.strictEqual(metadata.schema?.schemaName, 'act.web.api.models.Contact');
         assert.strictEqual(metadata.schema?.collectionPath, 'body');
-        assert.strictEqual(requests.length, 1);
+        assert.strictEqual(requests.length, 2);
+        assert.strictEqual(requests[0], requests[1]);
         const request = new URL(requests[0]);
         assert.match(request.pathname, /\/managedApis\/act$/);
         assert.strictEqual(
@@ -411,7 +605,6 @@ suite('Connector trigger data client', () => {
                 region: 'westcentralus',
                 regionDisplayName: 'West Central US',
             };
-            const counts = new Map<string, number>();
             for (const connectorId of [
                 'office365',
                 'azureblob',
@@ -421,49 +614,28 @@ suite('Connector trigger data client', () => {
                 'rss',
                 'sftpwithssh',
             ]) {
-                counts.set(
-                    connectorId,
-                    (await client.listConnectorOperations(
-                        context,
-                        azureContext,
-                        connectorId,
-                    )).length,
-                );
+                const operations = await client.listConnectorOperations(context, azureContext, connectorId);
+                assert.ok(operations.length > 0, `${connectorId} must expose polling events.`);
+                assert.ok(operations.every(operation => !operation.isWebhook));
+                assert.strictEqual(new Set(operations.map(operation => operation.id.toLowerCase())).size, operations.length);
             }
-            assert.deepStrictEqual(Object.fromEntries(counts), {
-                office365: 9,
-                azureblob: 1,
-                github: 3,
-                slack: 1,
-                dropbox: 4,
-                rss: 1,
-                sftpwithssh: 2,
-            });
 
             const adobeSign = await client.listConnectorOperationMetadata(
                 context,
                 azureContext,
                 'adobesign',
             );
-            assert.deepStrictEqual({
-                poll: adobeSign.pollOperations.length,
-                webhook: adobeSign.webhookOperations.length,
-            }, {
-                poll: 0,
-                webhook: 7,
-            });
+            assert.deepStrictEqual(adobeSign.pollOperations, []);
+            assert.ok(adobeSign.webhookOperations.length > 0);
+            assert.ok(adobeSign.webhookOperations.every(operation => operation.isWebhook));
             const creativeCloud = await client.listConnectorOperationMetadata(
                 context,
                 azureContext,
                 'adobecreativecloud',
             );
-            assert.deepStrictEqual({
-                poll: creativeCloud.pollOperations.length,
-                webhook: creativeCloud.webhookOperations.length,
-            }, {
-                poll: 0,
-                webhook: 2,
-            });
+            assert.deepStrictEqual(creativeCloud.pollOperations, []);
+            assert.ok(creativeCloud.webhookOperations.length > 0);
+            assert.ok(creativeCloud.webhookOperations.every(operation => operation.isWebhook));
             const kusto = await client.listConnectorOperationMetadata(
                 context,
                 azureContext,
@@ -592,46 +764,17 @@ function createArmClient(requests: string[]): ConnectorArmClient {
                         },
                     ],
                 };
-            } else if (url.includes('/managedApis/office365/apiOperations?')) {
-                return {
-                    value: [
-                        {
-                            name: 'OnNewEmail',
-                            properties: {
-                                isNotification: true,
-                                isTrigger: true,
-                                summary: 'When an email arrives',
-                                inputsDefinition: {
-                                    parameters: [{
-                                        name: 'folderPath',
-                                        type: 'string',
-                                    }],
-                                },
-                            },
-                        },
-                        {
-                            name: 'SendEmail',
-                            properties: {
-                                isTrigger: false,
-                                summary: 'Send an email',
-                            },
-                        },
-                    ],
-                };
-            } else if (url.includes('/managedApis/sharepointonline/apiOperations?')) {
-                return {
-                    value: [
-                        {
-                            name: 'OnNewFile',
-                            properties: {
-                                operationRole: 'Trigger',
-                                summary: 'When a file is created',
-                            },
-                        },
-                    ],
-                };
-            } else if (url.includes('/managedApis/teams/apiOperations?')) {
-                throw new Error('Connector operation metadata unavailable.');
+            } else if (url.includes('/managedApis/office365?')) {
+                return { properties: { swagger: {
+                    swagger: '2.0',
+                    paths: {
+                        '/email': { get: {
+                            operationId: 'OnNewEmail', 'x-ms-trigger': 'batch', summary: 'When an email arrives',
+                            'x-ms-notification': true,
+                        } },
+                        '/send': { post: { operationId: 'SendEmail', summary: 'Send an email' } },
+                    },
+                } } };
             } else if (url.includes('/locations/usgovvirginia/managedApis?')) {
                 return {
                     nextLink: 'https://management.usgovcloudapi.net/managed-api-page-2',
