@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, initializeWorkflowTelemetry, registerTelemetryHandler, TestOutputChannel, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, initializeWorkflowTelemetry, registerOnActionStartHandler, registerTelemetryHandler, TestOutputChannel, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ConfigurationTarget, Uri, workspace } from 'vscode';
+import { ConfigurationTarget, Uri, workspace, type Disposable } from 'vscode';
 import { FunctionCreateStepBase } from '../../src/commands/createFunction/FunctionCreateStepBase';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
@@ -18,6 +18,7 @@ import { installNodeDependencies } from '../../src/commands/createNewProject/ins
 import { JavaScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
 import { ProjectCreateStepBase } from '../../src/commands/createNewProject/ProjectCreateStep/ProjectCreateStepBase';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
+import { initProjectForVSCode } from '../../src/commands/initProjectForVSCode/initProjectForVSCode';
 import { tryGetFunctionProjectRoot } from '../../src/commands/createNewProject/verifyIsProject';
 import { funcVersionSetting, ProjectLanguage, projectSubpathSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
@@ -38,6 +39,8 @@ suite('Project npm dependencies', () => {
     let originalOutputChannel: typeof ext.outputChannel;
     let projectPath: string;
     let logs: string[];
+    let telemetryHook: Disposable;
+    let telemetryEvents: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
 
     setup(async () => {
         projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc gallery npm '));
@@ -46,6 +49,10 @@ suite('Project npm dependencies', () => {
         const outputChannel = new TestOutputChannel();
         outputChannel.appendLog = message => { logs.push(message); };
         ext.outputChannel = outputChannel;
+        telemetryEvents = [];
+        telemetryHook = registerTelemetryHandler(context => {
+            telemetryEvents.push({ name: context.callbackId, properties: { ...context.telemetry.properties }, measurements: { ...context.telemetry.measurements } });
+        });
         cpUtils.executeCommandLine = async (_output, cwd, command) => {
             assert.strictEqual(cwd, projectPath);
             assert.strictEqual(command, 'git init');
@@ -57,6 +64,7 @@ suite('Project npm dependencies', () => {
         cpUtils.executeCommand = originalExecuteCommand;
         cpUtils.executeCommandLine = originalExecuteCommandLine;
         ext.outputChannel = originalOutputChannel;
+        telemetryHook.dispose();
         await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
     });
 
@@ -71,14 +79,197 @@ suite('Project npm dependencies', () => {
 
     function createController(gitInstalled: boolean, events: string[]): FunctionsTemplateGalleryController {
         const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
+        controller['templateIds'] = new Set([template.id]);
         controller['isGitInstalled'] = async () => gitInstalled;
         controller['sendProgress'] = message => { events.push(message); };
         controller['tryOpenReadme'] = async () => { events.push('readme'); };
         controller['disposePanelIfOpen'] = () => { events.push('dispose'); };
+        controller['initializeProjectForVSCode'] = async (_context, location, language) => {
+            assert.strictEqual(location, projectPath);
+            assert.ok(template.languages.some(value => value === language));
+            assert.ok((await fs.promises.readdir(projectPath)).length > 0);
+            events.push('initialized');
+        };
         controller['promptAndOpenProject'] = async () => { events.push('open'); };
-        controller['initializeProjectForVSCode'] = async () => { events.push('initialized'); };
         return controller;
     }
+
+    for (const language of [ProjectLanguage.TypeScript, ProjectLanguage.Python, ProjectLanguage.CSharp]) {
+        for (const appFolder of ['', path.join('src', 'api')]) {
+            test(`initializes gallery ${language} ${appFolder ? 'nested app' : 'root app'} for VS Code before opening`, async () => {
+                const controller = createController(false, []);
+                controller['initializeProjectForVSCode'] = FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'];
+                controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+                    const appPath = path.join(destination, appFolder);
+                    await AzExtFsExtra.ensureDir(appPath);
+                    await AzExtFsExtra.writeJSON(path.join(appPath, 'host.json'), { version: '2.0' });
+                    if (language === ProjectLanguage.TypeScript) {
+                        await AzExtFsExtra.writeJSON(path.join(appPath, 'package.json'), {
+                            dependencies: { '@azure/functions': '^4.0.0' },
+                        });
+                    } else if (language === ProjectLanguage.Python) {
+                        await fs.promises.writeFile(path.join(appPath, 'function_app.py'), 'import azure.functions as func\napp = func.FunctionApp()\n');
+                    } else {
+                        await fs.promises.writeFile(path.join(appPath, 'Test.csproj'),
+                            '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><AzureFunctionsVersion>v4</AzureFunctionsVersion></PropertyGroup></Project>');
+                    }
+                    await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+                    await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'settings.json'), { 'editor.tabSize': 3 });
+                    await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'tasks.json'), {
+                        version: '2.0.0', tasks: [{ label: 'custom-task', type: 'shell', command: 'echo custom' }],
+                    });
+                    await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'launch.json'), {
+                        version: '0.2.0', configurations: [{ name: 'Custom debug', type: 'node', request: 'attach', port: 9000 }],
+                    });
+                };
+                cpUtils.executeCommand = async () => '';
+                let opened = false;
+                controller['promptAndOpenProject'] = async () => {
+                    const vscodePath = path.join(projectPath, '.vscode');
+                    const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(vscodePath, 'settings.json'));
+                    assert.strictEqual(settings['azureFunctions.projectLanguage'], language);
+                    assert.strictEqual(settings['azureFunctions.projectRuntime'], FuncVersion.v4);
+                    assert.strictEqual(settings['editor.tabSize'], 3);
+                    if (language === ProjectLanguage.TypeScript || language === ProjectLanguage.Python) {
+                        assert.strictEqual(settings['azureFunctions.projectLanguageModel'], language === ProjectLanguage.TypeScript ? 4 : 2);
+                    }
+                    const tasks = await AzExtFsExtra.readJSON<{ tasks: { label?: string; type: string; options?: { cwd?: string } }[] }>(path.join(vscodePath, 'tasks.json'));
+                    assert.ok(tasks.tasks.some(task => task.label === 'custom-task'));
+                    assert.ok(tasks.tasks.some(task => task.type === 'func'));
+                    if (appFolder) {
+                        assert.strictEqual(settings['azureFunctions.projectSubpath'], 'src/api');
+                        assert.ok(tasks.tasks.some(task => task.options?.cwd === '${workspaceFolder}/src/api'));
+                    }
+                    const launch = await AzExtFsExtra.readJSON<{ configurations: { name: string }[] }>(path.join(vscodePath, 'launch.json'));
+                    assert.ok(launch.configurations.some(config => config.name === 'Custom debug'));
+                    assert.ok(launch.configurations.length > 1);
+                    assert.ok(await AzExtFsExtra.pathExists(path.join(vscodePath, 'extensions.json')));
+                    opened = true;
+                };
+
+                await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
+                    await runWithFuncSetting('createPythonVenv', false, async () => {
+                        await runWithFuncSetting('projectLanguageModel', language === ProjectLanguage.Python ? 1 : 3, async () => {
+                            await controller['createProject'](template, language, projectPath);
+                        });
+                    });
+                });
+
+                assert.ok(opened);
+                const created = telemetryEvents.find(event => event.name.endsWith('.projectCreated'));
+                assert.ok(created);
+                assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.createProjectStarted')).length, 1);
+                assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.projectCreated')).length, 1);
+                assert.strictEqual(created.properties.creationOutcome, 'succeeded');
+                assert.strictEqual(created.properties.vscodeInitialized, 'true');
+                assert.strictEqual(created.properties.templateId, template.id);
+                assert.strictEqual(created.properties.templateName, undefined);
+                assert.strictEqual(created.measurements.projectsCreated, 1);
+                assert.ok(typeof created.measurements.initializeVSCodeDuration === 'number' && created.measurements.initializeVSCodeDuration >= 0);
+                assert.strictEqual(created.measurements.initializeVSCodeCount, 1);
+                assert.ok(!telemetryEvents.some(event => Object.values(event.properties).some(value => typeof value === 'string' && value.includes(projectPath))));
+            });
+        }
+    }
+
+    test('does not open or report success when gallery initialization fails', async () => {
+        const events: string[] = [];
+        const controller = createController(false, events);
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+            await AzExtFsExtra.writeJSON(path.join(destination, 'host.json'), {});
+        };
+        controller['initializeProjectForVSCode'] = async () => { throw new Error('Initialization failed'); };
+
+        await assert.rejects(controller['createProject'](template, ProjectLanguage.TypeScript, projectPath), /Initialization failed/);
+
+        assert.ok(!events.includes('readme'));
+        assert.ok(!events.includes('open'));
+        assert.strictEqual(controller['isCreatingProject'], false);
+        const failed = telemetryEvents.find(event => event.name.endsWith('.createProject'));
+        assert.strictEqual(failed?.properties.creationOutcome, 'failed');
+        assert.strictEqual(failed?.properties.creationStage, 'initializeVSCode');
+        assert.strictEqual(failed?.properties.projectCreated, undefined);
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('ordinary initialization preserves its global model default and missing-project no-op', async () => {
+        await initProjectForVSCode(await createTestActionContext(), projectPath, ProjectLanguage.TypeScript);
+        assert.ok(!await AzExtFsExtra.pathExists(path.join(projectPath, '.vscode')));
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {
+            dependencies: { '@azure/functions': '^4.0.0' },
+        });
+        cpUtils.executeCommand = async () => '';
+
+        await runWithFuncSetting('projectRuntime', FuncVersion.v4, async () => {
+            await runWithFuncSetting('projectLanguageModel', 3, async () => {
+                await initProjectForVSCode(await createTestActionContext(), projectPath, ProjectLanguage.TypeScript);
+            });
+        });
+
+        const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(projectPath, '.vscode', 'settings.json'));
+        assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 3);
+    });
+
+    test('gallery initialization cancellation resets the shared creating view exactly once', async () => {
+        const controller = createController(false, []);
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+            await AzExtFsExtra.writeJSON(path.join(destination, 'host.json'), {});
+        };
+        controller['initializeProjectForVSCode'] = async () => { throw new UserCancelledError('initProject'); };
+        let resets = 0;
+        controller['postMessageToWebview'] = message => {
+            assert.deepStrictEqual(message, { type: 'projectCreationFailed', error: '' });
+            resets++;
+        };
+
+        await controller['createProject'](template, ProjectLanguage.Python, projectPath);
+
+        assert.strictEqual(resets, 1);
+        assert.strictEqual(controller['isCreatingProject'], false);
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('gallery initialization rejects a copied template without host.json', async () => {
+        const events: string[] = [];
+        const controller = createController(false, events);
+        controller['initializeProjectForVSCode'] = FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'];
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(destination);
+            await fs.promises.writeFile(path.join(destination, 'README.md'), 'Template without a Functions project');
+        };
+
+        await assert.rejects(controller['createProject'](template, ProjectLanguage.TypeScript, projectPath), /host\.json/);
+
+        assert.ok(!events.includes('open'));
+        assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+    });
+
+    test('records canceled nonempty-folder confirmation without counting a created project', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'keep.txt'), 'existing');
+        const controller = createController(false, []);
+        controller['postMessageToWebview'] = () => undefined;
+        const cancellation = registerOnActionStartHandler(context => {
+            if (context.callbackId === 'azureFunctions.templateGallery.createProject') {
+                context.ui.showWarningMessage = async () => { throw new UserCancelledError('targetNotEmpty'); };
+            }
+        });
+        try {
+            await controller['createProject'](template, ProjectLanguage.TypeScript, projectPath);
+            const canceled = telemetryEvents.find(event => event.name.endsWith('.createProject'));
+            assert.strictEqual(canceled?.properties.creationOutcome, 'canceled');
+            assert.strictEqual(canceled?.properties.creationStage, 'confirmTarget');
+            assert.strictEqual(canceled?.properties.result, 'Canceled');
+            assert.strictEqual(telemetryEvents.filter(event => event.name.endsWith('.createProjectStarted')).length, 1);
+            assert.ok(!telemetryEvents.some(event => event.name.endsWith('.projectCreated')));
+            assert.strictEqual(await fs.promises.readFile(path.join(projectPath, 'keep.txt'), 'utf8'), 'existing');
+            assert.strictEqual(controller['isCreatingProject'], false);
+        } finally {
+            cancellation.dispose();
+        }
+    });
 
     for (const language of Object.values(ProjectLanguage)) {
         test(`initializes ${language} gallery projects before reporting success and opening`, async () => {
@@ -131,9 +322,11 @@ suite('Project npm dependencies', () => {
                 opened = true;
             };
 
+            controller['initializeProjectForVSCode'] = async () => { events.push('initialized'); };
             await controller['createProject'](template, ProjectLanguage.CSharp, projectPath);
 
             assert.ok(opened);
+            assert.ok(events.includes('initialized'));
         });
     }
 
@@ -169,6 +362,9 @@ suite('Project npm dependencies', () => {
                 await step.executeCore(context, { report: () => undefined });
 
                 assert.strictEqual(installs, 1);
+                assert.strictEqual(context.telemetry.measurements.npmInstallCount, 1);
+                assert.ok(typeof context.telemetry.measurements.npmInstallDuration === 'number' && context.telemetry.measurements.npmInstallDuration >= 0);
+                assert.strictEqual(context.telemetry.properties.npmInstallSucceeded, String(installSucceeds));
                 assert.deepStrictEqual(logs, installSucceeds ? [] : ['WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.']);
                 if (language === ProjectLanguage.TypeScript) {
                     assert.ok(await AzExtFsExtra.pathExists(path.join(projectPath, 'tsconfig.json')));
@@ -215,6 +411,8 @@ suite('Project npm dependencies', () => {
                 assert.strictEqual(installs, 1);
                 assert.ok(events.indexOf('downloaded') < events.indexOf('installed'));
                 assert.ok(events.indexOf('installed') < events.indexOf('readme'));
+                assert.ok(events.indexOf('installed') < events.indexOf('initialized'));
+                assert.ok(events.indexOf('initialized') < events.indexOf('open'));
                 assert.ok(events.indexOf('installed') < events.indexOf('open'));
             });
         }
@@ -240,6 +438,7 @@ suite('Project npm dependencies', () => {
                 return '';
             };
 
+            controller['initializeProjectForVSCode'] = async () => { events.push('initialized'); };
             await controller['createProject'](template, language, projectPath);
 
             assert.strictEqual(installs, 0);
@@ -535,9 +734,10 @@ suite('Project npm dependencies', () => {
         const controller = createController(false, []);
         controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
             await AzExtFsExtra.ensureDir(destination);
+            await fs.promises.writeFile(path.join(destination, 'README.md'), 'test');
         };
         try {
-            await controller['createProject'](template, ProjectLanguage.Python, projectPath);
+            await controller['createProject'](template, ProjectLanguage.TypeScript, projectPath);
         } finally {
             telemetry.dispose();
         }

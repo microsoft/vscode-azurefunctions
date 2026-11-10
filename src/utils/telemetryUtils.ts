@@ -4,8 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { initializeWorkflowTelemetry, type IActionContext, type WorkflowTelemetryOptions } from '@microsoft/vscode-azext-utils';
+import { ProjectLanguage } from '../constants';
 
 export namespace telemetryUtils {
+    export function getProjectLanguage(language: string | undefined): ProjectLanguage | 'unknown' {
+        return Object.values(ProjectLanguage).find(value => value === language) ?? 'unknown';
+    }
+
     export const projectCreationStepNames: readonly string[] = [
         'projectCreationExperience', 'FolderListStep', 'NewProjectLanguageStep', 'ProgrammingModelStep',
         'DotnetRuntimeStep', 'projectConfiguration', 'FunctionListStep', 'FunctionNameStepBase',

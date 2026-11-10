@@ -12,6 +12,7 @@ import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
@@ -80,7 +81,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
-        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectLanguage = telemetryUtils.getProjectLanguage(context.language);
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
 

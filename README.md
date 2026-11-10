@@ -14,17 +14,19 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 ## Create your first serverless app
 
-1. Select the button to create a new project in the Azure Resources explorer
+1. Select **Create New Function Project...** in the Azure Workspace explorer or command palette.
 
-    ![createNewProject](resources/readme/createFunction.png)
+1. In the template gallery, select an HTTP trigger template and your desired programming language.
+1. Select a new, _empty_ folder to contain your project and create the project.
+1. If the selected folder is not already open, select "Open in current window" to open it.
 
-1. Select a new, _empty_ folder to contain your project
-1. Select your desired programming language
-1. Select "HTTP trigger" for your project's first function
-1. Use "HttpTrigger1" as the function name
-1. Select "Anonymous" for the authorization level, which enables anyone to call your function endpoint without a key.
-    > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
-1. If the selected folder is not already open, select "Open in current window" to open it
+**Create New Function Project...** opens the template gallery, even when a Functions project is already open. Gallery-created projects are initialized for VS Code before opening, including their language, tasks, and debugging configuration. Their programming model is detected from the copied project rather than overridden by a global default.
+
+**Create Function...** adds a function to an existing Functions project using the classic template feed, including projects created from the gallery. If no Functions project exists in the selected folder, it opens project creation.
+
+To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. The classic wizard asks for a destination again rather than reusing the gallery's launch-time folder. Disable the setting to return to the gallery.
+
+Select the banner's **Dismiss** (X) button to hide it permanently without switching to classic. To show it again, enable `"azureFunctions.showClassicTemplateFeedBanner"` in Settings.
 
 ## Run the serverless app locally
 
@@ -151,6 +153,10 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 <!-- endregion exclude-from-marketplace -->
 
 ## Telemetry
+
+Project and function creation telemetry distinguishes the gallery and classic experiences, banner dismissal, template selection, creation outcomes and cancellations, dependency installation, VS Code initialization, and opening behavior. Gallery telemetry uses template IDs from the loaded official catalog and known language/experience values; it does not collect template display names, folder paths, search text, or Copilot prompts. Closing a gallery during creation is recorded separately from cancellation, since closing the panel does not stop file creation.
+
+Language telemetry is restricted to supported language categories; other setting or argument values are reported as `unknown`. Creation error and exception telemetry is fully redacted in both classic and gallery flows, including the classic-banner handoff. Detailed local errors remain available for troubleshooting.
 
 VS Code collects usage data and sends it to Microsoft to help improve our products and services. Read our [privacy statement](https://go.microsoft.com/fwlink/?LinkID=521839) to learn more. If you don’t wish to send usage data to Microsoft, you can set the `telemetry.enableTelemetry` setting to `false`. Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
 

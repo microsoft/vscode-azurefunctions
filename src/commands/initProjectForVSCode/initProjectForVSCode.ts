@@ -10,6 +10,7 @@ import { funcVersionSetting, projectLanguageModelSetting, projectLanguageSetting
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
+import { isPathEqual } from '../../utils/fs';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
@@ -33,7 +34,10 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
             }
         }
     } else {
-        workspaceFolder = projectWorkspacePath ? undefined : getContainingWorkspace(fsPath);
+        workspaceFolder = getContainingWorkspace(projectWorkspacePath ?? fsPath);
+        if (projectWorkspacePath && workspaceFolder && !isPathEqual(workspaceFolder.uri.fsPath, projectWorkspacePath)) {
+            workspaceFolder = undefined;
+        }
         workspacePath = projectWorkspacePath ?? (workspaceFolder ? workspaceFolder.uri.fsPath : fsPath);
     }
 
@@ -43,7 +47,9 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
     }
 
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
-    const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
+    const languageModel: number | undefined = projectWorkspacePath
+        ? await detectProjectLanguageModel(language, projectPath)
+        : getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 

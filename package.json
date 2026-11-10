@@ -223,6 +223,18 @@
                 "enablement": "!virtualWorkspace"
             },
             {
+                "command": "azureFunctions.useClassicTemplateFeed",
+                "title": "%azureFunctions.useClassicTemplateFeed%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
+                "command": "azureFunctions.dismissClassicTemplateFeedBanner",
+                "title": "%azureFunctions.dismissClassicTemplateFeedBanner%",
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
+            },
+            {
                 "command": "azureFunctions.createSlot",
                 "title": "%azureFunctions.createSlot%",
                 "category": "Azure Functions"
@@ -523,12 +535,12 @@
         "menus": {
             "azureFunctions.submenus.workspaceActions": [
                 {
-                    "command": "azureFunctions.createFunction",
-                    "group": "1_projects@1"
+                    "command": "azureFunctions.createNewProject",
+                    "group": "1_projects@0"
                 },
                 {
-                    "command": "azureFunctions.createNewProject",
-                    "group": "1_projects@2"
+                    "command": "azureFunctions.createFunction",
+                    "group": "1_projects@1"
                 },
                 {
                     "command": "azureFunctions.createNewProjectWithDockerfile",
@@ -966,6 +978,14 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.useClassicTemplateFeed",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.dismissClassicTemplateFeedBanner",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.deployByFunctionAppId",
                     "when": "never"
@@ -1519,6 +1539,18 @@
                         "default": 24,
                         "description": "%azureFunctions.projectTemplates.cacheExpirationHours%"
                     },
+                    "azureFunctions.classicTemplateFeed": {
+                        "type": "boolean",
+                        "default": false,
+                        "scope": "application",
+                        "description": "%azureFunctions.classicTemplateFeed%"
+                    },
+                    "azureFunctions.showClassicTemplateFeedBanner": {
+                        "type": "boolean",
+                        "default": true,
+                        "scope": "application",
+                        "description": "%azureFunctions.showClassicTemplateFeedBanner%"
+                    },
                     "azureFunctions.enableTemplateGallery": {
                         "type": "boolean",
                         "default": false,
@@ -1550,7 +1582,7 @@
                         "id": "create",
                         "title": "%azureFunctions.walkthrough.functionsStart.create.title%",
                         "completionEvents": [
-                            "onCommand:azureFunctions.createFunction"
+                            "onCommand:azureFunctions.createNewProject"
                         ],
                         "description": "%azureFunctions.walkthrough.functionsStart.create.description%",
                         "media": {

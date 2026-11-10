@@ -8,10 +8,12 @@ import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { cpUtils } from '../../utils/cpUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 
 export async function installNodeDependencies(context: IActionContext, projectPath: string): Promise<void> {
     try {
-        await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
+        await telemetryUtils.runWithDurationTelemetry(context, 'npmInstall', async () =>
+            await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))()));
         context.telemetry.properties.npmInstallSucceeded ??= 'true';
     } catch {
         context.telemetry.properties.npmInstallSucceeded = 'false';
