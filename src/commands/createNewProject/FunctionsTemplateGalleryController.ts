@@ -271,7 +271,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     private async initializeProjectForVSCode(context: IActionContext, projectPath: string, language?: ProjectLanguage): Promise<void> {
-        const functionProjectPath = await tryGetFunctionProjectRoot(context, projectPath, 'prompt');
+        const functionProjectPath = await tryGetFunctionProjectRoot(context, projectPath, 'prompt', 'project');
         if (functionProjectPath) {
             await initProjectForVSCode(context, functionProjectPath, language, projectPath);
         }

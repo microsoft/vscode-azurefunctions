@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { Uri, workspace } from 'vscode';
+import { ConfigurationTarget, Uri, workspace } from 'vscode';
 import { FunctionCreateStepBase } from '../../src/commands/createFunction/FunctionCreateStepBase';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
 import { FunctionsTemplateGalleryController } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
@@ -18,7 +18,8 @@ import { installNodeDependencies } from '../../src/commands/createNewProject/ins
 import { JavaScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
 import { ProjectCreateStepBase } from '../../src/commands/createNewProject/ProjectCreateStep/ProjectCreateStepBase';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
-import { funcVersionSetting, ProjectLanguage } from '../../src/constants';
+import { tryGetFunctionProjectRoot } from '../../src/commands/createNewProject/verifyIsProject';
+import { funcVersionSetting, ProjectLanguage, projectSubpathSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
@@ -26,6 +27,7 @@ import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase'
 import { createActivityContext } from '../../src/utils/activityUtils';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { gitUtils } from '../../src/utils/gitUtils';
+import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { type ITasksJson } from '../../src/vsCodeConfig/tasks';
 import { runWithFuncSetting } from '../runWithSetting';
 import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
@@ -344,6 +346,117 @@ suite('Project npm dependencies', () => {
             }
         });
     }
+
+    for (const scenario of [
+        { name: 'parent suppression', parentSettings: { suppressProject: true }, apps: ['src'], selected: 'src', inputs: [] },
+        { name: 'parent subpath', parentSettings: { projectSubpath: 'unrelated-app' }, apps: ['src'], selected: 'src', inputs: [] },
+        { name: 'multiple apps', parentSettings: { suppressProject: true, projectSubpath: 'unrelated-app' }, apps: ['primary', 'secondary'], selected: 'secondary', inputs: ['Set default', /secondary/] },
+        { name: 'copied default', parentSettings: { suppressProject: true, projectSubpath: 'unrelated-app' }, apps: ['primary', 'secondary'], selected: 'secondary', inputs: [], copiedSubpath: 'secondary' },
+    ]) {
+        test(`isolates gallery discovery and selected configuration from ${scenario.name}`, async () => {
+            const parent = workspace.workspaceFolders?.[0];
+            assert.ok(parent);
+            const configuration = workspace.getConfiguration(ext.prefix, parent.uri);
+            const previousSettings = Object.keys(scenario.parentSettings).map(key => ({
+                key, value: configuration.inspect(key)?.workspaceFolderValue,
+            }));
+            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+            projectPath = await fs.promises.mkdtemp(path.join(parent.uri.fsPath, 'gallery-'));
+            try {
+                for (const [key, value] of Object.entries(scenario.parentSettings)) {
+                    await configuration.update(key, value, ConfigurationTarget.WorkspaceFolder);
+                }
+                const parentSettingsPath = path.join(parent.uri.fsPath, '.vscode', 'settings.json');
+                const parentSettings = await fs.promises.readFile(parentSettingsPath, 'utf8');
+                const inheritedRoot = await tryGetFunctionProjectRoot(await createTestActionContext(), parent);
+                assert.strictEqual(inheritedRoot, scenario.parentSettings.suppressProject ? undefined : path.join(parent.uri.fsPath, 'unrelated-app'));
+                const controller = createController(false, []);
+                controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+                    for (const app of scenario.apps) {
+                        await AzExtFsExtra.ensureDir(path.join(destination, app));
+                        await AzExtFsExtra.writeJSON(path.join(destination, app, 'host.json'), { version: '2.0' });
+                    }
+                    if (scenario.copiedSubpath) {
+                        await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+                        await fs.promises.writeFile(path.join(destination, '.vscode', 'settings.json'),
+                            `// Copied project default\n{"azureFunctions.projectSubpath":"${scenario.copiedSubpath}",}`);
+                    }
+                };
+                controller['initializeProjectForVSCode'] = async (context, location, language) => {
+                    const { ui } = await createTestActionContext();
+                    context.ui = ui;
+                    await ui.runWithInputs(scenario.inputs, async () =>
+                        await FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'].call(controller, context, location, language));
+                };
+                await runWithFuncSetting(funcVersionSetting, FuncVersion.v4, async () =>
+                    await controller['createProject'](template, ProjectLanguage.JavaScript, projectPath));
+
+                const tasks = (await AzExtFsExtra.readJSON<ITasksJson>(path.join(projectPath, '.vscode', 'tasks.json'))).tasks ?? [];
+                assert.ok(tasks.length > 0);
+                assert.ok(tasks.every(task => task.options?.cwd === '${workspaceFolder}/' + scenario.selected));
+                if (scenario.apps.length > 1) {
+                    const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(projectPath, '.vscode', 'settings.json'));
+                    assert.strictEqual(settings[`${ext.prefix}.${projectSubpathSetting}`], scenario.selected);
+                }
+                assert.strictEqual(await fs.promises.readFile(parentSettingsPath, 'utf8'), parentSettings);
+            } finally {
+                for (const { key, value } of previousSettings) {
+                    await configuration.update(key, value, ConfigurationTarget.WorkspaceFolder);
+                }
+            }
+        });
+    }
+
+    for (const subpath of ['../outside', 'missing-app']) {
+        test(`rejects a copied gallery subpath that does not select a destination app: ${subpath}`, async () => {
+            await AzExtFsExtra.ensureDir(path.join(projectPath, '.vscode'));
+            await AzExtFsExtra.writeJSON(path.join(projectPath, '.vscode', 'settings.json'), { 'azureFunctions.projectSubpath': subpath });
+            await assert.rejects(tryGetFunctionProjectRoot(await createTestActionContext(), projectPath, 'prompt', 'project'),
+                /The gallery project subpath must point to a Function App within the selected destination/);
+        });
+    }
+
+    test('merges copied JSONC tasks, launch settings, editor settings, and recommendations without overwrite prompts', async () => {
+        const controller = createController(false, []);
+        const customTask = { type: 'shell', label: 'custom task', command: 'echo custom' };
+        const customLaunch = { type: 'node', request: 'launch', name: 'Custom launch', program: '${workspaceFolder}/tools/custom.js' };
+        controller['downloadAndExtractZip'] = async (_context, _repository, _branch, destination) => {
+            await AzExtFsExtra.ensureDir(path.join(destination, 'src'));
+            await AzExtFsExtra.writeJSON(path.join(destination, 'src', 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+            for (const [name, data] of Object.entries({
+                'tasks.json': { version: '2.0.0', tasks: [customTask] },
+                'launch.json': { version: '0.2.0', configurations: [customLaunch] },
+                'settings.json': { 'editor.wordWrap': 'on' },
+                'extensions.json': { recommendations: ['fixture.custom'] },
+            })) {
+                const jsonc = '\uFEFF// Copied gallery configuration\n' + JSON.stringify(data, undefined, 2).replace(/\n}$/, ',\n}');
+                await fs.promises.writeFile(path.join(destination, '.vscode', name), jsonc);
+            }
+        };
+        controller['initializeProjectForVSCode'] = async (context, location, language) => {
+            const { ui } = await createTestActionContext();
+            context.ui = ui;
+            await ui.runWithInputs([], async () =>
+                await FunctionsTemplateGalleryController.prototype['initializeProjectForVSCode'].call(controller, context, location, language));
+        };
+
+        await runWithFuncSetting(funcVersionSetting, FuncVersion.v4, async () =>
+            await controller['createProject'](template, ProjectLanguage.JavaScript, projectPath));
+
+        const vscodePath = path.join(projectPath, '.vscode');
+        const tasks = (await AzExtFsExtra.readJSON<ITasksJson>(path.join(vscodePath, 'tasks.json'))).tasks ?? [];
+        assert.deepStrictEqual(tasks.find(task => task.label === customTask.label), customTask);
+        assert.ok(tasks.some(task => task.type === 'func' && task.options?.cwd === '${workspaceFolder}/src'));
+        const launch = await AzExtFsExtra.readJSON<ILaunchJson>(path.join(vscodePath, 'launch.json'));
+        assert.deepStrictEqual(launch.configurations?.find(configuration => configuration.name === customLaunch.name), customLaunch);
+        const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(vscodePath, 'settings.json'));
+        assert.strictEqual(settings['editor.wordWrap'], 'on');
+        assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.JavaScript);
+        const extensions = await AzExtFsExtra.readJSON<{ recommendations: string[] }>(path.join(vscodePath, 'extensions.json'));
+        assert.ok(extensions.recommendations.includes('fixture.custom'));
+        assert.ok(extensions.recommendations.includes('ms-azuretools.vscode-azurefunctions'));
+    });
 
     for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.Python, ProjectLanguage.CSharp, ProjectLanguage.PowerShell]) {
         for (const subpath of ['.', 'src']) {

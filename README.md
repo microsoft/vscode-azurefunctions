@@ -86,7 +86,7 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 ### Gallery project initialization
 
-Every gallery project is initialized for use with VS Code, regardless of language or whether the Function App is at the workspace root or in a subfolder such as `src`. Initialization configures the language-specific tasks, debugger, and settings for the Function App's location. Confirm any task-overwrite prompt to replace the template's matching tasks; unrelated custom tasks and parent-workspace configuration are preserved. For an existing project, run **Azure Functions: Initialize Project for Use with VS Code...** from the workspace root.
+Every gallery project is initialized for use with VS Code, regardless of language or whether the Function App is at the workspace root or in a subfolder such as `src`. Initialization configures the language-specific tasks, debugger, and settings for the Function App's location. Discovery uses only the destination's files and settings; if multiple Function Apps are found, the selected default is saved only in the new project's configuration. Confirm any task-overwrite prompt to replace the template's matching tasks; unrelated custom tasks and settings, including those in JSONC files, and parent-workspace configuration are preserved. For an existing project, run **Azure Functions: Initialize Project for Use with VS Code...** from the workspace root.
 
 ### Node.js MCP template SDK requirements
 
