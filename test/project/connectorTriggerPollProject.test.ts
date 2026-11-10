@@ -5,17 +5,20 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import { transform } from 'esbuild';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { runInNewContext } from 'vm';
 import { ensureConnectorTriggerPollProject } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
-import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/connectorTriggerSelection';
+import { type ILocalSettingsJson } from '../../src/funcConfig/local.settings';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { envUtils } from '../../src/utils/envUtils';
 
@@ -39,7 +42,7 @@ suite('Connector trigger Poll project scaffolding', () => {
         );
     });
 
-    test('adds an event-specific C# Poll binding from the live Act schema', async () => {
+    test('adds a raw C# Poll binding without inferring models from the Act schema', async () => {
         const projectFile = path.join(projectPath, 'sample.csproj');
         await AzExtFsExtra.writeFile(projectFile, `<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
@@ -73,13 +76,10 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.match(functionContents, /TriggerConfigName = "%TrigNewContactTriggerConfigName%"/);
         assert.match(functionContents, /\[Function\("TrigNewContact"\)\]/);
         assert.match(functionContents, /\]\s*string payload\)/);
-        assert.match(functionContents, /List<ContactForTrigNewContact>/);
-        assert.match(functionContents, /JsonPropertyName\("fullName"\)/);
-        assert.match(
-            functionContents,
-            /Dictionary<string, string>\? CustomFields/,
-        );
-        assert.match(functionContents, /ValueKind == JsonValueKind\.Array/);
+        assert.match(functionContents, /using var document = JsonDocument\.Parse\(payload\);/);
+        assert.match(functionContents, /var data = document\.RootElement;/);
+        assert.strictEqual(functionContents.match(/JsonDocument\.Parse/g)?.length, 1);
+        assert.doesNotMatch(functionContents, /Deserialize|JsonPropertyName|Envelope|List<|catch/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -127,7 +127,8 @@ suite('Connector trigger Poll project scaffolding', () => {
             generated,
             /TriggerConfigName = "%TrigNewContactTriggerConfigName%"/,
         );
-        assert.match(generated, /ContactForTrigNewContact2/);
+        assert.match(generated, /public sealed class TrigNewContact2Function/);
+        assert.match(generated, /JsonDocument\.Parse\(payload\)/);
     });
 
     test('keeps the canonical operation registration when the setting name collides', async () => {
@@ -167,9 +168,14 @@ public void Run(
             generated,
             /TriggerConfigName = "%TrigNewContact2TriggerConfigName%"/,
         );
+        const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(
+            path.join(projectPath, 'local.settings.json'),
+        );
+        assert.strictEqual(settings.Values.TrigNewContact2TriggerConfigName, '<trigger-configuration-name>');
+        assert.ok(!Object.hasOwn(settings.Values, 'TrigNewContactTriggerConfigName'));
     });
 
-    test('adds an event-specific TypeScript Poll binding from the live RSS schema', async () => {
+    test('adds a raw TypeScript Poll binding without inferring models from the RSS schema', async () => {
         const existingFunction = path.join(
             projectPath,
             'src',
@@ -204,10 +210,12 @@ const example = "app.http('OnNewFeed', {})";
         assert.match(functionContents, /connection: 'ConnectorNamespace'/);
         assert.match(functionContents, /triggerConfigName: '%OnNewFeedTriggerConfigName%'/);
         assert.match(functionContents, /app\.connectorTrigger\('OnNewFeed'/);
-        assert.match(functionContents, /interface FeedItemForOnNewFeed/);
-        assert.match(functionContents, /"title": string;/);
-        assert.match(functionContents, /"links"\?: string\[\];/);
-        assert.match(functionContents, /record\?\.value/);
+        assert.match(functionContents, /payload: unknown, context: InvocationContext/);
+        assert.match(functionContents, /let data: unknown = payload;/);
+        assert.match(functionContents, /if \(typeof payload === 'string'\)/);
+        assert.match(functionContents, /data = JSON\.parse\(payload\);/);
+        assert.strictEqual(functionContents.match(/JSON\.parse/g)?.length, 1);
+        assert.doesNotMatch(functionContents, /interface |normalize|decodeJson|outputs/);
         assert.ok(!functionContents.includes('ConnectorTriggerFunction'));
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -219,7 +227,7 @@ const example = "app.http('OnNewFeed', {})";
         );
     });
 
-    test('adds an idempotent event-specific Python Poll binding from the live Act schema', async () => {
+    test('adds an idempotent raw Python Poll binding without inferring models from the Act schema', async () => {
         const functionAppPath = path.join(projectPath, 'function_app.py');
         const requirementsPath = path.join(projectPath, 'requirements.txt');
         await AzExtFsExtra.writeFile(functionAppPath, `from __future__ import annotations
@@ -267,13 +275,14 @@ azurefunctions-extensions-connectors
         );
         assert.match(functionContents, /delivery_mode=func\.DeliveryMode\.POLL/);
         assert.match(functionContents, /trigger_config_name="%TrigNewContactTriggerConfigName%"/);
-        assert.match(functionContents, /class ContactForTrigNewContact:/);
-        assert.match(functionContents, /full_name: Optional\[str\] = None/);
-        assert.match(
-            functionContents,
-            /custom_fields: Optional\[Dict\[str, str\]\] = None/,
-        );
-        assert.match(functionContents, /if isinstance\(body, list\):/);
+        assert.match(functionContents, /^import json$/m);
+        assert.match(functionContents, /^from typing import List$/m);
+        assert.match(functionContents, /cardinality=func\.Cardinality\.MANY/);
+        assert.match(functionContents, /max_batch_size=4/);
+        assert.match(functionContents, /payloads: List\[str\]/);
+        assert.match(functionContents, /for payload in payloads:\r?\n {8}data = json\.loads\(payload\)/);
+        assert.strictEqual(functionContents.match(/json\.loads/g)?.length, 1);
+        assert.doesNotMatch(functionContents, /dataclass|WIRE_PROPERTIES|_normalize|_decode|except/);
         assert.match(requirements, /^azure-functions>=2\.4\.0b1$/m);
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -412,6 +421,193 @@ async def OnNewFeed(req):
     }
 
     for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
+        const projectFiles: Record<string, string> = language === ProjectLanguage.CSharp
+            ? { 'sample.csproj': csharpProject }
+            : language === ProjectLanguage.Python
+                ? {
+                    'function_app.py': 'import azure.functions as func\napp = func.FunctionApp()\n',
+                    'requirements.txt': 'azure-functions>=2.2.0b4\n',
+                }
+                : {};
+        const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
+            language === ProjectLanguage.TypeScript ? 'node' : 'python';
+
+        test(`creates complete missing local settings and ignore rules for ${language}`, async () => {
+            const preservedFiles = {
+                'README.md': 'Existing project instructions.\n',
+                'host.json': '{"version":"2.0"}\n',
+                'unrelated.txt': 'Keep this file.\n',
+            };
+            await writeProjectFiles(projectPath, { ...projectFiles, ...preservedFiles });
+
+            await ensureConnectorTriggerPollProject(
+                projectPath, language, createSelection('rss', 'OnNewFeed'),
+            );
+
+            const settings = await AzExtFsExtra.readJSON(
+                path.join(projectPath, 'local.settings.json'),
+            );
+            assert.deepStrictEqual(settings, {
+                IsEncrypted: false,
+                Values: {
+                    AzureWebJobsStorage: 'UseDevelopmentStorage=true',
+                    FUNCTIONS_WORKER_RUNTIME: workerRuntime,
+                    ['ConnectorNamespace__pollingEndpoint']: 'https://<connector-namespace-host>',
+                    OnNewFeedTriggerConfigName: '<trigger-configuration-name>',
+                },
+            });
+            const bindings = await findPollingConnectorBindings(projectPath);
+            assert.strictEqual(bindings.length, 1);
+            assert.ok(Object.hasOwn(settings.Values, `${bindings[0].connectionSettingName}__pollingEndpoint`));
+            assert.ok(Object.hasOwn(settings.Values, bindings[0].triggerConfigSettingName));
+            const sourceFile = language === ProjectLanguage.CSharp ? 'OnNewFeedFunction.cs' :
+                language === ProjectLanguage.TypeScript ? path.join('src', 'functions', 'onNewFeedFunction.ts') :
+                    'function_app.py';
+            const parser = language === ProjectLanguage.CSharp ? /JsonDocument\.Parse/g :
+                language === ProjectLanguage.TypeScript ? /JSON\.parse/g : /json\.loads/g;
+            const source = await fs.promises.readFile(path.join(projectPath, sourceFile), 'utf8');
+            assert.strictEqual(source.match(parser)?.length, 1);
+            assert.doesNotMatch(source, /Output schema|normalize|Deserialize|dataclass/);
+            for (const file of ['.gitignore', '.funcignore']) {
+                assert.strictEqual(
+                    await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
+                    'local.settings.json\n',
+                );
+            }
+            for (const [file, contents] of Object.entries(preservedFiles)) {
+                assert.strictEqual(await fs.promises.readFile(path.join(projectPath, file), 'utf8'), contents);
+            }
+        });
+
+        test(`preserves existing settings including empty values and other sections for ${language}`, async () => {
+            const settings = {
+                IsEncrypted: false,
+                Values: {
+                    AzureWebJobsStorage: '',
+                    FUNCTIONS_WORKER_RUNTIME: '',
+                    ['ConnectorNamespace__pollingEndpoint']: '',
+                    OnNewFeedTriggerConfigName: '',
+                    KeepSetting: 'keep-value',
+                },
+                Host: { LocalHttpPort: '7072' },
+                ConnectionStrings: { ExistingDatabase: 'keep-connection' },
+                CustomSection: { enabled: true },
+            };
+            await writeProjectFiles(projectPath, {
+                ...projectFiles,
+                'local.settings.json': JSON.stringify(settings),
+            });
+
+            await ensureConnectorTriggerPollProject(
+                projectPath, language, createSelection('rss', 'OnNewFeed'),
+            );
+
+            assert.deepStrictEqual(
+                await AzExtFsExtra.readJSON(path.join(projectPath, 'local.settings.json')),
+                settings,
+            );
+        });
+
+        const typedFile = language === ProjectLanguage.CSharp ? 'Existing.cs' :
+            language === ProjectLanguage.TypeScript ? 'src/functions/existing.ts' : 'function_app.py';
+        const typedContents = language === ProjectLanguage.CSharp ? `[Function("OnNewFeed")]
+public void Run(
+    [ConnectorTrigger(
+        DeliveryMode = ConnectorTriggerDeliveryMode.Poll,
+        Connection = "ExistingNamespace",
+        TriggerConfigName = "%ExistingConfig%")]
+    Office365OnCalendarChangedItemsTriggerPayload payload) { }
+` : language === ProjectLanguage.TypeScript ? `connectors.office365.onNewCalendarEvent('OnNewFeed', {
+    deliveryMode: 'Poll',
+    connection: 'ExistingNamespace',
+    triggerConfigName: '%ExistingConfig%',
+    handler: async (context: CalendarEventTriggerContext) => { processItems(context.calendarEvents); },
+});
+` : `import azure.functions as func
+app = func.FunctionApp()
+
+@app.function_name(name="OnNewFeed")
+@app.connector_trigger(
+    arg_name="payloads",
+    delivery_mode=func.DeliveryMode.POLL,
+    connection="ExistingNamespace",
+    trigger_config_name="%ExistingConfig%",
+    cardinality=func.Cardinality.MANY,
+)
+def existing_handler(payloads: List[GraphCalendarEventClientWithActionType]) -> None:
+    process_items(payloads)
+`;
+
+        test(`uses the actual reused ${language} binding settings without rewriting its SDK-typed handler`, async () => {
+            await writeProjectFiles(projectPath, {
+                ...projectFiles,
+                [typedFile]: typedContents,
+                'local.settings.json': JSON.stringify({
+                    Values: { ExistingConfig: '', KeepSetting: 'keep-value' },
+                }),
+            });
+
+            await ensureConnectorTriggerPollProject(
+                projectPath, language, createSelection('rss', 'OnNewFeed'),
+                await readOutputMetadata('rssOnNewFeedSwagger.json', 'OnNewFeed'),
+            );
+
+            assert.strictEqual(await fs.promises.readFile(path.join(projectPath, typedFile), 'utf8'), typedContents);
+            assert.deepStrictEqual(
+                await AzExtFsExtra.readJSON(path.join(projectPath, 'local.settings.json')),
+                {
+                    IsEncrypted: false,
+                    Values: {
+                        AzureWebJobsStorage: 'UseDevelopmentStorage=true',
+                        FUNCTIONS_WORKER_RUNTIME: workerRuntime,
+                        ['ExistingNamespace__pollingEndpoint']: 'https://<connector-namespace-host>',
+                        ExistingConfig: '',
+                        KeepSetting: 'keep-value',
+                    },
+                },
+            );
+            const before = await readProjectFiles(projectPath);
+            await ensureConnectorTriggerPollProject(
+                projectPath, language, createSelection('rss', 'OnNewFeed'),
+            );
+            assert.deepStrictEqual(await readProjectFiles(projectPath), before);
+        });
+
+        const invalidSettings = [
+            { name: 'malformed JSON', contents: '{"Values":{"Private":"private-setting-marker"},broken}' },
+            { name: 'empty JSON', contents: ' \n' },
+            { name: 'a null root', contents: 'null' },
+            { name: 'an array root', contents: '[]' },
+            { name: 'a string root', contents: '"private-setting-marker"' },
+            { name: 'encrypted settings', contents: '{"IsEncrypted":true,"Values":{"Private":"private-setting-marker"}}' },
+            { name: 'a non-boolean encryption flag', contents: '{"IsEncrypted":"false"}' },
+            { name: 'null Values', contents: '{"Values":null}' },
+            { name: 'array Values', contents: '{"Values":[]}' },
+            { name: 'non-string Values', contents: '{"Values":{"Private":42}}' },
+        ];
+        for (const invalid of invalidSettings) {
+            test(`rejects ${invalid.name} before any ${language} scaffold writes without disclosing values`, async () => {
+                await writeProjectFiles(projectPath, {
+                    ...projectFiles,
+                    'local.settings.json': invalid.contents,
+                    '.gitignore': 'keep-ignore-rule\n',
+                    '.funcignore': 'keep-deploy-rule\n',
+                });
+                const before = await readProjectFiles(projectPath);
+
+                await assert.rejects(
+                    ensureConnectorTriggerPollProject(projectPath, language, createSelection('rss', 'OnNewFeed')),
+                    (error: unknown) => {
+                        assert.ok(error instanceof Error);
+                        assert.ok(!error.message.includes('private-setting-marker'));
+                        return true;
+                    },
+                );
+
+                assert.deepStrictEqual(await readProjectFiles(projectPath), before);
+            });
+        }
+
         test(`rejects a conflicting HTTP registration even when the ${language} Poll function exists`, async () => {
             if (language === ProjectLanguage.CSharp) {
                 await writeProjectFiles(projectPath, { 'sample.csproj': csharpProject });
@@ -484,6 +680,121 @@ def http_handler(req):
         await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
 
         assert.deepStrictEqual(await readProjectFiles(projectPath), before);
+    });
+
+    test('preserves JSONC settings and adds missing defaults without changing other sections', async () => {
+        await writeProjectFiles(projectPath, {
+            'local.settings.json': '\uFEFF{\n// Existing settings\n"Values":{"KeepSetting":""},\n"Host":{"LocalHttpPort":"7072"},\n}\n',
+        });
+
+        await ensureConnectorTriggerPollProject(
+            projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'),
+        );
+
+        const settings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(path.join(projectPath, 'local.settings.json'));
+        assert.strictEqual(settings.IsEncrypted, false);
+        assert.ok(settings.Values);
+        assert.strictEqual(settings.Values.KeepSetting, '');
+        assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'node');
+        assert.strictEqual(settings.Values.OnNewFeedTriggerConfigName, '<trigger-configuration-name>');
+        assert.deepStrictEqual(settings.Host, { LocalHttpPort: '7072' });
+    });
+
+    test('preserves ignore contents and appends an effective settings rule after negations only once', async () => {
+        const ignoreFiles = {
+            '.gitignore': '# local.settings.json must not be committed\r\nbin\r\n!*.json\r\n',
+            '.funcignore': 'local.settings.json\r\n!local.settings.json',
+        };
+        await writeProjectFiles(projectPath, ignoreFiles);
+        const selection = createSelection('rss', 'OnNewFeed');
+
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
+
+        for (const [file, contents] of Object.entries(ignoreFiles)) {
+            const separator = contents.endsWith('\n') ? '' : '\r\n';
+            assert.strictEqual(
+                await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
+                `${contents}${separator}local.settings.json\r\n`,
+            );
+        }
+        const before = await readProjectFiles(projectPath);
+        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
+        assert.deepStrictEqual(await readProjectFiles(projectPath), before);
+    });
+
+    test('executes the raw TypeScript handler with parse-once shapes and rejects malformed JSON without reflecting payloads', async () => {
+        await ensureConnectorTriggerPollProject(
+            projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'),
+        );
+        const source = await fs.promises.readFile(
+            path.join(projectPath, 'src', 'functions', 'onNewFeedFunction.ts'), 'utf8',
+        );
+        type Handler = (payload: unknown, context: { log(...values: unknown[]): void }) => Promise<void>;
+        const handlers: Handler[] = [];
+        const parsedValues: unknown[] = [];
+        let parseCalls = 0;
+        const logs: unknown[][] = [];
+        const context = { log: (...values: unknown[]) => { logs.push(values); } };
+        const compiled = await transform(source, { loader: 'ts', format: 'cjs' });
+        runInNewContext(compiled.code, {
+            SyntaxError,
+            require: (id: string) => {
+                assert.strictEqual(id, '@azure/functions');
+                return {
+                    app: {
+                        connectorTrigger: (_name: string, options: { handler: Handler }) => {
+                            handlers.push(options.handler);
+                        },
+                    },
+                };
+            },
+            JSON: {
+                parse: (payload: string): unknown => {
+                    parseCalls++;
+                    const value: unknown = JSON.parse(payload);
+                    parsedValues.push(value);
+                    return value;
+                },
+            },
+        });
+        assert.strictEqual(handlers.length, 1);
+        const handler = handlers[0];
+        const payloads = [
+            { outputs: { body: '[{"private":"private-payload-marker"}]' } },
+            [1, { value: 'private-payload-marker' }],
+            42,
+            true,
+            null,
+            '{"nested":"private-payload-marker"}',
+        ];
+        for (const [index, value] of payloads.entries()) {
+            await handler(JSON.stringify(value), context);
+            assert.strictEqual(parsedValues.length, index + 1);
+            assert.deepStrictEqual(parsedValues[index], value);
+        }
+        for (const value of payloads.filter(payload => typeof payload !== 'string')) {
+            await handler(value, context);
+        }
+        assert.strictEqual(parsedValues.length, payloads.length);
+        assert.strictEqual(parseCalls, payloads.length);
+        const successfulLogs = logs.length;
+        const invalidPayload = 'payload-secret';
+        await assert.rejects(handler(invalidPayload, context), (error: unknown) => {
+            assert.ok(error instanceof SyntaxError);
+            assert.strictEqual(error.message, 'Invalid Connector Trigger JSON payload.');
+            assert.ok(!String(error).includes(invalidPayload));
+            assert.ok(!error.stack?.includes(invalidPayload));
+            assert.ok(!('cause' in error));
+            return true;
+        });
+        assert.strictEqual(parseCalls, payloads.length + 1);
+        assert.strictEqual(logs.length, successfulLogs);
+        assert.ok(!JSON.stringify(logs).includes('private-payload-marker'));
+        assert.ok(!JSON.stringify(logs).includes(invalidPayload));
+        const loggingError = new Error('Test logging failure.');
+        await assert.rejects(handler('{}', {
+            log: () => { throw loggingError; },
+        }), (error: unknown) => error === loggingError);
     });
 
     (buildAddProjectsEnabled ? test : test.skip)(
