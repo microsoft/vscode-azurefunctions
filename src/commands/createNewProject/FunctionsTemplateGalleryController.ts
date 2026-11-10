@@ -22,11 +22,13 @@ import { telemetryUtils } from '../../utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
 import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
+import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { installNodeDependencies } from './installNodeDependencies';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+import { tryGetFunctionProjectRoot } from './verifyIsProject';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -224,6 +226,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                             }
                         }
                     }
+                    await this.initializeProjectForVSCode(actionContext, projectPath, Object.values(ProjectLanguage).find(projectLanguage => projectLanguage === language));
 
                     this.sendProgress('Initializing git repository...');
                     // Remove the cloned template's git history so the user gets a fresh repo
@@ -265,6 +268,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 }
             });
         });
+    }
+
+    private async initializeProjectForVSCode(context: IActionContext, projectPath: string, language?: ProjectLanguage): Promise<void> {
+        const functionProjectPath = await tryGetFunctionProjectRoot(context, projectPath, 'prompt', 'project');
+        if (functionProjectPath) {
+            await initProjectForVSCode(context, functionProjectPath, language, projectPath);
+        }
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {

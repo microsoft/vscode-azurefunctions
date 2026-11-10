@@ -6,11 +6,14 @@
 import { AzExtFsExtra, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type MessageItem, type WorkspaceFolder } from 'vscode';
-import { hostFileName, projectSubpathSetting } from '../../constants';
+import { hostFileName, projectSubpathSetting, settingsFileName } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { isPathEqual, isSubpath } from '../../utils/fs';
+import { parseJson } from '../../utils/parseJson';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from '../../vsCodeConfig/settings';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -21,20 +24,36 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
  * Describes what to do if multiple projects are found
  */
 export type MultiProjectPromptBehavior = 'silent' | 'prompt' | 'modalPrompt';
+type ProjectSettingsScope = 'workspace' | 'project';
 
 /**
  * Checks root folder and one level down first, then all levels of tree
  * If a single function project is found, returns that path.
  * If multiple projects are found, will prompt based on the value of `promptBehavior`
  * @param workspaceFolder Per the VS Code docs for `findFiles`: It is recommended to pass in a workspace folder if the pattern should match inside the workspace.
+ * @param settingsScope Use project-local settings for a newly copied gallery destination, without inheriting or editing its containing workspace.
  */
-export async function tryGetFunctionProjectRoot(context: IActionContext, workspaceFolder: WorkspaceFolder | string, promptBehavior: MultiProjectPromptBehavior = 'silent'): Promise<string | undefined> {
+export async function tryGetFunctionProjectRoot(context: IActionContext, workspaceFolder: WorkspaceFolder | string, promptBehavior: MultiProjectPromptBehavior = 'silent', settingsScope: ProjectSettingsScope = 'workspace'): Promise<string | undefined> {
     return await telemetryUtils.runWithDurationTelemetry(context, 'tryGetProject', async () => {
         const folderPath = typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
-        if (!getWorkspaceSetting<boolean>('suppressProject', workspaceFolder)) {
-            const subpath: string | undefined = getWorkspaceSetting(projectSubpathSetting, workspaceFolder);
+        let projectSettings: Record<string, unknown> | undefined;
+        if (settingsScope === 'project') {
+            projectSettings = {};
+            const settingsPath = path.join(folderPath, '.vscode', settingsFileName);
+            if (await AzExtFsExtra.pathExists(settingsPath)) {
+                projectSettings = parseJson((await AzExtFsExtra.readFile(settingsPath)).toString());
+            }
+        }
+        const suppressProject = projectSettings ? projectSettings[`${ext.prefix}.suppressProject`] === true : getWorkspaceSetting<boolean>('suppressProject', workspaceFolder);
+        if (!suppressProject) {
+            const configuredSubpath = projectSettings ? projectSettings[`${ext.prefix}.${projectSubpathSetting}`] : getWorkspaceSetting<string>(projectSubpathSetting, workspaceFolder);
+            const subpath = typeof configuredSubpath === 'string' ? configuredSubpath : undefined;
             if (subpath) {
-                return path.join(folderPath, subpath);
+                const projectPath = path.join(folderPath, subpath);
+                if (settingsScope === 'project' && (!(isPathEqual(folderPath, projectPath) || isSubpath(folderPath, projectPath)) || !await isFunctionProject(projectPath))) {
+                    throw new Error(localize('invalidGalleryProjectSubpath', 'The gallery project subpath must point to a Function App within the selected destination.'));
+                }
+                return projectPath;
             } else if (await AzExtFsExtra.pathExists(folderPath)) {
                 if (await isFunctionProject(folderPath)) {
                     return folderPath;
@@ -52,7 +71,7 @@ export async function tryGetFunctionProjectRoot(context: IActionContext, workspa
                         return projectPaths[0];
                     } else if (projectPaths.length > 1 && promptBehavior !== 'silent') {
                         const subpaths = projectPaths.map(p => path.relative(folderPath, p));
-                        const pickedSubpath = await promptForProjectSubpath(context, folderPath, subpaths, promptBehavior);
+                        const pickedSubpath = await promptForProjectSubpath(context, folderPath, subpaths, promptBehavior, settingsScope);
                         return path.join(folderPath, pickedSubpath);
                     }
                 }
@@ -63,7 +82,7 @@ export async function tryGetFunctionProjectRoot(context: IActionContext, workspa
     });
 }
 
-async function promptForProjectSubpath(context: IActionContext, workspacePath: string, matchingSubpaths: string[], promptBehavior: MultiProjectPromptBehavior): Promise<string> {
+async function promptForProjectSubpath(context: IActionContext, workspacePath: string, matchingSubpaths: string[], promptBehavior: MultiProjectPromptBehavior, settingsScope: ProjectSettingsScope): Promise<string> {
     const message: string = localize('detectedMultipleProject', 'Detected multiple function projects in the same workspace folder. You must either set the default or use a multi-root workspace.');
     const learnMoreLink: string = 'https://aka.ms/AA4nmfy';
     const setDefault: MessageItem = { title: localize('setDefault', 'Set default') };
@@ -73,7 +92,13 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
     const picks: IAzureQuickPickItem<string>[] = matchingSubpaths.map(p => { return { label: p, data: p }; });
     const placeHolder: string = localize('selectProject', 'Select the default project subpath');
     const subpath: string = (await context.ui.showQuickPick(picks, { placeHolder, stepName: 'multipleProjects|select' })).data;
-    await updateWorkspaceSetting(projectSubpathSetting, subpath, workspacePath);
+    if (settingsScope === 'project') {
+        const vscodePath = path.join(workspacePath, '.vscode');
+        await AzExtFsExtra.ensureDir(vscodePath);
+        await writeToSettingsJson(context, vscodePath, projectSubpathSetting, subpath);
+    } else {
+        await updateWorkspaceSetting(projectSubpathSetting, subpath, workspacePath);
+    }
 
     return subpath;
 }
