@@ -80,7 +80,7 @@ export async function materializeGenericConnectorTriggerProject(
 
 This project was created from the pinned language genericApp starter.
 
-${bindings.map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
+${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
 Configure each binding's trigger configuration setting and its connection's polling endpoint setting before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection.
 

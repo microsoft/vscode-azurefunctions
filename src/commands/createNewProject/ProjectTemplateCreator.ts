@@ -31,6 +31,7 @@ import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardC
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 import { ProjectPrepareStep, type IProjectPrepareContext } from './ProjectPrepareStep';
+import { ensureScriptProjectIgnoreFiles } from './ProjectCreateStep/scriptProjectIgnoreFiles';
 import { type IPythonVenvWizardContext } from './pythonSteps/IPythonVenvWizardContext';
 
 export interface ProjectTemplateCreatorCallbacks {
@@ -97,6 +98,7 @@ export class ProjectTemplateCreator {
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
             await this.prepareLocalSettings(context, source);
+            await ensureScriptProjectIgnoreFiles(source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
                 const readme = await AzExtFsExtra.pathExists(readmePath) ? await AzExtFsExtra.readFile(readmePath) : '';

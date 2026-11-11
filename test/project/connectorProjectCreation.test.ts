@@ -5,17 +5,26 @@
 
 import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
+import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
+import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
+import { ScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
+import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
+import { ensureScriptProjectIgnoreFiles, getScriptProjectIgnoreFiles } from '../../src/commands/createNewProject/ProjectCreateStep/scriptProjectIgnoreFiles';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
+import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
+import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
+import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
@@ -476,6 +485,125 @@ suite('Connector project batch creation', () => {
         });
     });
 
+    test('adds classic ignore defaults to a generic TypeScript starter before copying it', async function () {
+        this.timeout(30_000);
+        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node' },
+        });
+        await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+        await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), { name: 'generic', dependencies: { '@azure/functions': '^4.0.0' } });
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+        const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
+        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        const originalExecuteCommand = cpUtils.executeCommand;
+        try {
+            cpUtils.executeCommand = async (...args) => args[2] === 'npm' ? '' : originalExecuteCommand(...args);
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
+        } finally {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        }
+
+        const defaults = nonNullValue(getScriptProjectIgnoreFiles(ProjectLanguage.TypeScript));
+        const gitignore = await AzExtFsExtra.readFile(path.join(destination, '.gitignore'));
+        const funcignore = await AzExtFsExtra.readFile(path.join(destination, '.funcignore'));
+        assert.strictEqual(gitignore, defaults.gitignore);
+        assert.strictEqual(funcignore, defaults.funcignore);
+        assert.ok(getLines(gitignore).includes('local.settings.json'));
+        assert.ok(getLines(funcignore).includes('local.settings.json'));
+        assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+    });
+
+    test('merges classic ignore defaults into ignore files a starter already ships', async () => {
+        const starterGitignore = 'node_modules/\r\n# starter\r\n!keep.me\r\ncustom-entry';
+        const starterFuncignore = 'custom-deploy-exclude\n*.ts\n';
+        const untouched = { 'host.json': '{"version":"2.0"}', 'local.settings.json': '{"Values":{}}', 'package.json': '{"name":"generic"}' };
+        await AzExtFsExtra.writeFile(path.join(source, '.gitignore'), starterGitignore);
+        await AzExtFsExtra.writeFile(path.join(source, '.funcignore'), starterFuncignore);
+        for (const [file, contents] of Object.entries(untouched)) {
+            await AzExtFsExtra.writeFile(path.join(source, file), contents);
+        }
+
+        await ensureScriptProjectIgnoreFiles(source, ProjectLanguage.TypeScript);
+
+        const defaults = nonNullValue(getScriptProjectIgnoreFiles(ProjectLanguage.TypeScript));
+        const gitignore = await AzExtFsExtra.readFile(path.join(source, '.gitignore'));
+        const funcignore = await AzExtFsExtra.readFile(path.join(source, '.funcignore'));
+        assert.ok(gitignore.startsWith(`${starterGitignore}\r\n`), 'Starter .gitignore entries were not preserved');
+        assert.ok(funcignore.startsWith(starterFuncignore), 'Starter .funcignore entries were not preserved');
+        const appended = gitignore.slice(starterGitignore.length);
+        assert.ok(!/(^|[^\r])\n/.test(appended), 'Merged .gitignore lines did not keep CRLF');
+        for (const [content, expected] of [[gitignore, defaults.gitignore], [funcignore, defaults.funcignore]]) {
+            const lines = getLines(content).filter(line => !line.startsWith('#'));
+            assert.ok(lines.includes('local.settings.json'));
+            assert.deepStrictEqual(lines.length, new Set(lines).size, 'Merged ignore file contains duplicate entries');
+            for (const line of getLines(expected).filter(entry => entry && !entry.startsWith('#'))) {
+                assert.ok(lines.includes(line), `Missing default entry ${line}`);
+            }
+        }
+        for (const [file, contents] of Object.entries(untouched)) {
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, file)), contents, `${file} changed`);
+        }
+
+        await ensureScriptProjectIgnoreFiles(source, ProjectLanguage.TypeScript);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, '.gitignore')), gitignore);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, '.funcignore')), funcignore);
+    });
+
+    test('keeps Python ignore defaults compatible with VS Code venv initialization', async () => {
+        await ensureScriptProjectIgnoreFiles(source, ProjectLanguage.Python);
+        const defaults = nonNullValue(getScriptProjectIgnoreFiles(ProjectLanguage.Python));
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, '.gitignore')), defaults.gitignore);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, '.funcignore')), defaults.funcignore);
+
+        const initStep = new PythonInitVSCodeStep() as unknown as { executeCore(context: IProjectWizardContext & IPythonVenvWizardContext): Promise<void> };
+        await initStep.executeCore(Object.assign(await createTestActionContext(), {
+            projectPath: source, workspacePath: source, version: FuncVersion.v4, language: ProjectLanguage.Python, venvName: '.venv',
+        }) as unknown as IProjectWizardContext & IPythonVenvWizardContext);
+
+        const gitignore = getLines(await AzExtFsExtra.readFile(path.join(source, '.gitignore')));
+        const funcignore = getLines(await AzExtFsExtra.readFile(path.join(source, '.funcignore')));
+        for (const lines of [gitignore, funcignore]) {
+            assert.ok(lines.includes('local.settings.json'));
+            assert.strictEqual(lines.filter(line => line === '.venv').length, 1);
+        }
+        assert.ok(gitignore.includes('.python_packages'));
+        await ensureScriptProjectIgnoreFiles(source, ProjectLanguage.Python);
+        assert.deepStrictEqual(getLines(await AzExtFsExtra.readFile(path.join(source, '.funcignore'))), funcignore);
+    });
+
+    for (const { name, createStep, gitignoreSha256, funcignore } of [
+        {
+            name: 'script', createStep: () => new ScriptProjectCreateStep(),
+            gitignoreSha256: '43f0ba487f23d919d51ac7eee2b2e229ab56eda3fb23268f1230457f31e1cb08', funcignore: [],
+        },
+        {
+            name: 'TypeScript', createStep: () => new TypeScriptProjectCreateStep(),
+            gitignoreSha256: '064a7d678dabc30e17062e0d6da0155387a48e5a4b9e25ac0b444d5fada9ee66', funcignore: ['*.js.map', '*.ts', 'tsconfig.json'],
+        },
+        {
+            name: 'Python', createStep: () => new PythonProjectCreateStep(),
+            gitignoreSha256: '17bdb81cf79f3d99dcb3e0ea1063dfc6d0fe42044d473cf58eee95bb53fa9caf', funcignore: [],
+        },
+    ]) {
+        test(`keeps classic ${name} create ignore files unchanged`, async () => {
+            const step = createStep();
+            Object.defineProperty(step, 'getHostContent', { value: async () => ({ version: '2.0' }) });
+            await ScriptProjectCreateStep.prototype.executeCore.call(step, Object.assign(await createTestActionContext(), {
+                projectPath: destination, version: FuncVersion.v4,
+            }) as unknown as IProjectWizardContext, { report: () => undefined });
+
+            const gitignore = await fs.promises.readFile(path.join(destination, '.gitignore'));
+            assert.strictEqual(createHash('sha256').update(gitignore).digest('hex'), gitignoreSha256);
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.funcignore')), [
+                '__blobstorage__', '__queuestorage__', '__azurite_db*__.json', '.git*', '.vscode', 'local.settings.json', 'test', ...funcignore,
+            ].sort().join(os.EOL));
+        });
+    }
+
     test('rejects destination conflicts before copying any file', async () => {
         await AzExtFsExtra.writeFile(path.join(source, 'first.txt'), 'new');
         await AzExtFsExtra.writeFile(path.join(source, 'second.txt'), 'template');
@@ -675,6 +803,10 @@ suite('Connector project batch creation', () => {
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
     });
 });
+
+function getLines(content: string): string[] {
+    return content.split(/\r?\n/).map(line => line.trim());
+}
 
 async function copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
     const creator = new ProjectTemplateCreator() as unknown as {
