@@ -8,11 +8,18 @@ import * as vscode from 'vscode';
 import { localize } from '../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { type HttpRequestEditors } from '../../webviews/azureInvoke/extension/HttpRequestEditors';
+import { type CollectionReviews } from '../../webviews/azureInvoke/extension/CollectionReviews';
 import { type BlobInvocationEditors } from '../../webviews/azureInvoke/extension/BlobInvocationEditors';
 import { type TimerInvocationEditors } from '../../webviews/azureInvoke/extension/TimerInvocationEditors';
 import { openCollectionFile, saveCollectionFile } from './collectionFiles';
 
-export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, blobs: BlobInvocationEditors, timers: TimerInvocationEditors): void {
+export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors, reviews: CollectionReviews, blobs: BlobInvocationEditors, timers: TimerInvocationEditors): void {
+    registerCommand('azureFunctions.azureInvoke.buildWithAI', async (context: IActionContext) => {
+        context.telemetry.maskEntireErrorMessage = true;
+        context.errorHandling.suppressDisplay = true;
+        await reviews.start();
+    });
+
     registerCommand('azureFunctions.azureInvoke.add', async (context: IActionContext) => {
         const triggers = [
             { label: localize('azureInvoke.httpTrigger', 'HTTP trigger'), supported: true, triggerType: 'http' },
