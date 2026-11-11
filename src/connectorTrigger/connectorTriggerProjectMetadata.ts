@@ -137,11 +137,14 @@ async function writeMetadataFile(
             if (latest?.contents !== existing?.contents) {
                 throw createMetadataError('MetadataChanged');
             }
-            await fs.promises.rename(temporaryPath, metadataPath);
-            temporaryCreated = false;
+            if (existing) {
+                await replaceMetadataFile(metadataPath, temporaryPath, existing.contents);
+            } else if (!await publishIfAbsent(temporaryPath, metadataPath)) {
+                throw createMetadataError('MetadataChanged');
+            }
         } finally {
             if (temporaryCreated) {
-                await fs.promises.unlink(temporaryPath);
+                await fs.promises.rm(temporaryPath, { force: true });
             }
         }
     } catch (error) {
@@ -150,6 +153,90 @@ async function writeMetadataFile(
         }
         throw createMetadataError('WriteFailed');
     }
+}
+
+/**
+ * Other extension hosts and editors can save the metadata file at any time, so the in-process lock is not enough.
+ * Atomically claiming the current file and publishing the replacement only while the path is absent means a
+ * concurrent save is either visible in the claimed contents or wins publication, and is reported rather than replaced.
+ */
+async function replaceMetadataFile(
+    metadataPath: string,
+    temporaryPath: string,
+    expectedContents: string,
+): Promise<void> {
+    const claimPath = `${metadataPath}.${randomUUID()}.claim`;
+    try {
+        await fs.promises.rename(metadataPath, claimPath);
+    } catch (error) {
+        if (getErrorCode(error) === 'ENOENT') {
+            throw createMetadataError('MetadataChanged');
+        }
+        throw error;
+    }
+
+    let published = false;
+    try {
+        if (await fs.promises.readFile(claimPath, 'utf8') !== expectedContents) {
+            throw createMetadataError('MetadataChanged');
+        }
+        published = await publishIfAbsent(temporaryPath, metadataPath);
+        if (!published) {
+            throw createMetadataError('MetadataChanged');
+        }
+    } finally {
+        if (published || await restoreClaimedMetadata(claimPath, metadataPath)) {
+            await fs.promises.rm(claimPath, { force: true });
+        }
+    }
+}
+
+async function restoreClaimedMetadata(claimPath: string, metadataPath: string): Promise<boolean> {
+    try {
+        // A file published meanwhile by another writer is newer than the claimed contents and is kept.
+        await publishIfAbsent(claimPath, metadataPath);
+        return true;
+    } catch {
+        // Keep the claimed file so its contents are not lost.
+        return false;
+    }
+}
+
+const linkUnsupportedErrorCodes = new Set(['ENOSYS', 'ENOTSUP', 'EOPNOTSUPP', 'EPERM', 'EXDEV']);
+
+/**
+ * Atomically creates `targetPath` with the complete contents of `sourcePath` only if it does not exist.
+ * Returns false when another writer already created it.
+ */
+async function publishIfAbsent(sourcePath: string, targetPath: string): Promise<boolean> {
+    try {
+        await fs.promises.link(sourcePath, targetPath);
+        return true;
+    } catch (error) {
+        const code = getErrorCode(error);
+        if (code === 'EEXIST') {
+            return false;
+        }
+        if (!code || !linkUnsupportedErrorCodes.has(code)) {
+            throw error;
+        }
+    }
+
+    // File systems without hard links still get exclusive creation, though not an atomic content swap.
+    try {
+        await fs.promises.copyFile(sourcePath, targetPath, fs.constants.COPYFILE_EXCL);
+        return true;
+    } catch (error) {
+        if (getErrorCode(error) === 'EEXIST') {
+            return false;
+        }
+        throw error;
+    }
+}
+
+function getErrorCode(error: unknown): string | undefined {
+    return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ?
+        error.code : undefined;
 }
 
 function throwIfMetadataDocumentIsDirty(metadataPath: string): void {

@@ -441,15 +441,82 @@ suite('Connector trigger project metadata', () => {
         assert.deepStrictEqual(await fs.promises.readdir(path.dirname(metadataPath(projectPath))), [metadataFileName]);
     });
 
-    test('releases the write lock and removes temporary files after a failed write', async () => {
+    test('does not replace a metadata file created by another window at the commit boundary', async () => {
+        const external = createMetadata('rss', 'OnNewFeed');
+        let createdConcurrently = false;
+        await duringMetadataCommit(projectPath, async () => {
+            if (!createdConcurrently) {
+                await fs.promises.writeFile(metadataPath(projectPath), JSON.stringify(external), { flag: 'wx' });
+                createdConcurrently = true;
+            }
+        }, async () => {
+            await assertMetadataError(
+                writeConnectorTriggerProjectMetadata(projectPath, createMetadata()),
+                'MetadataChanged',
+            );
+        });
+
+        assert.strictEqual(createdConcurrently, true);
+        assert.deepStrictEqual(await readMetadata(projectPath), external);
+        assert.deepStrictEqual(await fs.promises.readdir(path.dirname(metadataPath(projectPath))), [metadataFileName]);
+    });
+
+    test('does not replace a metadata file saved by another window after the final read', async () => {
+        await writeConnectorTriggerProjectMetadata(projectPath, createMetadata());
+        const external = createMetadata('rss', 'OnNewFeed');
         const originalRename = fs.promises.rename;
-        let failedOnce = false;
+        let savedConcurrently = false;
         fs.promises.rename = async (oldPath, newPath) => {
+            if (typeof oldPath === 'string' && isPathEqual(oldPath, metadataPath(projectPath)) && !savedConcurrently) {
+                await fs.promises.writeFile(metadataPath(projectPath), JSON.stringify(external));
+                savedConcurrently = true;
+            }
+            await originalRename(oldPath, newPath);
+        };
+        try {
+            await assertMetadataError(
+                writeConnectorTriggerProjectMetadata(projectPath, createMetadata('act', 'TrigNewContact')),
+                'MetadataChanged',
+            );
+        } finally {
+            fs.promises.rename = originalRename;
+        }
+
+        assert.strictEqual(savedConcurrently, true);
+        assert.deepStrictEqual(await readMetadata(projectPath), external);
+        assert.deepStrictEqual(await fs.promises.readdir(path.dirname(metadataPath(projectPath))), [metadataFileName]);
+    });
+
+    test('does not replace a metadata file saved by another window while the update is published', async () => {
+        await writeConnectorTriggerProjectMetadata(projectPath, createMetadata());
+        const external = createMetadata('rss', 'OnNewFeed');
+        let savedConcurrently = false;
+        await duringMetadataCommit(projectPath, async () => {
+            if (!savedConcurrently) {
+                await fs.promises.writeFile(metadataPath(projectPath), JSON.stringify(external));
+                savedConcurrently = true;
+            }
+        }, async () => {
+            await assertMetadataError(
+                writeConnectorTriggerProjectMetadata(projectPath, createMetadata('act', 'TrigNewContact')),
+                'MetadataChanged',
+            );
+        });
+
+        assert.strictEqual(savedConcurrently, true);
+        assert.deepStrictEqual(await readMetadata(projectPath), external);
+        assert.deepStrictEqual(await fs.promises.readdir(path.dirname(metadataPath(projectPath))), [metadataFileName]);
+    });
+
+    test('releases the write lock and removes temporary files after a failed write', async () => {
+        const originalLink = fs.promises.link;
+        let failedOnce = false;
+        fs.promises.link = async (existingPath, newPath) => {
             if (typeof newPath === 'string' && isPathEqual(newPath, metadataPath(projectPath)) && !failedOnce) {
                 failedOnce = true;
                 throw new Error('Injected metadata write failure.');
             }
-            await originalRename(oldPath, newPath);
+            await originalLink(existingPath, newPath);
         };
         try {
             const first = writeConnectorTriggerProjectMetadata(projectPath, createMetadata());
@@ -457,7 +524,7 @@ suite('Connector trigger project metadata', () => {
             await assertMetadataError(first, 'WriteFailed');
             await second;
         } finally {
-            fs.promises.rename = originalRename;
+            fs.promises.link = originalLink;
         }
 
         assert.strictEqual(failedOnce, true);
@@ -582,17 +649,17 @@ suite('Connector trigger project metadata', () => {
         concurrentSave: () => Promise<void>,
         write: () => Promise<void>,
     ): Promise<void> {
-        const originalRename = fs.promises.rename;
-        fs.promises.rename = async (oldPath, newPath) => {
+        const originalLink = fs.promises.link;
+        fs.promises.link = async (existingPath, newPath) => {
             if (typeof newPath === 'string' && isPathEqual(newPath, metadataPath(folderPath))) {
                 await concurrentSave();
             }
-            await originalRename(oldPath, newPath);
+            await originalLink(existingPath, newPath);
         };
         try {
             await write();
         } finally {
-            fs.promises.rename = originalRename;
+            fs.promises.link = originalLink;
         }
     }
 
