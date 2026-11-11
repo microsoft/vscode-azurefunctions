@@ -12,13 +12,18 @@ import { Range, Uri, WorkspaceEdit, workspace } from 'vscode';
 import { localSettingsFileName } from '../../constants';
 import { localize } from '../../localize';
 import { parseJson } from '../../utils/parseJson';
-import { ConnectorTriggerF5SetupError, type ConnectorTriggerLocalSettingsWriter } from './connectorTriggerF5Contracts';
+import {
+    ConnectorTriggerF5SetupError,
+    ConnectorTriggerLocalSettingsChangedError,
+    type ConnectorTriggerLocalSettingsWriter,
+} from './connectorTriggerF5Contracts';
 
 export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTriggerLocalSettingsWriter {
     public async write(
         context: IActionContext,
         projectPath: string,
         values: Readonly<Record<string, string>>,
+        expected?: Readonly<Record<string, string | undefined>>,
     ): Promise<void> {
         const localSettingsPath = path.join(projectPath, localSettingsFileName);
         const uri = Uri.file(localSettingsPath);
@@ -36,6 +41,19 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
         }
         if (settings.IsEncrypted === undefined) {
             contents = jsonc.applyEdits(contents, jsonc.modify(contents, ['IsEncrypted'], false, {}));
+        }
+        if (expected) {
+            const currentValues = settings.Values ?? {};
+            const current = Object.fromEntries(
+                Object.keys(expected).map(key => [key, getConnectorTriggerSettingValue(currentValues, key)]),
+            );
+            for (const value of Object.values(current)) {
+                maskValue(context, value ?? '');
+            }
+            const changedNames = Object.keys(expected).filter(key => current[key] !== expected[key]);
+            if (changedNames.length > 0) {
+                throw new ConnectorTriggerLocalSettingsChangedError(changedNames, current);
+            }
         }
         for (const [key, value] of Object.entries(values)) {
             maskValue(context, key);
@@ -72,6 +90,21 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
 
 function settingsChanged(): Error {
     return new ConnectorTriggerF5SetupError(undefined, localize('connectorSettingsChanged', 'Save or resolve changes to local.settings.json, then retry F5. Connector Trigger settings were not saved.'));
+}
+
+/**
+ * Returns a local.settings.json Values entry as the host sees it: names match case-insensitively and
+ * non-string JSON values are compared by their serialized form. Returns undefined when absent.
+ */
+export function getConnectorTriggerSettingValue(values: Readonly<Record<string, unknown>>, name: string): string | undefined {
+    const key = Object.hasOwn(values, name) ?
+        name :
+        Object.keys(values).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+    if (key === undefined) {
+        return undefined;
+    }
+    const value = values[key];
+    return typeof value === 'string' ? value : JSON.stringify(value) ?? String(value);
 }
 
 function maskValue(context: IActionContext, value: string): void {

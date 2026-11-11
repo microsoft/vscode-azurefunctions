@@ -24,6 +24,19 @@ export class ConnectorTriggerF5SetupError extends Error {
     }
 }
 
+export class ConnectorTriggerLocalSettingsChangedError extends Error {
+    public constructor(
+        public readonly changedNames: readonly string[],
+        /** Current value of every expected setting; undefined when the setting is absent. */
+        public readonly current: Readonly<Record<string, string | undefined>>,
+    ) {
+        super(localize(
+            'connectorSettingsChangedSinceReview',
+            'local.settings.json changed after Connector Trigger setup was reviewed.',
+        ));
+    }
+}
+
 export type ConnectorTriggerParameterValue =
     string |
     number |
@@ -97,6 +110,11 @@ export interface ConnectorTriggerConfig {
     id: string;
     name: string;
     state: string;
+    /**
+     * Persistent identity of the workspace that created the Trigger Config, read back from the
+     * resource. Undefined when the resource carries no ownership marker.
+     */
+    ownerWorkspaceId?: string;
     pollingEndpoints: {
         receiveUri: string;
         acknowledgeUri?: string;
@@ -171,6 +189,34 @@ export interface ConnectorTriggerGateway {
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
     ): Promise<unknown>;
+    /**
+     * Returns the Microsoft Entra principal that the local Functions host authenticates as when it
+     * polls this connection, or undefined when that principal cannot be determined.
+     *
+     * The Connector extension builds its credential with Microsoft.Extensions.Azure
+     * `AzureComponentFactory.CreateTokenCredential` for the `hostCredential.connectionSettingName`
+     * section and requests `https://apihub.azure.com/.default`. When
+     * `hostCredential.connectionSettings` is empty, the factory falls back to the host's
+     * DefaultAzureCredential: Environment, Workload Identity, Managed Identity, Visual Studio,
+     * Visual Studio Code, Azure CLI, Azure PowerShell, then Azure Developer CLI, honoring
+     * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential with
+     * `hostCredential.environment` applied over the inherited process environment and return the
+     * token's oid and tid claims.
+     *
+     * Do not substitute the account selected in VS Code or the connection creator for that
+     * evaluation; either can differ from the principal the chain resolves (for example, after
+     * `az login` as another user in a dev container).
+     */
+    getPollingPrincipal(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        hostCredential: ConnectorTriggerHostCredentialConfiguration,
+    ): Promise<ConnectorTriggerPrincipal | undefined>;
+    /**
+     * Creates or updates only the named policies. Policy names are principal-specific; an existing
+     * policy with a requested name may be updated only when it grants the same principal, and other
+     * policies on the connection must never be deleted or replaced.
+     */
     ensureConnectionAccessPolicies(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
@@ -179,8 +225,20 @@ export interface ConnectorTriggerGateway {
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
     ): Promise<void>;
     /**
+     * Returns the Trigger Config with the given name, including its ownership marker, or undefined
+     * when it does not exist.
+     */
+    getTriggerConfig(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        namespace: ConnectorTriggerNamespace,
+        triggerConfigName: string,
+    ): Promise<ConnectorTriggerConfig | undefined>;
+    /**
      * Creates or updates an enabled Poll Trigger Config without notificationDetails. The returned
      * model must include service-generated pollingEndpoints, using a GET fallback when PUT omits it.
+     * Implementations must persist request.ownerWorkspaceId on the resource so getTriggerConfig can
+     * return it as the ownership marker.
      */
     createOrUpdateTriggerConfig(
         context: IActionContext,
@@ -188,14 +246,35 @@ export interface ConnectorTriggerGateway {
     ): Promise<ConnectorTriggerConfig>;
 }
 
+export interface ConnectorTriggerPrincipal {
+    objectId: string;
+    tenantId: string;
+}
+
+/**
+ * Credential configuration the local Functions host will see for a Connector connection. Values
+ * can be secrets: never log them or include them in telemetry or errors.
+ */
+export interface ConnectorTriggerHostCredentialConfiguration {
+    connectionSettingName: string;
+    /**
+     * Microsoft.Extensions.Azure credential keys set as `<connectionSettingName>__<key>`, keyed by
+     * `<key>` (for example credential, clientId or tenantId). Process environment values take
+     * precedence over local.settings.json Values, matching Core Tools.
+     */
+    connectionSettings: Readonly<Record<string, string>>;
+    /**
+     * DefaultAzureCredential environment variables that local.settings.json Values add to the host
+     * process environment. Variables already set in the process environment are not included.
+     */
+    environment: Readonly<Record<string, string>>;
+}
+
 export interface ConnectorTriggerConnectionAccessPolicy {
     name: string;
     principal: {
         type: 'ActiveDirectory';
-        identity: {
-            objectId: string;
-            tenantId: string;
-        };
+        identity: ConnectorTriggerPrincipal;
     };
 }
 
@@ -214,6 +293,7 @@ export interface ConnectorTriggerConfigRequest {
     namespace: ConnectorTriggerNamespace;
     connection: ConnectorTriggerConnection;
     triggerConfigName: string;
+    ownerWorkspaceId: string;
     deliveryMode: 'Poll';
     state: 'Enabled';
     type: 'NotSpecified';
@@ -332,6 +412,8 @@ export interface ConnectorTriggerResourceNames {
 export interface ConnectorTriggerSetupRequest {
     metadata?: ConnectorTriggerProjectMetadata;
     projectPath: string;
+    /** Persistent identity of this workspace instance; distinguishes clones at the same path. */
+    workspaceId: string;
     binding: ConnectorTriggerLocalBinding;
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
 }
@@ -358,11 +440,22 @@ export interface ConnectorTriggerSetupSession {
 }
 
 export interface ConnectorTriggerLocalSettingsWriter {
+    /**
+     * When expected is provided, throws ConnectorTriggerLocalSettingsChangedError without writing if
+     * any listed setting's current value differs from the reviewed value. An undefined expected
+     * value means the setting was reviewed as absent. Names match case-insensitively, like the host.
+     */
     write(
         context: IActionContext,
         projectPath: string,
         values: Readonly<Record<string, string>>,
+        expected?: Readonly<Record<string, string | undefined>>,
     ): Promise<void>;
+}
+
+export interface ConnectorTriggerWorkspaceIdentityStore {
+    /** Returns a persistent identity for this workspace instance, creating it on first use. */
+    get(projectPath: string): Promise<string>;
 }
 
 export interface ConnectorTriggerF5Runtime {
@@ -382,5 +475,6 @@ export interface ConnectorTriggerF5Dependencies {
     operationResolver: ConnectorTriggerOperationResolver;
     openSetup(context: IActionContext, request: ConnectorTriggerSetupRequest): Promise<ConnectorTriggerSetupSession>;
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
+    workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
 }
