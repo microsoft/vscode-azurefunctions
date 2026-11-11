@@ -49,20 +49,25 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
 /**
  * Initializes a known project root without discovering another project in a containing workspace.
  */
-export async function initProjectForVSCodeAtProjectRoot(context: IActionContext, projectPath: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCodeAtProjectRoot(
+    context: IActionContext, projectPath: string, language?: ProjectLanguage, options?: Pick<IProjectWizardContext, 'preserveExistingConfig'>,
+): Promise<void> {
     const workspaceFolder = workspace.workspaceFolders?.find(folder => isPathEqual(folder.uri.fsPath, projectPath));
-    await initializeProject(context, projectPath, projectPath, workspaceFolder, language);
+    await initializeProject(context, projectPath, projectPath, workspaceFolder, language, options?.preserveExistingConfig);
 }
 
 async function initializeProject(
     context: IActionContext, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder | undefined, language?: ProjectLanguage,
+    preserveExistingConfig?: boolean,
 ): Promise<void> {
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
     const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
-    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey });
+    const wizardContext: IProjectWizardContext = Object.assign(context, {
+        projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey, preserveExistingConfig,
+    });
     const wizard = new AzureWizard<IProjectWizardContext>(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();
     await wizard.execute();

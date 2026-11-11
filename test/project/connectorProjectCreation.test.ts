@@ -8,17 +8,21 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource, Uri, workspace } from 'vscode';
+import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
-import { ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
+import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
+import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
+import { parseJson } from '../../src/utils/parseJson';
+import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
+import { type ITasksJson } from '../../src/vsCodeConfig/tasks';
 
 suite('Connector project batch creation', () => {
     let root: string;
@@ -260,6 +264,216 @@ suite('Connector project batch creation', () => {
         await assert.rejects(creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination,
             { ...options, targetFramework: 'net8.0' }), /could not be configured for net8\.0/);
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
+    });
+
+    suite('VS Code configuration preservation', function () {
+        this.timeout(30_000);
+        let creator: ProjectTemplateCreator;
+        let originalExecuteCommand: typeof cpUtils.executeCommand;
+        let oldOpenBehavior: unknown;
+        let preparationCommands: Parameters<typeof cpUtils.executeCommand>[];
+        const configFiles = ['launch.json', 'tasks.json', 'settings.json', 'extensions.json'];
+
+        setup(async () => {
+            originalExecuteCommand = cpUtils.executeCommand;
+            oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            preparationCommands = [];
+            await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node' },
+            });
+            await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+            await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
+                name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
+            });
+            creator = new ProjectTemplateCreator();
+            Object.defineProperty(creator, 'downloadTemplate', {
+                value: async (_context: unknown, _template: unknown, temporaryDirectory: string) => {
+                    const downloaded = path.join(temporaryDirectory, 'starter');
+                    await AzExtFsExtra.copy(source, downloaded);
+                    return downloaded;
+                },
+            });
+            // Exercise the real copy and initialization; only package-manager subprocesses are isolated.
+            cpUtils.executeCommand = async (...args) => {
+                if (args[2] === 'npm') {
+                    preparationCommands.push(args);
+                    return '';
+                }
+                return originalExecuteCommand(...args);
+            };
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+        });
+
+        teardown(async () => {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        });
+
+        async function createProject(): Promise<void> {
+            await creator.createProject(await createTestActionContext(),
+                nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript)),
+                ProjectLanguage.TypeScript, destination, options);
+        }
+
+        async function readConfig<T extends object>(file: string): Promise<T> {
+            return parseJson<T>(await AzExtFsExtra.readFile(path.join(destination, '.vscode', file)));
+        }
+
+        async function snapshotConfig(): Promise<Buffer[]> {
+            return await Promise.all(configFiles.map(file => fs.promises.readFile(path.join(destination, '.vscode', file))));
+        }
+
+        test('preserves a customized matching Node attach configuration through full createProject retries', async () => {
+            await createProject();
+            const customizedAttach: DebugConfiguration = {
+                name: nodeDebugConfig.name, request: 'attach', type: 'pwa-node', port: 9237, restart: false,
+                skipFiles: ['<node_internals>/**', '${workspaceFolder}/vendor/**'],
+                env: { CUSTOM_MODE: 'local' },
+                customOptions: { nested: { enabled: false }, values: ['first', 'second'] },
+            };
+            const unrelatedLaunch = { name: 'Browser', type: 'chrome', request: 'launch', custom: true };
+            await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'launch.json'), {
+                version: '0.2.0', configurations: [customizedAttach, unrelatedLaunch],
+                compounds: [{ name: 'Together', configurations: [nodeDebugConfig.name, unrelatedLaunch.name] }],
+            });
+            const tasks = await readConfig<ITasksJson>('tasks.json');
+            const unrelatedTask = { type: 'shell', label: 'Before Functions', command: 'echo ready', args: ['custom'] };
+            nonNullValue(tasks.tasks).push(unrelatedTask);
+            await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'tasks.json'), tasks);
+            const customizedSettings = {
+                'debug.internalConsoleOptions': 'openOnSessionStart',
+                'azureFunctions.deploySubpath': 'custom-output',
+                'azureFunctions.preDeployTask': 'Before Functions',
+                'editor.formatOnSave': false,
+                'custom.options': { nested: true, values: ['kept'] },
+            };
+            await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'settings.json'), customizedSettings);
+
+            await createProject();
+
+            const launch = await readConfig<ILaunchJson & { compounds: unknown[] }>('launch.json');
+            const configurations = nonNullValue(launch.configurations);
+            assert.deepStrictEqual(configurations.find(config => config.name === customizedAttach.name),
+                { ...customizedAttach, preLaunchTask: hostStartTaskName });
+            assert.deepStrictEqual(configurations.find(config => config.name === unrelatedLaunch.name), unrelatedLaunch);
+            assert.strictEqual(configurations.length, 2);
+            assert.deepStrictEqual(launch.compounds, [{ name: 'Together', configurations: [nodeDebugConfig.name, unrelatedLaunch.name] }]);
+            assert.deepStrictEqual((await readConfig<ITasksJson>('tasks.json')).tasks, tasks.tasks);
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            for (const [key, value] of Object.entries(customizedSettings)) {
+                assert.deepStrictEqual(settings[key], value);
+            }
+            assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+            assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
+            assert.strictEqual(settings['azureFunctions.projectRuntime'], '~4');
+            assert.strictEqual(settings['azureFunctions.postDeployTask'], 'npm install (functions)');
+            const snapshot = await snapshotConfig();
+
+            await createProject();
+
+            assert.deepStrictEqual(await snapshotConfig(), snapshot);
+            assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+            assert.deepStrictEqual(preparationCommands.map(([, cwd]) => cwd), Array(6).fill(destination));
+        });
+
+        test('unions required defaults into partial JSONC configuration without replacing custom tasks or settings', async () => {
+            await AzExtFsExtra.writeFile(path.join(source, 'extensions.csproj'), '<Project />');
+            await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+            const existingHost = {
+                type: 'func', command: 'host start', dependsOn: 'Before Functions', problemMatcher: ['$custom-func'],
+                options: { env: { CUSTOM_MODE: 'local' } }, presentation: { reveal: 'silent' },
+            };
+            const existingWatch = {
+                type: 'shell', label: 'npm watch (functions)', command: 'npm run custom-watch',
+                group: { isDefault: false }, dependsOn: ['Before Functions'], problemMatcher: '$custom-tsc',
+            };
+            const unrelatedTask = { type: 'shell', label: 'Before Functions', command: 'echo ready' };
+            const originalSettings = {
+                'files.exclude': { obj: false, '**/custom': true },
+                'editor.rulers': [80, 120],
+                'azureFunctions.preDeployTask': 'Before Functions',
+            };
+            const partialConfig = {
+                'launch.json': { configurations: [{ name: 'Browser', type: 'chrome', request: 'launch' }] },
+                'tasks.json': { tasks: [existingHost, existingWatch, unrelatedTask], inputs: [{ id: 'custom', type: 'promptString' }] },
+                'settings.json': originalSettings,
+                'extensions.json': { recommendations: ['custom.extension'], unwantedRecommendations: ['other.extension'] },
+            };
+            for (const [file, value] of Object.entries(partialConfig)) {
+                const contents = JSON.stringify(value, undefined, 4).replace(/\n/g, '\r\n').replace(/\r\n}$/, ',\r\n}')
+                    .replace('"group": {', '"group": {\r\n                // Keep this nested group comment.');
+                const jsonc = `${file === 'settings.json' ? '\uFEFF' : ''}// Keep this ${file} comment.\r\n${contents}`;
+                await AzExtFsExtra.writeFile(path.join(destination, '.vscode', file), jsonc);
+            }
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => { listener.dispose(); resolve(); });
+            });
+            assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(destination) }));
+            await added;
+            try {
+                await createProject();
+
+                const launch = await readConfig<ILaunchJson>('launch.json');
+                assert.strictEqual(launch.version, '0.2.0');
+                assert.deepStrictEqual(launch.configurations, [...partialConfig['launch.json'].configurations, nodeDebugConfig]);
+                const tasks = await readConfig<ITasksJson & { inputs: unknown[] }>('tasks.json');
+                assert.strictEqual(tasks.version, '2.0.0');
+                assert.deepStrictEqual(tasks.inputs, partialConfig['tasks.json'].inputs);
+                assert.deepStrictEqual(tasks.tasks?.find(task => task.type === 'func'), {
+                    ...existingHost, label: hostStartTaskName, isBackground: true,
+                    dependsOn: ['Before Functions', 'npm watch (functions)'],
+                    problemMatcher: ['$custom-func', '$func-node-watch'],
+                });
+                assert.deepStrictEqual(tasks.tasks?.find(task => task.label === existingWatch.label), {
+                    ...existingWatch, group: { isDefault: false, kind: 'build' }, isBackground: true,
+                    dependsOn: ['Before Functions', 'npm clean (functions)'],
+                    problemMatcher: ['$custom-tsc', '$tsc-watch'],
+                });
+                assert.deepStrictEqual(tasks.tasks?.find(task => task.label === unrelatedTask.label), unrelatedTask);
+                for (const label of ['npm build (functions)', 'npm install (functions)', 'npm prune (functions)', 'npm clean (functions)']) {
+                    assert.strictEqual(tasks.tasks?.filter(task => task.label === label).length, 1, label);
+                }
+                const settings = await readConfig<Record<string, unknown>>('settings.json');
+                assert.deepStrictEqual(settings['files.exclude'], { ...originalSettings['files.exclude'], bin: true });
+                assert.deepStrictEqual(settings['editor.rulers'], originalSettings['editor.rulers']);
+                assert.strictEqual(settings['azureFunctions.preDeployTask'], 'Before Functions');
+                assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.strictEqual(settings['debug.internalConsoleOptions'], 'neverOpen');
+                const extensions = await readConfig<{ recommendations: string[]; unwantedRecommendations: string[] }>('extensions.json');
+                assert.ok(extensions.recommendations.includes('ms-azuretools.vscode-azurefunctions'));
+                assert.strictEqual(extensions.recommendations[0], 'custom.extension');
+                assert.deepStrictEqual(extensions.unwantedRecommendations, ['other.extension']);
+                for (const file of configFiles) {
+                    assert.match(await AzExtFsExtra.readFile(path.join(destination, '.vscode', file)), /\/\/ Keep this .* comment\./);
+                }
+                assert.match(await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'tasks.json')), /\/\/ Keep this nested group comment\./);
+                assert.ok((await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'settings.json'))).startsWith('\uFEFF'));
+                const snapshot = await snapshotConfig();
+
+                await createProject();
+
+                assert.deepStrictEqual(await snapshotConfig(), snapshot);
+            } finally {
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => { listener.dispose(); resolve(); });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                await removed;
+            }
+        });
+
+        test('fails without overwriting invalid existing configuration or starting preparation', async () => {
+            await AzExtFsExtra.ensureDir(path.join(destination, '.vscode'));
+            const invalidTasks = '{ "tasks": [';
+            await AzExtFsExtra.writeFile(path.join(destination, '.vscode', 'tasks.json'), invalidTasks);
+
+            await assert.rejects(createProject(), /near line/);
+
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'tasks.json')), invalidTasks);
+            assert.deepStrictEqual(preparationCommands, []);
+        });
     });
 
     test('rejects destination conflicts before copying any file', async () => {

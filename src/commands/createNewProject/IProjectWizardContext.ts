@@ -14,6 +14,7 @@ export interface IProjectWizardContext extends IActionContext {
     projectPath: string;
     workspacePath: string;
     workspaceFolder: WorkspaceFolder | undefined;
+    preserveExistingConfig?: boolean;
 
     language?: ProjectLanguage;
     languageModel?: number;

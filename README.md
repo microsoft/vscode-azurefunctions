@@ -38,7 +38,7 @@ Events are loaded from the selected connector's regional exported definition (`m
 
 Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event F5 setup is deferred, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
 
-Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files, local settings, or VS Code configuration; conflicting project files are reported before copying.
+Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files or local settings. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults without duplicates. Conflicting project files are reported before copying.
 
 ## Run the serverless app locally
 
