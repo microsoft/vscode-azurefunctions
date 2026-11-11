@@ -264,9 +264,12 @@ export interface ConnectorTriggerGateway {
      * A verifiedTask observation supplies those claims from a fresh probe inside the host task;
      * validate its credential kind and tenant rather than acquiring another token outside the task.
      *
+     * For task launches, setup requires an AzureCliCredential pin (writing it when unset) and uses
+     * Azure CLI in the effective task environment. This policy does not prove equivalence after
+     * shell profiles change the CLI login or AZURE_CONFIG_DIR.
+     *
      * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
-     * that evaluation cannot be proven to match the host: for example when the launch environment
-     * is unknown or is a shell, terminal or task without a verified probe, or when
+     * the launch environment is unknown, the task credential pin conflicts, or when
      * `hostCredential.conflictingSettingNames` or the launch environment define a section the host
      * reads instead of the `<connectionSettingName>__<key>` settings.
      *
@@ -379,13 +382,15 @@ export type ConnectorTriggerHostLaunch =
     }
     | {
         /**
-         * The host is started by a VS Code task. Shell profiles, terminal settings and extension
-         * environment contributions can change its environment, so the host credential cannot be
-         * evaluated. `environment` is the task's options.env.
+         * The host is started by a VS Code task. Setup pins AzureCliCredential when unset and uses
+         * Azure CLI in this effective process + terminal + task environment. A shell profile can
+         * still change the Azure CLI login or AZURE_CONFIG_DIR after setup.
          */
         kind: 'task';
         execution: 'shell' | 'process' | 'custom';
         environment: Readonly<Record<string, string>>;
+        /** Original layers, before merging, so a later layer cannot hide a conflicting pin. */
+        environmentLayers?: readonly Readonly<Record<string, string | null | undefined>>[];
     };
 
 export interface ConnectorTriggerConnectionAccessPolicy {

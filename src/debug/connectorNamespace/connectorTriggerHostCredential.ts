@@ -26,8 +26,8 @@ const azureCliEnvironmentVariables = new Set(['HOME', 'HOMEDRIVE', 'HOMEPATH', '
 type HostEnvironment = Readonly<Record<string, string | undefined>>;
 
 /**
- * The credential the local Functions host will build, limited to the cases whose principal VS Code
- * can establish by acquiring a token with the same inputs in the same environment.
+ * The configured host credential, including the user-selected task policy of pinning Azure CLI.
+ * Task environments do not prove shell-profile equivalence.
  */
 export type ConnectorHostCredentialPlan =
     | {
@@ -51,8 +51,7 @@ export type ConnectorHostCredentialPlan =
 
 export type ConnectorHostCredentialUnsupportedReason =
     | 'launchUnknown'
-    | 'taskLaunch'
-    | 'taskEnvironmentOverride'
+    | 'taskCredentialConflict'
     | 'conflictingConnectionSection'
     | 'explicitCredentialType'
     | 'azureCloudSetting'
@@ -82,8 +81,9 @@ export interface ConnectorPollingTokenProvider {
  * .NET chain differs from the JavaScript SDK chain and depends on developer tools available to the
  * host process, so an unpinned chain is never guessed.
  *
- * Exact launch environments and environments observed by a task probe are evaluated. Launch
- * environment values take precedence over local.settings.json Values, matching Core Tools.
+ * Task launches require an existing or planned AzureCliCredential pin. Shell profiles can still
+ * change the CLI login or configuration directory. Launch environment values take precedence over
+ * local.settings.json Values, matching Core Tools.
  */
 export function planConnectorHostCredential(hostCredential: ConnectorTriggerHostCredentialConfiguration): ConnectorHostCredentialPlan {
     const connectionSettingName = hostCredential.connectionSettingName;
@@ -91,12 +91,14 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
     if (!launch) {
         return { kind: 'unsupported', reason: 'launchUnknown' };
     }
-    if (launch.kind === 'task') {
-        const overrides = Object.keys(launch.environment)
-            .filter(name => isConnectorHostCredentialVariable(name, connectionSettingName));
-        return overrides.length > 0 ?
-            { kind: 'unsupported', reason: 'taskEnvironmentOverride', settingNames: overrides } :
-            { kind: 'unsupported', reason: 'taskLaunch' };
+    if (launch.kind === 'task' && [
+        hostCredential.environment,
+        launch.environment,
+        ...launch.environmentLayers ?? [],
+    ].some(layer => Object.entries(layer).some(([name, value]) =>
+        name.toUpperCase() === 'AZURE_TOKEN_CREDENTIALS' &&
+        value !== undefined && value !== null && value.trim().toLowerCase() !== 'azureclicredential'))) {
+        return { kind: 'unsupported', reason: 'taskCredentialConflict' };
     }
 
     const launchEnvironment = launch.environment;
@@ -144,7 +146,8 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
     }
 
     const defaultTenantId = tenantId ?? environment('AZURE_TENANT_ID');
-    const selection = environment('AZURE_TOKEN_CREDENTIALS')?.toLowerCase();
+    const selection = environment('AZURE_TOKEN_CREDENTIALS')?.toLowerCase() ??
+        (launch.kind === 'task' ? 'azureclicredential' : undefined);
     if (selection === undefined || selection === 'dev' || selection === 'prod') {
         return { kind: 'unsupported', reason: 'defaultCredentialChain' };
     }
@@ -383,9 +386,8 @@ export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider
         return accessToken.token;
     },
     async getAzureCliToken(_context, request): Promise<string> {
-        // Matches .NET AzureCliCredential: the same command through cmd.exe /d /c or /bin/sh -c, run
-        // from the system directory with the host's PATH (or the default CLI install paths).
-        // Output is never written to an output channel.
+        // Use the effective launch environment without exposing the token in an output channel.
+        // Task shell profiles can still change the CLI login or AZURE_CONFIG_DIR after setup.
         const args = ['account', 'get-access-token', '--output', 'json', '--resource', connectorPollingTokenResource];
         if (request.tenantId) {
             if (!/^[\w.-]+$/.test(request.tenantId)) {
@@ -435,10 +437,8 @@ function getUnsupportedMessage(
     switch (reason) {
         case 'launchUnknown':
             return localize('connectorPollingLaunchUnknown', 'VS Code does not know how the local Functions host will be started, so it cannot verify which identity the host uses to poll Connector Triggers. {0}', notGranted);
-        case 'taskLaunch':
-            return localize('connectorPollingTaskLaunch', 'The local Functions host is started by a task whose shell profile, terminal settings or extensions can change the Azure identity it uses, so VS Code cannot verify that identity. {0}', notGranted);
-        case 'taskEnvironmentOverride':
-            return localize('connectorPollingTaskEnvironmentOverride', 'The task that starts the local Functions host sets Azure credential variables ({0}), so VS Code cannot verify which identity the host uses. Move them to local.settings.json Values. {1}', settingNames.join(', '), notGranted);
+        case 'taskCredentialConflict':
+            return localize('connectorPollingTaskCredentialConflict', 'Connector Trigger task setup requires AZURE_TOKEN_CREDENTIALS to be AzureCliCredential. Remove the conflicting value from local.settings.json, the process environment, terminal.integrated.env or the task options.env, then retry F5. No settings were changed. {0}', notGranted);
         case 'conflictingConnectionSection':
             return localize('connectorPollingConflictingSection', 'The local Functions host reads credential settings for "{0}" from {1}, which VS Code cannot verify. Remove them and use "{0}__<setting>" Values instead. {2}', connectionSettingName, settingNames.join(', '), remedy);
         case 'explicitCredentialType':
