@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -11,6 +12,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
+import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
@@ -26,9 +28,11 @@ import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
 import { parseJson } from '../../src/utils/parseJson';
+import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
 import { type ITasksJson } from '../../src/vsCodeConfig/tasks';
@@ -104,6 +108,182 @@ suite('Connector project batch creation', () => {
             await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options,
         ), /same template function/);
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
+    });
+
+    for (const [connectorId, functionNames] of [
+        ['office365', ['OnNewEmail', 'OnFlaggedEmail']],
+        ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
+    ] as const) {
+        for (const eventCount of [1, 2]) {
+            test(`prepares compatible Python requirements for ${eventCount} template-owned ${connectorId} event(s) without adding events`, async function () {
+                this.timeout(30_000);
+                const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
+                    operationId: `${functionName}Operation`,
+                    functionName,
+                    ownedPaths: [`operation${index}.py`],
+                }));
+                await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+                await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n');
+                await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), [
+                    'import azure.functions as func',
+                    ...operations.map((_, index) => `from operation${index} import bp as blueprint${index}`),
+                    'app = func.FunctionApp()',
+                    ...operations.map((_, index) => `app.register_functions(blueprint${index})`),
+                    '',
+                ].join('\n'));
+                for (const [index, operation] of operations.entries()) {
+                    await AzExtFsExtra.writeFile(path.join(source, operation.ownedPaths[0]), `import azure.functions as func
+bp = func.Blueprint()
+
+@bp.function_name(name="${operation.functionName}")
+@bp.connector_trigger(
+    arg_name="payloads",
+    delivery_mode=func.DeliveryMode.POLL,
+    connection="ConnectorNamespace",
+    trigger_config_name="%Event${index}Config%",
+)
+def handle(payloads):
+    pass
+`);
+                }
+                await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+                const creator = new ProjectTemplateCreator();
+                Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+                const template: IProjectTemplate = {
+                    id: `${connectorId}-connector-trigger-python`, displayName: connectorId, shortDescription: '', categories: [],
+                    languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
+                    connectorTrigger: { operations },
+                };
+                const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+                const originalExecuteCommand = cpUtils.executeCommand;
+                let installations = 0;
+                try {
+                    await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                    cpUtils.executeCommand = async (...args) => {
+                        if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
+                            assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
+                            const requirements = await AzExtFsExtra.readFile(path.join(destination, 'requirements.txt'));
+                            assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'$/m);
+                            assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'$/m);
+                            assert.strictEqual(requirements.match(/^azure-functions[><=]/gm)?.length, 2);
+                            assert.match(requirements, /^# Keep template dependencies\.$/m);
+                            assert.match(requirements, /^requests==2\.32\.5$/m);
+                            installations++;
+                            return '';
+                        }
+                        return originalExecuteCommand(...args);
+                    };
+                    await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
+                        ...options, selection: { connectorId, operationIds: operations.map(operation => operation.operationId) },
+                    });
+                    assert.strictEqual(installations, 1);
+                    assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
+                        operations.map(operation => operation.functionName).sort());
+                } finally {
+                    cpUtils.executeCommand = originalExecuteCommand;
+                    await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                }
+            });
+        }
+    }
+
+    suite('Template Git acquisition', function () {
+        this.timeout(30_000);
+        const selectedFolder = 'selected starter';
+        let pinnedCommit: string;
+        let commit: () => Promise<void>;
+
+        setup(async () => {
+            source = path.join(root, 'source repository');
+            destination = path.join(root, 'cloned project');
+            await AzExtFsExtra.ensureDir(path.join(source, selectedFolder));
+            await AzExtFsExtra.ensureDir(path.join(source, 'other-project'));
+            await AzExtFsExtra.writeFile(path.join(source, selectedFolder, 'host.json'), 'initial');
+            await AzExtFsExtra.writeFile(path.join(source, 'other-project', 'host.json'), 'unselected');
+            await AzExtFsExtra.writeFile(path.join(source, 'README.md'), 'root');
+            await cpUtils.executeCommand(undefined, source, 'git', ['init', '--initial-branch', 'main']);
+            commit = async (): Promise<void> => {
+                await cpUtils.executeCommand(undefined, source, 'git', ['add', '--all']);
+                await cpUtils.executeCommand(undefined, source, 'git', composeArgs(withQuotedArg(
+                    '-c', 'user.name=Template Test', '-c', 'user.email=template-test@example.invalid',
+                    '-c', `core.hooksPath=${path.join(root, 'no-hooks')}`,
+                    'commit', '--no-gpg-sign', '-m', 'Template fixture',
+                ))());
+            };
+            await commit();
+            pinnedCommit = (await cpUtils.executeCommand(undefined, source, 'git', ['rev-parse', 'HEAD'])).trim();
+            await cpUtils.executeCommand(undefined, source, 'git', ['tag', 'template-v1']);
+            await AzExtFsExtra.writeFile(path.join(source, selectedFolder, 'host.json'), 'updated');
+            await commit();
+        });
+
+        for (const { name, ref, folderPath, expected, removedFromDefaultBranch } of [
+            { name: 'branch', ref: 'main', folderPath: selectedFolder, expected: 'updated' },
+            { name: 'qualified branch', ref: 'refs/heads/main', folderPath: selectedFolder, expected: 'updated' },
+            { name: 'tag', ref: 'refs/tags/template-v1', folderPath: selectedFolder, expected: 'initial' },
+            { name: 'pinned commit', ref: undefined, folderPath: selectedFolder, expected: 'initial' },
+            { name: 'pinned commit removed from the default branch', ref: undefined, folderPath: selectedFolder, expected: 'initial', removedFromDefaultBranch: true },
+            { name: 'root branch', ref: 'main', folderPath: undefined, expected: 'updated' },
+            { name: 'root pinned commit', ref: undefined, folderPath: '.', expected: 'initial' },
+        ]) {
+            test(`clones the ${name} without checking out sibling projects for a folder template`, async () => {
+                if (removedFromDefaultBranch) {
+                    await AzExtFsExtra.deleteResource(path.join(source, selectedFolder), { recursive: true, useTrash: false });
+                    await commit();
+                }
+                await cloneProjectTemplate(source, ref ?? pinnedCommit, destination, folderPath);
+
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, selectedFolder, 'host.json')), expected);
+                assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'other-project')), !folderPath || folderPath === '.');
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'README.md')), 'root');
+            });
+        }
+    });
+
+    suite('Created project opening', () => {
+        let oldOpenBehavior: unknown;
+
+        setup(async () => {
+            oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            await updateGlobalSetting(projectOpenBehaviorSetting, undefined);
+        });
+
+        teardown(async () => {
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        });
+
+        test('does not prompt for an already open project', async () => {
+            const context = await createTestActionContext();
+            context.ui.showQuickPick = async () => assert.fail('The project is already open.');
+            await promptAndOpenProject(context, nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath);
+        });
+
+        test('honors the configured choice not to open the project', async () => {
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            const context = await createTestActionContext();
+            context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
+            await promptAndOpenProject(context, destination);
+        });
+
+        test('leaves a created project in place when the open prompt is cancelled', async () => {
+            await AzExtFsExtra.writeFile(path.join(destination, 'host.json'), 'created');
+            const context = await createTestActionContext();
+            let prompted = false;
+            context.ui.showQuickPick = async () => {
+                prompted = true;
+                throw new UserCancelledError();
+            };
+            await promptAndOpenProject(context, destination);
+            assert.strictEqual(prompted, true);
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), 'created');
+        });
+
+        test('propagates unexpected open-prompt failures', async () => {
+            const context = await createTestActionContext();
+            const failure = new Error('Open prompt failed');
+            context.ui.showQuickPick = async () => { throw failure; };
+            await assert.rejects(promptAndOpenProject(context, destination), error => error === failure);
+        });
     });
 
     for (const { projectSubpath, childOpen } of [

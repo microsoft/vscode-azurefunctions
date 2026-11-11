@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, UserCancelledError, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -13,23 +13,21 @@ import { type ConnectorTriggerSelections } from '../../connectorTrigger/connecto
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
-import { ProjectLanguage, projectOpenBehaviorSetting, workerRuntimeKey } from '../../constants';
+import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { localize } from '../../localize';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
+import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
-import { cpUtils } from '../../utils/cpUtils';
-import { isPathEqual } from '../../utils/fs';
+import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { extractZip } from '../../utils/zipUtils';
-import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
+import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
-import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
-import { OpenBehaviorStep } from './OpenBehaviorStep';
-import { OpenFolderStep } from './OpenFolderStep';
+import { promptAndOpenProject } from './OpenFolderStep';
 import { ProjectPrepareStep, type IProjectPrepareContext } from './ProjectPrepareStep';
 import { ensureScriptProjectIgnoreFiles } from './ProjectCreateStep/scriptProjectIgnoreFiles';
 import { type IPythonVenvWizardContext } from './pythonSteps/IPythonVenvWizardContext';
@@ -86,6 +84,9 @@ export class ProjectTemplateCreator {
                         { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
                 }
             }
+            if (language === ProjectLanguage.Python) {
+                await updatePythonFunctionsSdk(source);
+            }
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
             if (registrations.length !== selections.length || bindings.length !== selections.length ||
@@ -134,7 +135,7 @@ Configure every event separately before running or deploying. Authoring does not
             context.telemetry.properties.result = 'Succeeded';
             this.callbacks.onProjectCreated?.();
             void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
-            await this.promptAndOpenProject(context, projectPath);
+            await promptAndOpenProject(context, projectPath);
         } finally {
             await AzExtFsExtra.deleteResource(temporaryDirectory, { recursive: true, useTrash: false });
         }
@@ -156,7 +157,7 @@ Configure every event separately before running or deploying. Authoring does not
         if (new Set(configNames).size !== configNames.length) {
             throw new Error(localize('connectorTriggerConfigCollision', 'Each selected event must have its own trigger configuration setting.'));
         }
-        const settingsPath = path.join(source, 'local.settings.json');
+        const settingsPath = path.join(source, localSettingsFileName);
         const settings = await getLocalSettingsJson(context, settingsPath);
         if (settings.IsEncrypted) {
             throw new Error(localize('connectorTemplateSettingsEncrypted', 'The connector project template must contain unencrypted example settings.'));
@@ -182,28 +183,11 @@ Configure every event separately before running or deploying. Authoring does not
     private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
         const rawRef = template.gitRef?.trim() || template.branch?.trim() || 'main';
         const repositoryPath = path.join(temporaryDirectory, 'repository');
-        let gitAvailable: boolean;
-        try {
-            await cpUtils.executeCommand(undefined, undefined, 'git', ['--version']);
-            gitAvailable = true;
-        } catch {
-            context.telemetry.properties.connectorTemplateDownload = 'zip';
-            gitAvailable = false;
-        }
+        const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
+        context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
-            context.telemetry.properties.connectorTemplateDownload = 'git';
             this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
-            if (/^[a-f\d]{40}$/i.test(rawRef)) {
-                await cpUtils.executeCommand(undefined, undefined, 'git', [
-                    'clone', '--depth', '1', '--filter=blob:none', '--no-checkout', template.repositoryUrl, repositoryPath,
-                ]);
-                await cpUtils.executeCommand(undefined, repositoryPath, 'git', ['fetch', '--depth', '1', 'origin', rawRef]);
-                await cpUtils.executeCommand(undefined, repositoryPath, 'git', ['checkout', '--detach', 'FETCH_HEAD']);
-            } else {
-                await cpUtils.executeCommand(undefined, undefined, 'git', [
-                    'clone', '--depth', '1', '--branch', rawRef.replace(/^refs\/(?:heads|tags)\//, ''), template.repositoryUrl, repositoryPath,
-                ]);
-            }
+            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, template.folderPath);
         } else {
             const archiveRef = rawRef.startsWith('refs/') || template.gitRef ? rawRef : `refs/heads/${rawRef}`;
             const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
@@ -222,7 +206,7 @@ Configure every event separately before running or deploying. Authoring does not
         const source = path.resolve(repositoryPath, relative);
         const normalized = path.relative(repositoryPath, source);
         if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized) ||
-            !await AzExtFsExtra.pathExists(path.join(source, 'host.json'))) {
+            !await AzExtFsExtra.pathExists(path.join(source, hostFileName))) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
         return source;
@@ -243,13 +227,13 @@ Configure every event separately before running or deploying. Authoring does not
                     if (await AzExtFsExtra.pathExists(destinationPath)) {
                         // npm install updates the starter lockfile; retain it when retrying the same project.
                         if (relative === '' && entry.name === 'package-lock.json' &&
-                            await AzExtFsExtra.pathExists(path.join(destination, 'package.json')) &&
-                            (await fs.promises.readFile(path.join(source, 'package.json'))).equals(
-                                await fs.promises.readFile(path.join(destination, 'package.json')))) {
+                            await AzExtFsExtra.pathExists(path.join(destination, packageJsonFileName)) &&
+                            (await fs.promises.readFile(path.join(source, packageJsonFileName))).equals(
+                                await fs.promises.readFile(path.join(destination, packageJsonFileName)))) {
                             continue;
                         }
-                        if (entry.name.startsWith('.') || relative.split(path.sep)[0] === '.vscode' ||
-                            (relative === '' && entry.name === 'local.settings.json')) {
+                        if (entry.name.startsWith('.') || relative.split(path.sep)[0] === vscodeFolderName ||
+                            (relative === '' && entry.name === localSettingsFileName)) {
                             continue;
                         }
                         const [sourceContent, destinationContent] = await Promise.all([
@@ -276,26 +260,4 @@ Configure every event separately before running or deploying. Authoring does not
         }
     }
 
-    private async promptAndOpenProject(context: IActionContext, projectPath: string): Promise<void> {
-        if (vscode.workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
-            return;
-        }
-        const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
-            projectPath, workspacePath: projectPath, workspaceFolder: undefined,
-            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
-        });
-        const wizard = new AzureWizard(wizardContext, {
-            title: localize('openProject', 'Open new project'),
-            promptSteps: [new OpenBehaviorStep()],
-            executeSteps: [new OpenFolderStep()],
-        });
-        try {
-            await wizard.prompt();
-            await wizard.execute();
-        } catch (error) {
-            if (!isUserCancelledError(error)) {
-                throw error;
-            }
-        }
-    }
 }

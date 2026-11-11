@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
 import { type CancellationToken, type Progress } from 'vscode';
-import { ProjectLanguage } from '../../constants';
+import { ProjectLanguage, requirementsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { cpUtils } from '../../utils/cpUtils';
-import { installNodeDependencies } from './ProjectCreateStep/JavaScriptProjectCreateStep';
+import { installNodeDependencies } from '../../utils/nodeJsUtils';
+import { venvUtils } from '../../utils/venvUtils';
 
 export interface IProjectPrepareContext extends IActionContext {
     projectPath: string;
@@ -56,9 +56,8 @@ export class ProjectPrepareStep extends AzureWizardExecuteStep<IProjectPrepareCo
                     return;
                 }
                 await cpUtils.executeCommand(ext.outputChannel, context.projectPath,
-                    path.join(context.projectPath, context.venvName, process.platform === 'win32' ? 'Scripts' : 'bin',
-                        process.platform === 'win32' ? 'python.exe' : 'python'),
-                    ['-m', 'pip', 'install', '-r', 'requirements.txt']);
+                    venvUtils.getVenvPythonPath(context.projectPath, context.venvName),
+                    ['-m', 'pip', 'install', '-r', requirementsFileName]);
                 break;
         }
         this.checkCancellation(context);

@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { functionSubpathSetting, packageJsonFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
-import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { installNodeDependencies } from '../../../utils/nodeJsUtils';
 import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
@@ -109,10 +108,6 @@ app.setup({
 `);
         }
     }
-}
-
-export async function installNodeDependencies(projectPath: string): Promise<void> {
-    await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
 }
 
 /**
