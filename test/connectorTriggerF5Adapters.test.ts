@@ -411,6 +411,7 @@ suite('Connector Trigger F5 production adapters', () => {
             namespace,
             connection,
             triggerConfigName: 'on-new-email',
+            ownerWorkspaceId: 'synthetic-workspace-id',
             deliveryMode: 'Poll',
             state: 'Enabled',
             type: 'NotSpecified',
