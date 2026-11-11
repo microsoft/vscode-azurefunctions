@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { FileType } from 'vscode';
+import { FileType, type CancellationToken } from 'vscode';
 import * as semver from 'semver';
 import { localSettingsFileName, localStorageEmulatorConnectionString, packageJsonFileName, ProjectLanguage, requirementsFileName, workerRuntimeKey } from '../constants';
 import { ensureLocalSettingsIgnored, getLocalSettingsJsonWithDefaults } from '../funcConfig/local.settings';
@@ -19,7 +19,7 @@ import {
     getConnectorTriggerEventIdentity,
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
-import { type ConnectorTriggerSelection } from './connectorTriggerSelection';
+import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
@@ -30,6 +30,42 @@ interface AvailableConnectorIdentity {
     alreadyExists: boolean;
     binding: ConnectorTriggerBindingCandidate;
     identity: ConnectorTriggerEventIdentity;
+}
+
+export async function ensureConnectorTriggerPollProjects(
+    projectPath: string,
+    language: string,
+    selection: ConnectorTriggerSelections,
+    outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
+    cancellationToken?: CancellationToken,
+): Promise<void> {
+    const selections = validateConnectorTriggerSelections(selection);
+    // Validate the entire batch before changing dependencies or writing a handler.
+    for (const event of selections) {
+        await getAvailableConnectorIdentity(projectPath, language, event);
+    }
+    for (const event of selections) {
+        if (cancellationToken?.isCancellationRequested) {
+            throw new UserCancelledError('connectorProjectCreation');
+        }
+        await ensureConnectorTriggerPollProject(projectPath, language, event, outputMetadata.get(event.operationId));
+    }
+}
+
+export function validateConnectorTriggerSelections(selection: ConnectorTriggerSelections): ConnectorTriggerSelection[] {
+    if (!isConnectorTriggerSelections(selection)) {
+        throw new Error(localize('connectorTriggerSelectionInvalid', 'Select one or more distinct events for one connector.'));
+    }
+    const selections = getConnectorTriggerSelections(selection);
+    const functionNames = selections.map(event =>
+        getConnectorTriggerEventIdentity(event.connectorId, event.operationId).functionName.toLowerCase());
+    if (new Set(functionNames).size !== functionNames.length) {
+        throw new Error(localize(
+            'connectorTriggerBatchNameCollision',
+            'The selected events would register the same function name. Select these events separately and rename the first function before adding the next.',
+        ));
+    }
+    return selections;
 }
 
 export async function ensureConnectorTriggerPollProject(
@@ -148,8 +184,9 @@ async function getAvailableConnectorIdentity(
             binding.triggerConfigSettingName,
             triggerConfigSettingName,
         )); settingInstance++) {
-        triggerConfigSettingName =
-            `${baseIdentity.functionName}${settingInstance}TriggerConfigName`;
+        triggerConfigSettingName = getConnectorTriggerEventIdentity(
+            selection.connectorId, selection.operationId, settingInstance,
+        ).triggerConfigSettingName;
         if (settingInstance > 100) {
             throw new Error(localize(
                 'connectorTriggerSettingUnavailable',

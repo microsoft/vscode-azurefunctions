@@ -30,6 +30,21 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
+configs.connectorTriggerPicker = createWebviewEsbuildConfig({
+    entryPoints: {
+        connectorTriggerPicker: './src/webview/connectorTriggerPicker/index.tsx',
+    },
+    jsx: 'automatic',
+    outdir: './dist/webview',
+    plugins: [{
+        name: 'tree-shake-fluent-components',
+        setup(build) {
+            build.onResolve({ filter: /^@fluentui\/react-components$/ }, () => ({
+                path: resolve('./src/webview/fluentComponents.ts'),
+            }));
+        },
+    }],
+});
 configs.connectorTriggerSetup = createWebviewEsbuildConfig({
     entryPoints: {
         connectorTriggerSetup: './src/webview/connectorTriggerParameters/index.tsx',

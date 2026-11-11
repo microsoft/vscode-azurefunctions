@@ -31,7 +31,7 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.panelTitle, 'Template Gallery');
         assert.strictEqual(viewModel.labels.galleryTitle, 'Template Gallery');
         assert.strictEqual(viewModel.labels.connectorPageTitle, 'Choose a connector');
-        assert.strictEqual(viewModel.labels.eventPageTitle, 'Choose an event');
+        assert.strictEqual(viewModel.labels.eventPageTitle, 'Choose events');
         assert.strictEqual(
             viewModel.labels.azureContextRequired,
             'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
