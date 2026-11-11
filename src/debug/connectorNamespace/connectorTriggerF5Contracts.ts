@@ -4,11 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { randomBytes } from 'crypto';
 import { type CancellationToken } from 'vscode';
 import { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localize } from '../../localize';
 
 export { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+
+/** Attempts to find an unused hex-suffixed name before setup gives up. */
+export const connectorResourceNameSuffixAttempts = 5;
+
+/** Returns baseName with a random hex suffix, used when another owner already has baseName. */
+export function createSuffixedConnectorResourceName(baseName: string): string {
+    return `${baseName}-${randomBytes(3).toString('hex')}`;
+}
+
+export function isSuffixedConnectorResourceName(name: string | undefined, baseName: string): name is string {
+    return typeof name === 'string' &&
+        name.length === baseName.length + 7 &&
+        name.toLowerCase().startsWith(`${baseName.toLowerCase()}-`) &&
+        /^[0-9a-f]{6}$/i.test(name.slice(baseName.length + 1));
+}
 
 export class ConnectorTriggerF5SetupError extends Error {
     public readonly code = 'connectorTriggerF5SetupFailed';
@@ -49,6 +65,11 @@ export interface ConnectorTriggerSetupTarget extends ConnectorTriggerProjectMeta
     subscription: {
         id: string;
         tenantId: string;
+        /**
+         * Azure Resources account the subscription was selected under. The same subscription can be
+         * listed under several accounts; when set, only that account's live subscription is used.
+         */
+        accountId?: string;
         environment: {
             name: string;
             resourceManagerEndpointUrl: string;
@@ -104,6 +125,23 @@ export interface ConnectorTriggerConnection {
         objectId?: string;
         tenantId?: string;
     };
+    /** Workspace identity recorded when setup created the connection, read back from the resource. */
+    ownerWorkspaceId?: string;
+}
+
+/** Lets a gateway stop before each Azure mutation once the user cancels setup. */
+export interface ConnectorTriggerMutationOptions {
+    cancellationToken?: CancellationToken;
+}
+
+export interface ConnectorTriggerConnectionOptions extends ConnectorTriggerMutationOptions {
+    /** Recorded on connections setup creates, so retries reuse them and never adopt another's. */
+    ownerWorkspaceId: string;
+}
+
+export interface ConnectorTriggerConfigWriteOptions extends ConnectorTriggerMutationOptions {
+    /** Set when setup found the name unused; the write must fail rather than replace a Trigger Config created meanwhile. */
+    createOnly?: boolean;
 }
 
 export interface ConnectorTriggerConfig {
@@ -150,21 +188,33 @@ export interface ConnectorTriggerGateway {
      * the subscription through the current authenticated Azure account and use that live context.
      */
     listNamespaces(context: IActionContext, target: ConnectorTriggerSetupTarget): Promise<ConnectorTriggerNamespace[]>;
+    /**
+     * Returns a provisioned namespace. A create plan reuses a namespace created concurrently only
+     * when creation reported a conflict.
+     */
     ensureNamespace(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
         plan: ConnectorTriggerNamespacePlan,
+        options?: ConnectorTriggerMutationOptions,
     ): Promise<ConnectorTriggerNamespace>;
     listConnections(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
     ): Promise<ConnectorTriggerConnection[]>;
+    /**
+     * For a create plan, reuses a connection with the planned name only when this workspace owns
+     * it. When another connection already has that name, creates one whose name adds a random hex
+     * suffix (reusing a suffixed connection this workspace already owns). Rejects connectors whose
+     * required authentication settings setup cannot collect before creating anything.
+     */
     ensureConnection(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         plan: ConnectorTriggerConnectionPlan,
+        options: ConnectorTriggerConnectionOptions,
     ): Promise<ConnectorTriggerConnection>;
     getConnection(
         context: IActionContext,
@@ -199,9 +249,17 @@ export interface ConnectorTriggerGateway {
      * `hostCredential.connectionSettings` is empty, the factory falls back to the host's
      * DefaultAzureCredential: Environment, Workload Identity, Managed Identity, Visual Studio,
      * Visual Studio Code, Azure CLI, Azure PowerShell, then Azure Developer CLI, honoring
-     * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential with
-     * `hostCredential.environment` applied over the inherited process environment and return the
-     * token's oid and tid claims.
+     * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential in the
+     * environment described by `hostCredential.launch`, with `hostCredential.environment` applied
+     * for variables the launch environment does not set, and return the token's oid and tid claims.
+     * A verifiedTask observation supplies those claims from a fresh probe inside the host task;
+     * validate its credential kind and tenant rather than acquiring another token outside the task.
+     *
+     * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
+     * that evaluation cannot be proven to match the host: for example when the launch environment
+     * is unknown or is a shell, terminal or task without a verified probe, or when
+     * `hostCredential.conflictingSettingNames` or the launch environment define a section the host
+     * reads instead of the `<connectionSettingName>__<key>` settings.
      *
      * Do not substitute the account selected in VS Code or the connection creator for that
      * evaluation; either can differ from the principal the chain resolves (for example, after
@@ -223,6 +281,7 @@ export interface ConnectorTriggerGateway {
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
+        options?: ConnectorTriggerMutationOptions,
     ): Promise<void>;
     /**
      * Returns the Trigger Config with the given name, including its ownership marker, or undefined
@@ -243,6 +302,7 @@ export interface ConnectorTriggerGateway {
     createOrUpdateTriggerConfig(
         context: IActionContext,
         request: ConnectorTriggerConfigRequest,
+        options?: ConnectorTriggerConfigWriteOptions,
     ): Promise<ConnectorTriggerConfig>;
 }
 
@@ -259,16 +319,65 @@ export interface ConnectorTriggerHostCredentialConfiguration {
     connectionSettingName: string;
     /**
      * Microsoft.Extensions.Azure credential keys set as `<connectionSettingName>__<key>`, keyed by
-     * `<key>` (for example credential, clientId or tenantId). Process environment values take
+     * `<key>` (for example credential, clientId or tenantId). Launch environment values take
      * precedence over local.settings.json Values, matching Core Tools.
      */
     connectionSettings: Readonly<Record<string, string>>;
     /**
-     * DefaultAzureCredential environment variables that local.settings.json Values add to the host
-     * process environment. Variables already set in the process environment are not included.
+     * Credential-related variables (AZURE_*, managed identity endpoints and the home and path
+     * variables Azure CLI reads) that local.settings.json Values add to the host process
+     * environment. Variables already set in the launch environment are not included.
      */
     environment: Readonly<Record<string, string>>;
+    /**
+     * Names of local.settings.json Values and ConnectionStrings entries that the WebJobs host reads
+     * for this connection instead of, or in addition to, the `<connectionSettingName>__<key>`
+     * settings, such as `AzureWebJobs<connectionSettingName>__clientId`,
+     * `ConnectionStrings:<connectionSettingName>` or `<connectionSettingName>:clientId`.
+     */
+    conflictingSettingNames: readonly string[];
+    /** How the local Functions host will be launched, or undefined when that is not known. */
+    launch: ConnectorTriggerHostLaunch | undefined;
 }
+
+/**
+ * How the local Functions host process will be started, which determines the environment its
+ * credential reads. Values can be secrets: never log them or include them in telemetry or errors.
+ */
+export type ConnectorTriggerTaskCredentialKind = 'connectionSettings' | 'environmentCredential' | 'azureCli';
+
+export type ConnectorTriggerHostLaunch =
+    | {
+        /**
+         * A fresh credential probe ran in the same continuous task execution context as host startup,
+         * using the host's credential construction. The launcher must preserve that environment and
+         * block host startup until setup succeeds. A separate dependsOn/pre-launch task does not
+         * qualify. Never persist or reuse this observation on a later launch.
+         */
+        kind: 'verifiedTask';
+        /** Effective environment observed by the probe, not the extension's process environment. */
+        environment: Readonly<Record<string, string>>;
+        principal: ConnectorTriggerPrincipal;
+        credentialKind: ConnectorTriggerTaskCredentialKind;
+    }
+    | {
+        /**
+         * The launcher starts Core Tools directly, without a shell, terminal or task, with exactly
+         * this process environment. Setup evaluates the host credential in that environment.
+         */
+        kind: 'exactEnvironment';
+        environment: Readonly<Record<string, string>>;
+    }
+    | {
+        /**
+         * The host is started by a VS Code task. Shell profiles, terminal settings and extension
+         * environment contributions can change its environment, so the host credential cannot be
+         * evaluated. `environment` is the task's options.env.
+         */
+        kind: 'task';
+        execution: 'shell' | 'process' | 'custom';
+        environment: Readonly<Record<string, string>>;
+    };
 
 export interface ConnectorTriggerConnectionAccessPolicy {
     name: string;
@@ -477,4 +586,9 @@ export interface ConnectorTriggerF5Dependencies {
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
     workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
+    /**
+     * How the caller will start the local Functions host after setup. When omitted, setup cannot
+     * verify the host's polling identity and grants no connection access.
+     */
+    hostLaunch?: ConnectorTriggerHostLaunch;
 }

@@ -425,6 +425,53 @@ suite('Connector Gateway client', () => {
         assert.strictEqual(requests.length, 1);
     });
 
+    test('keeps the HTTP status on sanitized errors without exposing service details', async () => {
+        const armClient = createArmClient(
+            [],
+            () => ({ error: { code: 'Conflict', message: 'service-detail-secret' } }),
+            () => 409,
+        );
+        const client = new AzureConnectorGatewayClient(
+            async () => assert.fail('Connection list must not create a resources client.'),
+            async () => armClient,
+        );
+
+        await assert.rejects(
+            client.listConnections(await createContext(), 'rg-one', 'gateway-one'),
+            (error: unknown) => error instanceof Error &&
+                (error as { statusCode?: unknown }).statusCode === 409 &&
+                !Object.keys(error).includes('statusCode') &&
+                !error.message.includes('service-detail-secret'),
+        );
+    });
+
+    test('sends If-None-Match only for create-only writes and surfaces the 412 status', async () => {
+        const requests: PipelineRequest[] = [];
+        const armClient = createArmClient(
+            requests,
+            request => request.headers.has('If-None-Match') ? { error: { code: 'PreconditionFailed' } } : getRequestBody(request),
+            request => request.headers.has('If-None-Match') ? 412 : 200,
+        );
+        const client = new AzureConnectorGatewayClient(
+            async () => assert.fail('Connection writes must not create a resources client.'),
+            async () => armClient,
+        );
+        const context = await createContext();
+        const request = { properties: { connectorName: 'office365' } };
+
+        await client.createOrUpdateConnection(context, 'rg-one', 'gateway-one', 'office-connection', request);
+        await assert.rejects(
+            client.createOrUpdateConnection(context, 'rg-one', 'gateway-one', 'office-connection', request, { createOnly: true }),
+            (error: unknown) => (error as { statusCode?: unknown }).statusCode === 412,
+        );
+        await assert.rejects(
+            client.createOrUpdateTriggerConfig(context, 'rg-one', 'gateway-one', 'trigger-config', { properties: {} }, { createOnly: true }),
+            (error: unknown) => (error as { statusCode?: unknown }).statusCode === 412,
+        );
+
+        assert.deepStrictEqual(requests.map(sent => sent.headers.get('If-None-Match')), [undefined, '*', '*']);
+    });
+
     test('cancels before creating an ARM client', async () => {
         let clientCreated = false;
         const client = new AzureConnectorGatewayClient(
