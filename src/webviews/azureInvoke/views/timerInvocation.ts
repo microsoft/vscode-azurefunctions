@@ -28,8 +28,10 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
                 <label><span data-label="functionName"></span><input id="function-name" required maxlength="128" spellcheck="false"></label>
                 <div class="timer-schedule"><span data-label="schedule"></span><code id="schedule"></code></div>
                 <p class="hint" data-label="scheduleHint"></p>
+                <label><span data-label="guidance"></span><textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea></label>
                 <div class="timer-actions"><button id="run" type="submit" data-label="run"></button>
                     <button id="cancel" type="button" class="secondary" data-label="cancel" hidden></button>
+                    <button id="debug" type="button" class="secondary" data-label="debug"></button>
                 </div>
             </form>
             <p id="notice" role="status" hidden></p><p id="error" role="alert" hidden></p>
@@ -43,31 +45,40 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
     const name = element<HTMLInputElement>('#name');
     const host = element<HTMLInputElement>('#host-url');
     const functionName = element<HTMLInputElement>('#function-name');
+    const guidance = element<HTMLTextAreaElement>('#breakpoint-guidance');
     const save = element<HTMLButtonElement>('#save');
     const run = element<HTMLButtonElement>('#run');
+    const debug = element<HTMLButtonElement>('#debug');
     name.value = invocation.name;
     host.value = invocation.request.hostUrl;
     functionName.value = invocation.request.functionName;
     element('h1').textContent = invocation.name;
     element('#schedule').textContent = invocation.request.schedule || labels.unknownSchedule;
+    guidance.placeholder = labels.guidancePlaceholder;
+    guidance.title = labels.guidancePrivacy;
     let revision = 0;
     let savedRevision = configuration.saved ? 0 : -1;
     let saving: number | undefined;
     let busy = false;
+    let openingDebug = false;
     function updateControls(): void {
         save.disabled = busy || saving !== undefined || revision === savedRevision;
         save.textContent = saving === undefined ? labels.save : labels.saving;
         element('#save-status').textContent = revision === savedRevision ? labels.saved : labels.unsaved;
-        run.disabled = busy;
+        run.disabled = busy || openingDebug;
         run.textContent = busy ? labels.running : labels.run;
+        debug.disabled = busy || openingDebug || saving !== undefined || revision !== savedRevision || guidance.value.length > guidance.maxLength;
+        guidance.disabled = busy || openingDebug;
         element('#cancel').hidden = !busy;
     }
     const read = (): TimerInvocation => ({
         ...invocation, name: name.value,
         request: { hostUrl: host.value, functionName: functionName.value, schedule: invocation.request.schedule },
     });
-    element('#timer-form').addEventListener('input', () => {
-        revision++;
+    element('#timer-form').addEventListener('input', event => {
+        if (event.target !== guidance) {
+            revision++;
+        }
         updateControls();
     });
     save.addEventListener('click', () => {
@@ -83,12 +94,21 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
         api.postMessage({ command: 'runTimer', invocation: read() });
     });
     element('#cancel').addEventListener('click', () => api.postMessage({ command: 'cancelInvocation' }));
+    debug.addEventListener('click', () => {
+        openingDebug = true;
+        element('#error').hidden = true;
+        updateControls();
+        api.postMessage({ command: 'debugTimer', breakpointGuidance: guidance.value });
+    });
     window.addEventListener('message', (event: MessageEvent<TimerViewMessage>) => {
         const message = event.data;
         if (message.command === 'saved') {
             savedRevision = saving ?? savedRevision;
             saving = undefined;
             element('h1').textContent = name.value.trim();
+        } else if (message.command === 'focusBreakpointGuidance') {
+            guidance.scrollIntoView({ block: 'nearest' });
+            guidance.focus();
         } else if (message.command === 'invocationStarted') {
             busy = true;
             element('#error').hidden = true;
@@ -110,11 +130,13 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
             receipt.hidden = false;
         } else if (message.command === 'invocationError' || message.command === 'error') {
             busy = false;
+            openingDebug = false;
             saving = undefined;
             element('#invocation-status').textContent = labels.notConfirmed;
             element('#error').textContent = message.message;
             element('#error').hidden = false;
         } else if (message.command === 'notice') {
+            openingDebug = false;
             element('#notice').textContent = message.message;
             element('#notice').hidden = false;
         }
