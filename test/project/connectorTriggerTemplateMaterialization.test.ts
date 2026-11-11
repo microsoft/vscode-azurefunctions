@@ -378,7 +378,6 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
             packageName: calendar.packageName,
             pythonFunctionName: calendar.pythonFunctionName,
             typescriptFileName: calendar.typescriptFileName,
-            schemaName: calendar.payloadModel?.schemaName,
         }, {
             functionName: 'CalendarGetOnChangedItemsV3',
             csharpClassName: 'CalendarGetOnChangedItemsV3Function',
@@ -386,7 +385,6 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
             packageName: 'calendar-get-on-changed-items-v3',
             pythonFunctionName: 'calendar_get_on_changed_items_v3_function',
             typescriptFileName: 'calendarGetOnChangedItemsV3Function.ts',
-            schemaName: 'GraphCalendarEventClientWithActionType',
         });
 
         const unsafe = getConnectorTriggerEventIdentity(

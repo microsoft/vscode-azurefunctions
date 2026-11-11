@@ -3,28 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export interface ConnectorTriggerPayloadModel {
-    schemaName: string;
-    collectionSchemaName: string;
-    csharp?: {
-        namespace: string;
-        packageName: string;
-        packageVersion: string;
-        payloadType: string;
-    };
-    python?: {
-        importName: string;
-        importPath: string;
-        packageName: string;
-        packageVersion: string;
-        wireProperties: Readonly<Record<string, string>>;
-    };
-    typescript?: {
-        importName: string;
-        importPath: string;
-    };
-}
-
 export interface ConnectorTriggerEventIdentity {
     camelName: string;
     csharpClassName: string;
@@ -34,7 +12,6 @@ export interface ConnectorTriggerEventIdentity {
     operationId: string;
     packageName: string;
     pascalName: string;
-    payloadModel?: ConnectorTriggerPayloadModel;
     projectName: string;
     pythonFunctionName: string;
     triggerConfigSettingName: string;
@@ -44,73 +21,8 @@ export interface ConnectorTriggerEventIdentity {
 const windowsReservedNames =
     /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
-const calendarChangedPayload: ConnectorTriggerPayloadModel = {
-    schemaName: 'GraphCalendarEventClientWithActionType',
-    collectionSchemaName: 'GraphCalendarEventListWithActionType',
-    csharp: {
-        namespace: 'Azure.Connectors.Sdk.Office365.Models',
-        packageName: 'Azure.Connectors.Sdk',
-        packageVersion: '0.14.0-preview.1',
-        payloadType: 'Office365OnCalendarChangedItemsTriggerPayload',
-    },
-    python: {
-        importName: 'GraphCalendarEventClientWithActionType',
-        importPath: 'azure.connectors.office365',
-        packageName: 'azure-connectors',
-        packageVersion: '0.1.0',
-        wireProperties: {
-            ActionType: 'action_type',
-            IsAdded: 'is_added',
-            IsUpdated: 'is_updated',
-            subject: 'subject',
-            start: 'start',
-            end: 'end',
-            startWithTimeZone: 'start_with_time_zone',
-            endWithTimeZone: 'end_with_time_zone',
-            body: 'body',
-            isHtml: 'is_html',
-            responseType: 'response_type',
-            responseTime: 'response_time',
-            id: 'id',
-            createdDateTime: 'created_date_time',
-            lastModifiedDateTime: 'last_modified_date_time',
-            organizer: 'organizer',
-            timeZone: 'time_zone',
-            seriesMasterId: 'series_master_id',
-            iCalUId: 'i_cal_u_id',
-            categories: 'categories',
-            webLink: 'web_link',
-            requiredAttendees: 'required_attendees',
-            optionalAttendees: 'optional_attendees',
-            resourceAttendees: 'resource_attendees',
-            location: 'location',
-            importance: 'importance',
-            isAllDay: 'is_all_day',
-            recurrence: 'recurrence',
-            recurrenceEnd: 'recurrence_end',
-            numberOfOccurences: 'number_of_occurences',
-            reminderMinutesBeforeStart: 'reminder_minutes_before_start',
-            isReminderOn: 'is_reminder_on',
-            showAs: 'show_as',
-            responseRequested: 'response_requested',
-            sensitivity: 'sensitivity',
-        },
-    },
-    typescript: {
-        importName: 'GraphCalendarEventClientWithActionType',
-        importPath: '@azure/connectors/generated/Office365Extensions',
-    },
-};
-
-const payloadModels = new Map<string, ConnectorTriggerPayloadModel>([
-    [
-        getPayloadKey('office365', 'CalendarGetOnChangedItemsV3'),
-        calendarChangedPayload,
-    ],
-]);
-
 export function getConnectorTriggerEventIdentity(
-    connectorId: string,
+    _connectorId: string,
     operationId: string,
     instance = 1,
 ): ConnectorTriggerEventIdentity {
@@ -156,16 +68,11 @@ export function getConnectorTriggerEventIdentity(
         operationId,
         packageName,
         pascalName,
-        payloadModel: payloadModels.get(getPayloadKey(connectorId, operationId)),
         projectName: camelName,
         pythonFunctionName: `${pythonBaseName}${instanceSuffix ? `_${instanceSuffix}` : ''}_function`,
         triggerConfigSettingName: `${functionName.replace(/[^A-Za-z\d_]/g, '_')}TriggerConfigName`,
         typescriptFileName: `${camelName}Function.ts`,
     };
-}
-
-function getPayloadKey(connectorId: string, operationId: string): string {
-    return `${connectorId.toLowerCase()}\0${operationId.toLowerCase()}`;
 }
 
 function splitIdentifier(value: string): string[] {

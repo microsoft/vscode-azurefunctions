@@ -75,6 +75,7 @@
     "azureFunctions.projectRuntime.v4": "Azure Functions v4",
     "azureFunctions.projectSubpath": "The default subpath of a workspace folder to use for project operations. This is only necessary if you have multiple projects in one workspace. See https://aka.ms/AA4nmfy for more information.",
     "azureFunctions.projectTemplateKey": "A key used to identify which templates to use for this project. In most cases, this will be automatically detected and should not need to be set.",
+    "azureFunctions.connectorTriggerProjects": "Connector and event selections used to configure triggers during F5 setup, keyed by project path relative to the workspace folder (use '.' for its root). Read from the folder's .vscode/settings.json only when the project has no .vscode/azureFunctions.connectorTrigger.json metadata file. User settings and shared .code-workspace settings are not used. Contains only the metadata version and connector/event IDs. Subscription and region are selected when provisioning during F5, not saved here. Never contains credentials or parameter values.",
     "azureFunctions.pythonVenv": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",
     "azureFunctions.redeploy": "Redeploy",
     "azureFunctions.reportIssue": "Report Issue...",
