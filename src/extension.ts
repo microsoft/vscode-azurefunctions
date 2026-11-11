@@ -18,6 +18,7 @@ import { listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
+import { debugHttpInvocationTool, getHttpInvocationDebugContextTool } from './chat/tools/azureInvoke/debugHttpInvocationTools';
 import { draftHttpInvocationTool, getInvocationCollectionReviewTool, getInvocationDiagnosticsTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from './chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from './chat/tools/azureInvoke/listHttpInvocationsTool';
 import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from './chat/tools/azureInvoke/savedHttpInvocationTools';
@@ -146,6 +147,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 registerMcpTool(server, proposeInvocationCollectionTool(azureInvokeReviews));
                 registerMcpTool(server, getInvocationCollectionReviewTool(azureInvokeReviews));
                 registerMcpTool(server, getInvocationDiagnosticsTool(azureInvokeReviews));
+                registerMcpTool(server, getHttpInvocationDebugContextTool(azureInvokeEditors));
+                registerMcpTool(server, debugHttpInvocationTool(azureInvokeEditors));
                 registerMcpTool(server, draftHttpInvocationTool(azureInvokeProvider, azureInvokeReviews));
                 registerMcpTool(server, listHttpInvocationsTool(azureInvokeProvider));
                 registerMcpTool(server, getHttpInvocationInspectionTool(azureInvokeEditors));

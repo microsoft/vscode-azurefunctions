@@ -17,11 +17,13 @@ import * as vscode from 'vscode';
 import * as z from 'zod/mini';
 import { createHttpInvocationTool } from '../src/chat/tools/azureInvoke/createHttpInvocationTool';
 import { listBlobInvocationsTool } from '../src/chat/tools/azureInvoke/blobInvocationTools';
+import { debugHttpInvocationTool, getHttpInvocationDebugContextTool } from '../src/chat/tools/azureInvoke/debugHttpInvocationTools';
 import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from '../src/chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from '../src/chat/tools/azureInvoke/savedHttpInvocationTools';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
+import { resolveInvocationDebugSession } from '../src/commands/azureInvoke/resolveInvocationDebugSession';
 import { mcpServerId } from '../src/constants';
 import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { parseInvocationCollection, serializeInvocationCollection } from '../src/tree/azureInvoke/invocationCollection';
@@ -1932,6 +1934,446 @@ suite('Azure Invoke', () => {
         }
     });
 
+    test('debugging shares chosen evidence and replays exact captured inputs without rerunning prerequisites', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const actionContext = await createTestActionContext();
+        const provider = new AzureInvokeTreeDataProvider();
+        const opened: { id: string; debugId: string }[] = [];
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: async () => ({ id: 'existing-debug-session' }),
+            openChat: async (id, debugId) => { opened.push({ id, debugId }); },
+        });
+        const setup = { id: 'debug-setup', name: 'Create setup', request: request({ method: 'POST', url: `${baseUrl}/accounts`, body: '{}' }) };
+        const target = {
+            id: 'debug-target', name: 'Inspect request',
+            request: request({
+                method: 'POST', url: `${baseUrl}/debug-replay?embedded=private-debug-query`,
+                query: [{ name: 'code', value: 'private-debug-code' }],
+                headers: [{ name: 'x-functions-key', value: 'private-debug-request-key' }],
+                body: '{"marker":"{{guid}}"}', dependsOn: [setup.id],
+            }),
+        };
+        provider.saveRequest(setup);
+        provider.saveRequest(target);
+        const readDefinition = getHttpInvocationDebugContextTool(editors);
+        const replayDefinition = debugHttpInvocationTool(editors);
+        const read = new McpTool(readDefinition.name, readDefinition.execute, readDefinition);
+        const replay = new McpTool(replayDefinition.name, replayDefinition.execute, replayDefinition);
+        const extras = { signal: new AbortController().signal, requestId: 'debug-replay' };
+        const before = receivedRequests;
+        const beforeBodies = debugBodies.length;
+        const beforeAccounts = accountBodies.length;
+        try {
+            assert.strictEqual(replayDefinition.annotations?.consentGuidance, ConsentGuidance.AlwaysRequired);
+            const unauthorized = await read.executeMcp({ id: target.id, debugId: 'not-authorized' }, extras);
+            assert.ok('isError' in unauthorized && unauthorized.isError);
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                const actions = document.querySelector('#debug-actions');
+                if (actions.hidden || !document.querySelector('#debug-response').disabled) throw new Error('Debugging is offered without a result.');
+                if (actions.compareDocumentPosition(document.querySelector('.response-section')) !== Node.DOCUMENT_POSITION_FOLLOWING) throw new Error('Breakpoint controls are not above the response.');
+                document.querySelector('#run-chain').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                if (document.querySelector('#debug-response').disabled) throw new Error('The response has no debug entry point.');
+                if (document.querySelector('#debug-response').textContent !== 'Run with Copilot breakpoints') throw new Error('The HTTP breakpoint action does not match other triggers.');
+                const guidance = document.querySelector('#breakpoint-guidance');
+                guidance.value = 'x'.repeat(501);
+                guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                if (!document.querySelector('#debug-response').disabled) throw new Error('Oversized guidance is allowed.');
+                window.testApi.postMessage({ command: 'debugRequest', breakpointGuidance: guidance.value });
+                await waitFor(() => document.querySelector('#debug-error').textContent.includes('500 characters'));
+                guidance.value = '  Pause before validation.  ';
+                guidance.dispatchEvent(new Event('input', { bubbles: true }));
+                if (!document.querySelector('#save').disabled) throw new Error('Guidance dirtied the saved request.');
+                if (document.querySelector('#debug-response').disabled) throw new Error('Valid guidance cannot be submitted.');
+                document.querySelector('#url').value = '${baseUrl}/unsaved-debug-url';
+                document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('#body').value = 'private-unsaved-debug-body';
+                document.querySelector('#body').dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+                if (!document.querySelector('#debug-hint').textContent.includes('sensitive data')) throw new Error('The response-sharing warning is missing.');
+                if (document.querySelector('#body').value !== 'private-unsaved-debug-body' || document.querySelector('#save').disabled) throw new Error('Debugging changed or saved local edits.');
+            `);
+            assert.strictEqual(opened.length, 1);
+            const result = await read.executeMcp(opened[0], extras);
+            const evidence = z.object({ structuredContent: z.object({
+                method: z.string(), path: z.string(),
+                breakpointGuidance: z.string(),
+                diagnostic: z.object({ outcome: z.string(), status: z.number(), body: z.string() }),
+            }) }).parse(result).structuredContent;
+            assert.strictEqual(evidence.method, 'POST');
+            assert.strictEqual(evidence.path, '/debug-replay');
+            assert.strictEqual(evidence.diagnostic.status, 422);
+            assert.strictEqual(evidence.diagnostic.body, '{"error":"inspect the handler"}');
+            assert.strictEqual(evidence.breakpointGuidance, 'Pause before validation.');
+            assert.ok(!serializeInvocationCollection(provider.getInvocations()).includes(evidence.breakpointGuidance), 'Guidance must not be saved or exported.');
+            for (const value of ['private-debug-query', 'private-debug-code', 'private-debug-request-key', 'private-debug-cookie', 'private-debug-response-key', 'private-unsaved-debug-body']) {
+                assert.ok(!JSON.stringify(result).includes(value));
+            }
+            assert.strictEqual(receivedRequests, before + 2);
+            const abort = new AbortController();
+            abort.abort();
+            const cancelled = await replay.executeMcp(opened[0], { ...extras, signal: abort.signal });
+            assert.ok('isError' in cancelled && cancelled.isError);
+            assert.strictEqual(receivedRequests, before + 2);
+            const replayed = await replay.executeMcp(opened[0], extras);
+            assert.strictEqual(runResultSchema.parse(replayed).structuredContent.status, 422);
+            assert.strictEqual(receivedRequests, before + 3);
+            assert.strictEqual(accountBodies.length, beforeAccounts + 1, 'Debug replay repeated setup.');
+            assert.strictEqual(debugBodies.length, beforeBodies + 2);
+            assert.strictEqual(debugBodies[beforeBodies + 1], debugBodies[beforeBodies], 'Debug replay regenerated captured inputs.');
+            assert.ok(!debugBodies[beforeBodies].includes('{{guid}}'));
+            assert.deepStrictEqual(provider.getRequest(target.id)?.request, target.request);
+            const repeated = await replay.executeMcp(opened[0], extras);
+            assert.ok('isError' in repeated && repeated.isError);
+            assert.strictEqual(receivedRequests, before + 3);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#breakpoint-guidance').value = '   ';
+                document.querySelector('#breakpoint-guidance').dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.strictEqual(opened.length, 2);
+            assert.notStrictEqual(opened[0].debugId, opened[1].debugId);
+            const nextContext = await editors.getDebugContext(await createTestActionContext(), target.id, opened[1].debugId);
+            assert.strictEqual(nextContext.method, 'POST');
+            assert.strictEqual(nextContext.breakpointGuidance, undefined);
+            editors.closeAll();
+            await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[1].debugId), /no longer active/);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('debug replay preserves generated values and bindings despite later saved edits and newer source results', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const actionContext = await createTestActionContext();
+        const provider = new AzureInvokeTreeDataProvider();
+        const opened: { id: string; debugId: string }[] = [];
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: async () => ({ id: 'existing-snapshot-debugger' }),
+            openChat: async (id, debugId) => { opened.push({ id, debugId }); },
+        });
+        const source = {
+            id: 'snapshot-source', name: 'Create snapshot account',
+            request: request({
+                method: 'POST', url: `${baseUrl}/accounts`,
+                body: '{"email":"invoke-{{guid}}@example.com","token":"token-{{guid}}"}',
+            }),
+        };
+        const target = {
+            id: 'snapshot-target', name: 'Use captured account',
+            request: request({
+                method: 'POST', url: `${baseUrl}/echo/{{accountId}}?embedded={{guid}}`,
+                query: [
+                    { name: 'token', value: '{{token}}', enabled: true },
+                    { name: 'marker', value: '{{guid}}' },
+                    { name: 'disabled', value: 'not-sent', enabled: false },
+                ],
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' },
+                    { name: 'Authorization', value: 'Bearer {{token}}' },
+                    { name: 'x-functions-key', value: 'private-snapshot-key', enabled: true },
+                    { name: 'x-disabled', value: 'not-sent', enabled: false },
+                ],
+                body: '{"marker":"{{guid}}","id":"{{accountId}}","email":"{{email}}"}',
+                bindings: [
+                    { name: 'accountId', sourceId: source.id, pointer: '/body/id' },
+                    { name: 'token', sourceId: source.id, pointer: '/request/body/token' },
+                    { name: 'email', sourceId: source.id, pointer: '/request/body/email' },
+                ],
+                dependsOn: [source.id],
+            }),
+        };
+        provider.saveRequests([source, target]);
+        const beforeAccounts = accountBodies.length;
+        try {
+            const original = JSON.parse((await editors.sendRequest(actionContext, target, undefined, true)).body);
+            const originalBody = JSON.parse(original.body);
+            const originalSource = JSON.parse(accountBodies[beforeAccounts]);
+            assert.ok(!original.body.includes('{{'));
+            assert.strictEqual(originalBody.email, originalSource.email);
+            assert.strictEqual(original.headers.authorization, `Bearer ${originalSource.token}`);
+            assert.strictEqual(new URL(original.url, baseUrl).searchParams.get('marker'), originalBody.marker);
+            assert.strictEqual(original.headers['x-disabled'], undefined);
+            assert.strictEqual(new URL(original.url, baseUrl).searchParams.has('disabled'), false);
+
+            const newerSource = await editors.sendRequest(actionContext, source);
+            assert.notStrictEqual(JSON.parse(newerSource.body).id, originalBody.id);
+            provider.saveRequest({ ...target, request: request({ method: 'PUT', url: `${baseUrl}/later-saved`, body: 'later saved body' }) });
+            const saved = provider.getRequest(target.id);
+            assert.ok(saved);
+            const editor = editors.open(saved, true);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#body').value = 'unsaved snapshot body';
+                document.querySelector('#body').dispatchEvent(new Event('input', { bubbles: true }));
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent || document.querySelector('#debug-error').textContent);
+            `);
+            assert.strictEqual(opened.length, 1, 'Later saved edits must not prevent authorizing the last execution.');
+            const later = { ...target, request: request({ method: 'DELETE', url: `${baseUrl}/even-later-saved` }) };
+            provider.saveRequest(later);
+            provider.saveRequest({ ...source, request: request({ url: 'https://example.invalid/{{missing}}' }) });
+            const evidence = await editors.getDebugContext(actionContext, target.id, opened[0].debugId);
+            assert.strictEqual(evidence.method, 'POST');
+            assert.strictEqual(evidence.path, new URL(original.url, baseUrl).pathname);
+
+            const beforeReplay = receivedRequests;
+            const replayed = JSON.parse((await editors.debugRequest(actionContext, target.id, opened[0].debugId)).body);
+            assert.strictEqual(receivedRequests, beforeReplay + 1, 'Replay must send only the captured request.');
+            assert.strictEqual(accountBodies.length, beforeAccounts + 2, 'Replay must not rerun the prerequisite.');
+            assert.strictEqual(replayed.method, original.method);
+            assert.strictEqual(replayed.url, original.url);
+            assert.strictEqual(replayed.body, original.body);
+            for (const name of ['content-type', 'authorization', 'x-functions-key', 'x-disabled']) {
+                assert.strictEqual(replayed.headers[name], original.headers[name]);
+            }
+            assert.deepStrictEqual(provider.getRequest(target.id), later);
+            await assert.rejects(() => editors.debugRequest(actionContext, target.id, opened[0].debugId), /no longer active/);
+            assert.strictEqual(receivedRequests, beforeReplay + 1, 'Expired authorization must not fall back to a normal run.');
+
+            provider.saveRequests([source, target]);
+            const beforeNormal = receivedRequests;
+            const normal = JSON.parse((await editors.sendRequest(actionContext, target, undefined, true)).body);
+            const normalBody = JSON.parse(normal.body);
+            assert.strictEqual(receivedRequests, beforeNormal + 2, 'A normal run must still execute its prerequisite.');
+            assert.strictEqual(accountBodies.length, beforeAccounts + 3);
+            assert.notStrictEqual(normalBody.marker, originalBody.marker, 'A normal run must generate fresh request inputs.');
+            assert.notStrictEqual(normalBody.email, originalBody.email, 'A normal run must generate fresh prerequisite inputs.');
+            assert.notStrictEqual(normalBody.id, originalBody.id, 'A normal run must bind the new prerequisite result.');
+            assert.notStrictEqual(normal.headers.authorization, original.headers.authorization);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('debug replay repeats a successful mutation even when the same generated email now conflicts', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const emails = new Set<string>();
+        const bodies: string[] = [];
+        const fixture = createServer(async (request, response) => {
+            const chunks: Buffer[] = [];
+            for await (const chunk of request) {
+                chunks.push(Buffer.from(chunk));
+            }
+            const body = Buffer.concat(chunks).toString();
+            bodies.push(body);
+            const { email } = JSON.parse(body);
+            const exists = emails.has(email);
+            emails.add(email);
+            response.writeHead(exists ? 409 : 201, { 'content-type': 'application/json' });
+            response.end(JSON.stringify({ created: !exists }));
+        });
+        await new Promise<void>(resolve => fixture.listen(0, '127.0.0.1', resolve));
+        const provider = new AzureInvokeTreeDataProvider();
+        let debugId: string | undefined;
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: async () => ({ id: 'existing-registration-debugger' }),
+            openChat: async (_id, id) => { debugId = id; },
+        });
+        const target = {
+            id: 'debug-registration', name: 'Register account',
+            request: request({
+                method: 'POST', url: `http://127.0.0.1:${(fixture.address() as AddressInfo).port}/register`,
+                body: '{"email":"invoke-{{guid}}@example.com"}',
+            }),
+        };
+        provider.saveRequest(target);
+        try {
+            const actionContext = await createTestActionContext();
+            assert.strictEqual((await editors.sendRequest(actionContext, target)).status, 201);
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.ok(debugId);
+            assert.strictEqual((await editors.debugRequest(actionContext, target.id, debugId)).status, 409);
+            assert.strictEqual(bodies.length, 2);
+            assert.strictEqual(bodies[1], bodies[0], 'Replay must not regenerate the email to avoid a conflict.');
+            assert.strictEqual((await editors.sendRequest(actionContext, target)).status, 201);
+            assert.strictEqual(bodies.length, 3);
+            assert.notStrictEqual(bodies[2], bodies[0]);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+            fixture.closeAllConnections();
+            await new Promise<void>((resolve, reject) => fixture.close(error => error ? reject(error) : resolve()));
+        }
+    });
+
+    test('debug replay results cannot supply stale bindings to dependent requests', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const actionContext = await createTestActionContext();
+        const provider = new AzureInvokeTreeDataProvider();
+        let debugId: string | undefined;
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: async () => ({ id: 'existing-dependency-debugger' }),
+            openChat: async (_id, id) => { debugId = id; },
+        });
+        const [source, target] = accountChain();
+        const dependent = {
+            id: 'after-debug', name: 'Use current account',
+            request: request({
+                method: 'POST', body: '{"id":"{{accountId}}"}',
+                bindings: [{ name: 'accountId', sourceId: target.id, pointer: '/body/id' }],
+            }),
+        };
+        provider.saveRequests([source, target, dependent]);
+        try {
+            const original = await editors.sendRequest(actionContext, target, undefined, true);
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.ok(debugId);
+            const replayed = await editors.debugRequest(actionContext, target.id, debugId);
+            assert.strictEqual(replayed.body, original.body);
+            const latestSource = await editors.sendRequest(actionContext, source);
+            const before = receivedRequests;
+            await assert.rejects(() => editors.sendRequest(actionContext, dependent), /current successful result/);
+            assert.strictEqual(receivedRequests, before);
+            await editors.sendRequest(actionContext, target);
+            const result = await editors.sendRequest(actionContext, dependent);
+            assert.strictEqual(JSON.parse(JSON.parse(result.body).body).id, JSON.parse(latestSource.body).id);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('debugging requires an existing session and keeps chat failures retryable without changing the request', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const actionContext = await createTestActionContext();
+        assert.strictEqual(vscode.debug.activeDebugSession, undefined);
+        await assert.rejects(async () => await resolveInvocationDebugSession(await createTestActionContext()), /Start your local application/);
+        const provider = new AzureInvokeTreeDataProvider();
+        let sessionId: string | undefined;
+        let failChat = true;
+        const opened: { id: string; debugId: string }[] = [];
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: actionContext => sessionId ? Promise.resolve({ id: sessionId }) : resolveInvocationDebugSession(actionContext),
+            openChat: async (id, debugId) => {
+                opened.push({ id, debugId });
+                if (failChat) {
+                    throw new Error('Copilot Chat is unavailable.');
+                }
+            },
+        });
+        const target = { id: 'debug-guards', name: 'Inspect failure', request: request({ url: `${baseUrl}/error`, body: 'Unused body for a future POST' }) };
+        provider.saveRequest(target);
+        const editor = editors.open(target, true);
+        const before = receivedRequests;
+        try {
+            await runEditorScript(editor, `
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-error').textContent.includes('Start your local application'));
+                if (document.querySelector('#debug-response').disabled || document.querySelector('#response-body').hidden) throw new Error('A missing debugger blocked response inspection.');
+            `);
+            assert.strictEqual(opened.length, 0);
+            sessionId = 'debug-session-one';
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-error').textContent.includes('unavailable'));
+                if (document.querySelector('#debug-response').disabled) throw new Error('Chat failure left debugging disabled.');
+            `);
+            assert.strictEqual(opened.length, 1);
+            await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[0].debugId), /no longer active/);
+            failChat = false;
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.strictEqual(opened.length, 2);
+            await editors.getDebugContext(actionContext, target.id, opened[1].debugId);
+            sessionId = 'debug-session-two';
+            await assert.rejects(() => editors.debugRequest(actionContext, target.id, opened[1].debugId), /active debugger changed/);
+            sessionId = 'debug-session-one';
+            await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[1].debugId), /no longer active/);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.strictEqual(opened.length, 3);
+            provider.saveRequest({ ...target, request: request({ url: `${baseUrl}/echo` }) });
+            await editors.getDebugContext(actionContext, target.id, opened[2].debugId);
+            await editors.sendRequest(actionContext, target);
+            await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[2].debugId), /last execution.*changed/);
+            provider.saveRequest(target);
+            await assert.rejects(() => editors.getDebugContext(actionContext, target.id, opened[2].debugId), /no longer active/);
+            assert.strictEqual(receivedRequests, before + 2);
+            assert.deepStrictEqual(provider.getRequest(target.id)?.request, target.request);
+        } finally {
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('debug replay disables only its HTTP timeout and remains cancellable from the response editor', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const actionContext = await createTestActionContext();
+        const settings = vscode.workspace.getConfiguration('azureFunctions');
+        const originalTimeout = settings.inspect<number>('requestTimeout')?.workspaceValue;
+        const provider = new AzureInvokeTreeDataProvider();
+        let debugId: string | undefined;
+        const editors = new HttpRequestEditors(context, provider, {
+            resolveSession: async () => ({ id: 'existing-timeout-debugger' }),
+            openChat: async (_id, id) => { debugId = id; },
+        });
+        const target = { id: 'debug-timeout', name: 'Inspect pending response', request: request({ url: `${baseUrl}/slow` }) };
+        provider.saveRequest(target);
+        let pending: Promise<unknown> | undefined;
+        try {
+            await settings.update('requestTimeout', 1, vscode.ConfigurationTarget.Workspace);
+            assert.strictEqual(vscode.workspace.getConfiguration('azureFunctions').get('requestTimeout'), 1);
+            await assert.rejects(() => editors.sendRequest(actionContext, target), /timed out/);
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#debug-response').disabled);
+                document.querySelector('#debug-response').click();
+                await waitFor(() => document.querySelector('#debug-notice').textContent.includes('Opened Copilot Chat'));
+            `);
+            assert.ok(debugId);
+            let settled = false;
+            pending = editors.debugRequest(actionContext, target.id, debugId);
+            void pending.then(() => { settled = true; }, () => { settled = true; });
+            await new Promise<void>(resolve => setTimeout(resolve, 1200));
+            assert.strictEqual(settled, false, 'Debug replay used the ordinary one-second request timeout.');
+            await runEditorScript(editor, `
+                await waitFor(() => !document.querySelector('#abort').hidden);
+                document.querySelector('#abort').click();
+                await waitFor(() => document.querySelector('#error').textContent === 'Request cancelled.');
+                if (!document.querySelector('#debug-response').disabled) throw new Error('A cancelled replay still offers debugging.');
+            `);
+            await assert.rejects(pending, error => isUserCancelledError(error));
+        } finally {
+            editors.dispose();
+            provider.dispose();
+            await settings.update('requestTimeout', originalTimeout, vscode.ConfigurationTarget.Workspace);
+            await pending?.catch(error => {
+                assert.ok(isUserCancelledError(error));
+            });
+        }
+    });
 
     test('non-loopback targets are blocked before any request in their chain is sent', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
@@ -2231,11 +2673,14 @@ suite('Azure Invoke', () => {
         const content = await fs.readFile(path.join(context.extensionPath, agent.path), 'utf8');
         assert.match(content, /\nname: Azure Invoke\n/);
         assert.match(content, /\n {2}- edit\n/, 'The Azure Invoke agent must support workspace edits alongside invocation testing.');
-        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_http_invocations', 'get_http_invocation_inspection', 'propose_http_invocation_changes', 'run_http_invocation', 'list_blob_invocations', 'upload_blob_invocation']) {
+        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'get_http_invocation_debug_context', 'debug_http_invocation', 'list_http_invocations', 'get_http_invocation_inspection', 'propose_http_invocation_changes', 'run_http_invocation', 'list_blob_invocations', 'upload_blob_invocation']) {
             assert.ok(content.includes(`  - Azure Functions Extension Tools/${name}`));
         }
         assert.ok(!content.includes('  - Azure Functions Extension Tools/create_http_invocation'));
         assert.ok(!content.includes('  - Azure Functions Extension Tools/draft_http_invocation'));
+        for (const name of ['add_breakpoint', 'list_breakpoints', 'get_debug_status']) {
+            assert.ok(content.includes(`  - debugmcp/${name}`));
+        }
         for (const name of ['start_debugging', 'stop_debugging', 'continue_execution', 'evaluate_expression', 'get_variables_values']) {
             assert.ok(!content.includes(`  - debugmcp/${name}`));
         }
@@ -3109,7 +3554,7 @@ suite('Azure Invoke', () => {
             const discovered = z.object({ result: z.object({ tools: z.array(z.object({ name: z.string() })) }) })
                 .parse(await rpc('tools/list', {}));
             assert.deepStrictEqual(discovered.result.tools.map(tool => tool.name).sort(), [
-                'create_http_invocation', 'draft_http_invocation', 'get_http_invocation_inspection', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_http_invocation_changes', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
+                'create_http_invocation', 'debug_http_invocation', 'draft_http_invocation', 'get_http_invocation_debug_context', 'get_http_invocation_inspection', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_http_invocation_changes', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
             ]);
             const listed = z.object({
                 result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), name: z.string(), method: z.string(), dependencyIds: z.array(z.string()) })) }) }),

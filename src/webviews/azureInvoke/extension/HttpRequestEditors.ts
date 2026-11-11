@@ -6,6 +6,8 @@
 import * as vscode from 'vscode';
 import { randomUUID } from 'crypto';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { openInvocationDebugChat } from '../../../commands/azureInvoke/openAzureInvokeChat';
+import { resolveInvocationDebugSession, type InvocationDebugSession } from '../../../commands/azureInvoke/resolveInvocationDebugSession';
 import { localize } from '../../../localize';
 import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { copyInvocation } from '../../../tree/azureInvoke/invocationCollection';
@@ -18,17 +20,36 @@ export class HttpRequestEditors implements vscode.Disposable {
     private readonly controllers = new Map<string, HttpRequestController>();
     private readonly execution: HttpInvocationRunner;
     private readonly subscription: vscode.Disposable;
+    private readonly debugSessionSubscription: vscode.Disposable;
     private readonly inspections = new Map<string, { id: string; invocation: HttpInvocation }>();
+    private debugTarget: {
+        id: string;
+        invocation: HttpInvocation;
+        snapshot: NonNullable<ReturnType<HttpInvocationRunner['getLastRun']>>;
+        session: InvocationDebugSession;
+        breakpointGuidance?: string;
+    } | undefined;
 
     public constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly provider: AzureInvokeTreeDataProvider,
+        private readonly debugging = { resolveSession: resolveInvocationDebugSession, openChat: openInvocationDebugChat },
     ) {
         this.execution = new HttpInvocationRunner(id => provider.getRequest(id), (id, message) => provider.updateRequestStatus(id, message));
         this.subscription = provider.onDidChangeTreeData(() => {
             this.inspections.clear();
+            if (this.debugTarget) {
+                if (!provider.getRequest(this.debugTarget.invocation.id)) {
+                    this.debugTarget = undefined;
+                }
+            }
             for (const [id, controller] of this.controllers) {
                 controller.updateSources(this.getSources(id));
+            }
+        });
+        this.debugSessionSubscription = vscode.debug.onDidChangeActiveDebugSession(session => {
+            if (this.debugTarget && session?.id !== this.debugTarget.session.id) {
+                this.debugTarget = undefined;
             }
         });
     }
@@ -47,6 +68,7 @@ export class HttpRequestEditors implements vscode.Disposable {
             runner: this.execution.getRunner(invocation.id),
             sources: this.getSources(invocation.id),
             execute: (context, request, options) => this.execution.send(context, { ...invocation, request }, options),
+            debug: (context, guidance) => this.debugInvocation(context, invocation.id, guidance),
         });
         this.controllers.set(invocation.id, controller);
         controller.onDisposed(() => {
@@ -112,11 +134,85 @@ export class HttpRequestEditors implements vscode.Disposable {
         return copyInvocation(inspection.invocation);
     }
 
+    private async debugInvocation(context: IActionContext, id: string, guidance: string): Promise<void> {
+        context.valuesToMask.push(guidance);
+        if (guidance.length > 500) {
+            throw new Error(localize('azureInvoke.breakpointGuidanceTooLong', 'Keep breakpoint guidance within 500 characters.'));
+        }
+        const session = await this.debugging.resolveSession(context);
+        const invocation = this.provider.getRequest(id);
+        const snapshot = this.execution.getLastRun(id);
+        if (!invocation || !snapshot) {
+            throw new Error(localize('azureInvoke.debugRunRequired', 'No replayable last execution is available. Send this request, then select Run with Copilot breakpoints again.'));
+        }
+        if (!snapshot.run.canShareResponse) {
+            throw new Error(localize('azureInvoke.debugLocalOnly', 'This prototype debugs only localhost requests whose prerequisites are also local.'));
+        }
+        const target = { id: randomUUID(), invocation: snapshot.run.invocation, snapshot, session, breakpointGuidance: guidance.trim() || undefined };
+        this.debugTarget = target;
+        try {
+            await this.debugging.openChat(id, target.id);
+        } catch (error) {
+            if (this.debugTarget === target) {
+                this.debugTarget = undefined;
+            }
+            throw error;
+        }
+    }
+
+    private async getDebugTarget(context: IActionContext, id: string, debugId: string) {
+        const target = this.debugTarget;
+        if (!target || target.id !== debugId || target.invocation.id !== id) {
+            throw new Error(localize('azureInvoke.debugExpired', 'This debug request is no longer active. Select Run with Copilot breakpoints again.'));
+        }
+        const session = await this.debugging.resolveSession(context);
+        const invocation = this.provider.getRequest(id);
+        const latest = this.execution.getLastRun(id);
+        if (this.debugTarget !== target || session.id !== target.session.id || !invocation ||
+            latest?.run !== target.snapshot.run || latest.message !== target.snapshot.message) {
+            this.debugTarget = undefined;
+            throw new Error(localize('azureInvoke.debugChanged', 'The last execution or the active debugger changed. Select Run with Copilot breakpoints again.'));
+        }
+        return target;
+    }
+
+    public async getDebugContext(context: IActionContext, id: string, debugId: string) {
+        const target = await this.getDebugTarget(context, id, debugId);
+        const { request } = target.snapshot.run;
+        const { message } = target.snapshot;
+        return {
+            id, debugId, method: request.method, path: new URL(request.url).pathname,
+            workspaceFolder: target.session.workspaceFolder,
+            ...(target.breakpointGuidance ? { breakpointGuidance: target.breakpointGuidance } : {}),
+            diagnostic: message.command === 'response' ?
+                { outcome: 'response' as const, ...getShareableHttpResponse(message.response, true) } :
+                { outcome: 'requestError' as const, message: message.message },
+        };
+    }
+
+    public async debugRequest(context: IActionContext, id: string, debugId: string, signal?: AbortSignal) {
+        const target = await this.getDebugTarget(context, id, debugId);
+        this.debugTarget = undefined;
+        const abort = new AbortController();
+        const subscription = vscode.debug.onDidTerminateDebugSession(session => {
+            if (session.id === target.session.id) {
+                abort.abort();
+            }
+        });
+        try {
+            return await this.execution.replay(context, target.snapshot.run,
+                signal ? AbortSignal.any([signal, abort.signal]) : abort.signal);
+        } finally {
+            subscription.dispose();
+        }
+    }
+
     private getSources(id: string) {
         return this.provider.getRequests().filter(source => source.id !== id).map(({ id, name }) => ({ id, name }));
     }
 
     public closeAll(): void {
+        this.debugTarget = undefined;
         this.inspections.clear();
         for (const controller of this.controllers.values()) {
             controller.panel.dispose();
@@ -127,6 +223,7 @@ export class HttpRequestEditors implements vscode.Disposable {
     public dispose(): void {
         this.closeAll();
         this.subscription.dispose();
+        this.debugSessionSubscription.dispose();
     }
 }
 
