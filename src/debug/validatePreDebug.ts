@@ -18,6 +18,8 @@ import { durableUtils } from '../utils/durableUtils';
 import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
+import { ConnectorTriggerF5SetupError } from './connectorNamespace/connectorTriggerF5Setup';
+import { validateConnectorNamespacePreDebug } from './connectorNamespace/validateConnectorNamespacePreDebug';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
 import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
@@ -48,7 +50,7 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            context.projectPath = await tryGetFunctionProjectRoot(context, workspace);
+            context.projectPath = await tryGetFunctionProjectRoot(context, workspace, 'modalPrompt');
 
             if (context.projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
@@ -64,6 +66,9 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, context.projectPath);
+
+                context.telemetry.properties.lastValidateStep = 'connectorNamespace';
+                await validateConnectorNamespacePreDebug(context, context.projectPath);
 
                 if (validateEmulators) {
                     switch (durableStorageType) {
@@ -95,10 +100,14 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
         const pe = parseError(error);
         if (pe.isUserCancelledError) {
             shouldContinue = false;
+        } else if (error instanceof ConnectorTriggerF5SetupError) {
+            shouldContinue = false;
+            context.telemetry.properties.preDebugValidateError = error.code;
+            await vscode.window.showErrorMessage(error.message, { modal: true });
         } else {
             // Don't block debugging for "unexpected" errors. The func cli might still work
             shouldContinue = true;
-            context.telemetry.properties.preDebugValidateError = maskUserInfo(pe.message, []);
+            context.telemetry.properties.preDebugValidateError = maskUserInfo(pe.message, context.valuesToMask);
         }
     }
 

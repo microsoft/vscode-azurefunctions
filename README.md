@@ -61,6 +61,28 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
     ![debug3](resources/readme/debug3.png)
 
+### Configure a polling Connector Trigger
+
+F5 discovers actual polling Connector Trigger bindings and their connection/Trigger Config setting keys. Projects whose effective settings are already configured skip setup, even without saved event metadata. Automatic setup supports one polling event per project; projects with multiple polling events and incomplete settings receive an actionable diagnostic instead of silently configuring the first event.
+
+A newly created single-event project does not need identity metadata. Choose **Configure**, select the provisioning subscription and supported region, then explicitly select the authored connector and polling event from the live API lists in the same setup screen. Function registration names, `host.json`, and setting names are not used to guess canonical event IDs. Only the selected connector's event metadata is loaded; authoring does not authenticate a connection or load account-specific parameter choices.
+
+Existing singular v1 entries in the folder's `azureFunctions.connectorTriggerProjects` setting remain supported, keyed by project-relative path (`"."` for the folder root), with only `version`, `connectorId`, and `operationId`. Invalid entries stop setup rather than guessing. User settings and shared `.code-workspace` settings do not supply project identities. F5 does not create an identity artifact or persist the selected subscription, region, connector/event association, parameters, or credentials in VS Code settings.
+
+When F5 detects missing or invalid Connector Trigger runtime settings, a modal asks you to configure the trigger. Choose **Configure** to open setup, **Debug Anyway** to continue debugging without connector setup, or **Cancel** to stop debugging. The connector trigger still needs valid configuration to run; Debug Anyway does not save connector settings or dismiss the prompt on future runs. Projects with valid runtime settings skip this prompt.
+
+The editable setup screen shows the connector/event, Azure scope, resource choices, and computed local-settings changes. The shared Subscription dropdown respects the Azure Resources subscription filter; choose **Show all subscriptions** or **Use filtered subscriptions** to switch lists, or type to search the current list. If no subscriptions are authenticated, choose **Sign in to Azure** from the dropdown. Select an existing or new Connector Namespace and connection; for new resources, edit the resource group, namespace, and connection names. Computed setting keys and value sources are read-only, existing values are hidden, and environment overrides are flagged.
+
+Choose **Set up and authenticate** to approve provisioning and lock the resource choices. A progress banner and busy button appear immediately, with status updates during provisioning, browser authentication, parameter loading, and saving. Complete browser consent if needed. The same screen then unlocks the selected event's inputs from the connector API. Dynamic choices are loaded through that authenticated connection, not a local list. For folder pickers such as Outlook, use the arrow to browse children, select a folder, or go back to the previous folder. Changing a dependency clears and reloads its dependent choices.
+
+Outlook address filters accept typed email addresses. Their built-in designer directory suggestions are not connector operations and do not require a separate Graph sign-in or lookup.
+
+Failed dynamic lookups show an error instead of an empty choice list. Use **Reload choices** to retry before applying parameters.
+
+Choose **Apply and continue** to send the selected IDs or paths, not their display labels, to the event's Trigger Config. Events with no inputs finish configuration after setup. Before approval, **Cancel setup** or closing the screen makes no connector changes. After approval, cancellation stops new work after any in-flight operation settles, keeps any resources already created, and does not apply unsubmitted parameter values. Cancel and restart debugging to change locked resource choices.
+
+Setup writes only the service-provided polling endpoint and Trigger Config reference to `local.settings.json`, preserving unrelated settings, comments, and formatting. Unsaved/conflicting edits, encrypted settings, and conflicting environment overrides stop saving rather than overwriting them. Later F5 runs reuse valid runtime settings; cancelling parameter selection leaves existing Azure resources available for retry. Unsupported event metadata and unavailable required choices stop setup rather than substituting guessed values. Fix the connection access or event definition and retry F5.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer
