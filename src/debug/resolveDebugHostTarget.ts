@@ -25,7 +25,7 @@ export interface DebugHostTarget {
     /**
      * Complete effective environment of the selected host task, when that task was found.
      */
-    environment?: Readonly<Record<string, string | undefined>>;
+    environment?: Readonly<Record<string, string>>;
     /**
      * Ordered process, terminal, and task environment layers that produced `environment`. Null marks a deleted name.
      */

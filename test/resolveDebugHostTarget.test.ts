@@ -13,7 +13,7 @@ import { hostStartTaskName } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { type ConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
-import { getEffectiveTaskEnvironment, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
+import { getEffectiveTaskEnvironment, getTaskExecutionKind, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
 
 function nonNull<T>(value: T | undefined): T {
     assert.ok(value !== undefined);
@@ -136,6 +136,44 @@ suite('resolveDebugHostTarget', () => {
         assert.ok(!('AZURE_TOKEN_CREDENTIALS' in environment));
         assert.strictEqual(environment.KEEP, 'a');
         assert.strictEqual(layers[0].AZURE_TOKEN_CREDENTIALS, 'ManagedIdentityCredential');
+    });
+
+    test('merges Windows environment names case-insensitively without changing the original layers', () => {
+        const layers = [
+            { azure_token_credentials: 'ManagedIdentityCredential', Path: 'inherited' },
+            { AZURE_TOKEN_CREDENTIALS: null, PATH: 'terminal' },
+            { azure_token_credentials: 'AzureCliCredential' },
+        ];
+        assert.deepStrictEqual(mergeEnvironmentLayers(layers, 'win32'), {
+            PATH: 'terminal',
+            azure_token_credentials: 'AzureCliCredential',
+        });
+        assert.strictEqual(layers[0].azure_token_credentials, 'ManagedIdentityCredential');
+        assert.strictEqual(layers[1].AZURE_TOKEN_CREDENTIALS, null);
+    });
+
+    for (const platform of ['darwin', 'linux'] as const) {
+        test(`preserves case-sensitive environment names on ${platform}`, () => {
+            assert.deepStrictEqual(mergeEnvironmentLayers([
+                { NAME: 'inherited', name: 'lowercase', REMOVED: 'inherited' },
+                { NAME: 'terminal', REMOVED: null },
+                { NAME: 'task' },
+            ], platform), { NAME: 'task', name: 'lowercase' });
+        });
+    }
+
+    test('distinguishes shell, process and custom task executions', () => {
+        assert.strictEqual(getTaskExecutionKind(createHostTask(root)), 'shell');
+        const processTask = new vscode.Task({ type: 'process' }, workspace, 'process', 'test',
+            new vscode.ProcessExecution('func', ['host', 'start']));
+        assert.strictEqual(getTaskExecutionKind(processTask), 'process');
+        const customTask = new vscode.Task({ type: 'custom' }, workspace, 'custom', 'test',
+            new vscode.CustomExecution(async () => ({
+                onDidWrite: new vscode.EventEmitter<string>().event,
+                open: () => undefined,
+                close: () => undefined,
+            })));
+        assert.strictEqual(getTaskExecutionKind(customTask), 'custom');
     });
 
     test('settings supplied by the selected task env satisfy pre-debug validation without setup', async () => {
