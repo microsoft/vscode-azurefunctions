@@ -34,6 +34,8 @@ export interface ConnectorTriggerPickerLaunchOptions {
     languageModel?: number;
     initialLocation?: string;
     initialFilters: InitialTemplateFilters;
+    /** .NET target framework selected in the project wizard, such as "net8.0". */
+    targetFramework?: string;
 }
 
 export type ConnectorTriggerPickerDataSource = Pick<ConnectorTriggerDataClient,
@@ -427,7 +429,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }
-        const options: ConnectorProjectCreationOptions = { selection: normalizedSelection, outputMetadata, cancellationToken: token };
+        const options: ConnectorProjectCreationOptions = {
+            selection: normalizedSelection, outputMetadata, cancellationToken: token,
+            targetFramework: this.launchOptions.targetFramework,
+        };
         await this.projectCreator.createProject(context, template, this.launchOptions.language, projectPath, options);
     }
 

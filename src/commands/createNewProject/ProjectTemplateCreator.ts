@@ -12,6 +12,7 @@ import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/conn
 import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
+import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
@@ -41,6 +42,8 @@ export interface ConnectorProjectCreationOptions {
     selection: ConnectorTriggerSelections;
     outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
     cancellationToken: vscode.CancellationToken;
+    /** .NET target framework to apply to the C# starter, such as "net8.0". */
+    targetFramework?: string;
 }
 
 export class ProjectTemplateCreator {
@@ -88,6 +91,10 @@ export class ProjectTemplateCreator {
                 functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
                     bindings.filter(binding => binding.functionName === name).length !== 1)) {
                 throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));
+            }
+            if (language === ProjectLanguage.CSharp && options.targetFramework) {
+                await retargetConnectorTriggerProject(source, options.targetFramework);
+                context.telemetry.properties.targetFramework = options.targetFramework;
             }
             await this.prepareLocalSettings(context, source);
             if (selections.length > 1 && !generic) {

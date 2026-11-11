@@ -195,6 +195,73 @@ suite('Connector project batch creation', () => {
         });
     }
 
+    test('creates the C# starter for the .NET runtime selected before the picker opened', async function () {
+        this.timeout(30_000);
+        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated' },
+        });
+        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+        await AzExtFsExtra.writeFile(path.join(source, 'Program.cs'), 'class Program {}');
+        await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.1.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="0.2.0-alpha" />
+  </ItemGroup>
+</Project>`);
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+        const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.CSharp));
+        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        const originalExecuteCommand = cpUtils.executeCommand;
+        const dotnetCommands: string[][] = [];
+        try {
+            cpUtils.executeCommand = async (...args) => {
+                if (args[2] === 'dotnet') {
+                    dotnetCommands.push(args[3] as string[]);
+                    return '';
+                }
+                return originalExecuteCommand(...args);
+            };
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination,
+                { ...options, targetFramework: 'net8.0' });
+        } finally {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        }
+
+        const csproj = await AzExtFsExtra.readFile(path.join(destination, 'starter.csproj'));
+        assert.match(csproj, /<TargetFramework>net8\.0<\/TargetFramework>/);
+        assert.doesNotMatch(csproj, /net10/);
+        assert.match(csproj, /Extensions\.Connector" Version="1\.0\.0"/);
+        const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
+        assert.strictEqual(settings['azureFunctions.deploySubpath'], 'bin/Release/net8.0/publish');
+        assert.deepStrictEqual(dotnetCommands, [['build']]);
+        assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+    });
+
+    test('rejects a C# starter that cannot be retargeted before copying any file', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+        await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><TargetFrameworks>net8.0;net10.0</TargetFrameworks></PropertyGroup>
+<ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+        const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.CSharp));
+        await assert.rejects(creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination,
+            { ...options, targetFramework: 'net8.0' }), /could not be configured for net8\.0/);
+        assert.deepStrictEqual(await fs.promises.readdir(destination), []);
+    });
+
     test('rejects destination conflicts before copying any file', async () => {
         await AzExtFsExtra.writeFile(path.join(source, 'first.txt'), 'new');
         await AzExtFsExtra.writeFile(path.join(source, 'second.txt'), 'template');

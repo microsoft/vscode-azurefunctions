@@ -7,7 +7,7 @@
 
 ### Fixed
 * Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
-
+* Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 ## 1.22.2 - 2026-09-25
 
 ### Fixed
