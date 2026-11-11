@@ -36,7 +36,10 @@ import {
     type ConnectorTriggerNamespacePlan,
     type ConnectorTriggerSetupTarget,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
-import { createConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
+import {
+    createConnectorTriggerF5Dependencies,
+    createConnectorTriggerSetupScopes,
+} from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
 
 const target: ConnectorTriggerSetupTarget = {
     version: 1,
@@ -455,6 +458,54 @@ suite('Connector Trigger F5 production adapters', () => {
         );
         assert.ok(dependencies);
         await dependencies.projectStore.markComplete('C:\\project');
+    });
+
+    test('setup scopes keep the selected account when accounts share subscription, tenant and cloud', async () => {
+        const calls: string[] = [];
+        const accountFor = (accountId: string | undefined) => {
+            calls.push(accountId ?? 'missing');
+            return accountId;
+        };
+        const options = [
+            { id: 'shared-subscription', label: 'Shared (shared-subscription, Account A)', accountId: 'account-a', accountLabel: 'Account A' },
+            { id: 'shared-subscription', label: 'Shared (shared-subscription, Account B)', accountId: 'account-b', accountLabel: 'Account B' },
+        ];
+        const data = {
+            listSubscriptionScopes: () => Promise.resolve(options),
+            getSubscriptionContext: (subscriptionId: string, accountId?: string) => {
+                accountFor(accountId);
+                return Promise.resolve({ ...createLiveSubscription(), subscriptionId, account: { id: accountId } });
+            },
+            listLocations: (_context: unknown, _subscriptionId: string, accountId?: string) => {
+                accountFor(accountId);
+                return Promise.resolve([{ name: 'eastus', label: 'East US' }]);
+            },
+            getCatalog: (_context: unknown, azureContext: { accountId?: string }) => {
+                accountFor(azureContext.accountId);
+                return Promise.resolve({ catalog: { connectors: [] } });
+            },
+            listConnectorOperations: (_context: unknown, azureContext: { accountId?: string }) => {
+                accountFor(azureContext.accountId);
+                return Promise.resolve([]);
+            },
+            invalidateSubscriptions: () => undefined,
+        } as unknown as Parameters<typeof createConnectorTriggerSetupScopes>[0];
+        const scopes = createConnectorTriggerSetupScopes(data, () => Promise.resolve());
+        const context = await createTestActionContext();
+
+        const listed = await scopes.listSubscriptions(context, false);
+        assert.deepStrictEqual(listed, options);
+        const selected = listed[1];
+        const subscription = await scopes.getSubscription(context, selected);
+        await scopes.listRegions(context, selected);
+        const scope = { subscription, region: 'eastus' };
+        await scopes.listConnectors(context, scope);
+        await scopes.listEvents(context, scope, 'office365');
+
+        assert.strictEqual(subscription.accountId, 'account-b');
+        assert.strictEqual(subscription.id, 'shared-subscription');
+        assert.deepStrictEqual(calls, ['account-b', 'account-b', 'account-b', 'account-b']);
+        assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /account-/);
     });
 });
 

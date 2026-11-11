@@ -5,6 +5,7 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
+import { type ConnectorTriggerAzureContext, type ConnectorTriggerDataClient } from '../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import { readConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { ext } from '../../extensionVariables';
 import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Adapters';
@@ -31,44 +32,58 @@ export function createConnectorTriggerF5Dependencies(
         openSetup: async (context, request) => {
             const { ConnectorTriggerSetupController } = await import('./ConnectorTriggerSetupController.js');
             const { ConnectorTriggerDataClient } = await import('../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient.js');
-            const data = new ConnectorTriggerDataClient();
-            const scopes: ConnectorTriggerSetupScopes = {
-                listSubscriptions: async (_context, showAll) => await data.listSubscriptions(showAll),
-                getSubscription: async (_context, id) => {
-                    const subscription = await data.getSubscriptionContext(id);
-                    return {
-                        id: subscription.subscriptionId,
-                        tenantId: subscription.tenantId,
-                        environment: {
-                            name: subscription.environment.name,
-                            resourceManagerEndpointUrl: subscription.environment.resourceManagerEndpointUrl,
-                        },
-                    };
-                },
-                listRegions: async (actionContext, id) =>
-                    (await data.listLocations(actionContext, id)).map(location => ({
-                        id: location.name, label: location.label, regionCategory: location.regionCategory,
-                    })),
-                listConnectors: async (actionContext, scope) =>
-                    (await data.getCatalog(actionContext, toCatalogContext(scope))).catalog.connectors,
-                listEvents: async (actionContext, scope, connectorId) =>
-                    (await data.listConnectorOperations(actionContext, toCatalogContext(scope), connectorId))
-                        .map(operation => ({ id: operation.id, label: operation.label })),
-                signIn: async () => {
-                    await commands.executeCommand('azureResourceGroups.logIn');
-                    data.invalidateSubscriptions();
-                },
-            };
+            const scopes = createConnectorTriggerSetupScopes(new ConnectorTriggerDataClient(), async () => {
+                await commands.executeCommand('azureResourceGroups.logIn');
+            });
             return ConnectorTriggerSetupController.open(ext.context, context, request, gateway, operationResolver, scopes);
         },
     });
 }
 
-function toCatalogContext(scope: ConnectorTriggerSetupScope): {
-    subscriptionId: string; subscriptionName: string; region: string; regionDisplayName: string;
-} {
+/**
+ * The same subscription ID can be listed under several Azure Resources accounts, so every lookup carries the
+ * selected option's account rather than resolving the first subscription with that ID.
+ */
+export function createConnectorTriggerSetupScopes(
+    data: Pick<ConnectorTriggerDataClient,
+        'listSubscriptionScopes' | 'getSubscriptionContext' | 'listLocations' | 'getCatalog' |
+        'listConnectorOperations' | 'invalidateSubscriptions'>,
+    signIn: () => Promise<void>,
+): ConnectorTriggerSetupScopes {
+    return {
+        listSubscriptions: async (_context, showAll) => await data.listSubscriptionScopes(showAll),
+        getSubscription: async (_context, option) => {
+            const subscription = await data.getSubscriptionContext(option.id, option.accountId);
+            return {
+                id: subscription.subscriptionId,
+                tenantId: subscription.tenantId,
+                accountId: option.accountId,
+                environment: {
+                    name: subscription.environment.name,
+                    resourceManagerEndpointUrl: subscription.environment.resourceManagerEndpointUrl,
+                },
+            };
+        },
+        listRegions: async (actionContext, option) =>
+            (await data.listLocations(actionContext, option.id, option.accountId)).map(location => ({
+                id: location.name, label: location.label, regionCategory: location.regionCategory,
+            })),
+        listConnectors: async (actionContext, scope) =>
+            (await data.getCatalog(actionContext, toCatalogContext(scope))).catalog.connectors,
+        listEvents: async (actionContext, scope, connectorId) =>
+            (await data.listConnectorOperations(actionContext, toCatalogContext(scope), connectorId))
+                .map(operation => ({ id: operation.id, label: operation.label })),
+        signIn: async () => {
+            await signIn();
+            data.invalidateSubscriptions();
+        },
+    };
+}
+
+function toCatalogContext(scope: ConnectorTriggerSetupScope): ConnectorTriggerAzureContext {
     return {
         subscriptionId: scope.subscription.id,
+        accountId: scope.subscription.accountId,
         subscriptionName: scope.subscription.id,
         region: scope.region,
         regionDisplayName: scope.region,
