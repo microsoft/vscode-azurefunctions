@@ -12,13 +12,18 @@ import { Range, Uri, WorkspaceEdit, workspace } from 'vscode';
 import { localSettingsFileName } from '../../constants';
 import { localize } from '../../localize';
 import { parseJson } from '../../utils/parseJson';
-import { ConnectorTriggerF5SetupError, type ConnectorTriggerLocalSettingsWriter } from './connectorTriggerF5Contracts';
+import {
+    ConnectorTriggerF5SetupError,
+    ConnectorTriggerLocalSettingsChangedError,
+    type ConnectorTriggerLocalSettingsWriter,
+} from './connectorTriggerF5Contracts';
 
 export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTriggerLocalSettingsWriter {
     public async write(
         context: IActionContext,
         projectPath: string,
         values: Readonly<Record<string, string>>,
+        expectedExisting?: Readonly<Record<string, boolean>>,
     ): Promise<void> {
         const localSettingsPath = path.join(projectPath, localSettingsFileName);
         const uri = Uri.file(localSettingsPath);
@@ -36,6 +41,16 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
         }
         if (settings.IsEncrypted === undefined) {
             contents = jsonc.applyEdits(contents, jsonc.modify(contents, ['IsEncrypted'], false, {}));
+        }
+        if (expectedExisting) {
+            const currentValues = settings.Values ?? {};
+            const currentExisting = Object.fromEntries(
+                Object.keys(expectedExisting).map(key => [key, Object.hasOwn(currentValues, key)]),
+            );
+            const changedNames = Object.keys(expectedExisting).filter(key => currentExisting[key] !== expectedExisting[key]);
+            if (changedNames.length > 0) {
+                throw new ConnectorTriggerLocalSettingsChangedError(changedNames, currentExisting);
+            }
         }
         for (const [key, value] of Object.entries(values)) {
             maskValue(context, key);

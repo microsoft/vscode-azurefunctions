@@ -24,6 +24,18 @@ export class ConnectorTriggerF5SetupError extends Error {
     }
 }
 
+export class ConnectorTriggerLocalSettingsChangedError extends Error {
+    public constructor(
+        public readonly changedNames: readonly string[],
+        public readonly currentExisting: Readonly<Record<string, boolean>>,
+    ) {
+        super(localize(
+            'connectorSettingsChangedSinceReview',
+            'local.settings.json changed after Connector Trigger setup was reviewed.',
+        ));
+    }
+}
+
 export type ConnectorTriggerParameterValue =
     string |
     number |
@@ -97,6 +109,11 @@ export interface ConnectorTriggerConfig {
     id: string;
     name: string;
     state: string;
+    /**
+     * Persistent identity of the workspace that created the Trigger Config, read back from the
+     * resource. Undefined when the resource carries no ownership marker.
+     */
+    ownerWorkspaceId?: string;
     pollingEndpoints: {
         receiveUri: string;
         acknowledgeUri?: string;
@@ -171,6 +188,20 @@ export interface ConnectorTriggerGateway {
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
     ): Promise<unknown>;
+    /**
+     * Returns the Microsoft Entra principal that the local Functions host authenticates as when
+     * polling, resolved from the selected authenticated Azure account. Never infer it from the
+     * connection creator, which can be another user or service principal.
+     */
+    getPollingPrincipal(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+    ): Promise<ConnectorTriggerPrincipal>;
+    /**
+     * Creates or updates only the named policies. Policy names are principal-specific; an existing
+     * policy with a requested name may be updated only when it grants the same principal, and other
+     * policies on the connection must never be deleted or replaced.
+     */
     ensureConnectionAccessPolicies(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
@@ -179,8 +210,20 @@ export interface ConnectorTriggerGateway {
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
     ): Promise<void>;
     /**
+     * Returns the Trigger Config with the given name, including its ownership marker, or undefined
+     * when it does not exist.
+     */
+    getTriggerConfig(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        namespace: ConnectorTriggerNamespace,
+        triggerConfigName: string,
+    ): Promise<ConnectorTriggerConfig | undefined>;
+    /**
      * Creates or updates an enabled Poll Trigger Config without notificationDetails. The returned
      * model must include service-generated pollingEndpoints, using a GET fallback when PUT omits it.
+     * Implementations must persist request.ownerWorkspaceId on the resource so getTriggerConfig can
+     * return it as the ownership marker.
      */
     createOrUpdateTriggerConfig(
         context: IActionContext,
@@ -188,14 +231,16 @@ export interface ConnectorTriggerGateway {
     ): Promise<ConnectorTriggerConfig>;
 }
 
+export interface ConnectorTriggerPrincipal {
+    objectId: string;
+    tenantId: string;
+}
+
 export interface ConnectorTriggerConnectionAccessPolicy {
     name: string;
     principal: {
         type: 'ActiveDirectory';
-        identity: {
-            objectId: string;
-            tenantId: string;
-        };
+        identity: ConnectorTriggerPrincipal;
     };
 }
 
@@ -214,6 +259,7 @@ export interface ConnectorTriggerConfigRequest {
     namespace: ConnectorTriggerNamespace;
     connection: ConnectorTriggerConnection;
     triggerConfigName: string;
+    ownerWorkspaceId: string;
     deliveryMode: 'Poll';
     state: 'Enabled';
     type: 'NotSpecified';
@@ -332,6 +378,8 @@ export interface ConnectorTriggerResourceNames {
 export interface ConnectorTriggerSetupRequest {
     metadata?: ConnectorTriggerProjectMetadata;
     projectPath: string;
+    /** Persistent identity of this workspace instance; distinguishes clones at the same path. */
+    workspaceId: string;
     binding: ConnectorTriggerLocalBinding;
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
 }
@@ -358,11 +406,21 @@ export interface ConnectorTriggerSetupSession {
 }
 
 export interface ConnectorTriggerLocalSettingsWriter {
+    /**
+     * When expectedExisting is provided, throws ConnectorTriggerLocalSettingsChangedError without
+     * writing if any listed setting's presence differs from the reviewed state.
+     */
     write(
         context: IActionContext,
         projectPath: string,
         values: Readonly<Record<string, string>>,
+        expectedExisting?: Readonly<Record<string, boolean>>,
     ): Promise<void>;
+}
+
+export interface ConnectorTriggerWorkspaceIdentityStore {
+    /** Returns a persistent identity for this workspace instance, creating it on first use. */
+    get(projectPath: string): Promise<string>;
 }
 
 export interface ConnectorTriggerF5Runtime {
@@ -382,5 +440,6 @@ export interface ConnectorTriggerF5Dependencies {
     operationResolver: ConnectorTriggerOperationResolver;
     openSetup(context: IActionContext, request: ConnectorTriggerSetupRequest): Promise<ConnectorTriggerSetupSession>;
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
+    workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
 }

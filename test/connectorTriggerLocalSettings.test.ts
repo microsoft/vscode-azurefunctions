@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Position, Uri, WorkspaceEdit, workspace } from 'vscode';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
+import { ConnectorTriggerLocalSettingsChangedError } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { parseJson } from '../src/utils/parseJson';
 
 suite('Connector Trigger safe local settings', () => {
@@ -53,6 +54,21 @@ suite('Connector Trigger safe local settings', () => {
         });
         await writer.write(context, projectPath, values);
         assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), first);
+    });
+
+    test('rejects without editing when reviewed settings changed before writing', async () => {
+        const original = '{"IsEncrypted":false,"Values":{"FixtureTriggerConfig":"added-later"}}';
+        await fs.promises.writeFile(settingsPath, original);
+        await assert.rejects(
+            new FileConnectorTriggerLocalSettingsWriter().write(await createTestActionContext(), projectPath, values, {
+                ['FixtureConnector__pollingEndpoint']: false,
+                FixtureTriggerConfig: false,
+            }),
+            (error: unknown) => error instanceof ConnectorTriggerLocalSettingsChangedError
+                && error.changedNames.join() === 'FixtureTriggerConfig'
+                && error.currentExisting.FixtureTriggerConfig === true,
+        );
+        assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
     });
 
     test('does not overwrite an unsaved local-settings editor', async () => {

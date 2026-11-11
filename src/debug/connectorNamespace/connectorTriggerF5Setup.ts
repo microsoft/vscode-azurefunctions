@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
 import {
     AzureWizard,
@@ -14,13 +14,18 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localSettingsFileName } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
     ConnectorTriggerF5SetupError,
+    ConnectorTriggerLocalSettingsChangedError,
     type ConnectorTriggerConnection,
+    type ConnectorTriggerConnectionAccessPolicy,
+    type ConnectorTriggerPrincipal,
+    type ConnectorTriggerWorkspaceIdentityStore,
     type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerF5Runtime,
@@ -42,9 +47,11 @@ export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
 
 const connectionPollIntervalMs = 3000;
 const connectionPollTimeoutMs = 3 * 60 * 1000;
+const workspaceIdsStateKey = 'connectorTriggerF5.workspaceIds';
 
 interface ConnectorTriggerF5WizardContext extends IActionContext {
     projectPath: string;
+    setupRequest?: ConnectorTriggerSetupRequest;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
@@ -82,7 +89,11 @@ export async function runConnectorTriggerF5Setup(
     };
     maskSetupValues(wizardContext);
 
-    const setup = await dependencies.openSetup(wizardContext, await createSetupRequest(wizardContext));
+    const workspaceIdentity = dependencies.workspaceIdentity ?? new WorkspaceStateConnectorTriggerWorkspaceIdentityStore();
+    const workspaceId = await workspaceIdentity.get(projectPath);
+    maskValue(wizardContext, workspaceId);
+    wizardContext.setupRequest = await createSetupRequest(wizardContext, workspaceId);
+    const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
     try {
         await runWizard(wizardContext, [new ConnectorResourcesPromptStep()], [], false);
@@ -112,12 +123,14 @@ export function createConnectorTriggerResourceNames(
     projectPath: string,
     target: ConnectorTriggerSetupTarget,
     binding: ConnectorTriggerLocalBinding,
+    workspaceId: string,
 ): ConnectorTriggerResourceNames {
     const scopeHash = stableHash([
         target.subscription.id,
         target.region,
     ]);
     const projectHash = stableHash([
+        workspaceId,
         projectPath,
         target.subscription.id,
         target.region,
@@ -319,9 +332,12 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
         const connection = nonNullValue(context.connection);
         const namespaceObjectId = namespace.identity?.principalId;
         const namespaceTenantId = namespace.identity?.tenantId;
-        const developerObjectId = connection.createdBy?.objectId;
-        const developerTenantId = connection.createdBy?.tenantId;
-        if (!namespaceObjectId || !namespaceTenantId || !developerObjectId || !developerTenantId) {
+        const target = nonNullValue(context.target);
+        const pollingPrincipal = await this.dependencies.gateway.getPollingPrincipal(context, target);
+        assertSetupActive(context);
+        maskValue(context, pollingPrincipal.objectId);
+        maskValue(context, pollingPrincipal.tenantId);
+        if (!namespaceObjectId || !namespaceTenantId || !pollingPrincipal.objectId || !pollingPrincipal.tenantId) {
             throw new Error(localize(
                 'missingConnectorAccessIdentities',
                 'Azure did not return the identities required to authorize local Connector Trigger polling.',
@@ -330,30 +346,12 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
 
         await this.dependencies.gateway.ensureConnectionAccessPolicies(
             context,
-            nonNullValue(context.target),
+            target,
             namespace,
             connection,
             [
-                {
-                    name: 'namespace-trigger-runtime',
-                    principal: {
-                        type: 'ActiveDirectory',
-                        identity: {
-                            objectId: namespaceObjectId,
-                            tenantId: namespaceTenantId,
-                        },
-                    },
-                },
-                {
-                    name: 'local-developer',
-                    principal: {
-                        type: 'ActiveDirectory',
-                        identity: {
-                            objectId: developerObjectId,
-                            tenantId: developerTenantId,
-                        },
-                    },
-                },
+                createAccessPolicy('namespace-trigger-runtime', { objectId: namespaceObjectId, tenantId: namespaceTenantId }),
+                createAccessPolicy('local-developer', pollingPrincipal),
             ],
         );
     }
@@ -401,16 +399,30 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
         assertSetupActive(context);
         const operation = nonNullValue(context.operation);
+        const target = nonNullValue(context.target);
+        const namespace = nonNullValue(context.namespace);
+        const triggerConfigName = nonNullValue(context.names).triggerConfigName;
+        const workspaceId = nonNullValue(context.setupRequest).workspaceId;
+        const existing = await this.dependencies.gateway.getTriggerConfig(context, target, namespace, triggerConfigName);
+        assertSetupActive(context);
+        if (existing && existing.ownerWorkspaceId !== workspaceId) {
+            context.telemetry.properties.connectorF5TriggerConfigOwnedElsewhere = 'true';
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorTriggerConfigOwnedElsewhere',
+                'A Trigger Config with the selected name belongs to another workspace. Choose a different Trigger Config name, then retry F5. The existing Trigger Config was not changed.',
+            ));
+        }
         const parameters = this.dependencies.operationResolver.serializeParameters(
             operation,
             context.effectiveInputs,
             context.parameterValues,
         );
         context.triggerConfig = await this.dependencies.gateway.createOrUpdateTriggerConfig(context, {
-            target: nonNullValue(context.target),
-            namespace: nonNullValue(context.namespace),
+            target,
+            namespace,
             connection: nonNullValue(context.connection),
-            triggerConfigName: nonNullValue(context.names).triggerConfigName,
+            triggerConfigName,
+            ownerWorkspaceId: workspaceId,
             deliveryMode: 'Poll',
             state: 'Enabled',
             type: 'NotSpecified',
@@ -448,10 +460,27 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         }
 
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
-        await writer.write(context, context.projectPath, {
+        const values = {
             [`${context.binding.connectionSettingName}__pollingEndpoint`]: pollingEndpoint,
             [context.binding.triggerConfigSettingName]: triggerConfig.name,
-        });
+        };
+        let expectedExisting: Readonly<Record<string, boolean>> = Object.fromEntries(
+            nonNullValue(context.setupRequest).localSettings.map(setting => [setting.name, setting.exists]),
+        );
+        for (; ;) {
+            assertSetupActive(context);
+            try {
+                await writer.write(context, context.projectPath, values, expectedExisting);
+                break;
+            } catch (error) {
+                if (!(error instanceof ConnectorTriggerLocalSettingsChangedError)) {
+                    throw error;
+                }
+                assertSetupActive(context);
+                await confirmChangedLocalSettings(context, error.changedNames);
+                expectedExisting = error.currentExisting;
+            }
+        }
         context.localSettingsWritten = true;
     }
 
@@ -540,19 +569,25 @@ async function waitForConnectedStatus(
             while (runtime.now() < deadline) {
                 throwIfCancelled(token);
                 assertSetupActive(context);
+                let refreshed: ConnectorTriggerConnection | undefined;
                 try {
-                    const refreshed = await dependencies.gateway.getConnection(
+                    refreshed = await dependencies.gateway.getConnection(
                         context,
                         nonNullValue(context.target),
                         namespace,
                         connection,
                     );
-                    if (isConnected(refreshed)) {
-                        maskConnection(context, refreshed);
-                        return refreshed;
-                    }
                 } catch (error) {
+                    if (error instanceof UserCancelledError) {
+                        throw error;
+                    }
                     lastError = error;
+                }
+                throwIfCancelled(token);
+                assertSetupActive(context);
+                if (refreshed && isConnected(refreshed)) {
+                    maskConnection(context, refreshed);
+                    return refreshed;
                 }
 
                 await runtime.delay(connectionPollIntervalMs);
@@ -598,7 +633,7 @@ function assertSetupActive(context: ConnectorTriggerF5WizardContext): void {
     throwIfCancelled(nonNullValue(context.setupSession).cancellationToken);
 }
 
-async function createSetupRequest(context: ConnectorTriggerF5WizardContext): Promise<ConnectorTriggerSetupRequest> {
+async function createSetupRequest(context: ConnectorTriggerF5WizardContext, workspaceId: string): Promise<ConnectorTriggerSetupRequest> {
     const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
     if (settings.IsEncrypted) {
         throw new ConnectorTriggerF5SetupError(undefined, localize(
@@ -613,6 +648,7 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext): Pro
     return {
         metadata: context.metadata,
         projectPath: context.projectPath,
+        workspaceId,
         binding: context.binding,
         localSettings: keys.map(({ name, purpose }) => {
             const previousValue = settings.Values?.[name];
@@ -628,6 +664,51 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext): Pro
             };
         }),
     };
+}
+
+class WorkspaceStateConnectorTriggerWorkspaceIdentityStore implements ConnectorTriggerWorkspaceIdentityStore {
+    public async get(projectPath: string): Promise<string> {
+        const state = ext.context.workspaceState;
+        const key = path.resolve(projectPath);
+        const ids = state.get<Record<string, string>>(workspaceIdsStateKey) ?? {};
+        const existing = ids[key];
+        if (existing) {
+            return existing;
+        }
+        const id = randomUUID();
+        await state.update(workspaceIdsStateKey, { ...ids, [key]: id });
+        return id;
+    }
+}
+
+function createAccessPolicy(prefix: string, principal: ConnectorTriggerPrincipal): ConnectorTriggerConnectionAccessPolicy {
+    return {
+        name: `${prefix}-${stableHash([principal.tenantId.toLowerCase(), principal.objectId.toLowerCase()])}`,
+        principal: {
+            type: 'ActiveDirectory',
+            identity: {
+                objectId: principal.objectId,
+                tenantId: principal.tenantId,
+            },
+        },
+    };
+}
+
+async function confirmChangedLocalSettings(context: IActionContext, changedNames: readonly string[]): Promise<void> {
+    context.telemetry.properties.connectorF5LocalSettingsChangedSinceReview = 'true';
+    const overwrite: vscode.MessageItem = { title: localize('overwriteConnectorSettings', 'Overwrite') };
+    const result = await context.ui.showWarningMessage(
+        localize(
+            'connectorSettingsChangedReapprove',
+            'local.settings.json changed after you reviewed Connector Trigger setup. Overwrite these settings: {0}?',
+            changedNames.join(', '),
+        ),
+        { modal: true, stepName: 'connectorF5LocalSettingsChanged' },
+        overwrite,
+    );
+    if (result !== overwrite) {
+        throw new UserCancelledError('connectorF5LocalSettingsChanged');
+    }
 }
 
 function maskSetupValues(context: ConnectorTriggerF5WizardContext): void {
