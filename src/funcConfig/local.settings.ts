@@ -62,7 +62,7 @@ export async function ensureLocalSettingsIgnored(projectPath: string): Promise<v
         const contents = await AzExtFsExtra.pathExists(ignorePath)
             ? (await AzExtFsExtra.readFile(ignorePath)).toString()
             : '';
-        const lines = contents.split(/\r?\n/).map(line => line.trim());
+        const lines = contents.split(/\r?\n/);
         const ruleIndex = Math.max(
             lines.lastIndexOf(localSettingsFileName),
             lines.lastIndexOf(`/${localSettingsFileName}`),
