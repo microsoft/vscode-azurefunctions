@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
+import { ConnectorTriggerF5SetupError } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 const binding: ConnectorTriggerLocalBinding = {
@@ -125,8 +126,7 @@ suite('Connector Namespace pre-debug flow', () => {
         process.env[endpointKey] = validEndpoint;
         const harness = await createHarness('Configure');
         const hostLaunch: ConnectorTriggerHostLaunch = {
-            kind: 'task',
-            execution: 'process',
+            kind: 'exactEnvironment',
             environment: { SYNTHETIC_TASK_VARIABLE: 'synthetic-task-value' },
         };
         let forwarded: ConnectorTriggerHostLaunch | undefined;
@@ -147,6 +147,50 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.strictEqual(forwarded, hostLaunch);
         assert.deepStrictEqual(harness.prompts[0].items, ['Configure', 'Debug Anyway']);
         assert.deepStrictEqual(harness.azureCalls, []);
+    });
+
+    test('rejects setup for an unverified task launch without provisioning or writing settings', async () => {
+        const taskLaunch: ConnectorTriggerHostLaunch = {
+            kind: 'task',
+            execution: 'process',
+            environment: { SYNTHETIC_TASK_VARIABLE: 'synthetic-task-value' },
+            environmentLayers: [{ SYNTHETIC_TASK_VARIABLE: 'synthetic-task-value', SYNTHETIC_DELETED_VARIABLE: null }],
+        };
+        await writeSettings({ IsEncrypted: false, Values: {} });
+        const before = await readSettings();
+
+        for (const viaOptions of [true, false]) {
+            const harness = await createHarness('Configure');
+            let setupOpened = false;
+            harness.dependencies.openSetup = async () => {
+                setupOpened = true;
+                throw new UserCancelledError('syntheticSetup');
+            };
+            if (!viaOptions) {
+                harness.dependencies.hostLaunch = taskLaunch;
+            }
+
+            await assert.rejects(
+                validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, viaOptions ? { hostLaunch: taskLaunch } : { environment: {} }),
+                (error: unknown) => error instanceof ConnectorTriggerF5SetupError && /can't verify the identity/.test(error.message),
+            );
+            assert.strictEqual(setupOpened, false);
+            assert.deepStrictEqual(harness.azureCalls, []);
+            assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupBlocked, 'unverifiedTaskLaunch');
+        }
+        assert.strictEqual(await readSettings(), before);
+
+        const debugAnyway = await createHarness('Debug Anyway');
+        await validateConnectorNamespacePreDebug(debugAnyway.context, projectPath, debugAnyway.dependencies, { hostLaunch: taskLaunch });
+        assert.strictEqual(debugAnyway.context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
+
+        const configuredByTask = await createHarness();
+        await validateConnectorNamespacePreDebug(configuredByTask.context, projectPath, configuredByTask.dependencies, {
+            hostLaunch: { ...taskLaunch, environment: { [endpointKey]: validEndpoint, [configKey]: validConfig } },
+        });
+        assert.deepStrictEqual(configuredByTask.prompts, []);
+        assert.strictEqual(configuredByTask.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+        assert.deepStrictEqual(configuredByTask.azureCalls, []);
     });
 
     test('defers encrypted settings that are present to Core Tools without changing the file', async () => {
