@@ -135,6 +135,46 @@ export class CollectionReviews implements vscode.Disposable {
         return this.create(copied);
     }
 
+    public openChanges(changes: { invocation: HttpInvocation; request: Partial<HttpRequest>; reason: string }[]): CollectionReviewController {
+        if (!changes.length || changes.length > 100 || new Set(changes.map(change => change.invocation.id)).size !== changes.length) {
+            throw new Error(localize('azureInvoke.invalidRequestChanges', 'Propose changes to 1 to 100 unique saved requests.'));
+        }
+        const saved = new Map(this.provider.getRequests().map(invocation => [invocation.id, copyInvocation(invocation)]));
+        const proposed = new Map(saved);
+        for (const change of changes) {
+            if (JSON.stringify(saved.get(change.invocation.id)) !== JSON.stringify(copyInvocation(change.invocation))) {
+                throw new Error(localize('azureInvoke.inspectionExpired', 'The collection or its results changed. Inspect the saved request again before proposing changes.'));
+            }
+            proposed.set(change.invocation.id, { ...change.invocation, request: { ...change.invocation.request, ...change.request } });
+        }
+        const included = new Map<string, HttpInvocation>();
+        for (const change of changes) {
+            const invocation = proposed.get(change.invocation.id);
+            if (!invocation) {
+                throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
+            }
+            validateInvocation(invocation);
+            for (const input of planInvocationChain(invocation, id => proposed.get(id))) {
+                included.set(input.id, input);
+            }
+        }
+        if (included.size > 100) {
+            throw new Error(localize('azureInvoke.tooManyRequestChanges', 'Review fewer requests at once; proposed changes and their prerequisites must fit within 100 requests.'));
+        }
+        const candidates: InvocationCandidate[] = [...included.values()].map(invocation => {
+            const change = changes.find(change => change.invocation.id === invocation.id);
+            return {
+                ...invocation, trigger: 'http', auth: 'unknown',
+                group: invocation.group ?? localize('azureInvoke.requestsGroup', 'Requests'),
+                description: change ?
+                    localize('azureInvoke.requestChangeReason', '{0} Proposed fields: {1}.', change.reason, Object.keys(change.request).join(', ')) :
+                    localize('azureInvoke.unchangedPrerequisite', 'Unchanged prerequisite included for context. Applying this review does not run it.'),
+            };
+        });
+        const originals = new Map([...saved].filter(([id]) => included.has(id)));
+        return this.create(candidates, originals);
+    }
+
     private create(candidates?: InvocationCandidate[], originals?: Map<string, HttpInvocation>): CollectionReviewController {
         this.controller?.panel.dispose();
         const review: CollectionReview = { id: randomUUID(), candidates: candidates ?? [], cancelled: false, drafts: new Map(), revision: 0, originals };

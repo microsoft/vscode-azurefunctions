@@ -5,6 +5,7 @@
 
 import { createTestActionContext, isUserCancelledError, registerOnActionStartHandler, TestUserInput, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { McpTool, registerMcpTool } from '@microsoft/vscode-inproc-mcp/mcp';
+import { ConsentGuidance } from '@microsoft/vscode-inproc-mcp';
 import { startInProcHttpServer } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as assert from 'assert';
 import * as fs from 'fs-extra';
@@ -19,6 +20,7 @@ import { listBlobInvocationsTool } from '../src/chat/tools/azureInvoke/blobInvoc
 import { draftHttpInvocationTool, getInvocationCollectionReviewTool, proposeInvocationCollectionTool, selectBlobInvocationFileTool } from '../src/chat/tools/azureInvoke/collectionReviewTools';
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
+import { getHttpInvocationInspectionTool, proposeHttpInvocationChangesTool } from '../src/chat/tools/azureInvoke/savedHttpInvocationTools';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
 import { mcpServerId } from '../src/constants';
 import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
@@ -682,6 +684,7 @@ suite('Azure Invoke', () => {
         const provider = new AzureInvokeTreeDataProvider();
         const invocation = { ...provider.createRequest(), request: request({ url: `${baseUrl}/format-json` }) };
         const editor = new HttpRequestController(context, invocation, false, saved => provider.saveRequest(saved));
+        const reviews = new CollectionReviews(context, provider);
         try {
             await runEditorScript(editor, `
                 document.querySelector('#send').click();
@@ -690,8 +693,17 @@ suite('Azure Invoke', () => {
                 if (document.querySelector('#response-body img')) throw new Error('The response was interpreted as HTML.');
             `);
             provider.saveRequest(invocation);
+            const review = reviews.openChanges([{ invocation, request: { method: 'GET' }, reason: 'Review the response.' }]);
+            await runEditorScript(review, `
+                document.querySelector('.case-toggle').click();
+                document.querySelector('.send-preview').click();
+                await waitFor(() => !document.querySelector('.preview-response-body').hidden);
+                if (document.querySelector('.preview-response-body').textContent !== ${JSON.stringify(formattedResponseJson)}) throw new Error('The collection preview did not indent JSON while preserving its original values.');
+                if (document.querySelector('.preview-response-body img')) throw new Error('The preview response was interpreted as HTML.');
+            `);
         } finally {
             editor.panel.dispose();
+            reviews.dispose();
             provider.dispose();
         }
     });
@@ -909,6 +921,9 @@ suite('Azure Invoke', () => {
             const running = editors.sendRequest(await createTestActionContext(), slow, abort.signal);
             await started;
             assert.strictEqual(provider.getRequestRunStatus(slow.id).status, 'running');
+            const inspection = editors.getInspection(slow.id);
+            assert.strictEqual(inspection.diagnostic, undefined);
+            assert.throws(() => editors.getInspectedInvocation(slow.id, inspection.inspectionId), /Inspect the saved request again/);
             abort.abort();
             await assert.rejects(running, isUserCancelledError);
             assert.strictEqual(provider.getRequestRunStatus(slow.id).status, 'cancelled');
@@ -918,6 +933,163 @@ suite('Azure Invoke', () => {
         }
     });
 
+    test('agents inspect saved failures and propose fixes that apply only after review without replacing private fields', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const reviews = new CollectionReviews(context, provider);
+        let controller: CollectionReviewController | undefined;
+        const openChanges = reviews.openChanges.bind(reviews);
+        reviews.openChanges = changes => {
+            const opened = openChanges(changes);
+            controller = opened;
+            return opened;
+        };
+        const source = accountChain()[0];
+        const target = {
+            id: 'repair-target', name: 'Create holding', group: 'Holdings',
+            request: request({
+                method: 'POST', url: `${baseUrl}/repairable?embedded=private-repair-query`,
+                headers: [{ name: 'x-functions-key', value: 'private-repair-key' }],
+                query: [{ name: 'code', value: 'private-repair-code' }],
+                body: '{"missing":"private-repair-body"}', dependsOn: [source.id],
+            }),
+        };
+        const unchecked = { id: 'repair-unchecked', name: 'Keep unchanged', request: request() };
+        provider.saveRequests([source, target, unchecked]);
+        const inspectDefinition = getHttpInvocationInspectionTool(editors);
+        const inspect = new McpTool(inspectDefinition.name, inspectDefinition.execute, inspectDefinition);
+        const proposeDefinition = proposeHttpInvocationChangesTool(editors, reviews);
+        const propose = new McpTool(proposeDefinition.name, proposeDefinition.execute, proposeDefinition);
+        const runDefinition = runHttpInvocationTool(provider, editors);
+        const run = new McpTool(runDefinition.name, runDefinition.execute, runDefinition);
+        const extras = { signal: new AbortController().signal, requestId: 'saved-repair' };
+        const inspectionSchema = z.object({ structuredContent: z.object({
+            inspectionId: z.string(), status: z.string(), resultMatchesSavedRequest: z.boolean(),
+            request: z.object({ query: z.array(z.object({ name: z.string(), inUrl: z.boolean() })) }),
+            diagnostic: z.optional(z.object({ status: z.number(), body: z.optional(z.string()) })),
+        }) });
+        try {
+            assert.strictEqual(inspectDefinition.annotations?.consentGuidance, ConsentGuidance.AlwaysRequired);
+            assert.strictEqual(runDefinition.annotations?.consentGuidance, ConsentGuidance.AlwaysRequired);
+            const editor = editors.open(target, true);
+            await runEditorScript(editor, `
+                document.querySelector('#run-chain').click();
+                await waitFor(() => !document.querySelector('#response-body').hidden);
+                document.querySelector('#body').value = 'private-unsaved-repair-body';
+                document.querySelector('#body').dispatchEvent(new Event('input', { bubbles: true }));
+            `);
+            const evidence = await inspect.executeMcp({ id: target.id }, extras);
+            const inspected = inspectionSchema.parse(evidence).structuredContent;
+            assert.strictEqual(inspected.status, 'failed');
+            assert.strictEqual(inspected.resultMatchesSavedRequest, true);
+            assert.strictEqual(inspected.diagnostic?.status, 422);
+            assert.strictEqual(inspected.diagnostic?.body, '{"error":"name is required"}');
+            assert.deepStrictEqual(inspected.request.query, [{ name: 'embedded', inUrl: true }, { name: 'code', inUrl: false }]);
+            for (const value of ['private-repair-query', 'private-repair-key', 'private-repair-code', 'private-repair-body', 'private-repair-cookie', 'private-unsaved-repair-body']) {
+                assert.ok(!JSON.stringify(evidence).includes(value));
+            }
+            const other = inspectionSchema.parse(await inspect.executeMcp({ id: unchecked.id }, extras)).structuredContent;
+            const before = receivedRequests;
+            const beforeAccounts = accountBodies.length;
+            const proposed = await propose.executeMcp({ changes: [
+                { id: target.id, inspectionId: inspected.inspectionId, reason: 'The handler requires a name.', request: { body: '{"name":"Synthetic holding"}' } },
+                { id: unchecked.id, inspectionId: other.inspectionId, reason: 'Use the requested method.', request: { method: 'HEAD' } },
+            ] }, extras);
+            const reviewId = z.object({ structuredContent: z.object({ reviewId: z.string() }) }).parse(proposed).structuredContent.reviewId;
+            assert.ok(controller);
+            assert.deepStrictEqual(provider.getRequest(target.id), target);
+            assert.deepStrictEqual(provider.getRequest(unchecked.id), unchecked);
+            assert.strictEqual(receivedRequests, before);
+            assert.throws(() => reviews.getReview(reviewId));
+            for (const value of ['private-repair-query', 'private-repair-key', 'private-repair-code', 'private-repair-body']) {
+                assert.ok(!JSON.stringify(proposed).includes(value));
+            }
+            await runEditorScript(controller, `
+                if (document.querySelector('main > h1').textContent !== 'Review saved request changes') throw new Error('The review looks like new collection authoring.');
+                if (document.querySelector('.comment-label')) throw new Error('Private saved fields have a feedback-sharing path.');
+                if (document.querySelector('#diagnose-failed')) throw new Error('Saved private fields have a preview-diagnosis path.');
+                const row = document.querySelector('[data-id="${target.id}"]');
+                row.querySelector('.case-toggle').click();
+                if (row.querySelector('.request-preview textarea').value !== '{"name":"Synthetic holding"}') throw new Error('The proposed body is missing.');
+                document.querySelector('[data-id="${unchecked.id}"] input[type="checkbox"]').click();
+                document.querySelector('#confirm-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.startsWith('Applied'));
+            `);
+            assert.deepStrictEqual(provider.getRequest(target.id), { ...target, request: { ...target.request, body: '{"name":"Synthetic holding"}' } });
+            assert.deepStrictEqual(provider.getRequest(source.id), source);
+            assert.deepStrictEqual(provider.getRequest(unchecked.id), unchecked);
+            assert.strictEqual(provider.getRequests().length, 3);
+            assert.strictEqual(receivedRequests, before);
+            const oldResult = editors.getInspection(target.id);
+            assert.strictEqual(oldResult.resultMatchesSavedRequest, false);
+            assert.strictEqual(oldResult.diagnostic?.outcome, 'response');
+            assert.throws(() => reviews.getReview(reviewId));
+            assert.throws(() => reviews.getDraftId(reviewId, target.id));
+            assert.throws(() => reviews.getDiagnostics(reviewId, 'not-shared'));
+            const stale = await propose.executeMcp({ changes: [
+                { id: target.id, inspectionId: inspected.inspectionId, reason: 'Old evidence.', request: { method: 'GET' } },
+            ] }, extras);
+            assert.ok('isError' in stale && stale.isError);
+            const result = runResultSchema.parse(await run.executeMcp({ id: target.id, runDependencies: false }, extras));
+            assert.strictEqual(result.structuredContent.status, 200);
+            assert.strictEqual(result.structuredContent.body, '{"accepted":true}');
+            assert.strictEqual(accountBodies.length, beforeAccounts, 'Repair or rerun repeated a mutating prerequisite.');
+            assert.strictEqual(provider.getRequestRunStatus(target.id).status, 'succeeded');
+        } finally {
+            reviews.dispose();
+            editors.dispose();
+            provider.dispose();
+        }
+    });
+
+    test('saved request fixes are cancelled safely and reject changed snapshots and expired inspections', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const provider = new AzureInvokeTreeDataProvider();
+        const editors = new HttpRequestEditors(context, provider);
+        const reviews = new CollectionReviews(context, provider);
+        const saved = { id: 'stale-repair', name: 'Original saved request', request: request({ body: 'private unchanged body' }) };
+        provider.saveRequest(saved);
+        const before = receivedRequests;
+        try {
+            const initial = editors.getInspection(saved.id);
+            const cancelled = reviews.openChanges([{ invocation: editors.getInspectedInvocation(saved.id, initial.inspectionId), request: { method: 'HEAD' }, reason: 'Inspect headers only.' }]);
+            await runEditorScript(cancelled, `
+                document.querySelector('#cancel-collection').click();
+                await waitFor(() => document.querySelector('#review-message').textContent.includes('Saved requests are unchanged'));
+            `);
+            assert.deepStrictEqual(provider.getRequest(saved.id), saved);
+            const next = editors.getInspection(saved.id);
+            const stale = reviews.openChanges([{ invocation: editors.getInspectedInvocation(saved.id, next.inspectionId), request: { method: 'HEAD' }, reason: 'Inspect headers only.' }]);
+            const manual = { ...saved, request: { ...saved.request, body: 'new private manual edit' } };
+            provider.saveRequest(manual);
+            assert.throws(() => editors.getInspectedInvocation(saved.id, next.inspectionId), /Inspect the saved request again/);
+            await runEditorScript(stale, `
+                document.querySelector('#confirm-collection').click();
+                await waitFor(() => !document.querySelector('#review-error').hidden);
+                if (!document.querySelector('#review-error').textContent.includes('Nothing has been applied')) throw new Error('A stale review did not explain why it was blocked.');
+            `);
+            assert.deepStrictEqual(provider.getRequest(saved.id), manual);
+            const invalid = editors.getInspection(saved.id);
+            assert.throws(() => reviews.openChanges([{
+                invocation: editors.getInspectedInvocation(saved.id, invalid.inspectionId),
+                request: { dependsOn: ['missing-source'] }, reason: 'Invalid dependency.',
+            }]), /prerequisite/);
+            const emptyUrl = { id: 'invalid-saved-url', name: 'Incomplete URL', request: request({ url: '' }) };
+            provider.saveRequest(emptyUrl);
+            assert.strictEqual(editors.getInspection(emptyUrl.id).request.url, undefined);
+            const expired = editors.getInspection(saved.id);
+            editors.closeAll();
+            assert.throws(() => editors.getInspectedInvocation(saved.id, expired.inspectionId), /Inspect the saved request again/);
+            assert.strictEqual(receivedRequests, before);
+        } finally {
+            reviews.dispose();
+            editors.dispose();
+            provider.dispose();
+        }
+    });
 
     test('AI-authored GUID inputs stay consistent per request and dependent runs reuse the actual credentials', async () => {
         const context = (await getTestApi()).extensionVariables.getContext();
@@ -2059,7 +2231,7 @@ suite('Azure Invoke', () => {
         const content = await fs.readFile(path.join(context.extensionPath, agent.path), 'utf8');
         assert.match(content, /\nname: Azure Invoke\n/);
         assert.match(content, /\n {2}- edit\n/, 'The Azure Invoke agent must support workspace edits alongside invocation testing.');
-        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_http_invocations', 'run_http_invocation', 'list_blob_invocations', 'upload_blob_invocation']) {
+        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_http_invocations', 'get_http_invocation_inspection', 'propose_http_invocation_changes', 'run_http_invocation', 'list_blob_invocations', 'upload_blob_invocation']) {
             assert.ok(content.includes(`  - Azure Functions Extension Tools/${name}`));
         }
         assert.ok(!content.includes('  - Azure Functions Extension Tools/create_http_invocation'));
@@ -2937,7 +3109,7 @@ suite('Azure Invoke', () => {
             const discovered = z.object({ result: z.object({ tools: z.array(z.object({ name: z.string() })) }) })
                 .parse(await rpc('tools/list', {}));
             assert.deepStrictEqual(discovered.result.tools.map(tool => tool.name).sort(), [
-                'create_http_invocation', 'draft_http_invocation', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
+                'create_http_invocation', 'draft_http_invocation', 'get_http_invocation_inspection', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_blob_invocations', 'list_http_invocations', 'propose_http_invocation_changes', 'propose_invocation_collection', 'run_http_invocation', 'select_blob_invocation_file', 'upload_blob_invocation',
             ]);
             const listed = z.object({
                 result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), name: z.string(), method: z.string(), dependencyIds: z.array(z.string()) })) }) }),
@@ -2956,6 +3128,15 @@ suite('Azure Invoke', () => {
             assert.notStrictEqual(ran.isError, true);
             assert.strictEqual(ran.structuredContent.status, 200);
             assert.strictEqual(JSON.parse(ran.structuredContent.body ?? '').body, input.body);
+            const inspection = z.object({ result: z.object({ structuredContent: z.object({
+                status: z.string(), resultMatchesSavedRequest: z.boolean(),
+                diagnostic: z.object({ status: z.number() }),
+            }) }) }).parse(await rpc('tools/call', {
+                name: 'get_http_invocation_inspection', arguments: { id: created.result.structuredContent.id },
+            })).result.structuredContent;
+            assert.strictEqual(inspection.status, 'succeeded');
+            assert.strictEqual(inspection.resultMatchesSavedRequest, true);
+            assert.strictEqual(inspection.diagnostic.status, 200);
             assert.strictEqual(receivedRequests, before + 1);
             assert.ok(!findInvocationTab(input.name), 'AI execution opened an unsolicited request tab.');
             await ui.runWithInputs(['Save Collection'], async () => {
