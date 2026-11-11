@@ -22,7 +22,7 @@ import {
 import { type ConnectorTriggerSelection } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
-import { connectorSdkVersions } from './connectorTriggerSdkBindings.generated';
+import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
 
 const connectionSettingName = 'ConnectorNamespace';
 

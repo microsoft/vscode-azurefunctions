@@ -1581,8 +1581,6 @@
         "compile": "tsgo -watch",
         "version": "tsgo --version",
         "cleanReadme": "node scripts/cleanReadme.mjs",
-        "update-connector-sdk-bindings": "node scripts/connectorSdkBindings/update.mjs",
-        "test-connector-sdk-bindings": "node --test scripts/connectorSdkBindings/update.test.mjs",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "lint-fix": "eslint --max-warnings 0 --fix",

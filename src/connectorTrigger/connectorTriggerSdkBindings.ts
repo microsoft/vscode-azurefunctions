@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { connectorSdkBindings } from './connectorTriggerSdkBindings.generated';
+import { connectorSdkBindings } from './connectorTriggerSdkBindingTable';
 
 export interface ConnectorTriggerSdkBinding {
     csharp?: { namespace: string; payloadType: string };
