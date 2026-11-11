@@ -1607,8 +1607,7 @@
         "@vscode/vsce": "*",
         "esbuild": "*",
         "husky": "^7.0.2",
-        "tsx": "*",
-        "typescript": "^6.0.3"
+        "tsx": "*"
     },
     "dependencies": {
         "@azure/arm-appinsights": "^5.0.0-alpha.20230530.1",
