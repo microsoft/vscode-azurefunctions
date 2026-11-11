@@ -1155,6 +1155,55 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
         await fs.promises.writeFile(settingsPath, JSON.stringify(settingsFile(values)));
     }
 
+    for (const [name, metadata] of [
+        ['needs settings setup cannot collect', { status: 200, body: { properties: { connectionParameterSets: { values: [{ name: 'oauth' }, { name: 'key' }] } } } }],
+        ['has authentication metadata that cannot be loaded', { status: 404 }],
+    ] as const) {
+        test(`provisions nothing for a new namespace and connection when the connector ${name}`, async () => {
+            const original = JSON.stringify(settingsFile(clientSecretValues));
+            await fs.promises.writeFile(settingsPath, original);
+            const fixture = createProvisioningFixture({ metadata });
+
+            await assert.rejects(
+                runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, fixture.dependencies),
+                /No connection was created/,
+            );
+
+            assert.deepStrictEqual(fixture.events, ['metadata']);
+            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+        });
+    }
+
+    test('checks connector authentication before creating the resource group or namespace', async () => {
+        await writeSettings(clientSecretValues);
+        const fixture = createProvisioningFixture({ metadata: oauthMetadata() });
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, fixture.dependencies),
+            /stop after connection/,
+        );
+
+        assert.deepStrictEqual(fixture.events.slice(0, 4), ['metadata', 'provider', 'resourceGroupCreate', 'namespaceCreate']);
+        assert.ok(fixture.events.includes('connectionCreate'));
+    });
+
+    test('provisions nothing when setup is cancelled during the connector authentication check', async () => {
+        const original = JSON.stringify(settingsFile(clientSecretValues));
+        await fs.promises.writeFile(settingsPath, original);
+        const fixture: ProvisioningFixture = createProvisioningFixture({
+            metadata: oauthMetadata(),
+            onMetadata: () => fixture.cancelSetup(),
+        });
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, fixture.dependencies),
+            UserCancelledError,
+        );
+
+        assert.deepStrictEqual(fixture.events, ['metadata']);
+        assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+    });
+
     async function readSettings(): Promise<Record<string, string>> {
         return parseJson<{ Values: Record<string, string> }>(await fs.promises.readFile(settingsPath, 'utf8')).Values;
     }
@@ -1377,6 +1426,113 @@ function createConnectionFixture(options: {
     return { adapter, connections, creates, metadataRequests };
 }
 
+interface ProvisioningFixture {
+    dependencies: ConnectorTriggerF5Dependencies;
+    events: string[];
+    cancelSetup: () => void;
+}
+
+/**
+ * Runs the real adapter for every provisioning call setup makes for a new namespace and a new
+ * connection, recording each metadata read and write in order. Setup stops at the first call after
+ * the connection is created.
+ */
+function createProvisioningFixture(options: {
+    metadata: { status: number; body?: unknown };
+    onMetadata?: () => void;
+}): ProvisioningFixture {
+    const events: string[] = [];
+    const record = (event: string) => async (): Promise<never> => {
+        events.push(event);
+        throw new Error(`unexpected ${event}`);
+    };
+    const connections = new Map<string, ConnectorConnectionResource>();
+    const client: Partial<ConnectorGatewayClient> = {
+        getNamespace: async () => undefined,
+        createNamespace: async () => {
+            events.push('namespaceCreate');
+            return namespaceResource('Succeeded');
+        },
+        getConnection: async (_context, _rg, _ns, name) => connections.get(name),
+        createOrUpdateConnection: async (_context, _rg, _ns, name, request) => {
+            events.push('connectionCreate');
+            const resource = connectionResource(name, request.tags?.[connectorTriggerOwnerTagKey]);
+            connections.set(name, resource);
+            return resource;
+        },
+        createOrUpdateConnectionAccessPolicy: record('policyWrite'),
+        createOrUpdateTriggerConfig: record('triggerConfigWrite'),
+    };
+    const adapter = createAdapter(client, {
+        resourceGroups: {
+            get: async () => { throw httpError(404); },
+            createOrUpdate: async () => {
+                events.push('resourceGroupCreate');
+                return {};
+            },
+        } as unknown as ConnectorResourceGroupsClient,
+        providerVerifier: async () => { events.push('provider'); },
+        sendRequest: async request => {
+            events.push('metadata');
+            options.onMetadata?.();
+            return { status: options.metadata.status, parsedBody: options.metadata.body, request } as unknown as PipelineResponse;
+        },
+    });
+    const progressCancellation = new vscode.CancellationTokenSource();
+    const setupCancellation = new vscode.CancellationTokenSource();
+    const stop = async (): Promise<never> => { throw new Error('stop after connection'); };
+    const gateway: Partial<ConnectorTriggerGateway> = {
+        assertConnectorConnectionCreatable: adapter.assertConnectorConnectionCreatable.bind(adapter),
+        ensureNamespace: adapter.ensureNamespace.bind(adapter),
+        ensureConnection: adapter.ensureConnection.bind(adapter),
+        getConnection: stop,
+        getConsentLink: stop,
+        getPollingPrincipal: stop,
+        ensureConnectionAccessPolicies: adapter.ensureConnectionAccessPolicies.bind(adapter),
+        getTriggerConfig: stop,
+        createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),
+    };
+    let now = 0;
+    return {
+        events,
+        cancelSetup: () => setupCancellation.cancel(),
+        dependencies: {
+            bindingResolver: { find: async () => [binding], resolve: async () => binding },
+            gateway: gateway as ConnectorTriggerGateway,
+            projectStore: { read: async () => undefined, markComplete: async () => undefined },
+            operationResolver: {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => ({}),
+                serializeParameters: () => [],
+            },
+            workspaceIdentity: { get: async () => workspaceId },
+            hostLaunch: exactLaunch(),
+            openSetup: async (_context, request) => ({
+                cancellationToken: setupCancellation.token,
+                selectResources: async () => ({
+                    target,
+                    namespace: { kind: 'create', resourceGroupName: 'resource-group', namespaceName: 'namespace' },
+                    connection: { kind: 'create', connectionName: 'office365-planned' },
+                    triggerConfigName: 'trigger-config',
+                    localSettings: request.localSettings,
+                }),
+                collectParameters: async () => ({}),
+                setStatus: () => undefined,
+                dispose: () => {
+                    progressCancellation.dispose();
+                    setupCancellation.dispose();
+                },
+            }),
+            runtime: {
+                now: () => now++,
+                delay: async () => undefined,
+                openExternal: async () => true,
+                withProgress: async (_title, task) => await task(progressCancellation.token),
+            },
+        },
+    };
+}
+
 function connectionResource(name: string, ownerWorkspaceId: string | undefined, connectorName: string = target.connectorId): ConnectorConnectionResource {
     return {
         id: `${namespaceId}/connections/${name}`,
@@ -1433,6 +1589,7 @@ function createDependencies(
     let now = 0;
     const gateway: Partial<ConnectorTriggerGateway> = {
         ensureNamespace: async () => namespace,
+        assertConnectorConnectionCreatable: async () => { throw new Error('unexpected preflight for an existing connection'); },
         ensureConnection: async () => connection,
         getConnection: async () => connection,
         getConsentLink: async () => 'https://consent.example.invalid/',

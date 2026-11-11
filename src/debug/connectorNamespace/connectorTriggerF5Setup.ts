@@ -153,7 +153,10 @@ export async function runConnectorTriggerF5Setup(
     try {
         await runWizard(wizardContext, [new ConnectorResourcesPromptStep()], [], false);
         setup.setStatus('provisioning');
-        await runWizard(wizardContext, [], [new ConnectorNamespaceEnsureStep(dependencies)]);
+        await runWizard(wizardContext, [], [
+            new ConnectorConnectionPreflightStep(dependencies),
+            new ConnectorNamespaceEnsureStep(dependencies),
+        ]);
         await runWizard(wizardContext, [], [
             new ConnectorConnectionEnsureStep(dependencies),
             new ConnectorConnectionConsentStep(dependencies, runtime),
@@ -246,6 +249,32 @@ class ConnectorResourcesPromptStep extends AzureWizardPromptStep<ConnectorTrigge
         context.target = undefined;
         context.names = undefined;
         context.setupApproved = false;
+    }
+}
+
+/**
+ * Rejects a connector whose authentication setup cannot collect before any resource group,
+ * namespace or connection is created. Existing connections are already authorized and skip it.
+ */
+class ConnectorConnectionPreflightStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {
+    public priority = 90;
+
+    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
+        super();
+    }
+
+    public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
+        await this.dependencies.gateway.assertConnectorConnectionCreatable(
+            context,
+            nonNullValue(context.target),
+            { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
+        );
+        assertSetupActive(context);
+    }
+
+    public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
+        return context.connectionPlan?.kind === 'create';
     }
 }
 

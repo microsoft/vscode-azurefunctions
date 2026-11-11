@@ -328,6 +328,7 @@ function createHarness(options: HarnessOptions): Harness {
     };
     const gateway: Partial<ConnectorTriggerGateway> = {
         ensureNamespace: async () => namespace,
+        assertConnectorConnectionCreatable: async () => undefined,
         ensureConnection: async (_context, _target, _namespace, plan, connectionOptions) => {
             harness.connectionRequests.push({ plan, options: connectionOptions });
             return connection;
