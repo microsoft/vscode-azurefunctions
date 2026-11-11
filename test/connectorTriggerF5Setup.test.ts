@@ -71,6 +71,7 @@ const target: ConnectorTriggerSetupTarget = {
     connectorId: 'office365',
     operationId: 'OnNewEmailV3',
 };
+const workspaceId = 'workspace-id';
 const projectMetadata: ConnectorTriggerProjectMetadata = {
     version: 1, connectorId: target.connectorId, operationId: target.operationId,
 };
@@ -155,10 +156,9 @@ suite('Connector Trigger F5 setup', () => {
         const gateway = createGateway(state, {
             onAccessPolicies: policies => {
                 accessConfigured = true;
-                assert.deepStrictEqual(policies.map(policy => policy.name), [
-                    'namespace-trigger-runtime',
-                    'local-developer',
-                ]);
+                assert.strictEqual(policies.length, 2);
+                assert.match(policies[0].name, /^namespace-trigger-runtime-[a-f0-9]{10}$/);
+                assert.match(policies[1].name, /^local-developer-[a-f0-9]{10}$/);
                 assert.deepStrictEqual(policies.map(policy => policy.principal.identity), [
                     { objectId: 'namespace-principal', tenantId: 'tenant-id' },
                     { objectId: 'developer-object', tenantId: 'tenant-id' },
@@ -393,8 +393,8 @@ suite('Connector Trigger F5 setup', () => {
     });
 
     test('generates stable resource names without exposing target identifiers', () => {
-        const first = createConnectorTriggerResourceNames(projectPath, target, binding);
-        const second = createConnectorTriggerResourceNames(projectPath, target, binding);
+        const first = createConnectorTriggerResourceNames(projectPath, target, binding, workspaceId);
+        const second = createConnectorTriggerResourceNames(projectPath, target, binding, workspaceId);
 
         assert.deepStrictEqual(first, second);
         assert.match(first.namespaceName, /^func-connectors-[a-f0-9]{10}$/);
@@ -751,8 +751,8 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(invoked, false);
 
         const ui = new ScriptedUi(
-            [/Create a new Connector Namespace/, /Create a new connector connection/, [], 'Inbox', 'false', '0.5'],
-            ['mailbox/name', '1e3'],
+            [/Create a new Connector Namespace/, /Create a new connector connection/, [], 'false', '0.5', 'Inbox'],
+            ['1000', 'mailbox/name'],
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
@@ -760,10 +760,10 @@ suite('Connector Trigger F5 setup', () => {
             write: async () => undefined,
         });
         await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
-        assert.deepStrictEqual(state.triggerParameters, [
-            { name: 'mailbox', value: 'mailbox/name' },
+        assert.deepStrictEqual([...nonNullValue(state.triggerParameters)].sort(compareParameters), [
             { name: 'folderPath', value: 'inbox-id' },
             { name: 'includeAttachments', value: false },
+            { name: 'mailbox', value: 'mailbox/name' },
             { name: 'maxBatch', value: 1000 },
             { name: 'minimumScore', value: 0.5 },
         ]);
@@ -1034,6 +1034,7 @@ suite('Connector Trigger F5 setup', () => {
             operationResolver: resolver,
             openSetup: async (context, request) => createScriptedSetupSession(context, request, gateway, resolver),
             runtime: createRuntime(),
+            workspaceIdentity: { get: async () => workspaceId },
         };
         const ui = new ScriptedUi(
             [
@@ -1073,7 +1074,7 @@ suite('Connector Trigger F5 setup', () => {
             if (hasMetadata) {
                 await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
             }
-            const metadataPath = path.join(tempProject, '.vscode', 'settings.json');
+            const metadataPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const metadataBefore = hasMetadata ? await fs.promises.readFile(metadataPath, 'utf8') : undefined;
             assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
             assert.doesNotMatch(metadataBefore ?? '', /subscription|tenant|region|environment|management\.azure/);
@@ -1152,6 +1153,8 @@ suite('Connector Trigger F5 setup', () => {
                 dynamicInvoke: fail,
                 ensureConnectionAccessPolicies: fail,
                 createOrUpdateTriggerConfig: fail,
+                getPollingPrincipal: fail,
+                getTriggerConfig: fail,
             },
             projectStore: {
                 read: readConnectorTriggerProjectMetadata,
@@ -1165,11 +1168,12 @@ suite('Connector Trigger F5 setup', () => {
                 serializeParameters: () => assert.fail('Parameters must not be serialized.'),
             },
             openSetup: fail,
+            workspaceIdentity: { get: async () => workspaceId },
         };
 
         try {
             await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
-            const settingsPath = path.join(tempProject, '.vscode', 'settings.json');
+            const settingsPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
@@ -1210,7 +1214,7 @@ suite('Connector Trigger pre-debug setup review', () => {
             createOrUpdateTriggerConfig: fail,
         };
         const previousEnvironment = process.env[binding.triggerConfigSettingName];
-        process.env[binding.triggerConfigSettingName] = 'fixture-environment-secret';
+        delete process.env[binding.triggerConfigSettingName];
         let reviewed = 0;
         const ui = new ScriptedUi(
             [/Create a new Connector Namespace/, /Create a new connector connection/],
@@ -1229,7 +1233,7 @@ suite('Connector Trigger pre-debug setup review', () => {
                 assert.strictEqual(plan.connection.kind, 'create');
                 assert.deepStrictEqual(plan.localSettings, [
                     { name: 'ConnectorNamespace__pollingEndpoint', purpose: 'pollingEndpoint', exists: false, environmentOverride: false },
-                    { name: 'OnNewEmailTriggerConfigName', purpose: 'triggerConfig', exists: true, environmentOverride: true },
+                    { name: 'OnNewEmailTriggerConfigName', purpose: 'triggerConfig', exists: true, environmentOverride: false },
                 ]);
                 assert.doesNotMatch(JSON.stringify(plan), /fixture-existing-secret|fixture-environment-secret|unrelated-secret/);
                 assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /subscription-id|tenant-id|connector-project/);
@@ -1274,7 +1278,7 @@ suite('Connector Trigger pre-debug setup review', () => {
     });
 
     test('reviews deterministic reuse before ensuring existing namespace and connection resources', async () => {
-        const names = createConnectorTriggerResourceNames(projectPath, target, binding);
+        const names = createConnectorTriggerResourceNames(projectPath, target, binding, workspaceId);
         const state = createGatewayState();
         state.namespace = { ...createNamespace(names.namespaceName), resourceGroupName: names.resourceGroupName };
         state.connection = createConnection(names.connectionName, 'Connected');
@@ -1481,6 +1485,8 @@ function createGateway(
         getConsentLink: async () => 'https://login.example.test/consent?secret=value',
         dynamicInvoke: async (_context, _handoff, _namespace, _connection, request) =>
             callbacks.onDynamicInvoke?.(request) ?? assert.fail('Dynamic invoke was not expected.'),
+        getPollingPrincipal: async () => ({ objectId: 'developer-object', tenantId: 'tenant-id' }),
+        getTriggerConfig: async () => undefined,
         ensureConnectionAccessPolicies: async (_context, _handoff, _namespace, _connection, policies) => {
             callbacks.onAccessPolicies?.(policies);
         },
@@ -1536,6 +1542,7 @@ function createDependencies(
         openSetup: async (context, request) =>
             createScriptedSetupSession(context, request, gateway, operationResolver, callbacks.review),
         runtime: createRuntime(),
+        workspaceIdentity: { get: async () => workspaceId },
     };
 }
 

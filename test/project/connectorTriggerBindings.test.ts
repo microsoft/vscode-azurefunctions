@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
+    findConnectorTriggerRegistrations,
+    findPollingConnectorBindings,
     getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
@@ -104,5 +109,88 @@ async def connector(event):
             getPollingConnectorBindings(source).map(candidate => candidate.functionName),
             ['OnChangedV2', 'OnChangedV3'],
         );
+    });
+
+    test('ignores disabled TypeScript registrations in comments and strings', () => {
+        const source = `
+            /* app.connectorTrigger("Disabled", {
+                connection: "OldConnection", triggerConfigName: "%OldConfig%", deliveryMode: "Poll" }); */
+            // connectors.office365.onChanged("LineDisabled", { connection: "OldConnection", triggerConfigName: "%OldConfig%", deliveryMode: "Poll" });
+            const docs = \`app.connectorTrigger("Example", { connection: "OldConnection", triggerConfigName: "%OldConfig%", deliveryMode: "Poll" })\`;
+            app.connectorTrigger("OnChangedV3", {
+                connection: "ConnectorConnection",
+                triggerConfigName: "%ConnectorConfig%",
+                deliveryMode: "Poll",
+                handler: () => {},
+            });
+        `;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), expected);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), ['OnChangedV3']);
+    });
+
+    test('ignores disabled C# attributes in comments', () => {
+        const source = `
+            // [Function("Disabled")]
+            // public void Old([ConnectorTrigger(Connection = "OldConnection", TriggerConfigName = "%OldConfig%", DeliveryMode = ConnectorDeliveryMode.Poll)] object input) {}
+            [Function("OnChangedV3")]
+            public void Connector(
+                /* [ConnectorTrigger(Connection = "OldConnection", TriggerConfigName = "%OldConfig%", DeliveryMode = ConnectorDeliveryMode.Poll)] */
+                [ConnectorTrigger(
+                    Connection = "ConnectorConnection",
+                    TriggerConfigName = "%ConnectorConfig%",
+                    DeliveryMode = ConnectorDeliveryMode.Poll)] object input) {}
+        `;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.cs'), expected);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.cs'), ['OnChangedV3']);
+    });
+
+    test('ignores disabled Python decorators in comments and docstrings', () => {
+        const source = `
+"""
+@app.function_name(name="Example")
+@app.connector_trigger(connection="OldConnection", trigger_config_name="%OldConfig%", delivery_mode=DeliveryMode.POLL)
+def example(event):
+"""
+# @app.function_name(name="Disabled")
+# @app.connector_trigger(connection="OldConnection", trigger_config_name="%OldConfig%", delivery_mode=DeliveryMode.POLL)
+# def disabled(event):
+
+@app.function_name(name="OnChangedV3")
+@app.connector_trigger(connection="ConnectorConnection", trigger_config_name="%ConnectorConfig%", delivery_mode=DeliveryMode.POLL)
+async def connector(event):
+    pass
+`;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.py'), expected);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.py'), ['OnChangedV3']);
+    });
+
+    test('only reads host-loaded function.json files and skips malformed ones', async () => {
+        const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connectorBindings'));
+        try {
+            const write = async (relativePath: string, content: string) => {
+                const filePath = path.join(root, relativePath);
+                await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+                await fs.promises.writeFile(filePath, content);
+            };
+            await write('host.json', '{}');
+            await write('OnChangedV3/function.json', JSON.stringify({
+                bindings: [{
+                    type: 'connectorTrigger',
+                    deliveryMode: 'Poll',
+                    connection: 'ConnectorConnection',
+                    triggerConfigName: '%ConnectorConfig%',
+                }],
+            }));
+            await write('Broken/function.json', '{ not json');
+            await write('tests/fixtures/Fixture/function.json', '{ not json');
+            await write('tests/fixtures/Other/function.json', JSON.stringify({
+                bindings: [{ type: 'connectorTrigger', deliveryMode: 'Poll', connection: 'Fixture', triggerConfigName: '%Fixture%' }],
+            }));
+
+            assert.deepStrictEqual(await findPollingConnectorBindings(root), expected);
+            assert.deepStrictEqual(await findConnectorTriggerRegistrations(root), ['OnChangedV3']);
+        } finally {
+            await fs.promises.rm(root, { recursive: true, force: true });
+        }
     });
 });
