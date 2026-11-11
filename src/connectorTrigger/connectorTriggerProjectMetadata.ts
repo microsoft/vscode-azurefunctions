@@ -76,15 +76,13 @@ export async function readConnectorTriggerProjectMetadata(
         return file.metadata;
     }
 
-    const metadata = await readProjectSetting(projectPath, projectPath);
-    if (metadata) {
-        return metadata;
-    }
-
     if (folder && !isPathEqual(folder.uri.fsPath, projectPath)) {
-        return await readProjectSetting(folder.uri.fsPath, projectPath);
+        const metadata = await readProjectSetting(folder.uri.fsPath, projectPath);
+        if (metadata) {
+            return metadata;
+        }
     }
-    return undefined;
+    return await readProjectSetting(projectPath, projectPath);
 }
 
 function getProjectMetadataPath(projectPath: string): string {

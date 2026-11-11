@@ -210,7 +210,7 @@ suite('Connector trigger project metadata', () => {
         assert.deepStrictEqual(await readMetadata(child), childHandoff);
     });
 
-    test('prefers project-local identity and reads legacy parent records when it is absent', async () => {
+    test('preserves legacy workspace precedence until project-local metadata is written', async () => {
         const child = workspaceChildRoot;
         const previous = createMetadata();
         await updateWorkspaceSetting(connectorTriggerProjectsSetting, { [path.basename(child)]: previous }, workspaceFolder);
@@ -218,7 +218,11 @@ suite('Connector trigger project metadata', () => {
 
         const local = createMetadata('act', 'TrigNewContact');
         await writeSettings(child, { '.': local });
+        assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(child), previous);
+
+        await updateWorkspaceSetting(connectorTriggerProjectsSetting, undefined, workspaceFolder);
         assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(child), local);
+        await updateWorkspaceSetting(connectorTriggerProjectsSetting, { [path.basename(child)]: previous }, workspaceFolder);
 
         const updated = createMetadata('office365', 'OnNewEmailV3');
         await writeConnectorTriggerProjectMetadata(child, updated);
